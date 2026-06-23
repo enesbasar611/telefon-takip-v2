@@ -191,19 +191,16 @@ export function NotificationFeed({ notifications: initialNotifications }: { noti
 
     const handleSnooze = async (e: React.MouseEvent | undefined, id: string, hours: number) => {
         if (e) e.stopPropagation();
+        const notification = allNotifications.find(n => n.id === id);
         setNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
         setAllNotifications((prev: SystemNotification[]) => prev.filter(n => n.id !== id));
-        await snoozeNotificationAction(id, hours);
-        broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: id });
-
-        let message = "Bildirim ertelendi";
-        if (hours === 24) message = "Bildirim 24 saat ertelendi";
-        else if (hours === 168) message = "Bildirim 1 hafta ertelendi";
-        else if (hours > 100000) message = "Bildirim süresiz olarak gizlendi";
-
-        toast.success(message, {
-            icon: <Clock className="h-4 w-4 text-amber-500" />
+        await snoozeNotificationAction(id, hours, {
+            title: notification?.title,
+            message: notification?.message,
+            category: notification?.category,
+            type: notification?.type
         });
+        broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: id });
         window.dispatchEvent(new CustomEvent("notification-update"));
         router.refresh();
     };

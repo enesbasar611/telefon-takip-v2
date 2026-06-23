@@ -514,7 +514,17 @@ export function StockListTable({
             <p className="text-center py-10 text-muted-foreground/80 ">Ürün bulunamadı.</p>
           ) : (
             sortedData.map((product: any) => (
-              <div key={product.id} className="bg-card p-5 rounded-2xl border border-border shadow-sm space-y-4 cursor-pointer" onClick={() => handleProductClick(product)}>
+              <div
+                key={product.id}
+                className={cn(
+                  "bg-card p-5 rounded-2xl border border-border shadow-sm space-y-4 cursor-pointer relative overflow-hidden",
+                  highlightedId === product.id ? "ring-2 ring-primary bg-primary/5 animate-in fade-in zoom-in duration-500" : ""
+                )}
+                onClick={() => handleProductClick(product)}
+              >
+                {highlightedId === product.id && (
+                  <div className="absolute inset-0 bg-primary/10 animate-pulse pointer-events-none" />
+                )}
                 <div className="flex justify-between items-start gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <Checkbox
@@ -671,8 +681,18 @@ export function StockListTable({
               </TableRow>
             ) : (
               sortedData.map((product: any) => (
-                <TableRow key={product.id} className="border-b border-border/40 hover:bg-muted/40 transition-colors group cursor-pointer" onClick={() => handleProductClick(product)}>
-                  <TableCell className="py-4 pl-8" onClick={(e) => e.stopPropagation()}>
+                <TableRow
+                  key={product.id}
+                  className={cn(
+                    "border-b border-border/40 hover:bg-muted/40 transition-colors group cursor-pointer relative",
+                    highlightedId === product.id ? "bg-primary/20 ring-2 ring-primary ring-inset animate-in fade-in duration-500" : ""
+                  )}
+                  onClick={() => handleProductClick(product)}
+                >
+                  <TableCell className="py-4 pl-8 relative" onClick={(e) => { e.stopPropagation(); }}>
+                    {highlightedId === product.id && (
+                      <div className="absolute inset-0 bg-primary/10 animate-pulse pointer-events-none z-0" />
+                    )}
                     <Checkbox
                       checked={selectedIds.includes(product.id)}
                       onCheckedChange={() => toggleProductSelection(product.id)}
@@ -830,79 +850,81 @@ export function StockListTable({
       <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={shop?.id || "global"} />
 
       {/* Pagination Controls */}
-      {totalCount > pageSize && (
-        <div className="flex items-center justify-between px-8 py-6 border-t border-border/40 bg-muted/5">
-          <div className="flex-1 text-[12px] font-medium text-muted-foreground/80">
-            Toplam <span className="text-foreground">{totalCount}</span> üründen
-            <span className="text-foreground"> {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalCount)}</span> arası gösteriliyor
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString());
-                params.set("page", (currentPage - 1).toString());
-                router.push(`?${params.toString()}`);
-              }}
-              disabled={currentPage <= 1}
-              className="h-9 px-4 rounded-xl gap-2 text-[12px] font-medium border-border/80 hover:bg-muted"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Önceki
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, Math.ceil(totalCount / pageSize)) }, (_, i) => {
-                // Show pages around current page
-                const totalPages = Math.ceil(totalCount / pageSize);
-                let pageNum = currentPage;
-                if (totalPages <= 5) pageNum = i + 1;
-                else {
-                  if (currentPage <= 3) pageNum = i + 1;
-                  else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
-                  else pageNum = currentPage - 2 + i;
-                }
-
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      const params = new URLSearchParams(searchParams.toString());
-                      params.set("page", pageNum.toString());
-                      router.push(`?${params.toString()}`);
-                    }}
-                    className={cn(
-                      "h-9 w-9 p-0 rounded-xl text-[12px] font-medium transition-all",
-                      currentPage === pageNum ? "shadow-md shadow-primary/20" : "border-border/80 hover:bg-muted"
-                    )}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
+      {
+        totalCount > pageSize && (
+          <div className="flex items-center justify-between px-8 py-6 border-t border-border/40 bg-muted/5">
+            <div className="flex-1 text-[12px] font-medium text-muted-foreground/80">
+              Toplam <span className="text-foreground">{totalCount}</span> üründen
+              <span className="text-foreground"> {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalCount)}</span> arası gösteriliyor
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("page", (currentPage - 1).toString());
+                  router.push(`?${params.toString()}`);
+                }}
+                disabled={currentPage <= 1}
+                className="h-9 px-4 rounded-xl gap-2 text-[12px] font-medium border-border/80 hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Önceki
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString());
-                params.set("page", (currentPage + 1).toString());
-                router.push(`?${params.toString()}`);
-              }}
-              disabled={currentPage >= Math.ceil(totalCount / pageSize)}
-              className="h-9 px-4 rounded-xl gap-2 text-[12px] font-medium border-border/80 hover:bg-muted"
-            >
-              Sonraki
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, Math.ceil(totalCount / pageSize)) }, (_, i) => {
+                  // Show pages around current page
+                  const totalPages = Math.ceil(totalCount / pageSize);
+                  let pageNum = currentPage;
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else {
+                    if (currentPage <= 3) pageNum = i + 1;
+                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                    else pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set("page", pageNum.toString());
+                        router.push(`?${params.toString()}`);
+                      }}
+                      className={cn(
+                        "h-9 w-9 p-0 rounded-xl text-[12px] font-medium transition-all",
+                        currentPage === pageNum ? "shadow-md shadow-primary/20" : "border-border/80 hover:bg-muted"
+                      )}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("page", (currentPage + 1).toString());
+                  router.push(`?${params.toString()}`);
+                }}
+                disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+                className="h-9 px-4 rounded-xl gap-2 text-[12px] font-medium border-border/80 hover:bg-muted"
+              >
+                Sonraki
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 

@@ -157,6 +157,32 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
     },
   });
 
+  const condition = watch("condition");
+  const selectedBrand = watch("brand");
+  const selectedColor = watch("color");
+  const sim1NotUsed = watch("sim1NotUsed");
+  const sim2NotUsed = watch("sim2NotUsed");
+
+  const isNew = condition === "NEW";
+  const isIntl = condition === "INTERNATIONAL";
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setPhotoFiles(prev => [...prev, ...files]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotoFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleInvoiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setInvoiceFile(e.target.files[0]);
+    }
+  };
+
   const [pendingAccountId, setPendingAccountId] = useState<string | null>(null);
 
   const { data: accounts = [], refetch: refetchAccounts, isFetching: isFetchingAccounts } = useQuery({
@@ -175,69 +201,36 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   });
 
   // createDeviceMutation removed as it was replaced by direct call to avoid serialization issues
-  const isPending = isUploading;
+  const { mutateAsync: createDevice, isPending: isMutationPending } = useMutation({
+    mutationFn: (payload: any) => createDeviceEntry(payload),
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ["devices"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+        queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
 
-  // Cache finance accounts while the modal is open.
-  // Auto-select a default account when accounts load if none is selected
-  useEffect(() => {
-    if (open && accounts.length > 0) {
-      const currentVal = watch("financeAccountId");
-      const exists = accounts.some((a: any) => a.id === currentVal);
-      if (!exists && !pendingAccountId) {
-        const primary = accounts.find((a: any) => a.isDefault) || accounts[0];
-        if (primary) setValue("financeAccountId", primary.id);
+        toast.success("Cihaz başarıyla envantere eklendi.");
+        setOpen(false);
+        reset();
+        setPhotoFiles([]);
+        setInvoiceFile(null);
+        setSellerIdFront(null);
+        setSellerIdBack(null);
+        setWarrantyMode("months");
+      } else {
+        toast.error(result.error ?? "İşlem başarısız.");
       }
+    },
+    onError: (err: any) => {
+      console.error("Device creation error:", err);
+      toast.error(`Hata: ${err?.message || "Bilinmeyen bir hata oluştu."}`);
     }
-    // Auto-open quick account form ONLY if we are sure there are absolutely no accounts
-    if (open && accounts.length === 0 && !isFetchingAccounts) {
-      setShowQuickAccount(true);
-    }
-  }, [accounts, open, setValue, watch, isFetchingAccounts, pendingAccountId]);
-
-  // Handle the automatic selection of a newly created account
-  useEffect(() => {
-    if (pendingAccountId && accounts.length > 0) {
-      const accountExists = accounts.find((a: any) => a.id === pendingAccountId);
-      if (accountExists) {
-        setValue("financeAccountId", pendingAccountId, { shouldValidate: true });
-        setPendingAccountId(null);
-        setShowQuickAccount(false);
-      }
-    }
-  }, [accounts, pendingAccountId, setValue]);
-
-  const condition = watch("condition");
-  const buyPrice = watch("buyPrice");
-  const selectedBrand = watch("brand");
-  const sim1NotUsed = watch("sim1NotUsed");
-  const sim2NotUsed = watch("sim2NotUsed");
-  const selectedColor = watch("color");
-
-  const isNew = condition === "NEW";
-  const isIntl = condition === "INTERNATIONAL";
-
-  // When condition changes to NEW → auto-set 24 months warranty
-  useEffect(() => {
-    if (condition === "NEW") {
-      setWarrantyMode("months");
-      setValue("warrantyMonths", "24");
-    }
-  }, [condition, setValue]);
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    setPhotoFiles((prev) => [...prev, ...files].slice(0, 5));
-  };
-  const handleInvoiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInvoiceFile(e.target.files?.[0] ?? null);
-  };
-  const removePhoto = (idx: number) => setPhotoFiles((prev) => prev.filter((_, i) => i !== idx));
+  });
 
   const onSubmit = async (data: DeviceFormValues) => {
     setIsUploading(true);
     try {
-      const expertChecklist = data.replacedParts ? { notes: data.replacedParts } : {};
-
       let sellerIdFrontUrl = "";
       let sellerIdBackUrl = "";
       let uploadedPhotoUrls: string[] = [];
@@ -268,7 +261,6 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         sellerIdBackUrl = json.attachments[0].url;
       }
 
-      // Data Standardization (The Constitution)
       const cleaned = cleanFormData(data, {
         brand: "title",
         model: "title",
@@ -278,8 +270,6 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         replacedParts: "sentence"
       });
 
-      // Sanitize payload: Zod/react-hook-form may produce non-plain objects
-      // that React Server Actions cannot serialize. JSON round-trip ensures purity.
       const payload = JSON.parse(JSON.stringify({
         brand: cleaned.brand,
         model: cleaned.model,
@@ -308,32 +298,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         invoiceUrl: null,
       }));
 
-      // Call server action directly instead of mutateAsync to rule out proxy serialization issues
-      const result = await createDeviceEntry(payload);
-
-      if (result.success) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["devices"] }),
-          queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
-          queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
-          queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
-        ]);
-
-        toast.success("Cihaz başarıyla envantere eklendi.");
-        setOpen(false);
-        reset();
-        setPhotoFiles([]);
-        setInvoiceFile(null);
-        setSellerIdFront(null);
-        setSellerIdBack(null);
-        setWarrantyMode("months");
-      } else {
-        toast.error(result.error ?? "İşlem başarısız.");
-      }
+      await createDevice(payload);
     } catch (err: any) {
-      console.error("Device creation error:", err);
-      const msg = err?.message || "Bilinmeyen bir hata oluştu.";
-      toast.error(`Hata: ${msg}`);
+      // Error is handled in mutation onError
     } finally {
       setIsUploading(false);
     }
@@ -387,8 +354,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-500 text-white gap-2  h-10 px-6 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
-          <Plus className="h-4 w-4" /> Cihaz Ekle
+        <Button className="bg-blue-600 hover:bg-blue-500 text-white gap-2 h-12 px-8 rounded-2xl transition-all shadow-xl shadow-blue-500/20 text-[13px] font-bold uppercase tracking-wide group flex items-center">
+          <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Cihaz Ekle</span>
         </Button>
       </DialogTrigger>
 
@@ -936,9 +904,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 Telefonlar &gt; {condition === "NEW" ? "Sıfır" : condition === "USED" ? "2. El" : "Yurtdışı"}
               </span>
             </p>
-            <Button type="submit" disabled={isPending}
+            <Button type="submit" disabled={isMutationPending || isUploading}
               className="bg-blue-600 hover:bg-blue-500 text-white  text-[13px] h-12 w-full sm:w-auto sm:h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {(isMutationPending || isUploading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Kaydı Tamamla
             </Button>
           </div>

@@ -65,9 +65,9 @@ export function DeviceExportButton({ devices, categories, selectedMonth }: Devic
         <Button
             onClick={handleExport}
             variant="outline"
-            className="h-12 px-6 rounded-2xl bg-card border-border hover:border-emerald-500/50 hover:bg-emerald-500/10 text-foreground hover:text-emerald-400  transition-all gap-2 group shadow-lg"
+            className="h-12 px-6 bg-card border-border/60 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all rounded-2xl gap-2 text-[11px] font-medium tracking-widest uppercase shadow-lg group"
         >
-            <FileSpreadsheet className="h-5 w-5 group-hover:scale-110 transition-transform" />
+            <FileSpreadsheet className="h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform" />
             <span className="hidden sm:inline">DIŞA AKTAR</span>
         </Button>
     );

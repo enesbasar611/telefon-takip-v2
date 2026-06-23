@@ -3,8 +3,12 @@ import * as z from "zod";
 // --- Base Types ---
 const phoneSchema = z.string()
     .min(1, "Telefon numarası gereklidir")
-    .transform(val => val.replace(/\D/g, "").slice(-10))
-    .refine((val) => val.length === 10, "Geçerli bir telefon numarası girin");
+    .refine((val) => {
+        // Remove spaces and non-numeric except +
+        const cleaned = val.replace(/[^\d+]/g, "");
+        // Accept + prefixed numbers (international/850) or exactly 10-12 digits
+        return cleaned.startsWith("+") || (cleaned.replace(/\D/g, "").length >= 10);
+    }, "Geçerli bir telefon numarası girin (örn: 5xx xxx xxxx veya +850...)");
 
 const priceSchema = z.coerce.number().min(0, "Geçerli bir tutar giriniz");
 

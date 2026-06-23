@@ -119,6 +119,7 @@ model User {
   points               Int                   @default(0)
   baseSalary           Decimal?              @default(0) @db.Decimal(12, 2)
   salaryCurrency       String                @default("TRY")
+  serviceCommissionAmount Decimal?              @default(0) @db.Decimal(12, 2)
   accounts             Account[]
   auditLogs            AuditLog[]
   closedSessions       DailySession[]        @relation("ClosedBy")
@@ -188,7 +189,7 @@ model ServiceTicket {
   status                ServiceStatus       @default(PENDING)
   priority              Int                 @default(1)
   technicianId          String?
-  createdById           String
+  createdById           String?
   estimatedCost         Decimal             @default(0) @db.Decimal(10, 2)
   actualCost            Decimal             @default(0) @db.Decimal(10, 2)
   createdAt             DateTime            @default(now())
@@ -207,10 +208,10 @@ model ServiceTicket {
   inventoryMovements    InventoryMovement[]
   returns               ReturnTicket[]
   logs                  ServiceLog[]
-  createdBy             User                @relation("CreatedBy", fields: [createdById], references: [id])
+  createdBy             User?               @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   customer              Customer            @relation(fields: [customerId], references: [id])
   shop                  Shop                @relation(fields: [shopId], references: [id])
-  technician            User?               @relation("AssignedTechnician", fields: [technicianId], references: [id])
+  technician            User?               @relation("AssignedTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
   usedParts             ServiceUsedPart[]
 
   @@unique([shopId, ticketNumber])
@@ -358,7 +359,7 @@ model ReturnTicket {
   serviceTicketId    String?
   productId          String?
   supplierId         String?
-  userId             String
+  userId             String?
   returnReason       ReturnReason?
   lossAmount         Decimal             @default(0) @db.Decimal(10, 2)
   notes              String?
@@ -380,7 +381,7 @@ model ReturnTicket {
   serviceTicket      ServiceTicket?      @relation(fields: [serviceTicketId], references: [id])
   shop               Shop                @relation(fields: [shopId], references: [id])
   supplier           Supplier?           @relation(fields: [supplierId], references: [id])
-  user               User                @relation(fields: [userId], references: [id])
+  user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   shortageItems      ShortageItem[]
 
   @@unique([shopId, ticketNumber])
@@ -389,7 +390,7 @@ model ReturnTicket {
 model InventoryLog {
   id        String   @id @default(cuid())
   productId String
-  userId    String
+  userId    String?
   quantity  Int
   type      String
   notes     String?
@@ -397,7 +398,7 @@ model InventoryLog {
   shopId    String
   product   Product  @relation(fields: [productId], references: [id])
   shop      Shop     @relation(fields: [shopId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model DeviceHubInfo {
@@ -491,7 +492,7 @@ model Sale {
   id                 String              @id @default(cuid())
   saleNumber         String
   customerId         String?
-  userId             String
+  userId             String?
   totalAmount        Decimal             @db.Decimal(10, 2)
   discount           Decimal             @default(0) @db.Decimal(10, 2)
   finalAmount        Decimal             @db.Decimal(10, 2)
@@ -503,7 +504,7 @@ model Sale {
   inventoryMovements InventoryMovement[]
   customer           Customer?           @relation(fields: [customerId], references: [id])
   shop               Shop                @relation(fields: [shopId], references: [id])
-  user               User                @relation(fields: [userId], references: [id])
+  user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   items              SaleItem[]
   transaction        Transaction?
 
@@ -530,7 +531,7 @@ model Transaction {
   currency         String          @default("TRY")
   description      String
   paymentMethod    PaymentMethod   @default(CASH)
-  userId           String
+  userId           String?
   saleId           String?         @unique
   debtId           String?
   financeAccountId String?
@@ -549,7 +550,7 @@ model Transaction {
   sale             Sale?           @relation(fields: [saleId], references: [id])
   shop             Shop            @relation(fields: [shopId], references: [id])
   supplier         Supplier?       @relation("SupplierToTransaction", fields: [supplierId], references: [id])
-  user             User            @relation(fields: [userId], references: [id])
+  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([shopId])
   @@index([createdAt])
@@ -631,14 +632,14 @@ model DailySession {
   closingBalance Decimal?      @db.Decimal(12, 2)
   actualBalance  Decimal?      @db.Decimal(12, 2)
   status         SessionStatus @default(OPEN)
-  openedById     String
+  openedById     String?
   closedById     String?
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   shopId         String
-  closedBy       User?         @relation("ClosedBy", fields: [closedById], references: [id])
-  openedBy       User          @relation("OpenedBy", fields: [openedById], references: [id])
+  closedBy       User?         @relation("ClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  openedBy       User?         @relation("OpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
   shop           Shop          @relation(fields: [shopId], references: [id])
   transactions   Transaction[]
 }
@@ -1034,7 +1035,9 @@ model PerformanceMilestone {
 
 model MonthlyStaffArchive {
   id               String   @id @default(cuid())
-  userId           String
+  userId           String?
+  staffName        String?
+  staffEmail       String?
   period           String
   baseSalary       Decimal  @db.Decimal(12, 2)
   totalCommissions Decimal  @db.Decimal(12, 2)
@@ -1044,7 +1047,7 @@ model MonthlyStaffArchive {
   shopId           String
   metadata         Json?
   shop             Shop     @relation(fields: [shopId], references: [id])
-  user             User     @relation(fields: [userId], references: [id])
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([userId, period])
   @@index([shopId, period])

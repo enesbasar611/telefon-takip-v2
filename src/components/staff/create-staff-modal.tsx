@@ -36,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { getDefaultStaffPermissions, STAFF_PERMISSION_FIELDS } from "@/lib/staff-permissions";
+import { getExchangeRate } from "@/lib/currency-utils";
 
 const staffSchema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
@@ -70,6 +71,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [roleTemplates, setRoleTemplates] = useState<any[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number>(35.0);
   const { toast } = useToast();
 
   const {
@@ -110,6 +112,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
 
   useEffect(() => {
     if (!isOpen) return;
+    getExchangeRate().then(setExchangeRate);
     getRoleTemplates().then(setRoleTemplates);
     if (staff) {
       reset({
@@ -243,16 +246,50 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
               </div>
 
               {/* Removed Commission Rate Input */}
-
               <div className="space-y-1.5">
-                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">SABİT MAAŞ</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">SABİT MAAŞ</Label>
+                  {watch("baseSalary") > 0 && exchangeRate > 0 && (
+                    <span className="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      {watch("salaryCurrency") === "TRY"
+                        ? `(${(watch("baseSalary") / exchangeRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD)`
+                        : `(${(watch("baseSalary") * exchangeRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL)`}
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
-                  <Input
-                    {...register("baseSalary", { valueAsNumber: true })}
-                    type="number"
-                    step="0.01"
-                    className="flex-1 h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs"
-                  />
+                  <div className="relative flex-1">
+                    <Input
+                      key={watch("salaryCurrency")} // Fix: Re-mount to handle placeholder/formatting shifts if needed
+                      defaultValue={watch("baseSalary") > 0 ? (watch("baseSalary") % 1 === 0 ? watch("baseSalary").toString() : watch("baseSalary").toFixed(2).replace(".", ",")) : ""}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9,.]/g, "");
+                        // Intelligent parsing: replaces comma with dot if it's the decimal separator
+                        const numericValue = val.includes(",") && !val.includes(".")
+                          ? parseFloat(val.replace(",", "."))
+                          : parseFloat(val.replace(/,/g, ""));
+
+                        if (!isNaN(numericValue)) {
+                          setValue("baseSalary", numericValue);
+                        } else if (val === "") {
+                          setValue("baseSalary", 0);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const val = parseFloat(e.target.value.replace(",", "."));
+                        if (!isNaN(val)) {
+                          e.target.value = val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        }
+                      }}
+                      placeholder="0,00"
+                      className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs pr-10 font-medium"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <span className="text-[10px] font-black text-slate-300">
+                        {watch("salaryCurrency") === "TRY" ? "₺" : "$"}
+                      </span>
+                    </div>
+                  </div>
                   <Select
                     value={watch("salaryCurrency")}
                     onValueChange={(v) => setValue("salaryCurrency", v)}
@@ -266,6 +303,11 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
                     </SelectContent>
                   </Select>
                 </div>
+                {watch("baseSalary") > 0 && (
+                  <p className="text-[9px] text-emerald-600/70 font-medium ml-1">
+                    Kesin Değer: <span className="font-bold underline">{watch("baseSalary").toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {watch("salaryCurrency") === "TRY" ? "₺" : "$"}</span>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">

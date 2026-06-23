@@ -18,6 +18,7 @@ export async function StockTableStream({ searchParams, shop }: { searchParams?: 
 
     const [data, categoriesRaw, suppliersRaw] = await Promise.all([
         getProducts({
+            id: searchParams?.highlight,
             page: currentPage,
             pageSize: pageSize,
             search: searchParams?.q,

@@ -164,6 +164,9 @@ export function NotificationDropdown() {
 
     const handleSnooze = async (id: string, hours: number) => {
         try {
+            // Find the notification to get its metadata
+            const notification = notifications.find((n: SystemNotification) => n.id === id);
+
             // Optimistic update: immediately remove notification from dropdown list
             queryClient.setQueryData(["system-notifications"], (oldData: any) => {
                 if (!oldData) return oldData;
@@ -176,7 +179,12 @@ export function NotificationDropdown() {
                 };
             });
 
-            await snoozeNotificationAction(id, hours);
+            await snoozeNotificationAction(id, hours, {
+                title: notification?.title,
+                message: notification?.message,
+                category: notification?.category,
+                type: notification?.type
+            });
             queryClient.invalidateQueries({ queryKey: ["system-notifications"] });
             broadcastNotificationEvent({ type: "SNOOZE_NOTIFICATION", notificationId: id });
 

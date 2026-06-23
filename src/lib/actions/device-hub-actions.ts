@@ -2,7 +2,7 @@
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { formatTitleCase, formatProperCase, formatUppercase } from "@/lib/formatters";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 
 export async function getDeviceList(params?: { month?: string; startDate?: string; endDate?: string }) {
@@ -230,7 +230,7 @@ export async function createDeviceEntry(data: any) {
       return product;
     });
 
-    revalidatePath("/cihaz-listesi");
+    revalidateTag("device-list");
     revalidatePath("/satis/kasa");
     revalidatePath("/stok");
     revalidatePath("/dashboard");
@@ -258,7 +258,7 @@ export async function updateDeviceExpertise(deviceId: string, expertChecklist: a
         updatedAt: new Date(),
       },
     });
-    revalidatePath("/cihaz-listesi");
+    revalidateTag("device-list");
     return { success: true };
   } catch (error) {
     console.error("Error updating device expertise:", error);
@@ -266,27 +266,76 @@ export async function updateDeviceExpertise(deviceId: string, expertChecklist: a
   }
 }
 
-export async function deleteDevice(productId: string) {
+export async function deleteDevice(productId: string, options?: { keepInBalance?: boolean }) {
   try {
     const shopId = await getShopId();
-    const product = await prisma.product.findFirst({ where: { id: productId, shopId } });
+    const product = await prisma.product.findFirst({
+      where: { id: productId, shopId },
+      include: { deviceInfo: true }
+    });
     if (!product) return { success: false, error: "Cihaz bulunamadı." };
 
-    // Delete all related records to satisfy foreign key constraints (P2003 Fix)
-    await prisma.$transaction([
-      prisma.deviceHubInfo.deleteMany({ where: { productId } }),
-      prisma.inventoryMovement.deleteMany({ where: { productId } }),
-      prisma.inventoryLog.deleteMany({ where: { productId } }),
-      prisma.saleItem.deleteMany({ where: { productId } }),
-      prisma.serviceUsedPart.deleteMany({ where: { productId } }),
-      prisma.returnTicket.deleteMany({ where: { productId } }),
-      prisma.stockAIAlert.deleteMany({ where: { productId } }),
-      prisma.shortageItem.deleteMany({ where: { productId } }),
-      prisma.purchaseOrderItem.deleteMany({ where: { productId } }),
-      prisma.product.delete({ where: { id: productId } }),
-    ]);
+    // If keepInBalance is true, we don't delete the financial record. 
+    // In this system, "deleting" usually means removing the purchase transaction.
+    // However, the user said "bakiyeden düşmesin" (if they don't want it to affect balance, they mean keep the past status).
+    // The user's request: "bakiyeden düşülsün mü diye sorsun eğer düşülmesini istemiyorsa bakiyeden düşmesin, geçmişten silinmesin sadece bu listede görünmesin."
 
-    revalidatePath("/cihaz-listesi");
+    // Translation:
+    // If user says "Düşülsün" (YES) -> Standard delete (Everything gone, balance affected as if purchase never happened? OR record a return? No, standard delete usually means revert).
+    // If user says "Düşülmesin" (NO) -> Keep history, just hide from list.
+
+    if (options?.keepInBalance) {
+      // Soft delete: just set stock to 0 so it doesn't appear in active list
+      // and maybe mark as hidden/sold in history.
+      await prisma.product.update({
+        where: { id: productId },
+        data: { stock: 0 }
+      });
+
+      revalidateTag("device-list");
+      return { success: true, message: "Cihaz stoktan çıkarıldı, geçmiş verileri korundu." };
+    }
+
+    // Standard Hard Delete (Affected balance because purchase transaction remains but product is gone? 
+    // Wait, the existing code deletes EVERYTHING including saleItems.
+    // If we want to revert balance impact, we find the purchase transaction.
+
+    await prisma.$transaction(async (tx) => {
+      // Find the purchase transaction to revert balance
+      const purchaseTx = await tx.transaction.findFirst({
+        where: {
+          shopId,
+          AND: [
+            { description: { contains: `Cihaz Alımı:` } },
+            { description: { contains: product.name } }
+          ],
+          type: "EXPENSE"
+        }
+      });
+
+      if (purchaseTx && purchaseTx.financeAccountId) {
+        // Revert balance: increment because it was an expense
+        await tx.financeAccount.update({
+          where: { id: purchaseTx.financeAccountId },
+          data: { balance: { increment: purchaseTx.amount } }
+        });
+        // Delete the transaction
+        await tx.transaction.delete({ where: { id: purchaseTx.id } });
+      }
+
+      await tx.deviceHubInfo.deleteMany({ where: { productId } });
+      await tx.inventoryMovement.deleteMany({ where: { productId } });
+      await tx.inventoryLog.deleteMany({ where: { productId } });
+      await tx.saleItem.deleteMany({ where: { productId } });
+      await tx.serviceUsedPart.deleteMany({ where: { productId } });
+      await tx.returnTicket.deleteMany({ where: { productId } });
+      await tx.stockAIAlert.deleteMany({ where: { productId } });
+      await tx.shortageItem.deleteMany({ where: { productId } });
+      await tx.purchaseOrderItem.deleteMany({ where: { productId } });
+      await tx.product.delete({ where: { id: productId } });
+    });
+
+    revalidateTag("device-list");
     revalidatePath("/satis/kasa");
     revalidatePath("/stok");
 
@@ -409,9 +458,7 @@ export async function updateDeviceEntry(productId: string, data: any) {
       }
     });
 
-    revalidatePath("/cihaz-listesi");
-    revalidatePath("/satis/kasa");
-    revalidatePath("/stok");
+    revalidateTag("device-list");
     return { success: true };
   } catch (error) {
     console.error("Update device error:", error);
@@ -419,3 +466,36 @@ export async function updateDeviceEntry(productId: string, data: any) {
   }
 }
 
+export async function getDeviceById(productId: string) {
+  try {
+    const shopId = await getShopId();
+    const device = await prisma.product.findFirst({
+      where: { id: productId, shopId },
+      include: {
+        category: true,
+        deviceInfo: true,
+        saleItems: {
+          take: 1,
+          include: {
+            sale: {
+              include: { customer: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!device) return null;
+
+    const mapped = {
+      ...device,
+      brand: device.name.split(" ")[0],
+      sale: device.saleItems?.[0]?.sale || null
+    };
+
+    return serializePrisma(mapped);
+  } catch (error) {
+    console.error("Error fetching device by id:", error);
+    return null;
+  }
+}

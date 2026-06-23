@@ -57,6 +57,7 @@ export const getAllProductsForCategoriesUI = cache(async function getAllProducts
 
 
 export const getProducts = cache(async function getProducts(options: {
+  id?: string,
   search?: string,
   categoryId?: string,
   categoryName?: string,
@@ -69,32 +70,36 @@ export const getProducts = cache(async function getProducts(options: {
   page?: number,
   pageSize?: number
 } = {}) {
-  const { categoryId, categoryName, page, pageSize, search, minPrice, maxPrice, minStock, maxStock, isCritical, currency } = options;
+  const { id, categoryId, categoryName, page, pageSize, search, minPrice, maxPrice, minStock, maxStock, isCritical, currency } = options;
 
   try {
     const shopId = await getShopId();
     if (!shopId) return { products: [], totalCount: 0 };
     const where: any = { shopId };
 
-    if (categoryId) where.categoryId = categoryId;
-    if (categoryName) {
-      where.category = {
-        name: { contains: categoryName, mode: 'insensitive' }
-      };
-    }
+    if (id) {
+      where.id = id;
+    } else {
+      if (categoryId) where.categoryId = categoryId;
+      if (categoryName) {
+        where.category = {
+          name: { contains: categoryName, mode: 'insensitive' }
+        };
+      }
 
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-        { barcode: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { category: { name: { contains: search, mode: 'insensitive' } } },
-        { deviceInfo: { color: { contains: search, mode: 'insensitive' } } },
-        { deviceInfo: { capacity: { contains: search, mode: 'insensitive' } } },
-        { deviceInfo: { serialNumber: { contains: search, mode: 'insensitive' } } },
-        { deviceInfo: { imei: { contains: search, mode: 'insensitive' } } }
-      ];
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { sku: { contains: search, mode: 'insensitive' } },
+          { barcode: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { category: { name: { contains: search, mode: 'insensitive' } } },
+          { deviceInfo: { color: { contains: search, mode: 'insensitive' } } },
+          { deviceInfo: { capacity: { contains: search, mode: 'insensitive' } } },
+          { deviceInfo: { serialNumber: { contains: search, mode: 'insensitive' } } },
+          { deviceInfo: { imei: { contains: search, mode: 'insensitive' } } }
+        ];
+      }
     }
 
     // Price filters

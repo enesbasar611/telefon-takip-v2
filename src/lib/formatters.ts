@@ -108,8 +108,12 @@ export const cleanFormData = <T extends Record<string, any>>(
  */
 export const formatPhoneRaw = (text: string): string => {
     if (!text) return "";
+    // If it starts with +, keep as is but remove spaces
+    if (text.trim().startsWith("+")) {
+        return text.trim().replace(/\s/g, "");
+    }
     let cleaned = text.replace(/\D/g, "");
-    if (cleaned.startsWith("90") && cleaned.length > 2) cleaned = cleaned.substring(2);
+    if (cleaned.startsWith("90") && cleaned.length > 10) cleaned = cleaned.substring(2);
     if (cleaned.startsWith("0")) cleaned = cleaned.substring(1);
     return cleaned.substring(0, 10);
 };

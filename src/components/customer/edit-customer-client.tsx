@@ -22,33 +22,10 @@ interface EditCustomerClientProps {
 export function EditCustomerClient({ customer }: EditCustomerClientProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const formatInputPhone = (val: string = "") => {
-        let raw = val.replace(/[^0-9]/g, "");
-        if (raw.startsWith("90") && raw.length > 2) raw = raw.slice(2);
-        if (raw.startsWith("0")) raw = raw.slice(1);
-
-        if (raw.length > 0 && raw[0] !== '5') {
-            const firstFive = raw.indexOf('5');
-            if (firstFive !== -1) raw = raw.slice(firstFive);
-            else raw = "";
-        }
-
-        const d = raw.slice(0, 10);
-        if (d.length === 0) return "";
-
-        let f = "(" + d.slice(0, 3);
-        if (d.length >= 3) {
-            f += ") ";
-            if (d.length > 3) f += d.slice(3, 6);
-            if (d.length > 6) f += " " + d.slice(6, 10);
-        }
-        return f;
-    };
-
     const [formData, setFormData] = useState({
         name: customer.name || "",
-        phone: formatInputPhone(customer.phone),
-        secondaryPhone: formatInputPhone(customer.secondaryPhone),
+        phone: customer.phone || "",
+        secondaryPhone: customer.secondaryPhone || "",
         email: customer.email || "",
         address: customer.address || "",
         notes: customer.notes || "",
@@ -67,8 +44,8 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
         try {
             const res = await updateCustomer(customer.id, {
                 ...formData,
-                phone: formData.phone.replace(/\D/g, "").substring(0, 10),
-                secondaryPhone: formData.secondaryPhone ? formData.secondaryPhone.replace(/\D/g, "").substring(0, 10) : undefined,
+                phone: formData.phone,
+                secondaryPhone: formData.secondaryPhone || undefined,
             });
 
             if (res.success) {
@@ -85,10 +62,7 @@ export function EditCustomerClient({ customer }: EditCustomerClientProps) {
         }
     };
 
-    const handlePhoneFormat = (val: string, fieldName: 'phone' | 'secondaryPhone') => {
-        const formatted = formatInputPhone(val);
-        setFormData({ ...formData, [fieldName]: formatted });
-    };
+    // handlePhoneFormat function removed since we use direct state updates in PhoneInput callbacks
 
     return (
         <div className="flex flex-col gap-6 max-w-3xl mx-auto">

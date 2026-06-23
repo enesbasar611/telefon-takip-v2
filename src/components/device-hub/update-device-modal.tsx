@@ -222,10 +222,10 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
-          className="h-9 w-9 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 transition-all border border-blue-500/20 hover:border-blue-500/40"
+          className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 transition-all border border-blue-500/20 hover:border-blue-500/40"
           title="Düzenle"
         >
-          <PenLine className="h-4 w-4" />
+          <PenLine className="h-4.5 w-4.5" />
         </button>
       </DialogTrigger>
       <DialogContent className="w-full md:max-w-4xl h-full md:h-auto md:max-h-[85vh] overflow-hidden bg-[#0B0F19] border-border text-foreground/90 p-0 md:rounded-3xl flex flex-col">

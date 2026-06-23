@@ -47,9 +47,9 @@ export function DeviceDateRangeSelector({ initialMonth }: DeviceDateRangeSelecto
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="outline" className="h-10 px-4 bg-card border-border/60 hover:border-blue-500/50 transition-all rounded-xl gap-2 text-[11px]  tracking-widest uppercase">
-                    <Calendar className="h-4 w-4 text-blue-500" />
-                    TARİH FİLTRESİ
+                <Button variant="outline" className="h-12 px-6 bg-card border-border/60 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all rounded-2xl gap-2 text-[11px] font-medium tracking-widest uppercase shadow-lg group">
+                    <Calendar className="h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="hidden sm:inline">TARİH FİLTRESİ</span>
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-4 bg-card border-border shadow-2xl rounded-2xl" align="end">

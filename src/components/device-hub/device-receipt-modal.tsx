@@ -8,11 +8,14 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, X, ShoppingCart, Package, Image as ImageIcon, Upload, Eye, Plus, Paperclip, Loader2, Download, Trash2, User } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { updateDeviceEntry } from "@/lib/actions/device-hub-actions";
+import { updateDeviceEntry, getDeviceById } from "@/lib/actions/device-hub-actions";
 import { toast } from "sonner";
 import { useEffect, useTransition } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { RotateCw, FileText, Printer, X, ShoppingCart, Package, Image as ImageIcon, Upload, Eye, Plus, Paperclip, Loader2, Download, Trash2, User, MessageCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WhatsAppConfirmModal } from "../common/whatsapp-confirm-modal";
+
 import { PhoneInput } from "@/components/ui/phone-input";
 import { formatProperCase, formatUppercase } from "@/lib/formatters";
 import { useRouter } from "next/navigation";
@@ -267,18 +270,19 @@ function ThermalReceipt({
 }
 
 export function DeviceReceiptModal({ device, children, defaultOpen = false, onClose }: DeviceReceiptModalProps) {
+    const queryClient = useQueryClient();
     const [open, setOpen] = useState(defaultOpen);
     const [formType, setFormType] = useState<FormType>("purchase");
     const [printFormat, setPrintFormat] = useState<PrintFormat>("a4");
     const [shopInfo, setShopInfo] = useState<any>(null);
     const [receiptSettings, setReceiptSettings] = useState<any>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [currentDevice, setCurrentDevice] = useState(device);
 
-    // Sync with defaultOpen
     useEffect(() => {
         if (defaultOpen) setOpen(true);
     }, [defaultOpen]);
 
-    // Handle manual close
     const handleOpenChange = (val: boolean) => {
         setOpen(val);
         if (!val && onClose) onClose();
@@ -299,26 +303,45 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
         fetchShop();
         getReceiptSettings("device").then(setReceiptSettings);
     }, []);
+
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
+    useEffect(() => {
+        setCurrentDevice(device);
+    }, [device]);
+
+    const refreshData = async () => {
+        setIsRefreshing(true);
+        try {
+            const updated = await getDeviceById(device.id);
+            if (updated) {
+                setCurrentDevice(updated);
+            }
+        } catch (err) {
+            console.error("Refresh error:", err);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     const [customer, setCustomer] = useState<CustomerInfo>({ name: "", tc: "", phone: "" });
     const [expert, setExpert] = useState<DeviceExpertInfo>({ screen: "Orijinal", liquid: "Yok", repair: "" });
+    const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 
-    // Auto-fill from device data if available
     useEffect(() => {
         if (open) {
             setCustomer(prev => ({
-                name: prev.name || device.deviceInfo?.sellerName || "",
-                tc: prev.tc || device.deviceInfo?.sellerTC || "",
-                phone: prev.phone || device.deviceInfo?.sellerPhone || ""
+                name: prev.name || currentDevice.deviceInfo?.sellerName || "",
+                tc: prev.tc || currentDevice.deviceInfo?.sellerTC || "",
+                phone: prev.phone || currentDevice.deviceInfo?.sellerPhone || ""
             }));
 
-            if (device.deviceInfo?.expertChecklist?.notes) {
-                setExpert(prev => ({ ...prev, repair: device.deviceInfo.expertChecklist.notes }));
+            if (currentDevice.deviceInfo?.expertChecklist?.notes) {
+                setExpert(prev => ({ ...prev, repair: currentDevice.deviceInfo.expertChecklist.notes }));
             }
         }
-    }, [open, device.deviceInfo]);
+    }, [open, currentDevice.deviceInfo]);
 
     const now = new Date().toLocaleDateString("tr-TR", {
         day: "2-digit", month: "2-digit", year: "numeric",
@@ -328,47 +351,53 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const { mutate: updateDevice, isPending: isUpdatingDevice } = useMutation({
+        mutationFn: ({ id, data }: { id: string, data: any }) => updateDeviceEntry(id, data),
+        onSuccess: (result) => {
+            if (result.success) {
+                toast.success("Cihaz verileri güncellendi.");
+                refreshData();
+                queryClient.invalidateQueries({ queryKey: ["devices"] });
+                queryClient.invalidateQueries({ queryKey: ["device", device.id] });
+                router.refresh();
+            } else {
+                toast.error(result.error || "Güncelleme hatası.");
+            }
+        },
+        onError: () => toast.error("Bir hata oluştu.")
+    });
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
         setIsUploading(true);
-        startTransition(async () => {
-            try {
-                const formData = new FormData();
-                Array.from(files).forEach(f => formData.append("files", f));
+        try {
+            const formData = new FormData();
+            Array.from(files).forEach(f => formData.append("files", f));
 
-                const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
-                const json = await res.json();
+            const res = await fetch("/api/finance/upload", { method: "POST", body: formData });
+            const json = await res.json();
 
-                if (json.success) {
-                    const newUrls = json.attachments.map((a: any) => a.url);
-                    const currentUrls = device.deviceInfo?.photoUrls || [];
+            if (json.success) {
+                const newUrls = json.attachments.map((a: any) => a.url);
+                const currentUrls = currentDevice.deviceInfo?.photoUrls || [];
 
-                    const result = await updateDeviceEntry(device.id, {
-                        ...device,
-                        brand: device.deviceInfo?.brand || device.name.split(" ")[0],
-                        model: device.deviceInfo?.model || device.name.split(" ").slice(1).join(" "),
-                        condition: device.deviceInfo?.condition || "USED",
-                        buyPrice: device.buyPrice.toString(),
-                        sellPrice: device.sellPrice.toString(),
+                updateDevice({
+                    id: currentDevice.id,
+                    data: {
+                        ...currentDevice.deviceInfo,
                         photoUrls: [...currentUrls, ...newUrls]
-                    });
-
-                    if (result.success) {
-                        toast.success("Belge başarıyla eklendi.");
-                    } else {
-                        toast.error("Veritabanı güncellenemedi.");
                     }
-                } else {
-                    toast.error("Dosya yüklenemedi.");
-                }
-            } catch (err) {
-                toast.error("Bir hata oluştu.");
-            } finally {
-                setIsUploading(false);
+                });
+            } else {
+                toast.error("Dosya yüklenemedi.");
             }
-        });
+        } catch (err) {
+            toast.error("Yükleme sırasında hata oluştu.");
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const thermalPaperSize = receiptSettings?.paperSize || "72mm";
@@ -423,10 +452,10 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
             <DialogTrigger asChild>
                 {children || (
                     <button
-                        className="h-9 w-9 flex items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 hover:text-orange-400 transition-all border border-orange-500/20 hover:border-orange-500/40"
+                        className="h-10 w-10 flex items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 hover:text-orange-400 transition-all border border-orange-500/20 hover:border-orange-500/40"
                         title="Belgeler & Sözleşme"
                     >
-                        <Paperclip className="h-4 w-4" />
+                        <Paperclip className="h-4.5 w-4.5" />
                     </button>
                 )}
             </DialogTrigger>
@@ -507,11 +536,29 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                         </div>
                         <Button
                             onClick={handlePrint}
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white  gap-2 h-12 rounded-xl shadow-lg shadow-blue-600/20 text-[11px] uppercase tracking-widest"
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white gap-2 h-12 rounded-2xl shadow-lg shadow-blue-600/20 text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95"
                         >
                             <Printer className="h-4 w-4" />
                             SÖZLEŞMEYİ YAZDIR
                         </Button>
+
+                        <Button
+                            onClick={() => setWhatsAppModalOpen(true)}
+                            variant="outline"
+                            className="w-full bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20 hover:border-emerald-500/40 gap-2 h-12 rounded-2xl text-[11px] font-bold uppercase tracking-widest transition-all active:scale-95"
+                        >
+                            <MessageCircle className="h-4 w-4" />
+                            WHATSAPP GÖNDER
+                        </Button>
+
+                        <WhatsAppConfirmModal
+                            isOpen={whatsAppModalOpen}
+                            onClose={() => setWhatsAppModalOpen(false)}
+                            customerName={customer.name}
+                            phones={customer.phone ? [customer.phone] : []}
+                            initialMessage={`Merhaba ${customer.name}, ${currentDevice.name} cihazınıza ait ${formType === "purchase" ? "alış" : "satış"} belgesi hazırlanmıştır.`}
+                            mode="selection"
+                        />
                     </div>
                 </div>
 
@@ -529,11 +576,22 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                             </TabsTrigger>
                         </TabsList>
 
-                        <div className="flex items-center gap-3">
-                            <Eye className="h-4 w-4 text-slate-600" />
-                            <div className="flex flex-col items-end shrink-0">
-                                <h2 className="font-medium text-[12px]  text-white leading-none uppercase">{device.name}</h2>
-                                <p className="text-[10px] text-muted-foreground/80  tracking-tight mt-1 truncate max-w-[150px]">IMEI: {device.deviceInfo?.imei || "—"}</p>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={refreshData}
+                                disabled={isRefreshing}
+                                className={`p-2 rounded-xl border border-border/60 hover:bg-white/5 transition-all flex items-center gap-2 group ${isRefreshing ? 'opacity-50 pointer-events-none' : ''}`}
+                                title="Verileri Yenile"
+                            >
+                                <RotateCw className={`h-4 w-4 text-muted-foreground group-hover:text-amber-500 transition-all ${isRefreshing ? 'animate-spin text-amber-500' : ''}`} />
+                                <span className="text-[10px] text-muted-foreground group-hover:text-white uppercase tracking-widest hidden sm:inline">Yenile</span>
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <Eye className="h-4 w-4 text-slate-600" />
+                                <div className="flex flex-col items-end shrink-0">
+                                    <h2 className="font-medium text-[12px]  text-white leading-none uppercase">{currentDevice.name}</h2>
+                                    <p className="text-[10px] text-muted-foreground/80  tracking-tight mt-1 truncate max-w-[150px]">IMEI: {currentDevice.deviceInfo?.imei || "—"}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -556,9 +614,9 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                         <div className="flex-1 bg-[#05070A] overflow-auto p-10 flex justify-center items-start custom-scrollbar">
                             <div className={`shadow-2xl ring-1 ring-white/5 ${printFormat === 'a4' ? 'w-[210mm]' : thermalPaperSize === '58mm' ? 'w-[58mm]' : thermalPaperSize === '80mm' ? 'w-[80mm]' : 'w-[72mm]'}`}>
                                 {printFormat === "a4" ? (
-                                    <A4Receipt device={device} formType={formType} date={now} customer={customer} expert={expert} shopInfo={shopInfo} />
+                                    <A4Receipt device={currentDevice} formType={formType} date={now} customer={customer} expert={expert} shopInfo={shopInfo} />
                                 ) : (
-                                    <ThermalReceipt device={device} formType={formType} date={now} customer={customer} shopInfo={shopInfo} />
+                                    <ThermalReceipt device={currentDevice} formType={formType} date={now} customer={customer} shopInfo={shopInfo} />
                                 )}
                             </div>
                         </div>
@@ -594,15 +652,19 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
 
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                 {/* Photos Array */}
-                                {device.deviceInfo?.photoUrls?.map((url: string, i: number) => {
+                                {currentDevice.deviceInfo?.photoUrls?.map((url: string, i: number) => {
                                     const isPdf = url.toLowerCase().includes('.pdf');
 
                                     const handleDelete = async () => {
                                         if (!confirm("Bu fotoğrafı silmek istediğinize emin misiniz?")) return;
                                         startTransition(async () => {
-                                            const newPhotos = device.deviceInfo.photoUrls.filter((_: any, idx: number) => idx !== i);
-                                            const res = await updateDeviceEntry(device.id, { photoUrls: newPhotos });
-                                            if (res.success) toast.success("Fotoğraf silindi.");
+                                            const newPhotos = currentDevice.deviceInfo.photoUrls.filter((_: any, idx: number) => idx !== i);
+                                            const res = await updateDeviceEntry(currentDevice.id, { photoUrls: newPhotos });
+                                            if (res.success) {
+                                                toast.success("Fotoğraf silindi.");
+                                                await refreshData();
+                                                router.refresh(); // Background refresh
+                                            }
                                             else toast.error("Hata oluştu.");
                                         });
                                     };
@@ -647,14 +709,18 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                                 })}
 
                                 {/* Seller ID Photo */}
-                                {device.deviceInfo?.sellerIdPhotoUrl && (() => {
-                                    const url = device.deviceInfo.sellerIdPhotoUrl;
+                                {currentDevice.deviceInfo?.sellerIdPhotoUrl && (() => {
+                                    const url = currentDevice.deviceInfo.sellerIdPhotoUrl;
                                     const isPdf = url.toLowerCase().includes('.pdf');
                                     const handleDelete = async () => {
                                         if (!confirm("Kimlik görselini silmek istediğinize emin misiniz?")) return;
                                         startTransition(async () => {
-                                            const res = await updateDeviceEntry(device.id, { sellerIdPhotoUrl: null });
-                                            if (res.success) toast.success("Kimlik görseli silindi.");
+                                            const res = await updateDeviceEntry(currentDevice.id, { sellerIdPhotoUrl: null });
+                                            if (res.success) {
+                                                toast.success("Kimlik görseli silindi.");
+                                                await refreshData();
+                                                router.refresh(); // Background refresh
+                                            }
                                             else toast.error("Hata oluştu.");
                                         });
                                     };
@@ -697,14 +763,18 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                                 })()}
 
                                 {/* Invoice Photo / PDF */}
-                                {device.deviceInfo?.invoiceUrl && (() => {
-                                    const url = device.deviceInfo.invoiceUrl;
+                                {currentDevice.deviceInfo?.invoiceUrl && (() => {
+                                    const url = currentDevice.deviceInfo.invoiceUrl;
                                     const isPdf = url.toLowerCase().includes('.pdf');
                                     const handleDelete = async () => {
                                         if (!confirm("Fatura belgesini silmek istediğinize emin misiniz?")) return;
                                         startTransition(async () => {
-                                            const res = await updateDeviceEntry(device.id, { invoiceUrl: null });
-                                            if (res.success) toast.success("Fatura silindi.");
+                                            const res = await updateDeviceEntry(currentDevice.id, { invoiceUrl: null });
+                                            if (res.success) {
+                                                toast.success("Fatura silindi.");
+                                                await refreshData();
+                                                router.refresh(); // Background refresh
+                                            }
                                             else toast.error("Hata oluştu.");
                                         });
                                     };
@@ -747,9 +817,9 @@ export function DeviceReceiptModal({ device, children, defaultOpen = false, onCl
                                 })()}
 
                                 {/* Empty State */}
-                                {!device.deviceInfo?.photoUrls?.length &&
-                                    !device.deviceInfo?.sellerIdPhotoUrl &&
-                                    !device.deviceInfo?.invoiceUrl && (
+                                {!currentDevice.deviceInfo?.photoUrls?.length &&
+                                    !currentDevice.deviceInfo?.sellerIdPhotoUrl &&
+                                    !currentDevice.deviceInfo?.invoiceUrl && (
                                         <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-3xl opacity-30">
                                             <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
                                                 <Package className="h-8 w-8 text-muted-foreground/80" />

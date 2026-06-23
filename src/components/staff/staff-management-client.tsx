@@ -547,13 +547,23 @@ export function StaffManagementClient({
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-black text-sm text-slate-900 dark:text-white tabular-nums">
-                                                                {member.salaryCurrency === "USD" ? "$" : ""}
-                                                                {(member.baseSalary || 0).toLocaleString('tr-TR', { minimumFractionDigits: member.salaryCurrency === "USD" ? 2 : 0 })}
-                                                                {member.salaryCurrency === "TRY" ? " ₺" : ""}
-                                                            </span>
-                                                            <span className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em] mt-0.5">MAAŞ</span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-black text-sm text-slate-900 dark:text-white tabular-nums">
+                                                                    {member.salaryCurrency === "USD" ? "$" : ""}
+                                                                    {(member.baseSalary || 0).toLocaleString('tr-TR', { minimumFractionDigits: member.salaryCurrency === "USD" ? 2 : 0 })}
+                                                                    {member.salaryCurrency === "TRY" ? " ₺" : ""}
+                                                                </span>
+                                                                <span className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em] mt-0.5 leading-none">SABİT MAAŞ</span>
+                                                            </div>
+                                                            {Number(member.serviceCommissionAmount || 0) > 0 && (
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-[11px] text-emerald-600 tabular-nums">
+                                                                        +{(member.serviceCommissionAmount || 0).toLocaleString('tr-TR')} ₺
+                                                                    </span>
+                                                                    <span className="text-[7px] text-slate-400 font-black uppercase tracking-[0.1em] leading-none">SERVİS PRİMİ</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-right pr-8">

@@ -258,16 +258,23 @@ export async function getEmployeeDashboardData(userId: string) {
     });
 
     // 7. Pro-rata Maaş Hesaplama (30 gün üzerinden)
-    const daysInMonth = 30; // Kullanıcı 30 gün üzerinden hesaplanmasını istedi
+    const daysInMonth = 30;
     let activeDaysCount = 30;
 
-    // Eğer personel bu ay işe girdiyse
-    if (user?.createdAt && user.createdAt > firstDayOfMonth) {
-        const startDay = user.createdAt.getDate();
-        activeDaysCount = 30 - startDay + 1;
-    }
+    const today = new Date();
+    const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    if (activeDaysCount < 0) activeDaysCount = 0;
+    // Eğer personel bu ay işe girdiyse, başlangıç gününü ayın başı değil işe giriş günü yap
+    const effectiveStartDate = (user?.createdAt && user.createdAt > startOfCurrentMonth)
+        ? user.createdAt
+        : startOfCurrentMonth;
+
+    // Çalışılan gün: Bugün - Başlangıç + 1 (Aynı gün bile olsa 1 gün sayılır)
+    const timeDiff = today.getTime() - effectiveStartDate.getTime();
+    activeDaysCount = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) || 1;
+
+    // Sınırlar: 0 ile 30 arası
+    if (activeDaysCount < 1) activeDaysCount = 1;
     if (activeDaysCount > 30) activeDaysCount = 30;
 
     const baseSalary = Number(user?.baseSalary || 0);
@@ -462,6 +469,72 @@ export async function addStaffDeduction({
 
 
 /**
+ * Belirli bir personel için arşiv kaydı oluşturur
+ */
+export async function createStaffArchive(userId: string, tx?: any) {
+    try {
+        const session = await auth();
+        const shopId = session?.user?.shopId;
+        if (!shopId) {
+            console.error("[createStaffArchive] shopId bulunamadı, arşiv atlanıyor.");
+            return null;
+        }
+
+        const data = await getEmployeeDashboardData(userId);
+        const now = new Date();
+        const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+        const userData = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, surname: true, email: true }
+        });
+
+        const db = tx || prisma;
+        const staffName = userData ? `${userData.name} ${userData.surname || ""}`.trim() : "Bilinmeyen Personel";
+        const staffEmail = userData?.email || "";
+
+        // upsert yerine findFirst + create/update kullan (nullable userId ile compound unique sorun yaratıyor)
+        const existing = await (db as any).monthlyStaffArchive.findFirst({
+            where: { userId, period, shopId }
+        });
+
+        if (existing) {
+            return await (db as any).monthlyStaffArchive.update({
+                where: { id: existing.id },
+                data: {
+                    staffName,
+                    staffEmail,
+                    baseSalary: data.finance.baseSalary,
+                    totalCommissions: data.finance.approvedCommissions,
+                    totalExpenses: data.finance.totalExpenses,
+                    netPayout: data.finance.netPayout,
+                    metadata: data,
+                }
+            });
+        } else {
+            return await (db as any).monthlyStaffArchive.create({
+                data: {
+                    userId,
+                    staffName,
+                    staffEmail,
+                    period,
+                    baseSalary: data.finance.baseSalary,
+                    totalCommissions: data.finance.approvedCommissions,
+                    totalExpenses: data.finance.totalExpenses,
+                    netPayout: data.finance.netPayout,
+                    shopId,
+                    metadata: data,
+                }
+            });
+        }
+    } catch (error) {
+        console.error("[createStaffArchive] Arşiv oluşturulurken hata:", error);
+        // Arşiv hatası silme işlemini engellemesin
+        return null;
+    }
+}
+
+/**
  * Aktif ayı kapatır ve arşivler
  */
 export async function closeFinancialPeriod() {
@@ -470,32 +543,18 @@ export async function closeFinancialPeriod() {
     if (!isAdmin) throw new Error("Yetkisiz işlem");
 
     const shopId = session.user.shopId!;
-    const now = new Date();
-    // Önceki ayı arşivlemek isteyebilir, ancak genelde "şu anki durumu dondur" mantığıdır.
-    const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
     const users = await prisma.user.findMany({
         where: { shopId, isApproved: true },
     });
 
     for (const user of users) {
-        const data = await getEmployeeDashboardData(user.id);
-
-        await (prisma as any).monthlyStaffArchive.create({
-            data: {
-                userId: user.id,
-                period,
-                baseSalary: data.finance.baseSalary,
-                totalCommissions: data.finance.approvedCommissions,
-                totalExpenses: data.finance.totalExpenses,
-                netPayout: data.finance.netPayout,
-                shopId,
-                metadata: JSON.stringify(data),
-            },
-        });
+        await createStaffArchive(user.id);
     }
 
     revalidatePath("/personel");
+    const now = new Date();
+    const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     return { success: true, period };
 }
 
@@ -764,11 +823,13 @@ export async function getFinanceAccounts() {
     const session = await auth();
     if (!session?.user?.shopId) throw new Error("Yetkisiz erişim");
 
-    return await prisma.financeAccount.findMany({
+    const accounts = await prisma.financeAccount.findMany({
         where: {
             shopId: session.user.shopId,
             isActive: true
         },
         orderBy: { isDefault: "desc" }
     });
+
+    return serializePrisma(accounts);
 }

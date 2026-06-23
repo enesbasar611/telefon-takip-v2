@@ -138,8 +138,8 @@ export function DeviceImportModal() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2 rounded-2xl border-dashed">
-                    <Upload className="h-4 w-4" />
+                <Button variant="outline" className="h-12 px-6 bg-card border-border/60 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all rounded-2xl gap-2 text-[11px] font-medium tracking-widest uppercase shadow-lg group">
+                    <Upload className="h-5 w-5 text-blue-500 group-hover:scale-110 transition-transform" />
                     <span className="hidden sm:inline">İçe Aktar (CSV)</span>
                 </Button>
             </DialogTrigger>

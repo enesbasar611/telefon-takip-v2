@@ -69,25 +69,28 @@ export async function getSystemNotifications(options?: {
       }
     });
 
-    const shouldIncludeFn = (id: string) => {
-      const isSnoozed = snoozedIds.has(id);
-      return options?.showSnoozed ? isSnoozed : !isSnoozed;
-    };
-
     dbStates.forEach((n: any) => {
-      if (!n.id.startsWith("stock-") && !n.id.startsWith("fin-") && !n.id.startsWith("pend-") && !n.id.startsWith("comp-") && !n.id.startsWith("deliv-") && !n.id.startsWith("warr-") && !n.id.startsWith("ai-") && !n.id.startsWith("debt-") && !n.isDeleted && shouldIncludeFn(n.id)) {
-        notifications.push({
-          id: n.id,
-          type: n.type as any,
-          category: (n.category === "SYSTEM" ? "Tümü" : n.category) as any,
-          title: n.title,
-          message: n.message,
-          createdAt: n.createdAt,
-          referenceId: n.referenceId,
-          status: n.status,
-          isRead: n.isRead,
-          metadata: n.metadata
-        });
+      const isSnoozed = snoozedIds.has(n.id);
+      const shouldInclude = options?.showSnoozed ? isSnoozed : !isSnoozed;
+
+      if (!n.isDeleted && shouldInclude) {
+        // If we are looking for snoozed ones, we include EVERYTHING that is snoozed
+        // regardless of whether it's virtual or manual, as long as it has a record in dbStates
+        if (options?.showSnoozed || (!n.id.startsWith("stock-") && !n.id.startsWith("fin-") && !n.id.startsWith("pend-") && !n.id.startsWith("comp-") && !n.id.startsWith("deliv-") && !n.id.startsWith("warr-") && !n.id.startsWith("ai-") && !n.id.startsWith("debt-"))) {
+          notifications.push({
+            id: n.id,
+            type: n.type as any,
+            category: (n.category === "SYSTEM" ? "Tümü" : n.category) as any,
+            title: n.title,
+            message: n.message,
+            createdAt: n.createdAt,
+            referenceId: n.referenceId,
+            status: n.status,
+            isRead: n.isRead,
+            metadata: n.metadata,
+            snoozedUntil: n.snoozedUntil
+          });
+        }
       }
     });
 
@@ -109,7 +112,7 @@ export async function getSystemNotifications(options?: {
         }
       }
 
-      if (!isDeleted && shouldIncludeFn(id)) {
+      if (!isDeleted && !snoozedIds.has(id) && !options?.showSnoozed) {
         notifications.push({
           id,
           type: "CRITICAL_STOCK",
@@ -119,7 +122,7 @@ export async function getSystemNotifications(options?: {
           createdAt: p.updatedAt,
           referenceId: p.id,
           isRead: readIds.has(id),
-          metadata: { stock: p.stock } // Include current stock for dismiss action
+          metadata: { stock: p.stock, productName: p.name } // Include current stock for dismiss action
         });
       }
     });
@@ -135,7 +138,7 @@ export async function getSystemNotifications(options?: {
     });
     suppliersWithDebt.forEach(s => {
       const id = `fin-${s.id}`;
-      if (!deletedIds.has(id) && shouldIncludeFn(id)) {
+      if (!deletedIds.has(id) && !snoozedIds.has(id) && !options?.showSnoozed) {
         notifications.push({
           id,
           type: "FINANCIAL_DELAY",
@@ -159,7 +162,7 @@ export async function getSystemNotifications(options?: {
       // PENDING APPROVAL
       if (t.status === "PENDING" || t.status === "WAITING_PART") {
         const id = `pend-${t.id}`;
-        if (!deletedIds.has(id) && shouldIncludeFn(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id) && !options?.showSnoozed) {
           notifications.push({
             id,
             type: "PENDING_APPROVAL",
@@ -178,7 +181,7 @@ export async function getSystemNotifications(options?: {
       // COMPLETED
       if ((t.status === "READY" || t.status === "DELIVERED") && t.updatedAt >= threeDaysAgo) {
         const id = `comp-${t.id}`;
-        if (!deletedIds.has(id) && shouldIncludeFn(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id) && !options?.showSnoozed) {
           notifications.push({
             id,
             type: "COMPLETED",
@@ -196,7 +199,7 @@ export async function getSystemNotifications(options?: {
       // DELIVERY_TIME
       if (t.estimatedDeliveryDate && t.estimatedDeliveryDate <= now && t.status !== "DELIVERED") {
         const id = `deliv-${t.id}`;
-        if (!deletedIds.has(id) && shouldIncludeFn(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id) && !options?.showSnoozed) {
           const delayDays = Math.floor((now.getTime() - t.estimatedDeliveryDate.getTime()) / (1000 * 60 * 60 * 24));
           const delayMsg = delayDays > 0 ? `${delayDays} gün gecikti!` : "Bugün teslim edilmeli!";
           notifications.push({
@@ -216,7 +219,7 @@ export async function getSystemNotifications(options?: {
       // WARRANTY_EXPIRY
       if (t.warrantyExpiry && t.warrantyExpiry > now && t.warrantyExpiry.getTime() - now.getTime() < 14 * 24 * 60 * 60 * 1000) {
         const id = `warr-${t.id}`;
-        if (!deletedIds.has(id) && shouldIncludeFn(id)) {
+        if (!deletedIds.has(id) && !snoozedIds.has(id) && !options?.showSnoozed) {
           const daysLeft = Math.ceil((t.warrantyExpiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           notifications.push({
             id,
@@ -244,7 +247,7 @@ export async function getSystemNotifications(options?: {
 
     stockAlerts.forEach((a: any) => {
       const id = `ai-${a.id}`;
-      if (!deletedIds.has(id) && shouldIncludeFn(id)) {
+      if (!deletedIds.has(id) && !snoozedIds.has(id) && !options?.showSnoozed) {
         notifications.push({
           id,
           type: "CRITICAL_STOCK",
@@ -271,7 +274,7 @@ export async function getSystemNotifications(options?: {
 
     trackedDebts.forEach(d => {
       const id = `debt-${d.id}`;
-      if (!deletedIds.has(id) && shouldIncludeFn(id)) {
+      if (!deletedIds.has(id) && !snoozedIds.has(id) && !options?.showSnoozed) {
         notifications.push({
           id,
           type: "DEBT_TRACKING",
@@ -426,7 +429,7 @@ export async function dismissNotificationAction(id: string, metadata?: any) {
     return { success: false };
   }
 }
-export async function snoozeNotificationAction(id: string, hours: number = 24) {
+export async function snoozeNotificationAction(id: string, hours: number = 24, data?: { title?: string, message?: string, category?: string, type?: string }) {
   try {
     const shopId = await getShopId();
     const snoozedUntil = new Date(Date.now() + hours * 60 * 60 * 1000);
@@ -439,15 +442,16 @@ export async function snoozeNotificationAction(id: string, hours: number = 24) {
       create: {
         id,
         shopId,
-        title: "Ertelenmiş Bildirim",
-        message: "Bu bildirim kullanıcı tarafından ertelendi.",
-        type: "SYSTEM",
-        category: "SYSTEM",
+        title: data?.title || "Ertelenmiş Bildirim",
+        message: data?.message || "Bu bildirim kullanıcı tarafından ertelendi.",
+        type: data?.type || "SYSTEM",
+        category: data?.category || "SYSTEM",
         // @ts-ignore
         snoozedUntil
       }
     });
 
+    revalidatePath("/bildirimler");
     revalidatePath("/");
     return { success: true };
   } catch (error) {

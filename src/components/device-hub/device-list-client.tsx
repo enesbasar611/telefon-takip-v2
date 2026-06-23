@@ -129,14 +129,14 @@ export function DeviceListClient({ initialDevices, initialDeviceId, month, start
                     <Button
                         variant="ghost"
                         onClick={() => setActiveTab("STOCK")}
-                        className={`flex-1 md:flex-none rounded-xl px-4 md:px-8 h-11 text-[11px] md:text-xs transition-all whitespace-nowrap ${activeTab === "STOCK" ? "bg-blue-600 text-white shadow-lg" : "text-muted-foreground hover:bg-white/5"}`}
+                        className={`flex-1 md:flex-none rounded-2xl px-4 md:px-8 h-12 text-[11px] md:text-xs transition-all whitespace-nowrap ${activeTab === "STOCK" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-muted-foreground hover:bg-white/5"}`}
                     >
                         MEVCUT STOK ({devices.filter((d: any) => d.stock > 0).length})
                     </Button>
                     <Button
                         variant="ghost"
                         onClick={() => setActiveTab("SOLD")}
-                        className={`flex-1 md:flex-none rounded-xl px-4 md:px-8 h-11 text-[11px] md:text-xs transition-all whitespace-nowrap ${activeTab === "SOLD" ? "bg-emerald-600 text-white shadow-lg" : "text-muted-foreground hover:bg-white/5"}`}
+                        className={`flex-1 md:flex-none rounded-2xl px-4 md:px-8 h-12 text-[11px] md:text-xs transition-all whitespace-nowrap ${activeTab === "SOLD" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" : "text-muted-foreground hover:bg-white/5"}`}
                     >
                         SATILANLAR ({devices.filter((d: any) => d.stock === 0).length})
                     </Button>
@@ -158,7 +158,7 @@ export function DeviceListClient({ initialDevices, initialDeviceId, month, start
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
                             <Input
                                 placeholder={activeTab === "STOCK" ? "Model veya IMEI No..." : "Müşteri veya Model..."}
-                                className="h-11 pl-9 bg-background/50 border-border rounded-xl text-sm font-medium"
+                                className="h-12 pl-9 bg-background/50 border-border rounded-2xl text-sm font-medium"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -167,7 +167,7 @@ export function DeviceListClient({ initialDevices, initialDeviceId, month, start
                     <div className="md:col-span-3 space-y-1.5 order-2">
                         <Label className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-widest px-1">MARKA</Label>
                         <Select value={brandFilter} onValueChange={setBrandFilter}>
-                            <SelectTrigger className="h-11 bg-background/50 border-border rounded-xl text-sm font-medium">
+                            <SelectTrigger className="h-12 bg-background/50 border-border rounded-2xl text-sm font-medium">
                                 <SelectValue placeholder="Tümü" />
                             </SelectTrigger>
                             <SelectContent className="bg-card border-border">
@@ -180,7 +180,7 @@ export function DeviceListClient({ initialDevices, initialDeviceId, month, start
                     </div>
                     <div className="md:col-span-2 space-y-1.5 order-4 md:order-3">
                         <Label className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-widest px-1">TİP</Label>
-                        <div className="flex items-center bg-background/50 rounded-xl p-1 border border-border h-11 overflow-x-auto scrollbar-none">
+                        <div className="flex items-center bg-background/50 rounded-2xl p-1 border border-border h-12 overflow-x-auto scrollbar-none">
                             <button
                                 onClick={() => setTypeFilter("all")}
                                 className={`flex-1 min-w-[50px] h-full text-[10px] uppercase tracking-tighter rounded-lg transition-all ${typeFilter === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground/80 hover:text-foreground"}`}
@@ -211,7 +211,7 @@ export function DeviceListClient({ initialDevices, initialDeviceId, month, start
                         <div className="md:col-span-3 space-y-1.5 order-3 md:order-4">
                             <Label className="font-medium text-[10px] text-muted-foreground/80 uppercase tracking-widest px-1">GARANTİ DURUMU</Label>
                             <Select value={warrantyFilter} onValueChange={setWarrantyFilter}>
-                                <SelectTrigger className="h-11 bg-background/50 border-border rounded-xl text-sm font-medium">
+                                <SelectTrigger className="h-12 bg-background/50 border-border rounded-2xl text-sm font-medium">
                                     <SelectValue placeholder="Tüm Durumlar" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-card border-border">
