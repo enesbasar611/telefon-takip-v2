@@ -28,8 +28,13 @@ services:
       - NEXTAUTH_URL=https://basarteknik.tech
       - AUTH_TRUST_HOST=true # NextAuth v4 için Traefik güvenliği
 
+    # --- Otomasyonun Kalbi ---
+    # İmajın içinden gelen en güncel şemayı Neon'a basar, ardından standalone server'ı başlatır.
+    command: node server.js
+
     volumes:
       - whatsapp-auth:/app/.whatsapp-auth
+      # NOT: ./prisma volume köprüsü tamamen kaldırıldı. Şema artık direkt imajın içinden okunuyor!
 
 volumes:
   whatsapp-auth:

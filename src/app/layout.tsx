@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { Navbar } from "@/components/navbar";
@@ -30,6 +31,11 @@ export default async function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning className="antialiased">
       <body className="bg-background text-foreground antialiased flex min-h-screen flex-col">
+        <Script
+          src="https://cloud.umami.is/script.js"
+          data-website-id="1f168c73-f8d9-4e77-9fbf-523498788a3d"
+          strategy="lazyOnload"
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
