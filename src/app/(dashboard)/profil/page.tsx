@@ -112,7 +112,7 @@ export default function ProfilePage() {
                 surname: editData.surname,
                 phone: editData.phone,
                 image: editData.image
-            });
+            }) as { success: boolean; error?: string };
 
             // Mağaza bilgilerini güncelle (Yönetici ve Admin rolü için)
             if (profile.role === "SHOP_MANAGER" || profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") {
@@ -190,7 +190,7 @@ export default function ProfilePage() {
             const base64 = event.target?.result as string;
             setIsSaving(true);
             try {
-                const res = await updateProfile({ name: editData.name || profile.name, surname: editData.surname || profile.surname, phone: editData.phone || profile.phone, image: base64 });
+                const res = await updateProfile({ name: editData.name || profile.name, surname: editData.surname || profile.surname, phone: editData.phone || profile.phone, image: base64 }) as any;
                 if (res.success) {
                     setProfile({ ...profile, image: base64 });
                     setEditData(prev => ({ ...prev, image: base64 }));

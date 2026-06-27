@@ -14,10 +14,13 @@ export async function StatsGridStream({ labels }: { labels?: Record<string, stri
     const queryClient = new QueryClient();
     await queryClient.prefetchQuery({
         queryKey: ["dashboard-init", shopId || ""],
-        queryFn: () => getDashboardInit(shopId),
+        queryFn: () => getDashboardInit(shopId || undefined),
     });
 
-    const statsDataRaw = await getDashboardStats(shopId);
+    const [initData, statsDataRaw] = await Promise.all([
+        getDashboardInit(shopId || undefined),
+        getDashboardStats()
+    ]);
     const statsData = serializePrisma(statsDataRaw);
 
     const stats = [

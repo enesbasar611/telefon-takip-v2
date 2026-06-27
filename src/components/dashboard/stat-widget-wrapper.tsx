@@ -17,8 +17,8 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency }: StatW
     const [isOpen, setIsOpen] = useState(false);
 
     const { data: dashboardInit, isLoading, isError } = useQuery({
-        queryKey: ["dashboard-init", shopId || ""],
-        queryFn: () => getDashboardInit(shopId),
+        queryKey: ["dashboard-init", shopId || "all"],
+        queryFn: () => getDashboardInit(shopId || undefined),
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,

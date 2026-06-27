@@ -86,7 +86,7 @@ export function StaffDeleteModal({ isOpen, onClose, member, otherStaff, onDelete
             getEmployeeDashboardData(member.id).then(data => setFinanceData(data));
             getFinanceAccounts().then(accs => {
                 setAccounts(accs);
-                const defaultAcc = accs.find(a => a.isDefault);
+                const defaultAcc = accs.find((a: any) => a.isDefault);
                 if (defaultAcc) setSelectedAccountId(defaultAcc.id);
                 else if (accs.length > 0) setSelectedAccountId(accs[0].id);
             });

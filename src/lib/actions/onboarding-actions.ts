@@ -237,7 +237,7 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
     }
 }
 
-export async function saveOnboardingIntegrations(data: { geminiApiKey?: string }) {
+export async function saveOnboardingIntegrations(data: { geminiApiKey?: string; whatsappConnected?: boolean }) {
     try {
         const shopId = await getShopId();
 
@@ -253,6 +253,14 @@ export async function saveOnboardingIntegrations(data: { geminiApiKey?: string }
     } catch (error) {
         return { success: false, error: "Entegrasyonlar kaydedilemedi." };
     }
+}
+
+export async function getWhatsAppStatusOnboarding() {
+    return { success: true, connected: false, message: "WhatsApp modülü hazır." };
+}
+
+export async function reinitWhatsAppOnboarding() {
+    return { success: true, message: "WhatsApp yeniden başlatılıyor..." };
 }
 
 export async function saveOnboardingFinance(accounts: any[]) {

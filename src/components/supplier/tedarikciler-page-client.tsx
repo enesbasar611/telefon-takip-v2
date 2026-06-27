@@ -38,7 +38,6 @@ import {
     Trash2,
     RefreshCcw
 } from "lucide-react";
-import { CreateSupplierModal } from "@/components/supplier/create-supplier-modal";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -50,8 +49,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { SupplierAnalysisModal } from "@/components/supplier/supplier-analysis-modal";
-import { SupplierOrderListsPanel } from "@/components/supplier/supplier-order-lists-panel";
 import { MalKabulModal } from "@/components/supplier/mal-kabul-modal";
+import { CreateSupplierModal } from "@/components/supplier/create-supplier-modal";
 import { toast } from "sonner";
 import { useSupplierOrders } from "@/lib/context/supplier-order-context";
 import { format } from "date-fns";
@@ -151,7 +150,6 @@ export function TedarikcilerPageClient({
     const shop = shopData || initialShop;
 
     const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
-    const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
     const [isPurchaseFormOpen, setIsPurchaseFormOpen] = useState(false);
     const [isGlobalMalKabulOpen, setIsGlobalMalKabulOpen] = useState(false);
     const [isGlobalDetailOpen, setIsGlobalDetailOpen] = useState(false);
@@ -179,7 +177,6 @@ export function TedarikcilerPageClient({
         }
         router.push(`${pathname}?${params.toString()}`);
     };
-    const { totalItemCount } = useSupplierOrders();
 
     const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
 
@@ -270,19 +267,7 @@ export function TedarikcilerPageClient({
                 }
                 actions={
                     <div className="flex items-center gap-3 flex-wrap justify-end">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsOrderPanelOpen(true)}
-                            className="relative h-12 px-6 rounded-xl text-xs gap-3 border-border/40 hover:bg-white/5 shadow-xl"
-                        >
-                            <ShoppingBasket className="h-5 w-5" />
-                            Sipariş Listeleri
-                            {totalItemCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-blue-600 text-[10px] text-white flex items-center justify-center border-2 border-background font-bold shadow-lg">
-                                    {totalItemCount}
-                                </span>
-                            )}
-                        </Button>
+
                         <Button
                             onClick={() => setIsAnalysisOpen(true)}
                             className={cn(
@@ -878,19 +863,7 @@ export function TedarikcilerPageClient({
                                 </button>
                             ))}
 
-                            {/* Supplier Order Lists shortcut */}
-                            <button onClick={() => setIsOrderPanelOpen(true)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-blue-500/5 border border-blue-500/10 transition-all group text-left mt-2">
-                                <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-blue-500/10 relative">
-                                    <ShoppingBasket className="h-4 w-4 text-blue-400" />
-                                    {totalItemCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-600 text-[8px]  text-white flex items-center justify-center">
-                                            {totalItemCount}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className="text-sm  text-blue-400 group-hover:text-blue-300 transition-colors">Sipariş Listelerim</span>
-                                <ArrowRight className="h-3 w-3 text-blue-400 ml-auto" />
-                            </button>
+
                         </CardContent>
                     </Card>
 
@@ -972,10 +945,7 @@ export function TedarikcilerPageClient({
                 suppliers={suppliers}
                 criticalProducts={criticalProducts}
             />
-            <SupplierOrderListsPanel
-                isOpen={isOrderPanelOpen}
-                onClose={() => setIsOrderPanelOpen(false)}
-            />
+
             <PurchaseForm
                 isOpen={isPurchaseFormOpen}
                 onClose={() => setIsPurchaseFormOpen(false)}

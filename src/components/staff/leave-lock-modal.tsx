@@ -19,7 +19,7 @@ export function LeaveLockModal({ leave, userName }: LeaveLockModalProps) {
     const handleEndLeave = async () => {
         try {
             setIsEnding(true);
-            const res = await deleteLeave(leave.id);
+            const res = await deleteLeave(leave.id) as { success: boolean; error?: string };
             if (res.success) {
                 toast.success("İzin sonlandırıldı. İyi çalışmalar!");
                 window.location.reload();

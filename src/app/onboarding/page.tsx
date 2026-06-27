@@ -170,7 +170,7 @@ export default function OnboardingPage() {
         let interval: any;
         if (step === "integrations") {
             const checkStatus = async () => {
-                const res: any = await getWhatsAppStatusOnboarding(shopId || undefined);
+                const res: any = await getWhatsAppStatusOnboarding();
                 if (res && res.success) setWsStatus(res);
             };
             checkStatus();
@@ -620,7 +620,7 @@ export default function OnboardingPage() {
                                                 )}
                                                 <Button
                                                     variant="ghost"
-                                                    onClick={() => reinitWhatsAppOnboarding(shopId || undefined)}
+                                                    onClick={() => reinitWhatsAppOnboarding()}
                                                     className="mt-6 text-[10px] font-black tracking-widest text-emerald-500/40 hover:text-emerald-500 hover:bg-emerald-500/10 h-8 rounded-lg"
                                                 >
                                                     OTURUMU DEĞİŞTİR
@@ -636,7 +636,7 @@ export default function OnboardingPage() {
                                                     <QrCode className="h-10 w-10 text-white/20" />
                                                 </div>
                                                 <Button
-                                                    onClick={() => reinitWhatsAppOnboarding(shopId || undefined)}
+                                                    onClick={() => reinitWhatsAppOnboarding()}
                                                     className="h-14 px-8 bg-emerald-500 text-black font-black rounded-2xl hover:bg-emerald-400 transition-all font-sans"
                                                 >
                                                     BAĞLANTIYI BAŞLAT

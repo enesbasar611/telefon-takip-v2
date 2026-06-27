@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getInvoiceViewUrl, getInvoiceHtml, getShopEdmCredentials } from "@/lib/edm/rest-client";
+import { getShopEdmCredentials, getInvoiceHTML, getInvoiceViewUrl } from "@/lib/edm/rest-client";
 
 /**
  * GET /api/edm/invoice/[id]/render
  * Faturayı yerel olarak render etmek (XSLT transform) yerine EDM'in resmi izleme portalına (ViewInvoice) yönlendirir.
- * Bu sayede xslt-processor bağımlılığına ve sunucu taraflı karmaşık işlemlere gerek kalmaz.
  */
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await auth();
@@ -20,7 +19,7 @@ export async function GET(
 
         const user = session.user as any;
         const shopId = user.shopId || user.currentShopId;
-        const { id } = params;
+        const { id } = await params;
 
         // 1. Veritabanından faturayı bul
         const invoice = await prisma.eDMInvoice.findFirst({
@@ -36,6 +35,7 @@ export async function GET(
                 uuid: true,
                 type: true,
                 shopId: true,
+                invoiceId: true,
             },
         });
 
@@ -56,34 +56,59 @@ export async function GET(
             );
         }
 
-        // 3. EDM'den ham HTML içeriğini çek (En güvenli ve profesyonel yöntem)
-        console.log(`[EDM Render] Fetching HTML for UUID: ${invoice.uuid}`);
-        const htmlContent = await getInvoiceHtml(credentials, invoice.uuid);
+        // 3. EDM Portal Linki (Redirect) — büyük/küçük harf toleranslı
+        // Fatura tipine göre EDM render tipini belirle
+        const typeStr = String(invoice.type).toUpperCase();
+        const renderType = typeStr.includes('EAR') || typeStr.includes('ARCHIVE') ? 'earsiv' : 'efatura';
+        // VKN olarak öncelik senderVkn, yoksa username
+        const vkn = credentials.senderVkn || credentials.username;
 
-        if (!htmlContent) {
-            // Fallback: EDM Portal Linki (Redirect)
-            // Enum değerleri: EARCHIVE | EINVOICE
-            const isEArxiv = invoice.type === 'EARCHIVE';
-            const portalType = isEArxiv ? 'earsiv' : 'efatura';
+        let htmlContent = "";
 
-            const fallbackUrl = getInvoiceViewUrl(credentials.senderVkn, invoice.uuid, portalType as any);
+        try {
+            // 1. ADIM: API üzerinden HTML çekmeyi dene
+            console.log(`[Proxy] API üzerinden HTML çekiliyor: ${invoice.uuid}`);
+            htmlContent = await getInvoiceHTML(credentials, invoice.uuid, renderType, invoice.invoiceId || undefined);
+        } catch (apiError) {
+            console.error("[Proxy] API HTML Hatası, Public Link deneniyor:", apiError instanceof Error ? apiError.message : apiError);
 
-            console.warn(`[EDM Render] HTML içeriği çekilemedi, portala yönlendiriliyor: ${fallbackUrl}`);
-            return NextResponse.redirect(fallbackUrl, 307);
+            // 2. ADIM: API patlarsa veya 503 verirse, kamuya açık görüntüleme linkinden fetch et
+            // Bu link genelde login gerektirmez ve daha stabildir
+            const publicUrl = `https://view.edmbilisim.com.tr/fatura/ViewInvoice/${vkn}/${invoice.uuid}/${renderType}`;
+            console.log(`[Proxy] Public URL'den fetch ediliyor: ${publicUrl}`);
+
+            try {
+                const response = await fetch(publicUrl);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                htmlContent = await response.text();
+            } catch (fetchError) {
+                console.error("[Proxy] Public Fetch Hatası:", fetchError);
+                // Eğer scrap da başarısız olursa mecburen redirect et
+                return NextResponse.redirect(publicUrl, 307);
+            }
         }
 
-        // 4. HTML içeriğini döndür
-        return new Response(htmlContent, {
+        // HTML içeriğini temizle ve base etiketi ekle
+        // Bu sayede CSS ve resimler EDM sunucularından çekilmeye devam eder
+        let processedHtml = htmlContent;
+        if (!processedHtml.includes('<base')) {
+            processedHtml = processedHtml.replace('<head>', '<head><base href="https://view.edmbilisim.com.tr/">');
+        }
+
+        // HTML olarak döndür
+        return new NextResponse(processedHtml, {
             headers: {
-                "Content-Type": "text/html; charset=utf-8",
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-            },
+                'Content-Type': 'text/html; charset=utf-8',
+                'X-Frame-Options': 'ALLOWALL', // Iframe içinde gösterilmesine izin ver
+                'Content-Security-Policy': "frame-ancestors 'self' *" // Güvenlik duvarını esnet
+            }
         });
-    } catch (error: any) {
-        console.error("[EDM Render API] Hata:", error.message);
-        return NextResponse.json({
-            error: "Fatura görüntüleme yönlendirmesi sırasında hata oluştu.",
-            detail: error.message
-        }, { status: 500 });
+
+    } catch (error) {
+        console.error("[Render Route] Beklenmeyen Hata:", error);
+        return NextResponse.json(
+            { error: "Fatura görüntüleme sırasında bir hata oluştu.", detail: error instanceof Error ? error.message : "Bilinmeyen hata" },
+            { status: 500 }
+        );
     }
 }

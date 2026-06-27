@@ -1367,29 +1367,47 @@ export async function assignShortageBulkToCourier(ids: string[], courierId: stri
   }
 }
 
-export async function bulkAssignProductsToCourier(productIds: string[], courierId: string | null) {
+export async function bulkAssignProductsToCourier(
+  items: (string | { productId?: string; name?: string; quantity: number })[],
+  courierId: string | null
+) {
   try {
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    // Normalize items to { productId?, name?, quantity }
+    const normalizedItems = items.map(item => {
+      if (typeof item === 'string') {
+        return { productId: item, quantity: 1 };
+      }
+      return item;
+    });
+
+    const productIds = normalizedItems.map(i => i.productId).filter(Boolean) as string[];
 
     const products = await prisma.product.findMany({
       where: { id: { in: productIds }, shopId }
     });
 
     const results = await prisma.$transaction(
-      products.map(product =>
-        prisma.shortageItem.create({
+      normalizedItems.map(item => {
+        const product = item.productId ? products.find(p => p.id === item.productId) : null;
+        const name = product?.name || item.name;
+
+        if (!name) return null;
+
+        return prisma.shortageItem.create({
           data: {
-            name: product.name,
-            productId: product.id,
-            quantity: 1,
-            shopId: product.shopId,
+            name: name,
+            productId: product?.id || null,
+            quantity: item.quantity,
+            shopId: shopId,
             assignedToId: courierId,
             requesterName: "Dükkan",
             notes: courierId ? "TOPLU KURYE ATAMASI" : "TOPLU EKSİK LİSTESİ"
           }
-        })
-      )
+        });
+      }).filter(Boolean) as any
     );
 
     revalidateTag(`shortage-${shopId}`);
@@ -1416,9 +1434,6 @@ export async function clearAllShortages() {
         isTaken: false
       }
     });
-
-    // Auto-sync zero stock products after cleanup as requested
-    await syncZeroStockShortages();
 
     revalidateTag(`shortage-${shopId}`);
     revalidateTag(`dashboard-${shopId}`);

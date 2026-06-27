@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Receipt, Eye, EyeOff } from "lucide-react";
+import { Receipt, Eye, EyeOff, FileText, Download } from "lucide-react";
+import { toast } from "sonner";
 import { ReceiptTemplate } from "@/components/common/receipt-template";
 import { ReceiptModalWrapper } from "@/components/common/receipt-modal-wrapper";
 import { getReceiptSettings } from "@/lib/actions/receipt-settings";
@@ -11,6 +12,10 @@ import { cn } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { generateProfessionalPDF } from "@/lib/receipt-print-styles";
+
+import { DebtStatementModern } from "./debt-statement-modern";
+import { useQuery } from "@tanstack/react-query";
+import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
 
 interface DebtReceiptModalProps {
     open: boolean;
@@ -50,7 +55,7 @@ const ReceiptContent = ({
         .filter((d: any) => d.currency === 'USD')
         .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
 
-    const currentUsdRate = Number(rates?.usd || rates?.USD) || 34.5;
+    const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 32.50;
     const portfolioTotalTRY = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
     const portfolioTotalUSD = (totalTRY / currentUsdRate) + totalUSD;
 
@@ -234,24 +239,50 @@ export function DebtReceiptModal({
     const [settings, setSettings] = useState<any>(null);
     const [showPaid, setShowPaid] = useState(initialShowPaid);
 
+    const { data: liveRates } = useQuery({
+        queryKey: ["rates"],
+        queryFn: () => getCurrentExchangeRates(),
+        refetchInterval: 60000 // 1 dakikada bir yenile
+    });
+
+    const activeRates = liveRates || rates;
+
     useEffect(() => {
         if (open) {
             getReceiptSettings("debt").then(setSettings);
         }
     }, [open]);
 
+    const [pdfLoading, setPdfLoading] = useState(false);
+
     const handlePDF = async () => {
-        const id = `debt-receipt-${customer.id}`;
-        const element = document.getElementById(id);
-        if (element) {
-            await generateProfessionalPDF(element, `ekstre-${customer.name.replace(/\s+/g, "-")}.pdf`);
+        try {
+            setPdfLoading(true);
+            const id = `debt-statement-modern-${customer.id}`;
+            const element = document.getElementById(id);
+
+            if (!element) {
+                toast.error("PDF hazırlanamadı: Görünüm oluşturulamadı");
+                return;
+            }
+
+            // Gerekli fontlar ve resimlerin render olması için kısa bir bekleme
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            await generateProfessionalPDF(element, `ekstre-${customer.name.replace(/\s+/g, "-")}`);
+            toast.success("PDF başarıyla oluşturuldu");
+        } catch (error) {
+            console.error("PDF Export Error:", error);
+            toast.error("PDF oluşturulurken hata oluştu");
+        } finally {
+            setPdfLoading(false);
         }
     };
 
     const currentPaperSize = settings?.paperSize || "72mm";
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
+        <>
             <ReceiptModalWrapper
                 open={open}
                 onClose={onClose}
@@ -289,7 +320,7 @@ export function DebtReceiptModal({
                             shopAddress={shopAddress}
                             shopWebsite={shopWebsite}
                             shopLogo={shopLogo}
-                            rates={rates}
+                            rates={activeRates}
                             showPaid={showPaid}
                             settings={settings}
                             defaultCurrency={defaultCurrency}
@@ -297,6 +328,38 @@ export function DebtReceiptModal({
                     </div>
                 )}
             </ReceiptModalWrapper>
-        </Dialog>
+
+            {/* Hidden modern statement for PDF export - Moved outside to prevent clipping */}
+            <div
+                id={`debt-statement-modern-${customer.id}`}
+                style={{
+                    position: 'fixed',
+                    left: '-9999px',
+                    top: '0',
+                    width: '210mm',
+                    height: 'auto',
+                    opacity: 1,
+                    visibility: 'visible',
+                    zIndex: -9999,
+                    pointerEvents: 'none',
+                    background: 'white'
+                }}
+            >
+                {open && (
+                    <DebtStatementModern
+                        customer={customer}
+                        debts={debts}
+                        shopName={shopName!}
+                        shopPhone={shopPhone}
+                        shopAddress={shopAddress}
+                        shopWebsite={shopWebsite}
+                        shopLogo={shopLogo}
+                        rates={activeRates}
+                        showPaid={showPaid}
+                        defaultCurrency={defaultCurrency}
+                    />
+                )}
+            </div>
+        </>
     );
 }

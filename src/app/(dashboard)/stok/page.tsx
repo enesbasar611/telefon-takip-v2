@@ -10,6 +10,8 @@ import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/page-header";
 import { getShop } from "@/lib/actions/setting-actions";
+import { SmartReplenishmentPanel } from "@/components/supplier/smart-replenishment-panel";
+import { SupplierOrderListsPanel } from "@/components/supplier/supplier-order-lists-panel";
 
 function TableSkeleton() {
   return (
@@ -61,20 +63,31 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         }
       />
 
-      <div className="space-y-8">
-        <Suspense fallback={<CardSkeleton />}>
-          <StockMetricsStream />
-        </Suspense>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        {/* Main Content Area (8/12) */}
+        <div className="xl:col-span-8 space-y-8">
+          <div className="space-y-8">
+            <Suspense fallback={<CardSkeleton />}>
+              <StockMetricsStream />
+            </Suspense>
 
-        <Suspense fallback={<CardSkeleton />}>
-          <CategorySummaryStream />
-        </Suspense>
-      </div>
+            <Suspense fallback={<CardSkeleton />}>
+              <CategorySummaryStream />
+            </Suspense>
+          </div>
 
-      <div className="bg-card shadow-sm rounded-[2rem] overflow-hidden border border-border">
-        <Suspense fallback={<TableSkeleton />}>
-          <StockTableStream searchParams={searchParams} shop={shop} />
-        </Suspense>
+          <div className="bg-card shadow-sm rounded-[2rem] overflow-hidden border border-border">
+            <Suspense fallback={<TableSkeleton />}>
+              <StockTableStream searchParams={searchParams} shop={shop} />
+            </Suspense>
+          </div>
+        </div>
+
+        {/* Sidebar Area (4/12) */}
+        <div className="xl:col-span-4 space-y-6">
+          <SmartReplenishmentPanel suppliers={suppliers} />
+          <SupplierOrderListsPanel isInline={true} />
+        </div>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export function SmartInsightsStream({ cols = 8, rows = 4, shopId, onDataStatus }
     const { data, isLoading } = useQuery({
         queryKey: ["dashboard-smart-insights", shopId || ""],
         queryFn: async () => {
-            const dataRaw = await getDashboardStats(shopId || "");
+            const dataRaw = await getDashboardStats();
             const data = serializePrisma(dataRaw);
             if (onDataStatus) {
                 // Usually not empty if we have any stats, but let's check

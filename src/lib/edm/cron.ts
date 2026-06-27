@@ -13,8 +13,8 @@ export function initEdmCron() {
         console.log("[CRON] Gelen fatura senkronizasyonu başlatılıyor...");
         try {
             const shops = await prisma.shop.findMany({
-                where: { eDMSettings: { edmActive: true } },
-                include: { eDMSettings: true },
+                where: { edmSettings: { edmActive: true } },
+                include: { edmSettings: true },
             });
 
             for (const shop of shops) {
@@ -27,7 +27,7 @@ export function initEdmCron() {
                         {
                             username: process.env.EDM_USERNAME || "",
                             password: process.env.EDM_PASSWORD || "",
-                            senderVkn: shop.eDMSettings?.senderVkn || process.env.EDM_SENDER_VKN || "",
+                            senderVkn: shop.edmSettings?.senderVkn || process.env.EDM_SENDER_VKN || "",
                             baseUrl: process.env.EDM_REST_API_URL,
                         } as any,
                         {
@@ -54,7 +54,7 @@ export function initEdmCron() {
                             invoiceId: inv.ID || inv.id || uuid,
                             senderVkn: inv.senderVKN || inv.sender || "",
                             senderName: inv.senderName || inv.supplier || "Bilinmeyen",
-                            receiverVkn: inv.receiverVKN || shop.eDMSettings?.senderVkn || "",
+                            receiverVkn: inv.receiverVKN || shop.edmSettings?.senderVkn || "",
                             amount: inv.payableAmount?.value || inv.amount || 0,
                             currency: inv.payableAmount?.currencyID === 0 ? "TRY" : (inv.currency || "TRY"),
                             status: inv.status || "PENDING",

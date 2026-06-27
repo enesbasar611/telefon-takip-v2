@@ -6,7 +6,7 @@ import { Loader2, FileText, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { getShopEdmSettings } from "@/lib/actions/edm-settings-actions";
-import { EDMSetupForm } from "@/components/edm/edm-setup-form";
+import { EDMLoginForm } from "@/components/edm/edm-login-form";
 import { EDMDashboard } from "@/components/edm/edm-dashboard";
 import { getShop } from "@/lib/actions/setting-actions";
 
@@ -14,8 +14,8 @@ export default function EfaturaPage() {
     const { data: session } = useSession();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
-    const [edmConfigured, setEdmConfigured] = useState<boolean | null>(null);
     const [isModuleActive, setIsModuleActive] = useState<boolean | null>(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     async function checkStatus() {
         setLoading(true);
@@ -26,11 +26,12 @@ export default function EfaturaPage() {
             ]);
 
             setIsModuleActive(shop?.isEInvoiceEnabled || false);
-            setEdmConfigured(!!(settings?.username && settings?.hasPassword));
+            // edmActive true ise ve kullanıcı adı varsa giriş yapılmış sayılır
+            setIsLoggedIn(!!(settings?.edmActive && settings?.username));
         } catch (error) {
             console.error("Status check failed:", error);
             setIsModuleActive(false);
-            setEdmConfigured(false);
+            setIsLoggedIn(false);
         } finally {
             setLoading(false);
         }
@@ -52,7 +53,6 @@ export default function EfaturaPage() {
         );
     }
 
-    // Modül aktif değilse (Super Admin tarafından kapatılmışsa)
     if (isModuleActive === false) {
         const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
         return (
@@ -80,15 +80,15 @@ export default function EfaturaPage() {
         );
     }
 
-    // Modül aktif ama konfigürasyon yoksa (İlk kurulum)
-    if (edmConfigured === false) {
-        return <EDMSetupForm onSuccess={() => checkStatus()} />;
+    // Giriş yapılmamışsa Login Formu göster
+    if (!isLoggedIn) {
+        return <EDMLoginForm onSuccess={() => checkStatus()} />;
     }
 
-    // Her şey tamam, Dashboard göster
+    // Giriş yapılmışsa Dashboard göster
     return (
         <div className="py-4">
-            <EDMDashboard />
+            <EDMDashboard onLogout={() => checkStatus()} />
         </div>
     );
 }

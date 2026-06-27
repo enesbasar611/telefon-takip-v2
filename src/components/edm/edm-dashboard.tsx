@@ -19,6 +19,8 @@ import {
     ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LogOut, Trash2 } from "lucide-react";
+import { disconnectEdm, deleteEdmSettings } from "@/lib/actions/edm-settings-actions";
 import { Input } from "@/components/ui/input";
 import {
     Dialog,
@@ -51,7 +53,7 @@ const statusMap: Record<string, { label: string; color: string; icon: React.Elem
     CANCELLED: { label: "İptal", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", icon: XCircle },
 };
 
-export function EDMDashboard() {
+export function EDMDashboard({ onLogout }: { onLogout?: () => void }) {
     const { data: session } = useSession();
     const router = useRouter();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -114,13 +116,41 @@ export function EDMDashboard() {
                         SaaS Entegrasyonu • {invoices.length} Kayıtlı Belge
                     </p>
                 </div>
-                <Button
-                    onClick={() => router.push("/efatura/yeni")}
-                    className="rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-14 px-8 shadow-2xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 font-bold text-lg"
-                >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Yeni Fatura Oluştur
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={async () => {
+                            if (confirm("EDM oturumunu kapatmak istediğinize emin misiniz?")) {
+                                await disconnectEdm();
+                                onLogout?.();
+                            }
+                        }}
+                        className="rounded-2xl border-amber-500/20 text-amber-500 hover:bg-amber-500/10 h-14 px-6 font-bold"
+                    >
+                        <LogOut className="h-5 w-5 mr-2" />
+                        Oturumu Kapat
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={async () => {
+                            if (confirm("TÜM EDM ayarlarınız silinecek. Emin misiniz?")) {
+                                await deleteEdmSettings();
+                                onLogout?.();
+                            }
+                        }}
+                        className="rounded-2xl border-red-500/20 text-red-500 hover:bg-red-500/10 h-14 px-6 font-bold"
+                    >
+                        <Trash2 className="h-5 w-5 mr-2" />
+                        Bilgileri Sil
+                    </Button>
+                    <Button
+                        onClick={() => router.push("/efatura/yeni")}
+                        className="rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-14 px-8 shadow-2xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 font-bold text-lg"
+                    >
+                        <Plus className="h-5 w-5 mr-2" />
+                        Yeni Fatura Oluştur
+                    </Button>
+                </div>
             </div>
 
             {/* Search */}
@@ -180,7 +210,7 @@ export function EDMDashboard() {
                                 <div className="flex-1 min-w-0 text-center md:text-left">
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
                                         <h3 className="text-xl font-bold text-foreground">
-                                            {invoice.customer?.name || "Bilinmeyen Müşteri"}
+                                            {invoice.customer?.name || (invoice as any).customerName || "Bilinmeyen Müşteri"}
                                         </h3>
                                         <span className={`
                                             inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-tighter
@@ -235,37 +265,88 @@ export function EDMDashboard() {
 
             {/* Iframe Preview Modal */}
             <Dialog open={!!viewLink} onOpenChange={(open) => !open && setViewLink(null)}>
-                <DialogContent className="max-w-[95vw] w-[1200px] h-[90vh] p-0 bg-transparent border-none">
-                    <div className="w-full h-full bg-white dark:bg-zinc-950 rounded-[3rem] overflow-hidden flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                        <DialogHeader className="p-6 border-b border-border/50 flex flex-row items-center justify-between shrink-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md">
+                <DialogContent className="max-w-[95vw] w-[1300px] h-[92vh] p-0 bg-transparent border-none overflow-hidden shadow-none">
+                    <div className="w-full h-full bg-slate-50 dark:bg-zinc-950 rounded-[3rem] overflow-hidden flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10">
+                        {/* Modern Action Bar */}
+                        <div className="p-4 md:p-6 border-b border-border/50 flex flex-col md:flex-row items-center justify-between shrink-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl gap-4">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-violet-500/10 rounded-2xl flex items-center justify-center">
-                                    <FileText className="h-6 w-6 text-violet-500" />
+                                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center shadow-inner">
+                                    <FileText className="h-6 w-6 text-primary" />
                                 </div>
-                                <div>
-                                    <DialogTitle className="text-xl font-bold tracking-tight">Orijinal Fatura Görüntüleyici</DialogTitle>
-                                    <p className="text-sm text-muted-foreground font-medium">EDM Bilişim Resmi Belge Çıktısı</p>
+                                <div className="text-left">
+                                    <DialogTitle className="text-xl font-bold tracking-tight">Fatura Önizleme</DialogTitle>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Resmi EDM Belgesi</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex gap-2 mr-10">
+
+                            <div className="flex flex-wrap items-center gap-2">
                                 <Button
                                     variant="outline"
-                                    className="rounded-xl font-bold h-10 px-4 gap-2"
+                                    className="rounded-2xl font-bold h-11 px-5 gap-2 border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/10 transition-all active:scale-95"
+                                    onClick={() => {
+                                        const text = `Faturanız hazır, bu bağlantıdan görüntüleyebilirsiniz: ${window.location.origin}${viewLink}`;
+                                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                                    }}
+                                >
+                                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.393 0 12.03c0 2.12.554 4.189 1.604 6.03L0 24l6.117-1.605c1.777.969 3.774 1.48 5.811 1.482h.005c6.634 0 12.032-5.396 12.035-12.032a11.85 11.85 0 00-3.48-8.487z" />
+                                    </svg>
+                                    WhatsApp
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-2xl font-bold h-11 px-5 gap-2 border-red-500/20 text-red-600 hover:bg-red-500/10 transition-all active:scale-95"
                                     onClick={() => window.open(viewLink!, "_blank")}
                                 >
-                                    <Printer className="h-4 w-4" />
+                                    <Download className="h-5 w-5" />
+                                    PDF / İndir
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-2xl font-bold h-11 px-5 gap-2 border-primary/20 text-primary hover:bg-primary/10 transition-all active:scale-95"
+                                    onClick={() => window.open(viewLink!, "_blank")}
+                                >
+                                    <Printer className="h-5 w-5" />
                                     Yazdır
                                 </Button>
+                                <Button
+                                    variant="ghost"
+                                    className="rounded-2xl w-11 h-11 p-0 hover:bg-black/5 dark:hover:bg-white/5 active:scale-90"
+                                    onClick={() => setViewLink(null)}
+                                >
+                                    <XCircle className="h-6 w-6 text-muted-foreground/50" />
+                                </Button>
                             </div>
-                        </DialogHeader>
-                        <div className="flex-1 bg-muted/10 relative">
+                        </div>
+
+                        {/* Iframe Content Area */}
+                        <div className="flex-1 bg-white relative overflow-hidden">
                             {viewLink && (
-                                <iframe
-                                    src={viewLink}
-                                    className="w-full h-full border-none"
-                                    title="Invoice Preview"
-                                />
+                                <div className="w-full h-full relative group">
+                                    <iframe
+                                        src={viewLink}
+                                        className="w-full h-full border-none bg-white scale-[1.0] origin-top transition-transform duration-500"
+                                        title="Invoice Preview"
+                                        onLoad={() => {
+                                            // Iframe yüklendiğinde bir ses veya görsel efekt eklenebilir
+                                        }}
+                                    />
+                                    {/* Overlay for loading state if needed */}
+                                    <div className="absolute inset-0 pointer-events-none border-[12px] border-white dark:border-zinc-950 rounded-b-[3rem] z-10" />
+                                </div>
                             )}
+                        </div>
+
+                        {/* Footer Info */}
+                        <div className="p-4 bg-muted/30 text-center">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">
+                                Bu belge EDM Bilişim güvencesiyle oluşturulmuştur.
+                                <span className="mx-2">•</span>
+                                © {new Date().getFullYear()} SaaS Elektronik Fatura Sistemi
+                            </p>
                         </div>
                     </div>
                 </DialogContent>

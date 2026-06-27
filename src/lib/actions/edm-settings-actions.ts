@@ -57,13 +57,49 @@ export async function getShopEdmSettings() {
         if (!settings) return null;
 
         return {
+            id: settings.id,
             username: settings.username,
             senderVkn: settings.senderVkn,
             senderName: settings.senderName,
             edmActive: settings.edmActive,
+            environment: settings.environment,
+            apiUrl: settings.apiUrl,
             hasPassword: !!settings.passwordEncrypted,
         };
     } catch (error) {
         return null;
+    }
+}
+
+export async function disconnectEdm() {
+    try {
+        const shopId = await getShopId(false);
+        if (!shopId) return { success: false, error: "Oturum bulunamadı." };
+
+        await prisma.eDMSettings.update({
+            where: { shopId },
+            data: { edmActive: false }
+        });
+
+        revalidatePath("/efatura");
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function deleteEdmSettings() {
+    try {
+        const shopId = await getShopId(false);
+        if (!shopId) return { success: false, error: "Oturum bulunamadı." };
+
+        await prisma.eDMSettings.delete({
+            where: { shopId }
+        });
+
+        revalidatePath("/efatura");
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
     }
 }

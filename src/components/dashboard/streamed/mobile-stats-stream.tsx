@@ -5,7 +5,7 @@ import { MobileStatsHeader } from "../mobile-stats-header";
 export async function MobileStatsStream() {
     const shopId = await getShopId(false);
     const [stats, settings] = await Promise.all([
-        getDashboardStats(shopId),
+        getDashboardStats(),
         import("@/lib/actions/setting-actions").then(m => m.getSettings())
     ]);
     const defaultCurrency = (settings as any[])?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";

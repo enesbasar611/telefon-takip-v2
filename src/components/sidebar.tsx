@@ -81,6 +81,8 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
       module: "STOCK",
       subItems: [
         { label: "Stok Listesi", href: "/stok" },
+        { label: "Tedarikçi Siparişleri", href: "/stok/siparisler" },
+        { label: "Tedarikçi Yönetimi", href: "/tedarikciler" },
         { label: "Hareket Analizi", href: "/stok/hareketler" },
         { label: "Kategoriler", href: "/stok/kategoriler" },
         { label: "AI Önerileri", href: "/stok/stok-ai" },
@@ -116,7 +118,6 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
       module: "EFATURA",
     },
     { icon: Smartphone, label: (labels.customerAsset || "Cihaz") + " Merkezi", href: "/cihaz-listesi", module: "SERVICE" },
-    { icon: Truck, label: "Tedarikçiler", href: "/tedarikciler", module: "SUPPLIER" },
     { icon: BarChart3, label: "İstatistikler", href: "/raporlar", module: "FINANCE" },
     { icon: UserCog, label: "Ekip", href: "/personel", module: "STAFF" },
     { icon: Bell, label: "Bildirimler", href: "/bildirimler", module: "NOTIFICATION" },

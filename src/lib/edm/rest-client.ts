@@ -1,71 +1,32 @@
-/**
- * EDM Bilişim REST + SOAP Client
- * Multi-Tenant SaaS yapısı ile uyumlu, REST API öncelikli entegrasyon.
- * 
- * REST API Base: https://restapi.edmbilisim.com.tr/EFaturaEDM_API_Test
- * Invoice View:  https://view.edmbilisim.com.tr/fatura/ViewInvoice/{VKN}/{ETTN}/{type}
- */
-
 import axios from 'axios';
 import { v4 as uuidv4 } from "uuid";
-
-/* ─── Constants ─── */
-
-const DEFAULT_SOAP_URL = "https://test.edmbilisim.com.tr/EFaturaEDM21ea/EFaturaEDM.svc";
-const DEFAULT_REST_URL = "https://restapi.edmbilisim.com.tr/EFaturaEDM_API_Test";
-const INVOICE_VIEW_BASE = "https://view.edmbilisim.com.tr/fatura/ViewInvoice";
-
-// Test ortamında e-Fatura simülasyonu için kullanılacak özel VKN
-const TEST_EINVOICE_VKN = "1111111111";
-
-/**
- * GİB uyumlu fatura numarası şablonu üretir.
- * Önemli: EDM dokümanına göre "BSR2009123456789" şablonu gönderilirse 
- * EDM otomatik olarak dükkanın sıradaki numarasını atar.
- */
-export function generateGibInvoiceId(prefix: string = "BSR"): string {
-    return `${prefix.substring(0, 3).toUpperCase()}2009123456789`;
-}
-
-/**
- * PROFILE_ID TEST ALTERNATIFLERI (Eğer TEMELINVOICE patlarsa sırayla dene):
- * - EFATURA: TEMELINVOICE, TICARIINVOICE, TEMEL, TICARI, TEMEL_FATURA, TICARI_FATURA, EFATURA
- * - EARSIV: EARSIVFATURA, EARSIV, EARSIV_FATURA
- */
-
-/**
- * e-Fatura/e-Arşiv tipine göre doğru GİB ProfileID'sini döndürür.
- * EDM SOAP Enum Listesi: TEMELFATURA, TICARIFATURA, EARSIVFATURA
- */
-function resolveProfileId(invoiceType: "efatura" | "earsiv", scenario?: string): string {
-    if (invoiceType === "earsiv") return "EARSIVFATURA";
-    if (scenario === "TICARI") return "TICARIFATURA";
-    return "TEMELFATURA";
-}
-
-/** TEST ortamı için varsayılan GİB posta kutusu etiketi */
-const DEFAULT_TEST_RECEIVER_ALIAS = "urn:mail:defaultpk@edmbilisim.com.tr";
-
-/* ─── Types ─── */
+import prisma from "@/lib/prisma";
 
 export interface EdmCredentials {
     username: string;
     password: string;
+    secretKey?: string;
     senderVkn: string;
     senderName?: string;
     senderAddress?: string;
     senderCity?: string;
     senderDistrict?: string;
     senderTaxOffice?: string;
-    invoicePrefix?: string;
-    baseUrl?: string;
-    isRest?: boolean;
+    baseUrl: string;
 }
 
 export interface EdmSession {
     sessionId: string;
     username: string;
     expiresAt: Date;
+}
+
+export interface EdmInvoiceLineItem {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    vatRate: number;
+    unitCode?: string;
 }
 
 export interface EdmInvoicePayload {
@@ -82,19 +43,11 @@ export interface EdmInvoicePayload {
         phone?: string;
     };
     items: EdmInvoiceLineItem[];
-    invoiceType?: "SATIS" | "IADE";
     currency?: string;
     notes?: string;
-    sequenceNumber?: number;
-    [key: string]: any;
-}
-
-export interface EdmInvoiceLineItem {
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    vatRate: number;
-    unitCode?: string;
+    invoiceType?: "SATIS" | "IADE" | "TEVKIFAT";
+    /** e-Fatura profili: TICARIFATURA veya TEMELFATURA (e-Arşiv için otomatik EARSIV atanır) */
+    invoiceProfile?: "TICARIFATURA" | "TEMELFATURA" | "EARSIV";
 }
 
 export interface CheckUserResult {
@@ -113,210 +66,122 @@ export interface SendInvoiceResult {
     rawResponse?: any;
 }
 
-/* ─── Session Cache ─── */
-
 const sessionCache = new Map<string, EdmSession>();
-const SESSION_TTL_MS = 25 * 60 * 1000;
 
-export function forceClearSession(username: string) {
-    console.log(`[EDM Session] Cache temizleniyor: ${username}`);
-    sessionCache.delete(username);
-    sessionCache.delete(`REST_${username}`);
-}
+function getRequestHeader(sessionId?: string) {
+    const rawDate = new Date();
+    const isoDate = rawDate.toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
 
-/* ─── REST Request Header Builder (DRY) ─── */
-
-function buildRestRequestHeader(sessionId?: string): any {
-    const now = new Date().toISOString().split('.')[0]; // YYYY-MM-DDTHH:mm:ss
-    return {
-        // Uppercase Variations
-        SESSION_ID: sessionId || "0",
-        CLIENT_TXN_ID: uuidv4(),
-        ACTION_DATE: now,
-        REASON: "EDM REST API",
-        APPLICATION_NAME: "BasarTeknikERP",
-        HOSTNAME: "TakipV2",
-        CHANNEL_NAME: "API",
-        SIMULATION_FLAG: "N",
-        COMPRESSED: "N",
-
-        // Mixed Case Variations (Strict WCF compatibility)
-        sessioN_ID: sessionId || "0",
+    const header: any = {
         clienT_TXN_ID: uuidv4(),
-        actioN_DATE: now,
+        sessioN_ID: sessionId || "0",
+        actioN_DATE: isoDate,
         actioN_DATESpecified: true,
-        reason: "EDM REST API",
-        applicatioN_NAME: "BasarTeknikERP",
-        hostname: "TakipV2",
-        channeL_NAME: "API",
-        simulatioN_FLAG: "N",
-        compressed: "N"
+        applicatioN_NAME: "Telefon Takip v2",
+        hostname: "Server",
+        channeL_NAME: "REST",
+        reason: "API Islem",
+        compressed: "N",
+        intL_TXN_ID: 0,
+        intL_TXN_IDSpecified: true,
+        intL_PARENT_TXN_ID: 0,
+        intL_PARENT_TXN_IDSpecified: true,
+        simulatioN_FLAG: "N"
     };
+
+    return header;
 }
 
-/* ─── REST Call Helper ─── */
+// FIX #1: Swagger uyumlu çağrı — requesT_HEADER ve root-level case-sensitivity
+async function callEdm(endpoint: string, body: any, credentials: EdmCredentials, sessionId?: string) {
+    const cleanBaseUrl = credentials.baseUrl.trim().replace(/\/+$/, '');
+    const cleanEndpoint = endpoint.trim().startsWith('/') ? endpoint.trim() : `/${endpoint.trim()}`;
+    const url = `${cleanBaseUrl}${cleanEndpoint}`;
 
-async function callEdmRest(
-    endpoint: string,
-    body: any,
-    sessionId?: string,
-    baseUrl?: string
-): Promise<any> {
-    const restUrl = baseUrl || process.env.EDM_REST_API_URL || DEFAULT_REST_URL;
-    const url = `${restUrl}${endpoint}`;
+    const header = getRequestHeader(sessionId);
+
+    const requestBody: any = {
+        requesT_HEADER: header,
+        ...body
+    };
 
     try {
-        const response = await axios.post(url, {
-            REQUEST_HEADER: buildRestRequestHeader(sessionId),
-            requesT_HEADER: buildRestRequestHeader(sessionId),
-            ...body
+        const response = await axios.post(url, requestBody, {
+            headers: {
+                'Content-Type': 'application/json',
+                'accept': 'text/plain'
+            },
+            timeout: 30000
         });
 
-        // Check for warning/errors in the response
-        const returnData = response.data?.requesT_RETURN || response.data?.REQUEST_RETURN;
-        if (returnData?.returN_CODE && returnData.returN_CODE !== 0) {
-            const warnings = returnData.warnings?.join(", ") || "Bilinmeyen hata";
-            console.error(`[EDM REST Error] ${endpoint}: ${warnings}`);
-            throw new Error(`EDM REST Hatası (${endpoint}): ${warnings}`);
-        }
+        // Swagger'da dönüşlerde REQUEST_RETURN / requesT_RETURN yapıları var
+        const resData = response.data;
+        const returnData = resData?.requesT_RETURN || resData?.REQUEST_RETURN || resData?.request_return;
 
-        return response.data;
+        if (returnData && (returnData.returN_CODE !== 0 && returnData.RETURN_CODE !== 0)) {
+            throw new Error(returnData.warnings?.join(", ") || returnData.ERROR_DESC || 'EDM API Hatası');
+        }
+        return resData;
     } catch (error: any) {
-        console.error(`[EDM REST Error - ${endpoint}]:`, error.response?.data || error.message);
-        throw new Error(`EDM REST Hatası (${endpoint}): ${error.message}`);
+        const edmError = error.response?.data?.requesT_RETURN?.ERROR_DESC ||
+            error.response?.data?.ERROR_DESC ||
+            error.message;
+
+        console.error(`[EDM REST ${endpoint} Error]:`, error.response?.data || error.message);
+        throw new Error(`EDM Bağlantı Hatası: ${edmError}`);
     }
 }
 
-/* ═══════════════════════════════════════════
-   LOGIN (REST)
-   ═══════════════════════════════════════════ */
-
 export async function getEdmRestSession(credentials: EdmCredentials): Promise<EdmSession> {
-    const cacheKey = `REST_${credentials.username}`;
-
+    const cacheKey = credentials.username;
     const cached = sessionCache.get(cacheKey);
-    if (cached && cached.expiresAt > new Date()) {
-        console.log(`[EDM REST Session] Cache HIT: ${cacheKey}`);
-        return cached;
-    }
+    if (cached && cached.expiresAt > new Date()) return cached;
 
-    console.log(`[EDM REST Login] Başlatılıyor...`);
-
-    const data = await callEdmRest("/LoginRequest", {
+    // SWAGGER'dan BİREBİR: En kritik harf duyarlılıkları (useR_NAME, password)
+    // Secret Key boştur (Test'te onaylandı)
+    const data = await callEdm('/LoginRequest', {
         useR_NAME: credentials.username,
         password: credentials.password,
-        // Uppercase fallbacks
-        USER_NAME: credentials.username,
-        PASSWORD: credentials.password
-    }, undefined, credentials.baseUrl);
+        secreT_KEY: credentials.secretKey || ""
+    }, credentials);
 
-    const sessionId = data?.sessioN_ID;
+    // Dönen session id'yi ayıkla
+    const sId = data?.sessioN_ID || data?.SESSION_ID || data?.requesT_RETURN?.sessioN_ID || data?.REQUEST_RETURN?.SESSION_ID;
 
-    if (!sessionId || sessionId === "0") {
-        const errorMsg = data?.requesT_RETURN?.warnings?.[0] || "Geçersiz yanıt.";
-        throw new Error(`EDM REST Oturum Açılamadı: ${errorMsg}`);
+    if (!sId || sId === "0") {
+        throw new Error("EDM Girişi başarısız, oturum ID alınamadı.");
     }
 
-    const session: EdmSession = {
-        sessionId,
+    const session = {
+        sessionId: sId,
         username: credentials.username,
-        expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+        expiresAt: new Date(Date.now() + 25 * 60 * 1000)
     };
-
     sessionCache.set(cacheKey, session);
-    console.log(`[EDM REST Session] Yeni Oturum Alındı: ${sessionId}`);
     return session;
 }
 
-/* ═══════════════════════════════════════════
-   CHECK USER (Mükellef Sorgulama - REST)
-   ═══════════════════════════════════════════ */
-
-export async function checkEdmUser(
-    credentials: EdmCredentials,
-    taxNumber: string
-): Promise<CheckUserResult> {
-    const isTestEnv = (process.env.EDM_ENVIRONMENT || "TEST") === "TEST";
-
-    // TEST ortamında özel VKN ile e-Fatura simülasyonu
-    if (isTestEnv && taxNumber === TEST_EINVOICE_VKN) {
-        console.log(`[EDM CheckUser] TEST MODU: VKN ${taxNumber} → e-Fatura mükellefi olarak simüle ediliyor.`);
-        return {
-            isEInvoice: true,
-            alias: "urn:mail:defaultpk@edmbilisim.com.tr",
-            message: "TEST: e-Fatura mükellefi (simülasyon)."
-        };
-    }
-
+export async function checkEdmUser(credentials: EdmCredentials, taxNumber: string): Promise<CheckUserResult> {
     try {
         const session = await getEdmRestSession(credentials);
-
-        const endpoint = "/api/CheckUserRequest";
-        const data = await callEdmRest(endpoint, {
-            endpoint: endpoint,
+        const data = await callEdm('/CheckUserRequestCounter', {
+            command: "PROCESS",
             user: {
-                identifier: taxNumber,
-                documenttype: "INVOICE"
+                identifier: taxNumber
             }
-        }, session.sessionId, credentials.baseUrl);
+        }, credentials, session.sessionId);
 
-        console.log(`[EDM CheckUser] Ham Yanıt (${taxNumber}):`, JSON.stringify(data, null, 2));
-
-        // EDM REST CheckUser yanıtında kullanıcı listesi var mı kontrol et
-        const users = data?.useR_LIST || data?.user_list || data?.users || [];
-        const hasEInvoice = Array.isArray(users) && users.length > 0;
-
-        if (hasEInvoice) {
-            const firstUser = users[0];
-            const alias = firstUser?.aliaS_LIST?.[0]?.alias ||
-                firstUser?.alias_list?.[0]?.alias ||
-                firstUser?.ALIAS ||
-                firstUser?.alias ||
-                "default";
-
-            console.log(`[EDM CheckUser] Mükellef Bulundu: ${taxNumber} | Alias: ${alias}`);
-            return {
-                isEInvoice: true,
-                alias,
-                message: "Mükellef e-Fatura kullanıcısı."
-            };
+        const users = data?.USER_LIST || data?.useR_LIST || data?.user_list || [];
+        if (users.length > 0) {
+            const aliasList = users[0]?.ALIAS_LIST || users[0]?.aliaS_LIST || [];
+            const alias = aliasList[0]?.alias || users[0]?.ALIAS || "default";
+            return { isEInvoice: true, alias, message: "Mükellef e-Fatura kullanıcısı." };
         }
-
-        console.log(`[EDM CheckUser] Mükellef e-Arşiv: ${taxNumber}`);
-        return {
-            isEInvoice: false,
-            message: "Mükellef e-Arşiv kullanıcısı (e-Fatura kaydı bulunamadı)."
-        };
-    } catch (error: any) {
-        console.warn(`[EDM CheckUser] Sorgu başarısız, e-Arşiv varsayıldı: ${error.message}`);
-        return {
-            isEInvoice: false,
-            message: `Sorgulama başarısız (e-Arşiv varsayıldı): ${error.message}`
-        };
+        return { isEInvoice: false, message: "Mükellef e-Arşiv kullanıcısı." };
+    } catch (e: any) {
+        return { isEInvoice: false, message: `Sorgulama başarısız: ${e.message}` };
     }
 }
-
-/* ═══════════════════════════════════════════
-   INVOICE VIEW URL BUILDER
-   ═══════════════════════════════════════════ */
-
-export function getInvoiceViewUrl(
-    senderVkn: string,
-    ettn: string,
-    type: "efatura" | "earsiv"
-): string {
-    /**
-     * EDM Public View Link (Path Format)
-     * Format: https://view.edmbilisim.com.tr/fatura/ViewInvoice/{VKN}/{ETTN}/{TYPE}
-     */
-    return `https://view.edmbilisim.com.tr/fatura/ViewInvoice/${senderVkn}/${ettn}/${type}`;
-}
-
-/* ═══════════════════════════════════════════
-   SEND INVOICE (REST - e-Fatura / e-Arşiv)
-   ═══════════════════════════════════════════ */
-
-import { buildInvoiceUblXml } from "./xml-builder";
 
 export async function sendRestInvoice(
     credentials: EdmCredentials,
@@ -326,201 +191,116 @@ export async function sendRestInvoice(
 ): Promise<SendInvoiceResult> {
     const session = await getEdmRestSession(credentials);
     const uuid = uuidv4();
-    const vkn = credentials.senderVkn;
-
-    // Resmi EDM "Automatic Invoice ID" kuralına göre sabit şablon gönderiyoruz.
-    // EDM bu şablonu görünce sıradaki boş numarayı otomatik üretip faturaya basacak.
-    const prefix = (payload.invoiceId && /^[A-Z]{3}/i.test(payload.invoiceId))
-        ? payload.invoiceId.substring(0, 3).toUpperCase()
-        : (credentials.invoicePrefix || "BSR");
-    const gibInvoiceId = generateGibInvoiceId(prefix);
-    const profileId = resolveProfileId(invoiceType, payload.invoiceScenario);
-
-    console.log(`[EDM SendInvoice] ${invoiceType.toUpperCase()} gönderiliyor: ${gibInvoiceId} (Otomatik Numaratör Şablonu) | UUID: ${uuid} | ProfileID: ${profileId}`);
-
-    // UBL XML Oluştur
-    const xml = buildInvoiceUblXml({
-        uuid,
-        invoiceId: gibInvoiceId,
-        issueDate: payload.issueDate,
-        invoiceScenario: profileId,
-        invoiceType: payload.invoiceType || "SATIS",
-        currency: payload.currency || "TRY",
-        note: payload.notes || "",
-        sender: {
-            vkn: vkn,
-            name: credentials.senderName || "GÖNDERİCİ ÜNVAN EKSİK",
-            address: credentials.senderAddress || "ADRES EKSİK",
-            city: credentials.senderCity || "İSTANBUL",
-            district: credentials.senderDistrict || "MERKEZ",
-            country: "Türkiye",
-            taxOffice: credentials.senderTaxOffice || ""
-        },
-        receiver: {
-            vkn: payload.customer.vknTckn,
-            name: payload.customer.name,
-            address: payload.customer.address || "",
-            city: payload.customer.city || "Istanbul",
-            district: payload.customer.district || "",
-            country: "Türkiye",
-            taxOffice: payload.customer.taxOffice || "",
-            email: payload.customer.email,
-            phone: payload.customer.phone,
-            alias: receiverAlias || (invoiceType === "efatura" ? DEFAULT_TEST_RECEIVER_ALIAS : "")
-        },
-        items: payload.items.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            vatRate: item.vatRate,
-            unitCode: item.unitCode || "C62"
-        }))
-    });
-
-    const b64xml = Buffer.from(xml).toString('base64');
-
-    // EDM REST Fatura Gövdesi (Swagger: /SendInvoiceRequest veya /api/SetArchiveInvoiceRequest)
-    // ÖNEMLİ: Key'ler Swagger/SOAP WSDL ile tam eşleşmeli (Genellikle ALL CAPS)
     const subtotal = payload.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-    const taxTotal = payload.items.reduce((sum, item) => {
-        const lineTotal = item.quantity * item.unitPrice;
-        return sum + (lineTotal * (item.vatRate / 100));
-    }, 0);
-    const grandTotal = subtotal + taxTotal;
+    const taxTotal = payload.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice * (item.vatRate / 100)), 0);
 
-    const receiverVkn = payload.customer.vknTckn;
-    const isTckn = receiverVkn.length === 11;
+    const isEar = invoiceType === "earsiv";
+    // FIX #3: Tarih formatı YYYY-MM-DD — saatsiz, EDM şema validasyonu bunu bekliyor
+    const pureDate = new Date(payload.issueDate).toISOString().split('T')[0];
 
-    // Integer Enum Mappings for EDM REST
-    const mapProfileToEnum = (profile: string): number => {
-        if (invoiceType === "earsiv") return 2; // E-Archive is always enum 2
+    // GİB/EDM Standartları — PROFILE ve TYPE string olarak büyük harfle gönderilmeli
+    // e-Arşiv → PROFILE: "EARSIV", TYPE: "SATIS" veya "IADE"
+    // e-Fatura → PROFILE: "TICARIFATURA" veya "TEMELFATURA", TYPE: "SATIS" veya "IADE"
+    const invoiceProfile: string = isEar
+        ? "EARSIV"
+        : (payload.invoiceProfile || "TICARIFATURA");
 
-        const p = profile.toUpperCase();
-        if (p.includes("TICARI")) return 1;
-        if (p.includes("EARSIV")) return 2;
-        return 0; // TEMEL (e-Invoice)
-    };
+    const invoiceTypeStr: string = payload.invoiceType === "IADE" ? "IADE" : "SATIS";
 
-    const mapTypeToEnum = (type: string): number => {
-        const t = type.toUpperCase();
-        if (t.includes("IADE")) return 1;
-        if (t.includes("TEVKIFAT")) return 2;
-        if (t.includes("ISTISNA")) return 3;
-        return 0; // SATIS
-    };
+    console.log(`[EDM REST] Fatura profil: ${invoiceProfile}, tip: ${invoiceTypeStr}, senaryo: ${isEar ? 'e-Arşiv' : 'e-Fatura'}`);
 
-    // Swagger: INVOICEMODEL Structure
     const invoiceModel = {
-        invoiceheader: {
-            profileid: mapProfileToEnum(profileId),
-            id: gibInvoiceId,
-            uuid: uuid,
-            issuedate: new Date(payload.issueDate).toISOString(), // Swagger expects date-time
-            issuetime: new Date().toTimeString().split(' ')[0], // HH:mm:ss
-            invoicetype: mapTypeToEnum(payload.invoiceType || "SATIS"),
-            note: payload.notes || "",
-            currency: payload.currency || "TRY",
-            customerparty: {
-                vkn: receiverVkn,
-                pk: receiverAlias || (invoiceType === "efatura" ? DEFAULT_TEST_RECEIVER_ALIAS : ""),
+        invoicE_HEADER: {
+            profilE_ID: invoiceProfile,   // "EARSIV" | "TICARIFATURA" | "TEMELFATURA"
+            invoicE_ID: payload.invoiceId,
+            uuiD: uuid,
+            issuE_DATE: pureDate,
+            issuE_TIME: new Date().toTimeString().split(' ')[0],
+            invoicE_TYPE: invoiceTypeStr, // "SATIS" | "IADE"
+            notE: payload.notes || "",
+            currencY_CODE: payload.currency || "TRY",
+            sendeR_PARTY: {
+                vkn: credentials.senderVkn,
+                city: credentials.senderCity || "Istanbul",
+                county: credentials.senderDistrict || "",
+                adress: credentials.senderAddress || "Merkez",
+                adsoyad: credentials.senderName || "Gönderici İşletme"
+            },
+            customeR_PARTY: {
+                vkn: payload.customer.vknTckn,
+                pk: receiverAlias || (isEar ? "" : "urn:mail:defaultpk@edmbilisim.com.tr"),
                 city: payload.customer.city || "Istanbul",
                 county: payload.customer.district || "",
                 adress: payload.customer.address || "Merkez Mah.",
-                adsoyad: payload.customer.name
-            },
-            isaccomodation: false,
-            isdespatch: false
+                adsoyad: payload.customer.name,
+                // FAQ: TCKN için Person/Ad-Soyad ayrımı gerekebilir
+                ...(payload.customer.vknTckn.length === 11 ? {
+                    firstname: payload.customer.name.split(' ').slice(0, -1).join(' ') || payload.customer.name,
+                    lastname: payload.customer.name.split(' ').slice(-1)[0] || ""
+                } : {})
+            }
         },
-        invoiceline: payload.items.map(item => ({
+        invoicE_LINE: payload.items.map(item => ({
             quantity: item.quantity,
             price: item.unitPrice,
             percent: Math.round(item.vatRate),
             name: item.name,
-            unitcode: item.unitCode || "C62",
-            accomodationtax: false
+            unitcode: item.unitCode || "C62"
         })),
-        invoicetotal: {
-            total: subtotal,
-            totalkdv: taxTotal
-        }
+        invoicE_TOTAL: { total: subtotal, totalkdv: taxTotal }
     };
 
     try {
-        const endpoint = "/LoadInvoiceRequestModel";
-        const requestBody = {
-            endpoint: endpoint,
-            invoice: {
-                ...invoiceModel,
-                invoiceheader: {
-                    ...invoiceModel.invoiceheader,
-                    senderparty: {
-                        vkn: credentials.senderVkn,
-                        city: credentials.senderCity || "Istanbul",
-                        county: credentials.senderDistrict || "",
-                        adress: credentials.senderAddress || "Merkez",
-                        adsoyad: credentials.senderName
-                    }
-                }
-            },
-            content: b64xml
-        };
+        // EDM hem büyük harfli INVOICE sarmalı ister, hem de içindeki nesneleri 
+        // bu sarmalın içinde büyük harfli varyasyonlarla (veya mevcut yapısıyla) bekler.
+        const data = await callEdm('/LoadInvoiceRequestModel', {
+            command: "PROCESS",
+            INVOICE: {
+                INVOICESERIAL_REQUESTED: payload.invoiceId.substring(0, 3) || "ETS",
+                INVOICE_HEADER: invoiceModel.invoicE_HEADER,
+                INVOICE_LINE: invoiceModel.invoicE_LINE,
+                INVOICE_TOTAL: invoiceModel.invoicE_TOTAL
+            }
+        }, credentials, session.sessionId);
 
-        console.log("================== EDM GÖNDERİLEN PAYLOAD (STRİKT) ==================");
-        console.log(JSON.stringify(requestBody, null, 2));
-
-        const data = await callEdmRest(endpoint, requestBody, session.sessionId, credentials.baseUrl);
-
-        console.log("================== EDM GERÇEK YANIT ==================");
-        console.log(JSON.stringify(data, null, 2));
-        console.log("======================================================");
-
-        // Check for success: sonuc is usually the indicator for this model
-        if (data?.sonuc === false || data?.error) {
-            throw new Error(data?.error || "EDM Fatura yükleme hatası!");
+        if (data?.sonuc === false || data?.SONUC === false || data?.Sonuc === false) {
+            const errorMsg = data?.error || data?.ERROR || data?.erroR || data?.Message || "Fatura gönderilemedi.";
+            throw new Error(errorMsg);
         }
 
-        const realInvoiceId = data?.invoice?.id || gibInvoiceId;
+        const realInvoiceId = data?.invoice?.id || data?.INVOICE?.id || payload.invoiceId;
 
         return {
             success: true,
             uuid,
             invoiceId: realInvoiceId,
             invoiceType,
-            viewUrl: getInvoiceViewUrl(vkn, uuid, invoiceType),
+            viewUrl: getInvoiceViewUrl(credentials.senderVkn, uuid, invoiceType),
             rawResponse: data
         };
-    } catch (error: any) {
-        console.error("[EDM SendInvoice] Hata:", error.message);
-        const viewUrl = getInvoiceViewUrl(vkn, uuid, invoiceType);
+    } catch (e: any) {
         return {
             success: false,
             uuid,
-            invoiceId: gibInvoiceId,
+            invoiceId: payload.invoiceId,
             invoiceType,
-            viewUrl,
-            error: error.message,
-            rawResponse: error.response?.data || error.rawResponse
+            viewUrl: getInvoiceViewUrl(credentials.senderVkn, uuid, invoiceType),
+            error: e.message
         };
     }
 }
 
-// Alias for compatibility with routes
 export { sendRestInvoice as sendInvoice };
 
-/* ═══════════════════════════════════════════
-   GET INVOICES (REST)
-   ═══════════════════════════════════════════ */
+export function getInvoiceViewUrl(senderVkn: string, uuid: string, type: "efatura" | "earsiv") {
+    // Test ortamında EDM kendi VKN'sini (3230512384) bastığı için render linkini buna jurnalliyoruz kanka
+    const vkn = senderVkn === "3230512384" ? "3230512384" : (senderVkn || "3230512384");
+    return `https://view.edmbilisim.com.tr/fatura/ViewInvoice/${vkn}/${uuid}/${type}`;
+}
 
-export async function getInvoices(
-    credentials: EdmCredentials,
-    filters: { startDate?: string; endDate?: string; direction?: "INBOUND" | "OUTBOUND" }
-): Promise<any[]> {
+export async function getInvoices(credentials: EdmCredentials, filters: { startDate?: string; endDate?: string; direction?: "INBOUND" | "OUTBOUND" }) {
     const session = await getEdmRestSession(credentials);
-
-    const formatDate = (dateStr: string) => {
-        if (dateStr.includes("T")) return dateStr;
-        return `${dateStr}T00:00:00`;
-    };
+    const formatDate = (dateStr: string) => dateStr.includes("T") ? dateStr : `${dateStr}T00:00:00`;
 
     const body = {
         invoicE_SEARCH_KEY: {
@@ -529,82 +309,59 @@ export async function getInvoices(
             invoicE_DIRECTION: filters.direction || "OUTBOUND",
             limiT: 100
         },
-        headeR_ONLY: "Y", // Dashboard listesi için sadece header yeterli
+        headeR_ONLY: "Y",
         invoicE_CONTENT_TYPE: 0
     };
 
     try {
-        const data = await callEdmRest("/GetInvoiceRequest", body, session.sessionId, credentials.baseUrl);
-        return data?.invoicE_LIST || [];
-    } catch (error) {
-        console.error("[EDM getInvoices] Hata:", error);
+        const data = await callEdm('/GetInvoiceRequest', body, credentials, session.sessionId);
+        return data?.invoicE_LIST || data?.INVOICE_LIST || [];
+    } catch {
         return [];
     }
 }
 
-/**
- * Gets the HTML content of a specific invoice from EDM.
- */
-export async function getInvoiceHtml(
-    credentials: EdmCredentials,
-    uuid: string,
-    direction: "INBOUND" | "OUTBOUND" | "EARSIV" = "OUTBOUND"
-): Promise<string | null> {
+export async function getInvoiceHTML(credentials: EdmCredentials, uuid: string, type: "efatura" | "earsiv", invoiceId?: string) {
     const session = await getEdmRestSession(credentials);
 
+    // Kanka hem UUID hem de varsa Fatura ID ile arayalım, bazı sunucular UUID'de 503 basabilive
     const body = {
         invoicE_SEARCH_KEY: {
             uuid: uuid,
-            invoicE_DIRECTION: direction
+            ...(invoiceId && { invoicE_ID: invoiceId }),
+            invoicE_DIRECTION: "OUTBOUND",
+            limiT: 1
         },
         headeR_ONLY: "N",
-        invoicE_CONTENT_TYPE: 2 // HTML
+        invoicE_CONTENT_TYPE: 1
     };
 
     try {
-        console.log(`[EDM getInvoiceHtml] Kayıt sorgulanıyor: UUID=${uuid}, Yön=${direction}`);
-        const data = await callEdmRest("/GetInvoiceRequest", body, session.sessionId, credentials.baseUrl);
-        const invoice = data?.invoicE_LIST?.[0];
-        const invoiceContent = invoice?.CONTENT;
+        const data = await callEdm('/GetInvoiceRequest', body, credentials, session.sessionId);
+        const invoices = data?.invoicE_LIST || data?.INVOICE_LIST || [];
 
-        if (invoiceContent) {
-            console.log(`[EDM getInvoiceHtml] İçerik bulundu, uzunluk: ${invoiceContent.length}`);
-            // Base64 kontrolü ve decode
-            if (invoiceContent.length > 100 && !invoiceContent.trim().startsWith("<")) {
-                try {
-                    return Buffer.from(invoiceContent, "base64").toString("utf-8");
-                } catch (e) {
-                    console.warn("[EDM getInvoiceHtml] Base64 decode hatası, ham veri dönülüyor.");
-                    return invoiceContent;
-                }
+        if (invoices.length === 0) {
+            // UUID bulamadıysa sadece ID ile son bir şans
+            if (invoiceId) {
+                const retryBody = { ...body, invoicE_SEARCH_KEY: { invoicE_ID: invoiceId, invoicE_DIRECTION: "OUTBOUND", limiT: 1 } };
+                const retryData = await callEdm('/GetInvoiceRequest', retryBody, credentials, session.sessionId);
+                const retryInvoices = retryData?.invoicE_LIST || retryData?.INVOICE_LIST || [];
+                if (retryInvoices.length > 0) return Buffer.from(retryInvoices[0]?.INVOICE_CONTENT || retryInvoices[0]?.invoicE_CONTENT, 'base64').toString('utf-8');
             }
-            return invoiceContent;
+            throw new Error("Fatura EDM sisteminde bulunamadı.");
         }
 
-        // --- Fallback Mekanizması ---
-        if (direction === "OUTBOUND") {
-            console.log("[EDM getInvoiceHtml] Outbound bulunamadı, Inbound deneniyor...");
-            return getInvoiceHtml(credentials, uuid, "INBOUND");
-        } else if (direction === "INBOUND") {
-            console.log("[EDM getInvoiceHtml] e-Fatura havuzlarında bulunamadı, e-Arşiv (EARSIV) deneniyor...");
-            return getInvoiceHtml(credentials, uuid, "EARSIV");
-        }
+        const content = invoices[0]?.INVOICE_CONTENT || invoices[0]?.invoicE_CONTENT;
+        if (!content) throw new Error("Fatura içeriği (HTML) boş geldi.");
 
-        console.warn("[EDM getInvoiceHtml] Hiçbir havuzda içerik bulunamadı.");
-        return null;
-    } catch (error) {
-        console.error("[EDM getInvoiceHtml] Kritik Hata:", error);
-        return null;
+        return Buffer.from(content, 'base64').toString('utf-8');
+    } catch (error: any) {
+        console.error("[EDM GetHTML Error]:", error.message);
+        throw error; // Route tarafında yakalayıp redirect atacağız
     }
 }
 
-
-/* ═══════════════════════════════════════════
-   MULTI-TENANT: DB'den Bayi Credential'larını Al
-   ═══════════════════════════════════════════ */
-
-import prisma from "@/lib/prisma";
-
+// FIX #5: secretKey desteği eklendi
 export async function getShopEdmCredentials(shopId: string): Promise<EdmCredentials> {
     const [settings, shop] = await Promise.all([
         prisma.eDMSettings.findUnique({ where: { shopId } }),
@@ -614,25 +371,22 @@ export async function getShopEdmCredentials(shopId: string): Promise<EdmCredenti
     if (!settings || !settings.edmActive) {
         throw new Error("Bu dükkan için e-Fatura entegrasyonu aktif değil.");
     }
-
     if (!settings.username || !settings.passwordEncrypted) {
-        throw new Error("EDM kullanıcı adı veya şifresi tanımlı değil. E-Fatura Ayarları'ndan bilgilerinizi girin.");
+        throw new Error("EDM kullanıcı adı veya şifresi eksik.");
     }
 
-    // Şifre base64 ile depolanıyor
     const password = Buffer.from(settings.passwordEncrypted, "base64").toString("utf-8");
 
     return {
         username: settings.username,
         password,
+        secretKey: (settings as any).secretKey || undefined,
         senderVkn: settings.senderVkn || shop?.taxNumber || "",
-        senderName: settings.senderName || shop?.companyName || shop?.name || undefined,
-        senderAddress: settings.senderAddress || shop?.address || undefined,
+        senderName: settings.senderName || shop?.companyName || shop?.name || "Bilinmeyen Ünvan",
+        senderAddress: settings.senderAddress || shop?.address || "Belirtilmemiş",
         senderCity: settings.senderCity || shop?.companyCity || "İstanbul",
-        senderDistrict: settings.senderDistrict || shop?.companyDistrict || undefined,
-        senderTaxOffice: settings.senderTaxOffice || shop?.taxOffice || undefined,
-        baseUrl: settings.apiUrl || process.env.EDM_REST_API_URL || DEFAULT_REST_URL,
-        isRest: true
+        senderDistrict: settings.senderDistrict || shop?.companyDistrict || "Merkez",
+        senderTaxOffice: settings.senderTaxOffice || shop?.taxOffice || "Merkez",
+        baseUrl: settings.apiUrl || process.env.EDM_REST_API_URL || "https://restapi.edmbilisim.com.tr/EFaturaEDM_API_Test"
     };
 }
-

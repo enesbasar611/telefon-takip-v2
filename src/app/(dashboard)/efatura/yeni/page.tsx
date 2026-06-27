@@ -42,7 +42,7 @@ const lineSchema = z.object({
 
 const invoiceSchema = z.object({
     customerName: z.string().trim().min(2, "Müşteri adı en az 2 karakter olmalıdır."),
-    customerVkn: z.string().regex(/^\d{10}$|^\d{11}$/, "VKN 10, TCKN 11 haneli olmalıdır."),
+    customerVkn: z.string().regex(/^\d{10,11}$/, "VKN 10, TCKN 11 haneli olmalıdır."),
     customerTaxOffice: z.string().trim().min(2, "Vergi dairesi zorunludur."),
     customerAddress: z.string().trim().min(5, "Adres en az 5 karakter olmalıdır."),
     customerCity: z.string().min(1, "İl seçimi zorunludur."),
@@ -178,7 +178,11 @@ export default function EfaturaYeniPage() {
     const onSubmit = async (values: InvoiceForm) => {
         setSending(true);
         try {
-            const autoInvoiceId = `${values.prefix}2009123456789`;
+            const year = new Date().getFullYear();
+            // Kanka, geçici olarak benzersiz bir ID oluşturuyoruz. 
+            // Normalde bu backend'de seq id ile yönetilmeli ama TEST için saniye bazlı unique'lik sağlıyoruz.
+            const timestamp = Math.floor(Date.now() / 1000).toString().slice(-9);
+            const autoInvoiceId = `${values.prefix}${year}${timestamp}`;
 
             const res = await fetch("/api/edm/invoices", {
                 method: "POST",

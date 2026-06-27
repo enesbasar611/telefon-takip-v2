@@ -33,47 +33,26 @@ export async function POST(req: Request) {
             );
         }
 
-        // EDM ayarlarini DB'den al
-        const settings = await prisma.eDMSettings.findFirst({
-            where: { shopId: String(shopId) },
-        });
-
-        if (!settings?.username || !settings?.passwordEncrypted) {
+        let credentials;
+        try {
+            credentials = await import("@/lib/edm/rest-client").then(m => m.getShopEdmCredentials(String(shopId)));
+        } catch (err: any) {
             return NextResponse.json(
-                { error: "EDM ayarlari bulunamadi. Lutfen once EDM ayarlarini yapin." },
+                { error: err.message || "EDM bilgileri alinamadi." },
                 { status: 400 }
             );
         }
 
-        const credentials = {
-            username: settings.username,
-            password: Buffer.from(settings.passwordEncrypted, "base64").toString("utf-8"),
-            senderVkn: settings.senderVkn || "3230512384",
-        };
+        // checkEdmUser kendi içinde try-catch barındırır, hata fırlatmaz, güvenli obje döner
+        const result = await checkEdmUser(credentials, vknTckn);
+        const isEInvoiceUser = result.isEInvoice;
 
-        let result;
-        let isEInvoiceUser = false;
-
-        try {
-            result = await checkEdmUser(credentials, vknTckn);
-            // UserAlias donerse → e-Fatura mükellefi
-            isEInvoiceUser = !!result.alias;
-            console.log(`[CheckUser] Mükellef durumu sorgulandı:`, {
-                vknTckn,
-                alias: result.alias,
-                isEInvoiceUser,
-                resultMessage: result.message
-            });
-        } catch (checkError: any) {
-            // Hata donerse → e-Arşiv mükellefi
-            isEInvoiceUser = false;
-            console.log(`[CheckUser] e-Arşiv mükellefi (sorgu hatasi):`, {
-                vknTckn,
-                error: checkError.message,
-                isEInvoiceUser,
-            });
-            result = { isEInvoice: false, alias: null, error: checkError.message };
-        }
+        console.log(`[CheckUser] Mükellef durumu sorgulandı:`, {
+            vknTckn,
+            alias: result.alias,
+            isEInvoiceUser,
+            resultMessage: result.message
+        });
 
         // Customer tablosunu güncelle (varsa)
         if (customerId) {

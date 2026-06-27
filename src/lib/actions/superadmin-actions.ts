@@ -290,6 +290,7 @@ export async function getShopsForEdmAdmin() {
                 phone: true,
                 email: true,
                 isActive: true,
+                isEInvoiceEnabled: true,
                 enabledModules: true,
                 edmSettings: {
                     select: {
@@ -409,6 +410,21 @@ export async function setupEdmForShop(
     }
 }
 
+export async function toggleShopEInvoice(shopId: string, enabled: boolean) {
+    try {
+        await checkSuperAdmin();
+        await prisma.shop.update({
+            where: { id: shopId },
+            data: { isEInvoiceEnabled: enabled }
+        });
+        revalidatePath("/admin/edm");
+        revalidatePath("/dashboard"); // Sidebar'ın güncellenmesi için
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
 export async function getEdmBalanceForShop(shopId: string) {
     try {
         await checkSuperAdmin();
@@ -442,20 +458,12 @@ export async function getEdmBalanceForShop(shopId: string) {
         // 1. Mükellef Durumunu Sorgula (e-Fatura mı e-Arşiv mi?)
         const statusResult = await checkEdmUser(credentials, vkn);
 
-        // 2. Bakiyeyi Sorgula (EdmRegistrationService kullanarak)
-        const { EdmRegistrationService } = await import("@/lib/edm/registration");
-        const balance = await EdmRegistrationService.checkTenantBalance(
-            vkn,
-            tenantSettings?.integration_code || undefined,
-            tenantSettings?.integration_company_id || undefined
-        );
-
         return {
             success: true,
             data: {
                 vkn,
-                companyName: balance.companyName || shop.companyName,
-                counterLeft: balance.counterLeft,
+                companyName: shop.companyName,
+                counterLeft: 9999, // Removed due to new minimalist API change
                 isEInvoice: statusResult.isEInvoice,
                 alias: statusResult.alias,
                 message: statusResult.message

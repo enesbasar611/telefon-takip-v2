@@ -859,11 +859,13 @@ model EDMInvoice {
   currency        String           @default("TRY")
   issueDate       DateTime
   note            String?
-  viewUrl         String?
-  edmError        String?
-  cancelledAt     DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  customerName     String?
+  customerTaxNumber String?
+  viewUrl          String?
+  edmError         String?
+  cancelledAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   customer        Customer?        @relation(fields: [customerId], references: [id])
   sale            Sale?            @relation(fields: [saleId], references: [id])
   serviceTicket   ServiceTicket?   @relation(fields: [serviceTicketId], references: [id])

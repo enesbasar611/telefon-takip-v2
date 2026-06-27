@@ -291,7 +291,8 @@ export default function MobileScannerPage() {
                     })),
                     totalAmount: totalAmount,
                     discountAmount: 0,
-                    usedPoints: 0
+                    usedPoints: 0,
+                    currency: "TRY"
                 });
 
                 if (result.success) {

@@ -340,6 +340,8 @@ export async function getStaffLogs(page = 1, limit = 10, search?: string, date?:
     } catch (error) { return { success: false, logs: [], totalPages: 0, total: 0 }; }
 }
 
+export { getStaffLogs as getAllLogs };
+
 export async function updateProfile(data: any) {
     try {
         const uid = await getUserId();

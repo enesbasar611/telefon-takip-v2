@@ -19,7 +19,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-    getShopsForEdmAdmin, getEdmBalanceForShop, setupEdmForShop
+    getShopsForEdmAdmin, getEdmBalanceForShop, setupEdmForShop, toggleShopEInvoice
 } from "@/lib/actions/superadmin-actions";
 
 export function EdmAdminClient() {
@@ -51,6 +51,20 @@ export function EdmAdminClient() {
             (shop.companyName || "").toLowerCase().includes(q)
         );
     });
+
+    const handleToggleModule = async (shopId: string, enabled: boolean) => {
+        try {
+            const res = await toggleShopEInvoice(shopId, enabled);
+            if (res.success) {
+                toast.success(`Modül yetkisi ${enabled ? "verildi" : "kaldırıldı"}.`);
+                queryClient.invalidateQueries({ queryKey: ["admin-edm-shops"] });
+            } else {
+                toast.error(res.error || "İşlem başarısız.");
+            }
+        } catch (e: any) {
+            toast.error(e.message);
+        }
+    };
 
     const handleCheckBalance = async (shop: any) => {
         setCheckingBalance(shop.id);
@@ -95,8 +109,8 @@ export function EdmAdminClient() {
                             <TableRow>
                                 <TableHead className="w-[280px]">Bayi & Durum</TableHead>
                                 <TableHead>VKN / Unvan</TableHead>
-                                <TableHead>e-Fatura Durumu</TableHead>
-                                <TableHead>Kontör</TableHead>
+                                <TableHead>EDM Entegrasyonu</TableHead>
+                                <TableHead>Modül Yetkisi (Sidebar)</TableHead>
                                 <TableHead className="text-right">Aksiyonlar</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -147,47 +161,57 @@ export function EdmAdminClient() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                {hasEdm ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                                        <span className="text-xs font-bold text-emerald-600">Aktif</span>
-                                                        <Badge variant="secondary" className="text-[9px] py-0 px-1.5">
-                                                            {shop.edmSettings?.senderVkn}
-                                                        </Badge>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-2 w-2 rounded-full bg-slate-300" />
-                                                        <span className="text-xs text-muted-foreground">Pasif</span>
-                                                    </div>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    {hasEdm ? (
+                                                        <div className="flex items-center gap-1.5 text-emerald-500 font-bold text-xs bg-emerald-500/10 px-2 py-1 rounded-lg">
+                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            Aktif
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5 text-muted-foreground font-bold text-xs bg-muted px-2 py-1 rounded-lg">
+                                                            <XCircle className="h-3 w-3" />
+                                                            Kurulmadı
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 gap-1.5 rounded-xl text-xs"
-                                                    onClick={() => handleCheckBalance(shop)}
-                                                    disabled={checkingBalance === shop.id || !hasEdm}
-                                                >
-                                                    {checkingBalance === shop.id ? (
-                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                    ) : (
-                                                        <CreditCard className="h-3.5 w-3.5" />
-                                                    )}
-                                                    Sorgula
-                                                </Button>
+                                                <div className="flex items-center gap-3">
+                                                    <Switch
+                                                        checked={shop.isEInvoiceEnabled}
+                                                        onCheckedChange={(v) => handleToggleModule(shop.id, v)}
+                                                    />
+                                                    <span className={`text-xs font-medium ${shop.isEInvoiceEnabled ? "text-primary" : "text-muted-foreground"}`}>
+                                                        {shop.isEInvoiceEnabled ? "Açık" : "Kapalı"}
+                                                    </span>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    className="h-9 px-3 rounded-xl gap-2 font-bold text-xs bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all"
-                                                    onClick={() => setSetupShopId(shop.id)}
-                                                >
-                                                    <Settings className="h-4 w-4" />
-                                                    Ayarlar
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-9 px-3 rounded-xl gap-2 font-bold text-xs"
+                                                        onClick={() => handleCheckBalance(shop)}
+                                                        disabled={checkingBalance === shop.id || !hasEdm}
+                                                    >
+                                                        {checkingBalance === shop.id ? (
+                                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                        ) : (
+                                                            <CreditCard className="h-3.5 w-3.5" />
+                                                        )}
+                                                        Bakiye
+                                                    </Button>
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        className="h-9 px-3 rounded-xl gap-2 font-bold text-xs bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all border-none"
+                                                        onClick={() => setSetupShopId(shop.id)}
+                                                    >
+                                                        <Settings className="h-4 w-4" />
+                                                        Yapılandır
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     );

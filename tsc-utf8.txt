@@ -1,0 +1,27 @@
+﻿src/app/(dashboard)/profil/page.tsx(140,33): error TS2339: Property 'error' does not exist on type '{ success: boolean; user: any; } | { success: boolean; user?: undefined; }'.
+  Property 'error' does not exist on type '{ success: boolean; user: any; }'.
+src/app/(dashboard)/profil/page.tsx(200,37): error TS2339: Property 'error' does not exist on type '{ success: boolean; user: any; } | { success: boolean; user?: undefined; }'.
+  Property 'error' does not exist on type '{ success: boolean; user: any; }'.
+src/app/api/edm/check-user/route.ts(58,41): error TS2345: Argument of type '{ username: string; password: string; senderVkn: string; }' is not assignable to parameter of type 'EdmCredentials'.
+  Property 'baseUrl' is missing in type '{ username: string; password: string; senderVkn: string; }' but required in type 'EdmCredentials'.
+src/app/api/edm/invoices/route.ts(106,17): error TS2353: Object literal may only specify known properties, and 'dueDate' does not exist in type 'EdmInvoicePayload'.
+src/app/onboarding/page.tsx(52,5): error TS2305: Module '"@/lib/actions/onboarding-actions"' has no exported member 'getWhatsAppStatusOnboarding'.
+src/app/onboarding/page.tsx(53,5): error TS2305: Module '"@/lib/actions/onboarding-actions"' has no exported member 'reinitWhatsAppOnboarding'.
+src/app/onboarding/page.tsx(249,17): error TS2353: Object literal may only specify known properties, and 'whatsappConnected' does not exist in type '{ geminiApiKey?: string | undefined; }'.
+src/app/scanner/page.tsx(284,49): error TS2345: Argument of type '{ customerId: string | undefined; paymentMethod: "CASH" | "TRANSFER" | "DEBT" | "CREDIT_CARD"; items: { productId: any; quantity: any; unitPrice: any; }[]; totalAmount: any; discountAmount: number; usedPoints: number; }' is not assignable to parameter of type '{ currency: string; paymentMethod: string; items: { productId: string; quantity: number; unitPrice: number; }[]; totalAmount: number; discountAmount: number; usedPoints: number; customerId?: string | undefined; }'.
+  Property 'currency' is missing in type '{ customerId: string | undefined; paymentMethod: "CASH" | "TRANSFER" | "DEBT" | "CREDIT_CARD"; items: { productId: any; quantity: any; unitPrice: any; }[]; totalAmount: any; discountAmount: number; usedPoints: number; }' but required in type '{ currency: string; paymentMethod: string; items: { productId: string; quantity: number; unitPrice: number; }[]; totalAmount: number; discountAmount: number; usedPoints: number; customerId?: string | undefined; }'.
+src/components/dashboard/stat-widget-wrapper.tsx(21,41): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/components/dashboard/streamed/mobile-stats-stream.tsx(8,27): error TS2554: Expected 0 arguments, but got 1.
+src/components/dashboard/streamed/smart-insights-stream.tsx(13,53): error TS2554: Expected 0 arguments, but got 1.
+src/components/dashboard/streamed/stats-grid-stream.tsx(17,41): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/components/dashboard/streamed/stats-grid-stream.tsx(20,50): error TS2554: Expected 0 arguments, but got 1.
+src/components/staff/leave-lock-modal.tsx(27,33): error TS2339: Property 'error' does not exist on type '{ success: boolean; }'.
+src/components/staff/staff-delete-modal.tsx(89,46): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/staff/staff-management-client.tsx(76,5): error TS2305: Module '"@/lib/actions/staff-actions"' has no exported member 'getAllLogs'.
+src/lib/actions/superadmin-actions.ts(446,57): error TS2307: Cannot find module '@/lib/edm/registration' or its corresponding type declarations.
+src/lib/edm/cron.ts(16,26): error TS2561: Object literal may only specify known properties, but 'eDMSettings' does not exist in type 'ShopWhereInput'. Did you mean to write 'edmSettings'?
+src/lib/edm/cron.ts(17,28): error TS2561: Object literal may only specify known properties, but 'eDMSettings' does not exist in type 'ShopInclude<DefaultArgs>'. Did you mean to write 'edmSettings'?
+src/lib/edm/cron.ts(30,45): error TS2339: Property 'eDMSettings' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; name: string; address: string | null; phone: string | null; email: string | null; enabledModules: string[]; industry: string; themeConfig: JsonValue; ... 15 more ...; logoUrl: string | null; }'.
+src/lib/edm/cron.ts(57,66): error TS2339: Property 'eDMSettings' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; name: string; address: string | null; phone: string | null; email: string | null; enabledModules: string[]; industry: string; themeConfig: JsonValue; ... 15 more ...; logoUrl: string | null; }'.

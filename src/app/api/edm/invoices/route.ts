@@ -91,9 +91,19 @@ export async function POST(req: NextRequest) {
         // Fatura tipini ve senaryosunu alıcının durumuna göre ayarla
         const invoiceType = isEInvoice ? "efatura" : "earsiv";
 
-        // Eğer e-Arşiv ise senaryo her zaman TEMEL (EARSIVFATURA) olmalı
-        // e-Fatura ise kullanıcının seçtiği (TEMEL/TICARI) korunmalı
-        const finalScenario = isEInvoice ? validated.invoiceScenario : "TEMEL";
+        // EDM PROFILE string'ine dönüştür — GİB standartları
+        // e-Arşiv → EARSIV (sabit)
+        // e-Fatura → TICARIFATURA veya TEMELFATURA (kullanıcı seçimi)
+        let invoiceProfile: "TICARIFATURA" | "TEMELFATURA" | "EARSIV";
+        if (!isEInvoice) {
+            invoiceProfile = "EARSIV";
+        } else {
+            // Kullanıcının seçtiği senaryo: TICARI → TICARIFATURA, TEMEL → TEMELFATURA
+            const scenario = validated.invoiceScenario?.toUpperCase() || "TICARI";
+            invoiceProfile = scenario.includes("TICARI") ? "TICARIFATURA" : "TEMELFATURA";
+        }
+
+        console.log(`[EDM Invoice API] Profile: ${invoiceProfile}, isEInvoice: ${isEInvoice}, scenario: ${validated.invoiceScenario}`);
 
         // Fatura tipini SATIS/IADE formatına çevir (Schema enum'dan al)
         const mappedInvoiceTypeForUbl = validated.invoiceType === "TEVKIFAT" ? "SATIS" : (validated.invoiceType as any);
@@ -103,11 +113,10 @@ export async function POST(req: NextRequest) {
             {
                 invoiceId: validated.invoiceId,
                 issueDate: validated.issueDate,
-                dueDate: validated.dueDate,
                 currency: validated.currency,
-                note: validated.note,
-                invoiceScenario: finalScenario,
+                notes: validated.note,
                 invoiceType: mappedInvoiceTypeForUbl,
+                invoiceProfile,  // "EARSIV" | "TICARIFATURA" | "TEMELFATURA"
                 customer: {
                     name: finalCustomerName,
                     vknTckn: finalTaxNo,
@@ -154,6 +163,8 @@ export async function POST(req: NextRequest) {
                 currency: validated.currency,
                 issueDate: new Date(validated.issueDate),
                 note: validated.note || null,
+                customerName: finalCustomerName,
+                customerTaxNumber: finalTaxNo,
                 viewUrl: result.viewUrl || null,
                 edmError: result.error || null,
             },
