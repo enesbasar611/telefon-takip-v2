@@ -36,7 +36,8 @@ import {
     Layers,
     ListFilter,
     Trash2,
-    RefreshCcw
+    RefreshCcw,
+    XCircle
 } from "lucide-react";
 import {
     AlertDialog,
@@ -72,6 +73,7 @@ import {
 import { getAIAlerts } from "@/lib/actions/stock-ai-actions";
 import { getShop } from "@/lib/actions/setting-actions";
 import { getStaff } from "@/lib/actions/staff-actions";
+import { cancelPurchaseOrder } from "@/lib/actions/supplier-actions";
 
 interface TedarikcilerPageClientProps {
     suppliers?: any[];
@@ -160,6 +162,7 @@ export function TedarikcilerPageClient({
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
     const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<{ ids: string[] } | null>(null);
+    const [cancelConfirmOrder, setCancelConfirmOrder] = useState<any | null>(null);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -626,6 +629,20 @@ export function TedarikcilerPageClient({
                                                                             Teslim Al
                                                                         </Button>
                                                                     )}
+                                                                    {(order.status === "PENDING" || order.status === "ORDERED") && (
+                                                                        <Button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setCancelConfirmOrder(order);
+                                                                            }}
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-rose-400 hover:bg-rose-500/10 rounded-lg"
+                                                                            title="Siparişi İptal Et"
+                                                                        >
+                                                                            <XCircle className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
@@ -729,6 +746,20 @@ export function TedarikcilerPageClient({
                                                             >
                                                                 {order.status === "PENDING" || order.status === "ORDERED" ? <TrendingUp className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                                                             </Button>
+                                                            {(order.status === "PENDING" || order.status === "ORDERED" || order.status === "ON_WAY") && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setCancelConfirmOrder(order);
+                                                                    }}
+                                                                    title="Siparişi İptal Et"
+                                                                >
+                                                                    <XCircle className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
@@ -816,6 +847,18 @@ export function TedarikcilerPageClient({
                                                 >
                                                     {order.status === "PENDING" || order.status === "ORDERED" ? "TAHSİL ET" : "İNCELE"}
                                                 </Button>
+                                                {(order.status === "PENDING" || order.status === "ORDERED" || order.status === "ON_WAY") && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setCancelConfirmOrder(order);
+                                                        }}
+                                                        className="flex-1 h-9 text-[10px] uppercase font-bold text-rose-400 border-rose-500/20 hover:bg-rose-500/10"
+                                                    >
+                                                        İPTAL ET
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1102,6 +1145,56 @@ export function TedarikcilerPageClient({
                     </div>
                 </div>
             )}
+
+            <AlertDialog open={!!cancelConfirmOrder} onOpenChange={(open) => !open && setCancelConfirmOrder(null)}>
+                <AlertDialogContent className="bg-card border-border sm:rounded-3xl shadow-2xl">
+                    <AlertDialogHeader>
+                        <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4">
+                            <XCircle className="h-6 w-6 text-amber-500" />
+                        </div>
+                        <AlertDialogTitle className="text-xl font-bold text-foreground">Siparişi İptal Et</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
+                            <strong className="text-foreground">#{cancelConfirmOrder?.orderNo}</strong> nolu sipariş iptal edilecektir.
+                            <br /><br />
+                            Siparişteki ürünler otomatik olarak <strong className="text-blue-400">Akıllı Stok Yenileme</strong> listesine (Eksik Ürünler) geri dönecektir.
+                            <br /><br />
+                            Devam etmek istiyor musunuz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-6 gap-3">
+                        <AlertDialogCancel className="h-11 rounded-xl border-border bg-accent/5 hover:bg-accent/10 text-xs font-bold transition-all">VAZGEÇ</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!cancelConfirmOrder || isDeleting) return;
+
+                                setIsDeleting(true);
+                                const res = await cancelPurchaseOrder(cancelConfirmOrder.id);
+                                setIsDeleting(false);
+
+                                if (res.success) {
+                                    toast.success("Sipariş iptal edildi ve ürünler eksik listesine geri döndü.");
+                                    setCancelConfirmOrder(null);
+                                    queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+                                    queryClient.invalidateQueries({ queryKey: ["smart-replenishment"] });
+                                    router.refresh();
+                                } else {
+                                    toast.error(res.error || "Sipariş iptal edilemedi.");
+                                }
+                            }}
+                            className="h-11 rounded-xl bg-amber-600 hover:bg-amber-500 text-white border-none text-xs font-bold shadow-lg shadow-amber-600/20 transition-all px-6"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <RefreshCcw className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <XCircle className="h-4 w-4 mr-2" />
+                            )}
+                            SİPARİŞİ İPTAL ET
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

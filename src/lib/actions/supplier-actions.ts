@@ -257,37 +257,57 @@ export interface ReplenishmentRecommendation {
   estimatedCost: number;
 }
 
-export async function getSmartReplenishmentData(): Promise<ReplenishmentRecommendation[]> {
+export async function getSmartReplenishmentData(
+  offset: number = 0,
+  limit: number = 6
+): Promise<{ recommendations: ReplenishmentRecommendation[]; totalCount: number }> {
   try {
     const shopId = await getShopId(false);
-    if (!shopId) return [];
+    if (!shopId) return { recommendations: [], totalCount: 0 };
 
     const now = new Date();
     const d30ago = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
     const d60ago = new Date(now.getTime() - 60 * 24 * 3600 * 1000);
     const d90ago = new Date(now.getTime() - 90 * 24 * 3600 * 1000);
 
-    // 1. Tüm ürünleri çek (kritik veya stok 0 olanlar)
-    const products = await prisma.product.findMany({
+    // 1. Get products that are either below critical stock OR have active shortage items
+    // First, find IDs of products in shortage
+    const shortageItemsProdIds = await prisma.shortageItem.findMany({
+      where: { shopId, isResolved: false, isTaken: false },
+      select: { productId: true }
+    });
+    const idsWithShortageSet = new Set(shortageItemsProdIds.map(s => s.productId).filter(Boolean) as string[]);
+
+    // Find products that meet criteria (low stock OR explicit shortage)
+    // Using a more lightweight query first to identify IDs
+    const allProductMetas = await prisma.product.findMany({
       where: {
         shopId,
         hideFromShortage: false,
-        OR: [
-          { stock: { lte: prisma.product.fields.criticalStock } }, // criticalStock yok, raw where kullanıcaz
-        ],
       },
+      select: {
+        id: true,
+        stock: true,
+        criticalStock: true,
+      }
+    });
+
+    const candidateIds = allProductMetas
+      .filter(p => p.stock <= (p.criticalStock ?? 1) || idsWithShortageSet.has(p.id))
+      .map(p => p.id);
+
+    if (candidateIds.length === 0) return { recommendations: [], totalCount: 0 };
+
+    // Fetch full data ONLY for candidates
+    const candidateProducts = await prisma.product.findMany({
+      where: { id: { in: candidateIds } },
       include: {
         category: true,
         supplier: true,
       },
     });
 
-    // Filtreyi manuel uygula (Prisma field comparison)
-    const candidateProducts = products.filter(
-      (p) => p.stock <= (p.criticalStock ?? 1)
-    );
-
-    if (candidateProducts.length === 0) return [];
+    if (candidateProducts.length === 0) return { recommendations: [], totalCount: 0 };
 
     const productIds = candidateProducts.map((p) => p.id);
 
@@ -322,6 +342,30 @@ export async function getSmartReplenishmentData(): Promise<ReplenishmentRecommen
         isTaken: false,
       },
     });
+
+    // 4b. Active assigned shortage IDs (assigned to couriers)
+    const assignedShortageProductIds = new Set(
+      shortageItems
+        .filter(si => si.assignedToId !== null)
+        .map(si => si.productId)
+        .filter(Boolean) as string[]
+    );
+
+    // 4c. Active purchase orders (ORDERED, PENDING, ON_WAY)
+    const activePurchaseOrderItems = await prisma.purchaseOrderItem.findMany({
+      where: {
+        order: {
+          shopId,
+          status: { in: ["PENDING", "ON_WAY"] }
+        },
+        productId: { in: productIds }
+      },
+      select: { productId: true }
+    });
+
+    const productsInActiveOrders = new Set(
+      activePurchaseOrderItems.map(item => item.productId).filter(Boolean) as string[]
+    );
 
     // 5. Tedarikçiler
     const suppliers = await prisma.supplier.findMany({
@@ -362,6 +406,11 @@ export async function getSmartReplenishmentData(): Promise<ReplenishmentRecommen
     const recommendations: ReplenishmentRecommendation[] = [];
 
     for (const product of candidateProducts) {
+      // Skip if assigned to courier or in active purchase order
+      if (assignedShortageProductIds.has(product.id) || productsInActiveOrders.has(product.id)) {
+        continue;
+      }
+
       const sales = salesByProduct.get(product.id) ?? { d30: 0, d60: 0, d90: 0 };
       const pendingServiceQty = serviceDemandByProduct.get(product.id) ?? 0;
       const pendingShortageQty = shortageDemandByProduct.get(product.id) ?? 0;
@@ -449,9 +498,68 @@ export async function getSmartReplenishmentData(): Promise<ReplenishmentRecommen
     // Öncelik skoruna göre sırala
     recommendations.sort((a, b) => b.priorityScore - a.priorityScore);
 
-    return serializePrisma(recommendations) as ReplenishmentRecommendation[];
+    const totalCount = recommendations.length;
+    const paginatedRecommendations = recommendations.slice(offset, offset + limit);
+
+    return {
+      recommendations: serializePrisma(paginatedRecommendations) as ReplenishmentRecommendation[],
+      totalCount
+    };
   } catch (error) {
     console.error("Error in getSmartReplenishmentData:", error);
-    return [];
+    return { recommendations: [], totalCount: 0 };
+  }
+}
+
+export async function cancelPurchaseOrder(id: string) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+
+    const order = await prisma.purchaseOrder.findUnique({
+      where: { id, shopId },
+      include: { items: true, supplier: true }
+    });
+
+    if (!order) return { success: false, error: "Sipariş bulunamadı." };
+
+    // Status check - only pending or on_way orders can be cancelled
+    if (order.status === "COMPLETED" || order.status === "CANCELLED") {
+      return { success: false, error: "Tamamlanmış veya zaten iptal edilmiş siparişler iptal edilemez." };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Mark order as CANCELLED
+      await tx.purchaseOrder.update({
+        where: { id },
+        data: { status: "CANCELLED" }
+      });
+
+      // 2. Add items back to ShortageItem list so they appear in Smart Replenishment again
+      for (const item of order.items) {
+        await tx.shortageItem.create({
+          data: {
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            notes: `İptal edilen ${order.orderNo} nolu siparişten geri döndü (${order.supplier.name})`,
+            isResolved: false,
+            isTaken: false,
+            isFromReplenishment: true,
+            shopId
+          }
+        });
+      }
+
+      // 3. Log the cancellation (if you have activity logs, otherwise skipping for now)
+    });
+
+    revalidatePath("/stok");
+    revalidatePath("/tedarikciler");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Cancel purchase order error:", error);
+    return { success: false, error: "Sipariş iptal edilirken bir hata oluştu." };
   }
 }

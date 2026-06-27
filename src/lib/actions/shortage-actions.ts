@@ -124,6 +124,13 @@ function withCourierPriority<T extends Record<string, any>>(items: T[]) {
   return items
     .map((item) => ({ ...item, isNotFound: isMarkedNotFound(item), ...getShortagePriority(item) }))
     .sort((a, b) => {
+      // First, prioritize items from replenishment
+      const aReplenishment = (a as any).isFromReplenishment ? 1 : 0;
+      const bReplenishment = (b as any).isFromReplenishment ? 1 : 0;
+      if (bReplenishment !== aReplenishment) {
+        return bReplenishment - aReplenishment;
+      }
+
       if (b.courierPriorityScore !== a.courierPriorityScore) {
         return b.courierPriorityScore - a.courierPriorityScore;
       }
@@ -136,7 +143,12 @@ export async function getShortageItems() {
   if (!shopId) return [];
 
   const items = await prisma.shortageItem.findMany({
-    where: { shopId, isResolved: false, isTaken: false },
+    where: {
+      shopId,
+      isResolved: false,
+      isTaken: false,
+      assignedToId: null // Hide courier-assigned items from navbar list
+    },
     include: {
       product: true,
       assignedTo: true,
@@ -150,7 +162,10 @@ export async function getShortageItems() {
         }
       }
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      { isFromReplenishment: "desc" },
+      { createdAt: "desc" }
+    ],
   });
   return serializePrisma(withCourierPriority(items));
 }
@@ -194,7 +209,10 @@ export async function getGlobalShortageList(dateStr?: string) {
           }
         }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: [
+        { isFromReplenishment: "desc" },
+        { createdAt: "desc" }
+      ]
     });
 
     const manualItems = manualItemsRaw.map((item: any) => ({
@@ -572,13 +590,11 @@ export async function addShortageItems(items: Array<{
   requesterPhone?: string;
   customerId?: string;
   assignedToId?: string;
+  isFromReplenishment?: boolean;
 }>) {
   try {
     const shopId = await getShopId();
     if (!shopId) return { success: false, error: "Shop ID not found" };
-
-    // We'll use a transaction to ensure all or nothing, or just loop if we want to handle each separately.
-    // Given the logic in addShortageItem (updating existing), we should probably reuse that logic.
 
     const results = [];
     let duplicateCount = 0;
@@ -616,6 +632,7 @@ export async function addShortageItems(items: Array<{
             requesterPhone: data.requesterPhone,
             customerId: data.customerId,
             assignedToId: data.assignedToId,
+            isFromReplenishment: data.isFromReplenishment ?? false,
             shopId
           }
         });
@@ -653,6 +670,7 @@ export async function addShortageItem(data: {
   requesterPhone?: string;
   customerId?: string;
   assignedToId?: string;
+  isFromReplenishment?: boolean;
 }) {
   return addShortageItems([data]);
 }
@@ -1431,7 +1449,8 @@ export async function clearAllShortages() {
       where: {
         shopId,
         isResolved: false,
-        isTaken: false
+        isTaken: false,
+        assignedToId: null // Crucial: don't delete items assigned to couriers
       }
     });
 
@@ -1484,7 +1503,8 @@ export async function syncZeroStockShortages() {
           quantity: 1,
           shopId,
           requesterName: "Sistem",
-          notes: "OTOMATIK EKLEME (STOK SIFIRLANDI)"
+          notes: "OTOMATIK EKLEME (STOK SIFIRLANDI)",
+          isFromReplenishment: false // System alerts are not necessarily replenishment items in this context
         }))
       });
     }

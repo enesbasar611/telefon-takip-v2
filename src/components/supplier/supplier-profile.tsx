@@ -32,7 +32,8 @@ import {
     ChevronDown,
     Trash2,
     Zap,
-    Copy
+    Copy,
+    XCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -43,7 +44,7 @@ import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 import { TedarikciCariEkstreModal } from "./tedarikci-cari-ekstre-modal";
 import { SupplierPaymentHistoryModal } from "./supplier-payment-history-modal";
 import { EditSupplierModal } from "./edit-supplier-modal";
-import { deleteSupplier } from "@/lib/actions/supplier-actions";
+import { deleteSupplier, cancelPurchaseOrder } from "@/lib/actions/supplier-actions";
 import { toast } from "sonner";
 import { PurchaseForm } from "./purchase-form";
 import {
@@ -83,6 +84,8 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
     const [pendingOrdersToDelete, setPendingOrdersToDelete] = useState<any[]>([]);
     const [isPendingOrdersModalOpen, setIsPendingOrdersModalOpen] = useState(false);
     const [isGroupedByDay, setIsGroupedByDay] = useState(true);
+    const [cancelConfirmOrder, setCancelConfirmOrder] = useState<any>(null);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     // Recovery & UI states
     const [selectedReturnForCourier, setSelectedReturnForCourier] = useState<any>(null);
@@ -500,6 +503,18 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                                                             Teslim Al
                                                                         </Button>
                                                                     )}
+                                                                    {(order.status === "PENDING" || order.status === "ORDERED" || order.status === "ON_WAY") && (
+                                                                        <Button
+                                                                            onClick={() => {
+                                                                                setCancelConfirmOrder(order);
+                                                                            }}
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 rounded-lg text-[10px] uppercase font-black tracking-widest text-rose-500 hover:bg-rose-500/10 border border-rose-500/20 shadow-sm"
+                                                                        >
+                                                                            İptal Et
+                                                                        </Button>
+                                                                    )}
                                                                     {Number(order.remainingAmount) > 0 && (
                                                                         <Button
                                                                             onClick={() => {
@@ -831,6 +846,58 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                 </DialogContent>
             </Dialog>
 
+            <AlertDialog open={!!cancelConfirmOrder} onOpenChange={(open) => !open && setCancelConfirmOrder(null)}>
+                <AlertDialogContent className="bg-card border-border sm:rounded-3xl shadow-2xl">
+                    <AlertDialogHeader>
+                        <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4">
+                            <XCircle className="h-6 w-6 text-amber-500" />
+                        </div>
+                        <AlertDialogTitle className="text-xl font-bold text-foreground uppercase tracking-tight">Siparişi İptal Et</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed font-medium uppercase tracking-widest">
+                            <strong className="text-foreground">#{cancelConfirmOrder?.orderNumber}</strong> nolu sipariş iptal edilecektir.
+                            <br /><br />
+                            Siparişteki ürünler otomatik olarak <strong className="text-blue-400">Akıllı Stok Yenileme</strong> listesine (Eksik Ürünler) geri dönecektir.
+                            <br /><br />
+                            Devam etmek istiyor musunuz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-6 gap-3">
+                        <AlertDialogCancel className="h-11 rounded-xl border-border bg-accent/5 hover:bg-accent/10 text-xs font-bold transition-all uppercase tracking-widest">VAZGEÇ</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!cancelConfirmOrder || isCancelling) return;
+
+                                setIsCancelling(true);
+                                try {
+                                    const res = await cancelPurchaseOrder(cancelConfirmOrder.id);
+                                    if (res.success) {
+                                        toast.success("Sipariş iptal edildi ve ürünler eksik listesine geri döndü.");
+                                        setCancelConfirmOrder(null);
+                                        // Refresh current view if possible, otherwise reload
+                                        window.location.reload();
+                                    } else {
+                                        toast.error(res.error || "Sipariş iptal edilemedi.");
+                                    }
+                                } catch (error) {
+                                    toast.error("Bir hata oluştu.");
+                                } finally {
+                                    setIsCancelling(false);
+                                }
+                            }}
+                            className="h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white border-none text-xs font-bold shadow-lg shadow-rose-600/20 transition-all px-6 uppercase tracking-widest"
+                            disabled={isCancelling}
+                        >
+                            {isCancelling ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <XCircle className="h-4 w-4 mr-2" />
+                            )}
+                            SİPARİŞİ İPTAL ET
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

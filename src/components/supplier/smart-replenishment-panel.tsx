@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,19 +16,23 @@ import {
     ShoppingCart,
     ArrowRight,
     Zap,
-    ChevronDown,
-    ChevronUp,
     RefreshCw,
     Sparkles,
     PackageOpen,
     BarChart2,
+    Loader2,
+    UserPlus2,
+    ChevronUp,
+    ChevronDown,
 } from "lucide-react";
+import { useInView } from "react-intersection-observer";
 import { cn } from "@/lib/utils";
 import {
     getSmartReplenishmentData,
     type ReplenishmentRecommendation,
 } from "@/lib/actions/supplier-actions";
 import { useSupplierOrders } from "@/lib/context/supplier-order-context";
+import { useShortage } from "@/lib/context/shortage-context";
 import { toast } from "sonner";
 
 const PRIORITY_CONFIG = {
@@ -98,10 +102,12 @@ function ReplenishmentRow({
     item,
     suppliers,
     onAddToOrder,
+    onAddToShortage,
 }: {
     item: ReplenishmentRecommendation;
     suppliers: any[];
     onAddToOrder: (item: ReplenishmentRecommendation, supplierId: string) => void;
+    onAddToShortage: (item: ReplenishmentRecommendation) => void;
 }) {
     const [expanded, setExpanded] = useState(false);
     const cfg = PRIORITY_CONFIG[item.priorityLevel];
@@ -309,6 +315,19 @@ function ReplenishmentRow({
                                 </div>
 
                                 <div className="flex items-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 px-4 rounded-xl text-[11px] gap-2 border-red-500/20 text-red-400 hover:bg-red-500/10"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onAddToShortage(item);
+                                        }}
+                                    >
+                                        <UserPlus2 className="h-3.5 w-3.5" />
+                                        Eksiklere Ekle
+                                    </Button>
+
                                     {item.suggestedSupplierId ? (
                                         <Button
                                             size="sm"
@@ -347,19 +366,53 @@ export function SmartReplenishmentPanel({ suppliers }: SmartReplenishmentPanelPr
         "ALL" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
     >("ALL");
 
-    const { addProductToSupplier } = useSupplierOrders();
+    const { addProductToSupplier, orders } = useSupplierOrders();
+    const { addShortage } = useShortage();
+
+    const productIdsInCart = useMemo(() => {
+        const ids = new Set<string>();
+        Object.values(orders).forEach(list => {
+            list.items.forEach(item => {
+                if (item.productId) ids.add(item.productId);
+            });
+        });
+        return ids;
+    }, [orders]);
 
     const {
-        data: recommendations = [],
+        data,
         isLoading,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
         refetch,
         isFetching,
-    } = useQuery({
+    } = useInfiniteQuery({
         queryKey: ["smart-replenishment"],
-        queryFn: () => getSmartReplenishmentData(),
+        queryFn: ({ pageParam = 0 }) => getSmartReplenishmentData(pageParam, 6),
+        getNextPageParam: (lastPage, allPages) => {
+            const nextOffset = allPages.length * 6;
+            return nextOffset < lastPage.totalCount ? nextOffset : undefined;
+        },
+        initialPageParam: 0,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
+
+    const recommendations = useMemo(() => {
+        const raw = data?.pages.flatMap((page) => page.recommendations) ?? [];
+        return raw.filter(item => !productIdsInCart.has(item.productId));
+    }, [data, productIdsInCart]);
+
+    const { ref: loadMoreRef, inView } = useInView({
+        threshold: 0.1,
+    });
+
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     const filtered = useMemo(() => {
         if (filterLevel === "ALL") return recommendations;
@@ -374,24 +427,24 @@ export function SmartReplenishmentPanel({ suppliers }: SmartReplenishmentPanelPr
 
     const totalEstimatedCost = filtered.reduce((s, r) => s + r.estimatedCost, 0);
 
-    const handleAddToOrder = (
-        item: ReplenishmentRecommendation,
-        supplierId: string
-    ) => {
+    const handleAddToOrder = (item: any, supplierId: string) => {
         const supplier = suppliers.find((s) => s.id === supplierId);
         addProductToSupplier(
             supplierId,
-            supplier?.name ?? "Tedarikçi",
+            supplier?.name ?? item.suggestedSupplierName ?? "Tedarikçi",
             supplier?.phone ?? undefined,
             { productId: item.productId, name: item.productName },
             item.suggestedOrderQty
         );
-        toast.success(
-            `${item.productName} sipariş listesine eklendi`,
-            {
-                description: `${item.suggestedOrderQty} adet → ${supplier?.name ?? "Tedarikçi"}`,
-            }
-        );
+    };
+
+    const handleAddToShortage = (item: any) => {
+        addShortage({
+            productId: item.productId,
+            name: item.productName,
+            quantity: item.suggestedOrderQty,
+            requesterName: "Akıllı Stok",
+        });
     };
 
     return (
@@ -477,8 +530,8 @@ export function SmartReplenishmentPanel({ suppliers }: SmartReplenishmentPanelPr
                 })}
             </div>
 
-            {/* Content */}
-            <div className="p-4">
+            {/* Content - Fixed height scrollable area to show roughly 6 items */}
+            <div className="p-4 max-h-[460px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {isLoading ? (
                     <div className="flex flex-col gap-3">
                         {[...Array(4)].map((_, i) => (
@@ -515,8 +568,33 @@ export function SmartReplenishmentPanel({ suppliers }: SmartReplenishmentPanelPr
                                     item={item}
                                     suppliers={suppliers}
                                     onAddToOrder={handleAddToOrder}
+                                    onAddToShortage={handleAddToShortage}
                                 />
                             ))}
+                        </div>
+
+                        {/* Infinite Scroll Trigger */}
+                        <div ref={loadMoreRef} className="py-6 flex justify-center border-t border-border/10 mt-4">
+                            {isFetchingNextPage ? (
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground bg-white/5 px-4 py-2 rounded-full border border-border/20 shadow-sm">
+                                    <Loader2 className="h-3 w-3 animate-spin text-blue-400" />
+                                    Yeni öneriler getiriliyor...
+                                </div>
+                            ) : hasNextPage ? (
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="h-1 w-8 bg-blue-500/20 rounded-full animate-bounce" />
+                                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                        Daha fazla öneri için kaydırın
+                                    </p>
+                                </div>
+                            ) : recommendations.length > 0 ? (
+                                <div className="flex flex-col items-center gap-2 opacity-60">
+                                    <div className="h-px w-12 bg-border" />
+                                    <p className="text-[10px] text-muted-foreground italic">
+                                        Tüm kritik stok analizi tamamlandı
+                                    </p>
+                                </div>
+                            ) : null}
                         </div>
                     </AnimatePresence>
                 )}
