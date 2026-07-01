@@ -40,7 +40,7 @@ export function ServiceDetailActions({ ticket }: ServiceDetailActionsProps) {
                     <Button
                         onClick={() => setShowReceipt(true)}
                         variant="outline"
-                        className="w-full h-12 rounded-2xl border-border/50 bg-white/[0.03] text-white hover:bg-white/5 transition-all gap-2"
+                        className="w-full h-12 rounded-2xl border-border/50 bg-slate-50 dark:bg-white/[0.03] text-foreground hover:bg-slate-100 dark:hover:bg-white/5 transition-all gap-2"
                     >
                         <Printer className="h-4 w-4 text-blue-500" />
                         FİŞ YAZDIR

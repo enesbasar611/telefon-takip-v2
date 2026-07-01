@@ -492,16 +492,16 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-full md:max-w-[98vw] md:w-[1500px] h-full md:h-[92vh] bg-[#0F172A] border-white/10 p-0 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] md:rounded-[2.5rem] overflow-hidden">
+            <DialogContent className="w-full md:max-w-[98vw] md:w-[1500px] h-full md:h-[92vh] bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 p-0 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] md:rounded-[2.5rem] overflow-hidden text-slate-900 dark:text-white">
                 {/* Premium Header */}
-                <div className="relative h-20 md:h-28 flex items-center justify-between px-6 md:px-12 bg-gradient-to-b from-white/[0.03] to-transparent border-b border-white/[0.05] shrink-0 z-50">
+                <div className="relative h-20 md:h-28 flex items-center justify-between px-6 md:px-12 bg-gradient-to-b from-slate-50 dark:from-white/[0.03] to-transparent border-b border-slate-200 dark:border-white/[0.05] shrink-0 z-50">
                     <div className="flex items-center gap-6 md:gap-10">
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2 mb-1.5">
                                 <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
-                                    <span className="text-[10px] font-bold text-blue-500 tracking-wider">#{ticket.ticketNumber}</span>
+                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 tracking-normal">#{ticket.ticketNumber}</span>
                                 </div>
-                                <span className="text-[10px] font-medium text-muted-foreground/40 uppercase tracking-widest">
+                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-normal">
                                     {format(new Date(ticket.createdAt), "dd MMMM yyyy", { locale: tr })}
                                 </span>
                             </div>
@@ -512,7 +512,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     </div>
 
                     {/* Visual Timeline Standard (Header) */}
-                    <div className="hidden xl:flex items-center gap-2 px-8 border-x border-white/[0.05]">
+                    <div className="hidden xl:flex items-center gap-2 px-8 border-x border-slate-200 dark:border-white/[0.05]">
                         {statusOrder.map((status, idx) => {
                             const config = statusConfig[status];
                             const isCurrent = ticket.status === status;
@@ -531,11 +531,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                             "h-10 w-10 rounded-xl flex items-center justify-center border transition-all duration-500",
                                             isCurrent ? "bg-blue-500 border-blue-400 text-white shadow-[0_0_25px_rgba(59,130,246,0.5)]" :
                                                 isPast ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
-                                                    "bg-white/5 border-white/10 text-white/40"
+                                                    "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40"
                                         )}>
                                             {isPast ? <Check className="h-4 w-4" /> : isCurrent ? <Check className="h-4 w-4" /> : <config.icon className="h-4 w-4" />}
                                         </div>
-                                        <span className="text-[7px] font-black uppercase tracking-widest text-center max-w-[50px] leading-tight">
+                                        <span className="text-[11px] font-extrabold uppercase tracking-normal text-center max-w-[80px] leading-tight text-slate-700 dark:text-slate-200">
                                             {config.label}
                                         </span>
                                     </div>
@@ -543,7 +543,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         <div className="flex flex-col items-center mx-2 mb-4">
                                             <div className={cn(
                                                 "w-6 h-[2px] rounded-full transition-colors duration-1000",
-                                                isPast ? "bg-emerald-500/30" : "bg-white/5"
+                                                isPast ? "bg-emerald-500/30" : "bg-slate-200 dark:bg-white/5"
                                             )} />
                                         </div>
                                     )}
@@ -556,47 +556,47 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         {!isQuickDeliver && !["READY", "DELIVERED", "CANCELLED"].includes(ticket.status) && (
                             <button
                                 onClick={() => handleStatusUpdate("READY")}
-                                className="h-10 md:h-12 bg-emerald-500 hover:bg-emerald-400 text-white text-[10px] font-black px-6 md:px-8 rounded-xl flex items-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.3)] transform transition-all active:scale-95 group"
+                                className="h-10 md:h-12 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-6 md:px-8 rounded-xl flex items-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.3)] transform transition-all active:scale-95 group"
                             >
                                 <Check className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                                <span className="hidden md:inline uppercase tracking-widest text-[11px]">Tamamla</span>
+                                <span className="hidden md:inline uppercase tracking-normal text-xs">Tamamla</span>
                             </button>
                         )}
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="h-10 w-10 md:h-14 md:w-14 rounded-2xl hover:bg-rose-500/10 text-rose-500/50 hover:text-rose-500 transition-colors"
+                            className="h-10 w-10 md:h-14 md:w-14 rounded-2xl hover:bg-rose-500/10 text-rose-500 dark:text-rose-500/50 hover:text-rose-500 transition-colors"
                         >
                             <Trash2 className="h-5 w-5 md:h-6 md:w-6" />
                         </Button>
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col md:grid md:grid-cols-[340px_1fr] overflow-hidden bg-[#0F172A]">
+                <div className="flex-1 flex flex-col md:grid md:grid-cols-[340px_1fr] overflow-hidden bg-slate-50 dark:bg-[#0D111C]">
                     {/* Left Pane: Identity & Context */}
-                    <div className="border-r border-white/5 flex flex-col overflow-y-auto no-scrollbar bg-white/[0.01]">
+                    <div className="border-r border-slate-200 dark:border-white/5 flex flex-col overflow-y-auto no-scrollbar bg-slate-50/50 dark:bg-white/[0.01]">
                         <div className="p-5 space-y-6">
                             {/* Device Context */}
                             <section className="space-y-1.5">
                                 <div className="flex items-center gap-2 px-1">
                                     <Smartphone className="h-3 w-3 text-blue-500/60" />
-                                    <h3 className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/30">Cihaz Kimliği</h3>
+                                    <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30">Cihaz Kimliği</h3>
                                 </div>
 
-                                <div className="bg-white/[0.01] border border-white/[0.05] rounded-xl p-2.5 space-y-2">
+                                <div className="bg-slate-100/50 dark:bg-white/[0.01] border border-slate-200 dark:border-white/[0.05] rounded-xl p-2.5 space-y-2">
                                     <div className="flex items-center justify-between">
                                         <div className="min-w-0">
-                                            <p className="text-[13px] font-bold text-white leading-tight truncate">
+                                            <p className="text-sm font-bold text-slate-800 dark:text-white leading-tight truncate">
                                                 {ticket.deviceBrand} <span className="text-blue-500">{ticket.deviceModel}</span>
                                             </p>
-                                            <p className="text-[9px] font-mono text-white/30 tracking-widest mt-0.5">
+                                            <p className="text-xs font-mono text-slate-500 dark:text-white/30 tracking-normal mt-0.5">
                                                 {ticket.imei || "IMEI TANIMSIZ"}
                                             </p>
                                         </div>
                                         {ticket.devicePassword && !ticket.devicePassword.startsWith("DESEN:") && (
-                                            <div className="px-2 py-1 bg-amber-500/5 rounded-lg border border-amber-500/10">
-                                                <span className="text-[9px] font-mono font-bold text-amber-500/80">{ticket.devicePassword}</span>
+                                            <div className="px-2 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                                <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-500/80">{ticket.devicePassword}</span>
                                             </div>
                                         )}
                                     </div>
@@ -620,13 +620,13 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                             <section className="space-y-1.5">
                                 <div className="flex items-center gap-2 px-1">
                                     <User className="h-3 w-3 text-emerald-500/60" />
-                                    <h3 className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/30">Müşteri Profili</h3>
+                                    <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30">Müşteri Profili</h3>
                                 </div>
 
-                                <div className="bg-white/[0.01] border border-white/[0.05] rounded-xl p-2.5 flex items-center justify-between group hover:bg-white/[0.03] transition-all">
+                                <div className="bg-slate-100/50 dark:bg-white/[0.01] border border-slate-200 dark:border-white/[0.05] rounded-xl p-2.5 flex items-center justify-between group hover:bg-slate-200/50 dark:hover:bg-white/[0.03] transition-all">
                                     <div className="min-w-0">
-                                        <p className="text-[13px] font-bold text-white/90 truncate">{ticket.customer?.name}</p>
-                                        <p className="text-[9px] font-mono text-white/30 tracking-wider mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white/90 truncate">{ticket.customer?.name}</p>
+                                        <p className="text-xs font-mono text-slate-500 dark:text-white/30 tracking-normal mt-0.5">{formatPhone(ticket.customer?.phone)}</p>
                                     </div>
                                     <Button
                                         variant="ghost"
@@ -645,15 +645,15 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     <div className="h-4 w-4 rounded bg-blue-500/10 flex items-center justify-center">
                                         <Wrench className="h-2.5 w-2.5 text-blue-500" />
                                     </div>
-                                    <h3 className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Sorumlu Teknisyen</h3>
+                                    <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/40">Sorumlu Teknisyen</h3>
                                 </div>
-                                <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl overflow-hidden">
+                                <div className="bg-slate-100 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] rounded-xl overflow-hidden">
                                     <Select
                                         value={ticket.technician?.id || staff.find(s => s.role === "SHOP_MANAGER")?.id || ""}
                                         onValueChange={handleAssignTech}
                                         disabled={!!ticket.technicianId && !isAdmin}
                                     >
-                                        <SelectTrigger className="h-10 bg-transparent border-none text-xs text-white/80 px-3 focus:ring-0">
+                                        <SelectTrigger className="h-10 bg-transparent border-none text-xs text-slate-800 dark:text-white/80 px-3 focus:ring-0">
                                             <SelectValue placeholder="Teknisyen Atanmamış" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-[#111827] border-white/10 text-white rounded-xl p-1 z-[9999]" position="popper" sideOffset={5}>
@@ -681,15 +681,15 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     <div className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex-1 overflow-y-auto no-scrollbar p-5 md:p-8 space-y-6 md:space-y-8">
                             {/* Problem Highlight */}
-                            <div className="p-4 bg-gradient-to-br from-amber-500/[0.08] via-amber-500/[0.02] to-transparent border border-amber-500/20 rounded-2xl relative overflow-hidden group shadow-xl">
+                            <div className="p-4 bg-amber-500/5 dark:bg-gradient-to-br dark:from-amber-500/[0.08] dark:via-amber-500/[0.02] dark:to-transparent border border-amber-200 dark:border-amber-500/20 rounded-2xl relative overflow-hidden group shadow-xl">
                                 <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700">
                                     <AlertCircle className="h-16 w-16 text-amber-500" />
                                 </div>
                                 <div className="flex items-center gap-3 mb-1.5">
                                     <Activity className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
-                                    <h3 className="text-[9px] font-black uppercase tracking-[0.4em] text-amber-500/40">MÜŞTERİ ARIZA BEYANI</h3>
+                                    <h3 className="text-xs font-extrabold uppercase tracking-normal text-amber-600 dark:text-amber-400">MÜŞTERİ ARIZA BEYANI</h3>
                                 </div>
-                                <p className="text-[12px] font-bold text-amber-900 dark:text-amber-100/90 leading-relaxed italic tracking-tight">
+                                <p className="text-sm font-bold text-amber-900 dark:text-amber-100/90 leading-relaxed italic tracking-tight">
                                     "{ticket.problemDesc}"
                                 </p>
                             </div>
@@ -699,7 +699,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     {/* Parts Search */}
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between px-1">
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">PARÇA YÖNETİMİ</h3>
+                                            <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30">PARÇA YÖNETİMİ</h3>
                                             {searchQuery && <span className="text-[10px] text-blue-500 animate-pulse font-bold uppercase">Arama Aktif</span>}
                                         </div>
                                         <div className="relative group">
@@ -708,7 +708,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                 placeholder="Ürün adı, SKU veya kategori..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="h-16 bg-white/[0.03] border-white/5 pl-16 pr-8 rounded-3xl text-sm font-bold text-white placeholder:text-white/10 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/20 transition-all"
+                                                className="h-16 bg-slate-100 dark:bg-white/[0.03] border-slate-200 dark:border-white/5 pl-16 pr-8 rounded-3xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/20 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/20 transition-all"
                                             />
                                             {searchQuery && (
                                                 <div className="absolute top-full left-0 right-0 mt-4 bg-[#111112] border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[100] max-h-[500px] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-300">
@@ -755,7 +755,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             <Plus className="h-6 w-6" />
                                                         </div>
                                                         <div className="flex flex-col relative z-10">
-                                                            <span className="text-xs font-black text-white uppercase tracking-[0.2em]">SİSTEM DIŞI EKLE</span>
+                                                            <span className="text-xs font-black text-white uppercase tracking-normal">SİSTEM DIŞI EKLE</span>
                                                             <span className="text-[10px] text-white/60 font-medium tracking-tight">Parçayı tedarikçiden borç olarak temin et</span>
                                                         </div>
                                                         <ArrowRightCircle className="h-6 w-6 text-white ml-auto group-hover/new:translate-x-1 transition-transform relative z-10" />
@@ -769,7 +769,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     {/* Used Parts List */}
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between px-1">
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 truncate">KULLANILAN MATERYALLER</h3>
+                                            <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30 truncate">KULLANILAN MATERYALLER</h3>
                                             <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                                                 <span className="text-[10px] font-black text-emerald-500 tabular-nums">{formatCurrency(partsTotal, true)}</span>
                                             </div>
@@ -777,38 +777,38 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                                         <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
                                             {ticket.usedParts?.length === 0 ? (
-                                                <div className="h-40 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2.5rem] opacity-20">
+                                                <div className="h-40 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[2.5rem] opacity-40">
                                                     <Box className="h-10 w-10 mb-2" />
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest">Henüz parça eklenmedi</p>
+                                                    <p className="text-xs font-bold uppercase tracking-normal">Henüz parça eklenmedi</p>
                                                 </div>
                                             ) : (
                                                 ticket.usedParts?.map((p: any) => (
-                                                    <div key={p.id} className="group relative p-6 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] hover:bg-white/[0.04] transition-all flex flex-col md:flex-row md:items-center gap-6">
+                                                    <div key={p.id} className="group relative p-6 bg-slate-100 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] rounded-[2.5rem] hover:bg-slate-200/50 dark:hover:bg-white/[0.04] transition-all flex flex-col md:flex-row md:items-center gap-6">
                                                         <div className="flex items-center gap-5 flex-1 min-w-0">
-                                                            <div className="h-16 w-16 rounded-[1.5rem] bg-white/[0.03] flex items-center justify-center border border-white/[0.05] shadow-lg group-hover:scale-105 transition-transform group-hover:text-blue-500">
+                                                            <div className="h-16 w-16 rounded-[1.5rem] bg-slate-200 dark:bg-white/[0.03] flex items-center justify-center border border-slate-300 dark:border-white/[0.05] shadow-lg group-hover:scale-105 transition-transform group-hover:text-blue-500">
                                                                 <Box className="h-8 w-8 text-blue-500/40" />
                                                             </div>
                                                             <div className="min-w-0 space-y-1">
-                                                                <p className="text-base font-bold text-white/90 truncate">{p.product?.name || p.name}</p>
-                                                                <p className="text-[10px] font-mono text-white/20 tracking-tighter uppercase">{p.product?.sku || "ÖZEL KALEM"}</p>
+                                                                <p className="text-base font-bold text-slate-800 dark:text-white truncate">{p.product?.name || p.name}</p>
+                                                                <p className="text-xs font-mono text-slate-500 dark:text-white/35 tracking-tighter uppercase">{p.product?.sku || "ÖZEL KALEM"}</p>
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex items-center gap-6 border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
+                                                        <div className="flex items-center gap-6 border-t md:border-t-0 border-slate-200 dark:border-white/5 pt-4 md:pt-0">
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[8px] font-black text-white/10 uppercase text-center tracking-widest">Maliyet</span>
+                                                                <span className="text-[10px] font-extrabold text-slate-400 dark:text-white/20 uppercase text-center tracking-normal">Maliyet</span>
                                                                 <PriceInput
                                                                     value={Number(p.costPrice)}
                                                                     onChange={(v) => handleUpdatePart(p.id, { costPrice: v })}
-                                                                    className="h-10 w-28 bg-black/40 border-white/10 text-amber-500/80 font-bold text-center text-xs rounded-xl"
+                                                                    className="h-10 w-28 bg-white dark:bg-black/40 border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-500/80 font-bold text-center text-xs rounded-xl"
                                                                 />
                                                             </div>
                                                             <div className="flex flex-col gap-1.5">
-                                                                <span className="text-[8px] font-black text-white/10 uppercase text-center tracking-widest">Satış</span>
+                                                                <span className="text-[10px] font-extrabold text-slate-400 dark:text-white/20 uppercase text-center tracking-normal">Satış</span>
                                                                 <PriceInput
                                                                     value={Number(p.unitPrice)}
                                                                     onChange={(v) => handleUpdatePart(p.id, { unitPrice: v })}
-                                                                    className="h-10 w-28 bg-black/40 border-white/10 text-emerald-500 font-bold text-center text-xs rounded-xl"
+                                                                    className="h-10 w-28 bg-white dark:bg-black/40 border-slate-200 dark:border-white/10 text-emerald-600 dark:text-emerald-500 font-bold text-center text-xs rounded-xl"
                                                                 />
                                                             </div>
                                                             <Button onClick={() => handleRemovePart(p.id)} variant="ghost" size="icon" className="h-10 w-10 text-rose-500/10 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all self-end">
@@ -823,27 +823,27 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 </div>
 
                                 {/* Right Side: Actions & Logs */}
-                                <div className="space-y-10 border-l border-white/5 pl-0 xl:pl-10">
+                                <div className="space-y-10 border-l border-slate-200 dark:border-white/5 pl-0 xl:pl-10">
                                     {/* Status & Technical Note */}
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between px-1">
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-white/30">İŞLEM MERKEZİ</h3>
+                                            <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30">İŞLEM MERKEZİ</h3>
                                             {selectedStatus && <span className="text-[10px] text-amber-500 animate-bounce font-black uppercase">Onay Bekliyor</span>}
                                         </div>
 
-                                        <div className="p-8 bg-white/[0.02] border border-white/[0.05] rounded-[2.5rem] space-y-7">
+                                        <div className="p-8 bg-slate-100 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] rounded-[2.5rem] space-y-7">
                                             <div className="space-y-3">
-                                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Akış Durumu</p>
+                                                <p className="text-xs font-bold text-slate-500 dark:text-white/35 uppercase tracking-normal ml-1">Akış Durumu</p>
                                                 <Select value={selectedStatus} onValueChange={(val) => setSelectedStatus(val as ServiceStatus)}>
-                                                    <SelectTrigger className="h-14 bg-black/40 border-white/10 rounded-2xl text-xs font-bold text-white/80 focus:ring-blue-500/20">
+                                                    <SelectTrigger className="h-14 bg-white dark:bg-black/40 border-slate-200 dark:border-white/10 rounded-2xl text-xs font-bold text-slate-800 dark:text-white/80 focus:ring-blue-500/20">
                                                         <SelectValue placeholder="Durumu güncelle..." />
                                                     </SelectTrigger>
-                                                    <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-[1.5rem] p-2 backdrop-blur-3xl shadow-2xl">
+                                                    <SelectContent className="bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-[1.5rem] p-2 backdrop-blur-3xl shadow-2xl">
                                                         {Object.entries(statusConfig).map(([key, config]) => (
-                                                            <SelectItem key={key} value={key} className="py-4 px-4 rounded-xl focus:bg-white/5 cursor-pointer">
+                                                            <SelectItem key={key} value={key} className="py-4 px-4 rounded-xl focus:bg-slate-100 dark:focus:bg-white/5 cursor-pointer">
                                                                 <div className="flex items-center gap-4">
                                                                     <div className={cn("h-2.5 w-2.5 rounded-full shadow-[0_0_10px_currentColor]", config.dot)} />
-                                                                    <span className="font-bold text-white/70">{config.label}</span>
+                                                                    <span className="font-bold text-slate-800 dark:text-white/70">{config.label}</span>
                                                                 </div>
                                                             </SelectItem>
                                                         ))}
@@ -856,14 +856,14 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                     placeholder="Operasyon notu ekleyin..."
                                                     value={techNote}
                                                     onChange={(e) => setTechNote(e.target.value)}
-                                                    className="h-32 bg-black/40 border-white/10 rounded-2xl p-5 text-sm font-medium text-white/80 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/20 transition-all resize-none placeholder:text-white/10"
+                                                    className="h-32 bg-white dark:bg-black/40 border-slate-200 dark:border-white/10 rounded-2xl p-5 text-sm font-medium text-slate-800 dark:text-white/80 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/20 transition-all resize-none placeholder:text-slate-400 dark:placeholder:text-white/20"
                                                 />
                                                 {(techNote.trim() || (selectedStatus && selectedStatus !== ticket.status)) && (
                                                     <div className="absolute bottom-4 right-4 animate-in zoom-in-95 fade-in duration-300">
                                                         <Button
                                                             onClick={handleSaveNoteAndStatus}
                                                             disabled={isSavingNote}
-                                                            className="h-10 px-6 bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl gap-3 shadow-2xl shadow-blue-500/20 group transform transition-all active:scale-95"
+                                                            className="h-10 px-6 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-normal rounded-xl gap-3 shadow-2xl shadow-blue-500/20 group transform transition-all active:scale-95"
                                                         >
                                                             {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 group-hover:scale-110" />}
                                                             KAYDET
@@ -877,13 +877,13 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     {/* Timeline Context */}
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between px-1">
-                                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">DİJİTAL SEYİR DEFTERİ</h3>
-                                            <span className="text-[9px] font-bold text-white/20 uppercase bg-white/5 px-3 py-1 rounded-full">{ticket.logs?.length || 0} ADIM</span>
+                                            <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30">DİJİTAL SEYİR DEFTERİ</h3>
+                                            <span className="text-[10px] font-bold text-slate-500 dark:text-white/30 uppercase bg-slate-200 dark:bg-white/5 px-3 py-1 rounded-full">{ticket.logs?.length || 0} ADIM</span>
                                         </div>
 
                                         <div className="max-h-[400px] overflow-y-auto no-scrollbar relative p-2 pr-4 space-y-8">
                                             {/* Journey Line with Animation */}
-                                            <div className="absolute left-[34px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/80 via-white/[0.05] to-transparent shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
+                                            <div className="absolute left-[34px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/80 via-slate-200 dark:via-white/[0.05] to-transparent shadow-[0_0_15px_rgba(59,130,246,0.2)]" />
 
                                             {ticket.logs?.map((log: any, i: number) => {
                                                 const isStatusLog = log.message.includes("Durum güncellendi");
@@ -898,29 +898,29 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                             "h-14 w-14 rounded-2xl border flex items-center justify-center shrink-0 z-10 transition-all duration-500",
                                                             i === 0 ? "bg-emerald-600 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.5)] scale-110" :
                                                                 isStatusLog ? "bg-amber-600/10 border-amber-500/20 text-amber-500" :
-                                                                    "bg-zinc-900 border-white/5 group-hover:border-white/20 group-hover:bg-zinc-800"
+                                                                    "bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/5 group-hover:border-slate-300 dark:group-hover:border-white/20 group-hover:bg-slate-50 dark:group-hover:bg-zinc-800"
                                                         )}>
                                                             {i === 0 ? <Check className="h-5 w-5 text-white animate-pulse" /> :
                                                                 isStatusLog ? <Timer className="h-4 w-4" /> :
-                                                                    <Target className="h-4 w-4 text-white/20" />}
+                                                                    <Target className="h-4 w-4 text-slate-400 dark:text-white/20" />}
                                                         </div>
                                                         <div className="flex flex-col gap-2 pt-1 flex-1 min-w-0">
                                                             <div className="flex items-center justify-between">
-                                                                <span className={cn("text-[9px] font-black uppercase tracking-[0.25em]", i === 0 ? "text-blue-400" : "text-white/20")}>
+                                                                <span className={cn("text-xs font-black uppercase tracking-normal", i === 0 ? "text-blue-500 dark:text-blue-400" : "text-slate-500 dark:text-white/30")}>
                                                                     {format(new Date(log.createdAt), "dd MMM, HH:mm", { locale: tr })}
                                                                 </span>
                                                                 {i === 0 && (
                                                                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 rounded-full border border-blue-500/20">
                                                                         <div className="h-1 w-1 rounded-full bg-blue-500 animate-ping" />
-                                                                        <span className="text-[8px] text-blue-500 font-black uppercase">AKTİF ADIM</span>
+                                                                        <span className="text-[10px] text-blue-500 font-black uppercase">AKTİF ADIM</span>
                                                                     </div>
                                                                 )}
                                                             </div>
                                                             <div className={cn(
                                                                 "p-5 rounded-[1.8rem] border transition-all duration-500",
-                                                                i === 0 ? "bg-blue-500/5 border-blue-500/20 shadow-[0_10px_40px_-10px_rgba(59,130,246,0.2)]" : "bg-white/[0.01] border-white/5 group-hover:bg-white/[0.03] group-hover:border-white/10"
+                                                                i === 0 ? "bg-blue-50/50 dark:bg-blue-500/5 border-blue-200 dark:border-blue-500/20 shadow-[0_10px_40px_-10px_rgba(59,130,246,0.2)]" : "bg-slate-100 dark:bg-white/[0.01] border-slate-200 dark:border-white/5 group-hover:bg-slate-200/50 dark:group-hover:bg-white/[0.03] group-hover:border-slate-300 dark:group-hover:border-white/10"
                                                             )}>
-                                                                <p className={cn("text-xs leading-relaxed font-semibold", i === 0 ? "text-white" : "text-white/40 group-hover:text-white/70 transition-colors")}>
+                                                                <p className={cn("text-xs leading-relaxed font-semibold", i === 0 ? "text-slate-800 dark:text-white" : "text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/70 transition-colors")}>
                                                                     {log.message}
                                                                 </p>
                                                             </div>
@@ -935,10 +935,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
 
                         {/* Financial Footer Workstation */}
-                        <div className="h-32 md:h-40 bg-[#0F172A]/80 border-t border-white/[0.05] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-2xl shrink-0">
+                        <div className="h-32 md:h-40 bg-white dark:bg-[#0F172A]/80 border-t border-slate-200 dark:border-white/[0.05] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-2xl shrink-0">
                             <div className="flex items-center gap-10">
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-[0.3em] ml-1">KODLAMA & İŞÇİLİK</p>
+                                    <p className="text-xs font-black text-slate-500 dark:text-white/30 uppercase tracking-normal ml-1">KODLAMA & İŞÇİLİK</p>
                                     <div className="relative group">
                                         <PriceInput
                                             value={laborCost}
@@ -951,10 +951,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     </div>
                                 </div>
 
-                                <div className="hidden md:block h-12 w-px bg-white/[0.03]" />
+                                <div className="hidden md:block h-12 w-px bg-slate-200 dark:bg-white/[0.03]" />
 
                                 <div className="space-y-1.5 flex flex-col items-center md:items-start">
-                                    <p className="text-[10px] font-black text-blue-500/40 uppercase tracking-[0.3em]">HAKEDİŞ ÖZETİ</p>
+                                    <p className="text-xs font-black text-blue-600 dark:text-blue-500/40 uppercase tracking-normal">HAKEDİŞ ÖZETİ</p>
                                     <div className="flex items-baseline gap-3">
                                         <span className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">{formatCurrency(grandTotal, true)}</span>
                                         {applyLoyaltyDiscount && (
@@ -983,7 +983,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     >
                                         <div className="flex items-center gap-2">
                                             <Sparkles className={cn("h-4 w-4", applyLoyaltyDiscount ? "text-white" : "text-blue-500")} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                            <span className="text-xs font-extrabold uppercase tracking-normal">
                                                 Cüzdan: {ticket.customer.loyaltyPoints} Puan
                                             </span>
                                         </div>
@@ -997,10 +997,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                                 <div className="flex gap-3 relative flex-1 md:flex-none">
                                     {(!hasNewModifications && ticket.status === "DELIVERED") && (
-                                        <div className="absolute inset-0 bg-black/60 shadow-inner backdrop-blur-md z-[60] rounded-[2rem] flex items-center justify-center border border-dashed border-white/20">
+                                        <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/60 shadow-inner backdrop-blur-md z-[60] rounded-[2rem] flex items-center justify-center border border-dashed border-slate-200 dark:border-white/20">
                                             <div className="flex items-center gap-3">
                                                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                                                <span className="text-xs font-black text-white uppercase tracking-[0.2em]">İŞLEM TAHSİL EDİLDİ</span>
+                                                <span className="text-xs font-black text-white uppercase tracking-normal">İŞLEM TAHSİL EDİLDİ</span>
                                             </div>
                                         </div>
                                     )}
@@ -1008,10 +1008,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         onClick={() => handleStatusUpdate("DELIVERED", "CASH", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
                                         disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
                                         className={cn(
-                                            "h-16 px-10 rounded-3xl transition-all font-black text-[11px] uppercase tracking-widest gap-4",
+                                            "h-16 px-10 rounded-3xl transition-all font-black text-xs uppercase tracking-normal gap-4",
                                             ticket.status === "READY"
                                                 ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                                                : "bg-white/5 border border-white/5 text-white/20 cursor-not-allowed"
+                                                : "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed"
                                         )}
                                     >
                                         <Check className="h-5 w-5" /> TAHSİL & TESLİM
@@ -1020,10 +1020,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         onClick={() => handleStatusUpdate("DELIVERED", "DEBT", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
                                         disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
                                         className={cn(
-                                            "h-16 px-10 rounded-3xl transition-all font-black text-[11px] uppercase tracking-widest gap-4",
+                                            "h-16 px-10 rounded-3xl transition-all font-black text-xs uppercase tracking-normal gap-4",
                                             ticket.status === "READY"
                                                 ? "bg-amber-600 hover:bg-amber-500 text-white shadow-2xl shadow-amber-500/20"
-                                                : "bg-white/5 border border-white/5 text-white/20 cursor-not-allowed"
+                                                : "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed"
                                         )}
                                     >
                                         <Wallet className="h-5 w-5" /> VERESİYE
@@ -1061,52 +1061,52 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             />
 
             < AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm} >
-                <AlertDialogContent className="bg-[#0F172A] border-white/10 text-white rounded-[2rem]">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Kaydı Silmek İstediğinize Emin Misiniz?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-white/40">
-                            Bu işlem geri alınamaz. Cihaza eklenen parçalar varsa stoğa iade edilecektir.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10">Vazgeç</AlertDialogCancel>
-                        <AlertDialogAction
-                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl"
-                            onClick={async () => {
-                                setIsDeleting(true);
-                                try {
-                                    const res = await deleteServiceTicket(ticket.id);
-                                    if (res.success) {
-                                        toast.success("Servis kaydı başarıyla silindi.");
-                                        onClose();
-                                    } else {
-                                        toast.error(res.error || "Silme işlemi sırasında bir hata oluştu.");
-                                    }
-                                } catch (error) {
-                                    toast.error("Silme işlemi sırasında bir hata oluştu.");
-                                } finally {
-                                    setIsDeleting(false);
-                                    setShowDeleteConfirm(false);
-                                }
-                            }}
-                            disabled={isDeleting}
-                        >
-                            {isDeleting ? "Siliniyor..." : "Evet, Sil"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog >
+                                <AlertDialogContent className="bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-[2rem]">
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Kaydı Silmek İstediğinize Emin Misiniz?</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-slate-500 dark:text-white/40">
+                                            Bu işlem geri alınamaz. Cihaza eklenen parçalar varsa stoğa iade edilecektir.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel className="rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10">Vazgeç</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl"
+                                            onClick={async () => {
+                                                setIsDeleting(true);
+                                                try {
+                                                    const res = await deleteServiceTicket(ticket.id);
+                                                    if (res.success) {
+                                                        toast.success("Servis kaydı başarıyla silindi.");
+                                                        onClose();
+                                                    } else {
+                                                        toast.error(res.error || "Silme işlemi sırasında bir hata oluştu.");
+                                                    }
+                                                } catch (error) {
+                                                    toast.error("Silme işlemi sırasında bir hata oluştu.");
+                                                } finally {
+                                                    setIsDeleting(false);
+                                                    setShowDeleteConfirm(false);
+                                                }
+                                            }}
+                                            disabled={isDeleting}
+                                        >
+                                            {isDeleting ? "Siliniyor..." : "Evet, Sil"}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog >
 
             <AlertDialog open={showEnableLoyaltyConfirm} onOpenChange={setShowEnableLoyaltyConfirm}>
-                <AlertDialogContent className="bg-[#0F172A] border-white/10 text-white rounded-[2rem]">
+                <AlertDialogContent className="bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-[2rem]">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Sadakat Sistemini Aktif Et</AlertDialogTitle>
-                        <AlertDialogDescription className="text-white/40">
+                        <AlertDialogDescription className="text-slate-500 dark:text-white/40">
                             Müşteri sadakat sistemi şu anda kapalı. Sadakat indirimini uygulamak için sistemi aktif etmek ister misiniz?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10">Vazgeç</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10">Vazgeç</AlertDialogCancel>
                         <AlertDialogAction
                             className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
                             onClick={async () => {
@@ -1133,43 +1133,43 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             </AlertDialog>
 
             <Dialog open={isAddingManual} onOpenChange={setIsAddingManual} key={isAddingManual ? "open" : "closed"}>
-                <DialogContent className="max-w-md bg-[#0F172A] border-white/10 rounded-[2rem] p-8 shadow-2xl z-[10001]">
+                <DialogContent className="max-w-md bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 rounded-[2rem] p-8 shadow-2xl z-[10001] text-slate-900 dark:text-white">
                     <div className="space-y-6">
                         <div className="flex items-center gap-4">
                             <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
                                 <Plus className="h-6 w-6 text-blue-500" />
                             </div>
                             <div className="flex flex-col">
-                                <h3 className="text-xl font-bold text-white">Sistem Dışı Parça Ekle</h3>
-                                <p className="text-xs text-white/40">Tedarikçiden borç olarak parça temin et</p>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Sistem Dışı Parça Ekle</h3>
+                                <p className="text-xs text-slate-500 dark:text-white/40">Tedarikçiden borç olarak parça temin et</p>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Parça Adı</label>
+                                <label className="text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-normal ml-1">Parça Adı</label>
                                 <Input
                                     value={manualPart.name}
                                     onChange={e => setManualPart({ ...manualPart, name: e.target.value })}
-                                    className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold focus:ring-blue-500/20"
+                                    className="h-12 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold focus:ring-blue-500/20"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Maliyet Birimi</label>
+                                    <label className="text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-normal ml-1">Maliyet Birimi</label>
                                     <Select value={manualPart.currency} onValueChange={(v: any) => setManualPart({ ...manualPart, currency: v })}>
-                                        <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold">
+                                        <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-xl z-[10002]">
+                                        <SelectContent className="bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl z-[10002]">
                                             <SelectItem value="TRY">TRY (₺)</SelectItem>
                                             <SelectItem value="USD">USD ($)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Birim Maliyet</label>
+                                    <label className="text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-normal ml-1">Birim Maliyet</label>
                                     <PriceInput
                                         value={manualPart.currency === "USD" ? Number(manualPart.buyPriceUsd) : Number(manualPart.buyPrice)}
                                         onChange={v => {
@@ -1179,18 +1179,18 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                 setManualPart({ ...manualPart, buyPrice: String(v), buyPriceUsd: String(v / (rates?.usd || 1)) });
                                             }
                                         }}
-                                        className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold focus:ring-blue-500/20"
+                                        className="h-12 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold focus:ring-blue-500/20"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Tedarikçi</label>
+                                <label className="text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-normal ml-1">Tedarikçi</label>
                                 <Select value={manualPart.supplierId} onValueChange={v => setManualPart({ ...manualPart, supplierId: v })}>
-                                    <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold">
+                                    <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold">
                                         <SelectValue placeholder="Tedarikçi seçin..." />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-xl z-[10002]">
+                                    <SelectContent className="bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl z-[10002]">
                                         {suppliers.map(s => (
                                             <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                         ))}
@@ -1199,12 +1199,12 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Garanti Süresi</label>
+                                <label className="text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-normal ml-1">Garanti Süresi</label>
                                 <Select value={manualPart.warrantyType} onValueChange={(v: any) => setManualPart({ ...manualPart, warrantyType: v })}>
-                                    <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold">
+                                    <SelectTrigger className="h-12 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-xl z-[10002]">
+                                    <SelectContent className="bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl z-[10002]">
                                         <SelectItem value="15_DAYS">15 Gün</SelectItem>
                                         <SelectItem value="1_MONTH">1 Ay</SelectItem>
                                         <SelectItem value="3_MONTHS">3 Ay</SelectItem>
@@ -1216,23 +1216,23 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                             {manualPart.warrantyType === "MANUAL" && (
                                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Kaç Gün?</label>
+                                    <label className="text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-normal ml-1">Kaç Gün?</label>
                                     <Input
                                         type="number"
                                         value={manualPart.warrantyValue}
                                         onChange={e => setManualPart({ ...manualPart, warrantyValue: e.target.value })}
-                                        className="h-12 bg-white/5 border-white/10 rounded-xl text-white font-bold focus:ring-blue-500/20"
+                                        className="h-12 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white font-bold focus:ring-blue-500/20"
                                     />
                                 </div>
                             )}
                         </div>
 
                         <div className="flex gap-4 pt-4">
-                            <Button variant="ghost" onClick={() => setIsAddingManual(false)} className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all">İptal</Button>
+                            <Button variant="ghost" onClick={() => setIsAddingManual(false)} className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-normal text-slate-500 dark:text-white/40 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all">İptal</Button>
                             <Button
                                 onClick={handleCreateAndAddPart}
                                 disabled={loading}
-                                className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest shadow-xl shadow-blue-500/20 gap-3"
+                                className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-normal shadow-xl shadow-blue-500/20 gap-3"
                             >
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
                                 EKLE

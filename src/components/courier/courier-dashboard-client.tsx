@@ -172,6 +172,7 @@ export function CourierDashboardClient({
     const [bulkQtyAdd, setBulkQtyAdd] = useState<number>(1);
     const [unassignedSearch, setUnassignedSearch] = useState("");
     const [pendingFilter, setPendingFilter] = useState<"all" | "critical" | "outOfStock" | "deadStock">("all");
+    const [isCourierControlOpen, setIsCourierControlOpen] = useState(false);
 
     // React Query for Tasks
     const { data: tasksData, isLoading: isTasksLoading } = useQuery({
@@ -796,16 +797,30 @@ export function CourierDashboardClient({
                         {/* Quick Add Form Card - ONLY FOR ADMIN */}
                         {isAdmin && (
                             <>
-                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-visible group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-50 xl:col-span-4 lg:col-span-1">
+                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-visible group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-50 xl:col-span-9 lg:col-span-1">
                                     <div className="p-6 space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                                <Plus className="w-5 h-5 text-blue-500" />
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                                    <Plus className="w-5 h-5 text-blue-500" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-black uppercase tracking-tight">Yeni Sipariş</h3>
+                                                    <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">HIZLI SİPARİŞ KARTI</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="text-lg font-black uppercase tracking-tight">Yeni Sipariş</h3>
-                                                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">HIZLI SİPARİŞ KARTI</p>
-                                            </div>
+                                            <button
+                                                onClick={() => setIsCourierControlOpen(true)}
+                                                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 hover:border-orange-500/40 transition-all group/kcbtn relative"
+                                            >
+                                                <User className="w-4 h-4 text-orange-500" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">Kurye Kontrolü</span>
+                                                {activeCourierNotifications.length > 0 && (
+                                                    <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-orange-500 text-white text-[8px] font-black flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
+                                                        {activeCourierNotifications.length}
+                                                    </span>
+                                                )}
+                                            </button>
                                         </div>
 
                                         <div className="bg-zinc-100 dark:bg-white/5 p-4 rounded-2xl border border-zinc-200 dark:border-white/5">
@@ -814,94 +829,100 @@ export function CourierDashboardClient({
                                     </div>
                                 </Card>
 
-                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-hidden group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-40 xl:col-span-5 lg:col-span-1 flex flex-col">
-                                    <div className="p-6 space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                                                <User className="w-5 h-5 text-orange-500" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-black uppercase tracking-tight">Kurye Kontrolü</h3>
-                                                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">GÜNLÜK İŞLEM BİTİRME & TAKİP</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4 content-start overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
-                                            {couriers.map((c: any) => {
-                                                const courierItems = items.filter((st: any) => st.assignedToId === c.id);
-                                                const workload = getCourierWorkload(c.id);
-                                                const totalToday = courierItems.length;
-                                                const resolvedToday = courierItems.filter((st: any) => st.isTaken || st.isResolved).length;
-                                                const remainingCount = courierItems.filter((st: any) => !st.isTaken && !st.isResolved).length;
-                                                const successRate = totalToday > 0 ? Math.round((resolvedToday / totalToday) * 100) : 0;
-                                                const isWaitingApproval = activeCourierNotifications.some(n => n.referenceId === c.id);
+                                {/* Kurye Kontrolü Modal */}
+                                <Dialog open={isCourierControlOpen} onOpenChange={setIsCourierControlOpen}>
+                                    <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden rounded-3xl border-none bg-card/95 backdrop-blur-3xl shadow-2xl p-0">
+                                        <DialogHeader className="px-6 pt-6 pb-0">
+                                            <DialogTitle className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                                                    <User className="w-5 h-5 text-orange-500" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-lg font-black uppercase tracking-tight block">Kurye Kontrolü</span>
+                                                    <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60 block">GÜNLÜK İŞLEM BİTİRME & TAKİP</span>
+                                                </div>
+                                            </DialogTitle>
+                                            <DialogDescription className="sr-only">Kurye görev durumları ve gün sonu onay paneli</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="p-6 overflow-y-auto max-h-[calc(85vh-100px)] custom-scrollbar">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {couriers.map((c: any) => {
+                                                    const courierItems = items.filter((st: any) => st.assignedToId === c.id);
+                                                    const workload = getCourierWorkload(c.id);
+                                                    const totalToday = courierItems.length;
+                                                    const resolvedToday = courierItems.filter((st: any) => st.isTaken || st.isResolved).length;
+                                                    const remainingCount = courierItems.filter((st: any) => !st.isTaken && !st.isResolved).length;
+                                                    const successRate = totalToday > 0 ? Math.round((resolvedToday / totalToday) * 100) : 0;
+                                                    const isWaitingApproval = activeCourierNotifications.some(n => n.referenceId === c.id);
 
-                                                return (
-                                                    <div key={c.id} className={cn(
-                                                        "bg-white/50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 p-4 rounded-3xl flex flex-col gap-4 group/courier relative transition-all hover:shadow-md",
-                                                        isWaitingApproval && "border-orange-500/50 bg-orange-500/[0.03] ring-1 ring-orange-500/10 shadow-lg shadow-orange-500/5 transition-all duration-500"
-                                                    )}>
-                                                        <div className="flex justify-between items-center -mb-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center font-black text-[10px]">
-                                                                    {getInitials(`${c.name} ${c.surname}`)}
-                                                                </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-black text-xs uppercase tracking-tight truncate max-w-[80px] leading-tight">{c.name} {c.surname}</span>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <TrendingUp className="w-2.5 h-2.5 text-blue-500" />
-                                                                        <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">{c.points || 0} PUAN</span>
+                                                    return (
+                                                        <div key={c.id} className={cn(
+                                                            "bg-white/50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 p-4 rounded-3xl flex flex-col gap-4 group/courier relative transition-all hover:shadow-md",
+                                                            isWaitingApproval && "border-orange-500/50 bg-orange-500/[0.03] ring-1 ring-orange-500/10 shadow-lg shadow-orange-500/5 transition-all duration-500"
+                                                        )}>
+                                                            <div className="flex justify-between items-center -mb-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center font-black text-[10px]">
+                                                                        {getInitials(`${c.name} ${c.surname}`)}
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-black text-xs uppercase tracking-tight truncate max-w-[120px] leading-tight">{c.name} {c.surname}</span>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <TrendingUp className="w-2.5 h-2.5 text-blue-500" />
+                                                                            <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">{c.points || 0} PUAN</span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
+                                                                {isWaitingApproval && (
+                                                                    <div className="flex items-center gap-1 bg-orange-500 text-white text-[7px] font-black px-2 py-1 rounded-full shadow-lg shadow-orange-500/20 animate-pulse">
+                                                                        ONAY
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                            {isWaitingApproval && (
-                                                                <div className="flex items-center gap-1 bg-orange-500 text-white text-[7px] font-black px-2 py-1 rounded-full shadow-lg shadow-orange-500/20 animate-pulse">
-                                                                    ONAY
+
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 p-2 rounded-2xl flex flex-col items-center">
+                                                                    <span className="text-[7px] font-black text-emerald-500/70 uppercase tracking-widest">TAMAM</span>
+                                                                    <span className="text-sm font-black text-emerald-500">{resolvedToday}</span>
                                                                 </div>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 p-2 rounded-2xl flex flex-col items-center">
-                                                                <span className="text-[7px] font-black text-emerald-500/70 uppercase tracking-widest">TAMAM</span>
-                                                                <span className="text-sm font-black text-emerald-500">{resolvedToday}</span>
+                                                                <div className="bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/10 p-2 rounded-2xl flex flex-col items-center">
+                                                                    <span className="text-[7px] font-black text-orange-500/70 uppercase tracking-widest">KALAN</span>
+                                                                    <span className="text-sm font-black text-orange-500">{remainingCount}</span>
+                                                                </div>
                                                             </div>
-                                                            <div className="bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/10 p-2 rounded-2xl flex flex-col items-center">
-                                                                <span className="text-[7px] font-black text-orange-500/70 uppercase tracking-widest">KALAN</span>
-                                                                <span className="text-sm font-black text-orange-500">{remainingCount}</span>
+
+                                                            <div className="bg-blue-500/5 border border-blue-500/10 p-2 rounded-2xl flex items-center justify-between">
+                                                                <span className="text-[7px] font-black text-blue-500/70 uppercase tracking-widest">YUK</span>
+                                                                <span className="text-sm font-black text-blue-500">{workload.priorityScore}</span>
+                                                                {workload.highPriority > 0 && (
+                                                                    <Badge className="bg-red-500/10 text-red-500 border-none text-[7px] font-black">
+                                                                        {workload.highPriority} ONCELIK
+                                                                    </Badge>
+                                                                )}
                                                             </div>
-                                                        </div>
 
-                                                        <div className="bg-blue-500/5 border border-blue-500/10 p-2 rounded-2xl flex items-center justify-between">
-                                                            <span className="text-[7px] font-black text-blue-500/70 uppercase tracking-widest">YUK</span>
-                                                            <span className="text-sm font-black text-blue-500">{workload.priorityScore}</span>
-                                                            {workload.highPriority > 0 && (
-                                                                <Badge className="bg-red-500/10 text-red-500 border-none text-[7px] font-black">
-                                                                    {workload.highPriority} ONCELIK
-                                                                </Badge>
-                                                            )}
+                                                            <Button
+                                                                variant={isWaitingApproval ? "default" : "outline"}
+                                                                onClick={() => handleFinishCourierDay(c.id)}
+                                                                className={cn(
+                                                                    "w-full text-[10px] font-black uppercase h-10 transition-all shadow-sm rounded-2xl",
+                                                                    isWaitingApproval
+                                                                        ? "bg-orange-500 hover:bg-orange-600 text-white border-none shadow-orange-500/20"
+                                                                        : "border-zinc-200 dark:border-white/10 text-muted-foreground hover:border-orange-500/50 hover:text-orange-500"
+                                                                )}
+                                                            >
+                                                                {isWaitingApproval ? "Bitir" : "Bitir"}
+                                                            </Button>
                                                         </div>
-
-                                                        <Button
-                                                            variant={isWaitingApproval ? "default" : "outline"}
-                                                            onClick={() => handleFinishCourierDay(c.id)}
-                                                            className={cn(
-                                                                "w-full text-[10px] font-black uppercase h-10 transition-all shadow-sm rounded-2xl",
-                                                                isWaitingApproval
-                                                                    ? "bg-orange-500 hover:bg-orange-600 text-white border-none shadow-orange-500/20"
-                                                                    : "border-zinc-200 dark:border-white/10 text-muted-foreground hover:border-orange-500/50 hover:text-orange-500"
-                                                            )}
-                                                        >
-                                                            {isWaitingApproval ? "Bitir" : "Bitir"}
-                                                        </Button>
-                                                    </div>
-                                                )
-                                            })}
-                                            {couriers.length === 0 && (
-                                                <span className="text-xs text-muted-foreground font-black uppercase">Aktif kurye bulunamadı.</span>
-                                            )}
+                                                    )
+                                                })}
+                                                {couriers.length === 0 && (
+                                                    <span className="text-xs text-muted-foreground font-black uppercase col-span-2 text-center py-8">Aktif kurye bulunamadı.</span>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                </Card>
+                                    </DialogContent>
+                                </Dialog>
 
                                 <div className="xl:col-span-3 lg:col-span-2 flex flex-col md:flex-row xl:flex-col gap-4">
                                     {[
@@ -977,9 +998,9 @@ export function CourierDashboardClient({
                     </Card>
                 )}
 
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-center max-w-4xl mx-auto w-full">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-center max-w-4xl mx-auto w-full group/search-container">
                     {isAdmin && (
-                        <div className="flex items-center bg-zinc-100 dark:bg-white/5 px-4 rounded-2xl border border-zinc-200 dark:border-white/5 h-14 min-w-[180px] w-full md:w-auto">
+                        <div className="flex items-center bg-zinc-100 dark:bg-white/5 px-4 rounded-2xl border border-zinc-200 dark:border-white/5 h-14 min-w-[180px] w-full md:w-auto transition-all duration-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 shadow-sm hover:shadow-md">
                             <span className="text-[10px] uppercase font-black text-muted-foreground mr-2 shrink-0">GÜN:</span>
                             <Input
                                 type="date"
@@ -990,12 +1011,12 @@ export function CourierDashboardClient({
                         </div>
                     )}
                     <div className="relative flex-1 w-full">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-50" />
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within/search-container:text-blue-500 opacity-60" />
                         <Input
                             placeholder="ÜRÜN VEYA BAYİ ARA..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-12 bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/5 rounded-2xl h-14 font-black uppercase text-xs tracking-widest focus:ring-blue-500/20"
+                            className="pl-14 pr-4 bg-background dark:bg-zinc-900 border-2 border-zinc-200 dark:border-white/10 rounded-2xl h-14 font-black uppercase text-xs tracking-widest transition-all duration-300 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:shadow-md hover:border-zinc-300 dark:hover:border-white/20"
                         />
                     </div>
                     <div className="flex gap-2 w-full md:w-auto justify-center">
@@ -1129,7 +1150,7 @@ export function CourierDashboardClient({
 
                                 <div className={cn(
                                     "flex flex-col gap-2 ml-4 pl-6 border-l-2 border-zinc-500/10", // Single list for items inside shop
-                                    !isAdmin && "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ml-0 pl-0 border-none" // Cards for courier
+                                    !isAdmin && "grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ml-0 pl-0 border-none gap-3" // Cards for courier — wider gaps for mobile
                                 )}>
                                     <AnimatePresence mode="popLayout">
                                         {group.items.map((item: any) => (
@@ -1142,8 +1163,11 @@ export function CourierDashboardClient({
                                                 onClick={() => isSelectionMode && toggleSelect(item.id)}
                                                 className={cn(
                                                     "group transition-all duration-300 border shadow-sm relative overflow-hidden shrink-0",
-                                                    isAdmin ? "p-3 rounded-xl flex items-center gap-4" : "p-4 rounded-2xl flex flex-col min-h-[160px] cursor-pointer",
+                                                    isAdmin ? "p-3 rounded-xl flex items-center gap-4 hover:shadow-sm" : "p-5 rounded-2xl flex flex-col min-h-[180px] cursor-pointer hover:shadow-md hover:scale-[1.01] hover:border-zinc-300 dark:hover:border-white/10 active:scale-[0.99]",
                                                     isSelectionMode && "active:scale-[0.98] ring-2 ring-blue-500/20",
+                                                    !isAdmin && item.courierPriorityLabel === "ACIL" && "border-l-4 border-l-red-500",
+                                                    !isAdmin && item.courierPriorityLabel === "YUKSEK" && "border-l-4 border-l-amber-500",
+                                                    !isAdmin && item.courierPriorityLabel === "NORMAL" && "border-l-4 border-l-blue-500",
                                                     item.isNotFound
                                                         ? "bg-red-500/10 dark:bg-red-500/10 border-red-500/30"
                                                         : item.isTaken
@@ -1198,17 +1222,19 @@ export function CourierDashboardClient({
 
                                                     <div className="flex-1 min-w-0">
                                                         <div className={cn("flex items-center gap-3", isAdmin ? "justify-between" : "flex-col items-start")}>
-                                                            <div className="min-w-0">
-                                                                <h4 className={cn(
-                                                                    "font-black text-sm tracking-tight truncate leading-none mb-1 uppercase",
-                                                                    item.isTaken ? "text-muted-foreground line-through opacity-40" : "text-zinc-900 dark:text-zinc-100"
-                                                                )}>
-                                                                    {item.returnTicketId && (
-                                                                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20 text-[8px] px-2 py-0.5 font-black flex items-center gap-1 shadow-sm uppercase">
+                                                            <div className="min-w-0 flex-1">
+                                                                {item.returnTicketId && (
+                                                                    <div className="mb-1.5 flex">
+                                                                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20 text-[8px] px-2 py-0.5 font-black flex items-center gap-1 shadow-sm uppercase shrink-0">
                                                                             <ArrowUpCircle className="w-2 h-2" />
                                                                             İADE GÖREVİ
                                                                         </Badge>
-                                                                    )}
+                                                                    </div>
+                                                                )}
+                                                                <h4 className={cn(
+                                                                    "font-black text-sm tracking-tight leading-snug mb-2 uppercase line-clamp-2 break-words",
+                                                                    item.isTaken ? "text-muted-foreground line-through opacity-40" : "text-zinc-900 dark:text-zinc-100"
+                                                                )}>
                                                                     {getCourierItemDisplayName(item)}
                                                                 </h4>
                                                                 <div className="flex flex-wrap items-center gap-2">
@@ -1304,14 +1330,14 @@ export function CourierDashboardClient({
                                                 </div>
 
                                                 {!isAdmin && (
-                                                    <div className="mt-4 flex flex-col gap-2">
+                                                    <div className="mt-auto pt-4 flex flex-col gap-3 border-t border-zinc-200/50 dark:border-white/5">
                                                         <div onClick={(e) => e.stopPropagation()} className="relative">
                                                             <Select
                                                                 value={selectedSuppliers[item.id] || item.supplierId || ""}
                                                                 onValueChange={(val) => setSelectedSuppliers(prev => ({ ...prev, [item.id]: val }))}
                                                                 disabled={item.isTaken || item.isResolved}
                                                             >
-                                                                <SelectTrigger className="h-11 rounded-xl border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 shadow-sm font-black text-[10px] uppercase">
+                                                                <SelectTrigger className="h-12 min-h-[48px] rounded-xl border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 shadow-sm font-black text-[10px] uppercase">
                                                                     <div className="flex items-center gap-2 truncate">
                                                                         <Truck className="w-3.5 h-3.5 text-blue-500 opacity-70" />
                                                                         <SelectValue placeholder="TEDARİKÇİ SEÇ..." />
@@ -1326,7 +1352,7 @@ export function CourierDashboardClient({
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
-                                                        <div className="flex gap-2">
+                                                        <div className="flex gap-2.5">
                                                             <Button
                                                                 variant="outline"
                                                                 onClick={(e) => {
@@ -1335,7 +1361,7 @@ export function CourierDashboardClient({
                                                                 }}
                                                                 disabled={loadingId === item.id || item.isTaken}
                                                                 className={cn(
-                                                                    "h-11 rounded-xl text-[10px] font-black uppercase tracking-widest flex-1 transition-all",
+                                                                    "h-12 min-h-[48px] rounded-xl text-[10px] font-black uppercase tracking-widest flex-1 transition-all active:scale-[0.97]",
                                                                     item.isNotFound
                                                                         ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
                                                                         : "border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white"
@@ -1353,7 +1379,7 @@ export function CourierDashboardClient({
                                                                             handleReturnOutcome(item.id, "EXCHANGED");
                                                                         }}
                                                                         disabled={loadingId === item.id}
-                                                                        className="h-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest flex-1 shadow-lg shadow-emerald-500/20"
+                                                                        className="h-12 min-h-[48px] rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest flex-1 shadow-lg shadow-emerald-500/20 active:scale-[0.97]"
                                                                     >
                                                                         <Check className="w-3.5 h-3.5 mr-1" />
                                                                         DEĞİŞTİ
@@ -1364,7 +1390,7 @@ export function CourierDashboardClient({
                                                                             handleReturnOutcome(item.id, "LOSS");
                                                                         }}
                                                                         disabled={loadingId === item.id}
-                                                                        className="h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-widest flex-1 shadow-lg shadow-red-500/20"
+                                                                        className="h-12 min-h-[48px] rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-widest flex-1 shadow-lg shadow-red-500/20 active:scale-[0.97]"
                                                                     >
                                                                         <AlertCircle className="w-3.5 h-3.5 mr-1" />
                                                                         DEĞİŞMEDİ

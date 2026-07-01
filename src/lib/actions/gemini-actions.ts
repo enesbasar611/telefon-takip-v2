@@ -52,6 +52,7 @@ export interface AIDiagnosticResult {
     repairTimeRange: string;
     riskLevel: "Düşük" | "Orta" | "Yüksek";
     professionalNote: string;
+    summaryReport?: string;
 }
 
 async function buildCategoryContext() {

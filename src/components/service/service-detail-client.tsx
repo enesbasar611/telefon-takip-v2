@@ -1,11 +1,22 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getServiceTicketById } from "@/lib/actions/service-actions";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getServiceTicketById, updateServiceDetails } from "@/lib/actions/service-actions";
 import { getProducts } from "@/lib/actions/product-actions";
+import { getStaffShell } from "@/lib/actions/staff-actions";
 import { notFound, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     Smartphone,
     User,
@@ -57,6 +68,14 @@ const statusLabels: Record<string, string> = {
 
 export function ServiceDetailClient({ ticketId, shopId }: { ticketId: string, shopId: string }) {
     const router = useRouter();
+    const queryClient = useQueryClient();
+
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedEstimatedCost, setEditedEstimatedCost] = useState(0);
+    const [editedLaborCost, setEditedLaborCost] = useState(0);
+    const [editedProblemDesc, setEditedProblemDesc] = useState("");
+    const [editedTechnicianId, setEditedTechnicianId] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const { data: ticket, isLoading: ticketLoading } = useQuery({
         queryKey: ["service-ticket", ticketId],
@@ -76,6 +95,14 @@ export function ServiceDetailClient({ ticketId, shopId }: { ticketId: string, sh
         staleTime: 5 * 60 * 1000 // 5 minutes
     });
 
+    const { data: staffList = [] } = useQuery({
+        queryKey: ["staff-shell"],
+        queryFn: async () => {
+            return await getStaffShell();
+        },
+        staleTime: 5 * 60 * 1000
+    });
+
     if (ticketLoading || productsLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -91,6 +118,38 @@ export function ServiceDetailClient({ ticketId, shopId }: { ticketId: string, sh
     }
 
     const products = productsData?.products || [];
+
+    const handleStartEdit = () => {
+        setEditedEstimatedCost(Number(ticket.estimatedCost || 0));
+        setEditedLaborCost(Number(ticket.actualCost || 0));
+        setEditedProblemDesc(ticket.problemDesc || "");
+        setEditedTechnicianId(ticket.technicianId || null);
+        setIsEditing(true);
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const res = await updateServiceDetails(
+                ticketId,
+                editedEstimatedCost,
+                editedLaborCost,
+                editedProblemDesc,
+                editedTechnicianId
+            );
+            if (res.success) {
+                toast.success("Servis detayları başarıyla güncellendi.");
+                setIsEditing(false);
+                queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] });
+            } else {
+                toast.error(res.error || "Güncelleme başarısız.");
+            }
+        } catch (error) {
+            toast.error("Bir hata oluştu.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <div className="flex flex-col gap-8 pb-20 bg-background text-foreground min-h-screen p-8">
@@ -114,9 +173,33 @@ export function ServiceDetailClient({ ticketId, shopId }: { ticketId: string, sh
                 </div>
                 <div className="flex items-center gap-3">
                     <TechnicalServiceAnalysisModal />
-                    <Button variant="ghost" className="text-[10px]  text-blue-500 bg-blue-500/5 border border-blue-500/20 h-10 rounded-xl px-6 hover:bg-blue-500/10 transition-all font-bold">
-                        DÜZENLE
-                    </Button>
+                    {isEditing ? (
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => setIsEditing(false)}
+                                className="text-[10px] text-rose-500 bg-rose-500/5 border border-rose-500/20 h-10 rounded-xl px-6 hover:bg-rose-500/10 transition-all font-bold"
+                            >
+                                İPTAL
+                            </Button>
+                            <Button 
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="text-[10px] text-white bg-emerald-600 border border-emerald-500 h-10 rounded-xl px-6 hover:bg-emerald-500 transition-all font-bold gap-2"
+                            >
+                                {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                                KAYDET
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button 
+                            variant="ghost" 
+                            onClick={handleStartEdit}
+                            className="text-[10px] text-blue-500 bg-blue-500/5 border border-blue-500/20 h-10 rounded-xl px-6 hover:bg-blue-500/10 transition-all font-bold"
+                        >
+                            DÜZENLE
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -141,9 +224,18 @@ export function ServiceDetailClient({ ticketId, shopId }: { ticketId: string, sh
                                     <span className="text-xs  text-muted-foreground">KOZMETİK DURUM</span>
                                     <span className="text-sm  text-foreground">{ticket.cosmeticCondition || 'Normal'}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs  text-muted-foreground">ARIZA TANIMI</span>
-                                    <span className="text-sm  text-blue-400">{ticket.problemDesc}</span>
+
+                                <div className="flex justify-between items-center border-b border-border/50 pb-3 gap-4">
+                                    <span className="text-xs  text-muted-foreground shrink-0">ARIZA TANIMI</span>
+                                    {isEditing ? (
+                                        <Input
+                                            value={editedProblemDesc}
+                                            onChange={(e) => setEditedProblemDesc(e.target.value)}
+                                            className="text-sm text-right h-8 max-w-[250px] bg-white dark:bg-black/40 border-slate-200 dark:border-white/10 text-foreground"
+                                        />
+                                    ) : (
+                                        <span className="text-sm  text-blue-400">{ticket.problemDesc}</span>
+                                    )}
                                 </div>
 
                                 {ticket.devicePassword && (
@@ -266,11 +358,41 @@ export function ServiceDetailClient({ ticketId, shopId }: { ticketId: string, sh
                             </div>
                         </CardHeader>
                         <CardContent className="p-8 space-y-6">
-                            <div className="text-center">
-                                <p className="text-xs  text-muted-foreground mb-2">TAHMİNİ ÜCRET</p>
-                                <h2 className="font-medium text-5xl  text-foreground">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</h2>
+                            <div className="space-y-4">
+                                <div className="text-center">
+                                    <p className="text-xs  text-muted-foreground mb-2">TAHMİNİ TOPLAM ÜCRET</p>
+                                    {isEditing ? (
+                                        <div className="max-w-[200px] mx-auto">
+                                            <Input
+                                                type="number"
+                                                value={editedEstimatedCost}
+                                                onChange={(e) => setEditedEstimatedCost(Number(e.target.value))}
+                                                className="text-2xl font-black text-center h-12 bg-white dark:bg-black/40 border-slate-200 dark:border-white/10"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <h2 className="font-medium text-5xl  text-foreground">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</h2>
+                                    )}
+                                </div>
+
+                                <div className="text-center border-t border-border/50 pt-4">
+                                    <p className="text-xs  text-muted-foreground mb-2">İŞÇİLİK ÜCRETİ</p>
+                                    {isEditing ? (
+                                        <div className="max-w-[200px] mx-auto">
+                                            <Input
+                                                type="number"
+                                                value={editedLaborCost}
+                                                onChange={(e) => setEditedLaborCost(Number(e.target.value))}
+                                                className="text-xl font-bold text-center h-10 bg-white dark:bg-black/40 border-slate-200 dark:border-white/10"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <h3 className="font-medium text-2xl  text-foreground">₺{Number(ticket.actualCost || 0).toLocaleString('tr-TR')}</h3>
+                                    )}
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+
+                            <div className="grid grid-cols-2 gap-4 border-t border-border/50 pt-4">
                                 <div className="p-4 rounded-2xl bg-muted/30 border border-border/50 text-center">
                                     <p className="text-[11px]  text-muted-foreground mb-1">ALINAN KAPORA</p>
                                     <p className="text-lg  text-emerald-500">₺0</p>
@@ -291,15 +413,34 @@ export function ServiceDetailClient({ ticketId, shopId }: { ticketId: string, sh
                             </div>
                         </CardHeader>
                         <CardContent className="p-6 space-y-6">
-                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 whisper-border border-border/50">
-                                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500  text-xs">
-                                    {ticket.technician?.name?.charAt(0) || '?'}
+                            {isEditing ? (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Görevli Teknisyen Seçin</label>
+                                    <Select value={editedTechnicianId || "NONE"} onValueChange={(val) => setEditedTechnicianId(val === "NONE" ? null : val)}>
+                                        <SelectTrigger className="bg-white/5 border-border/50 rounded-xl h-11 text-xs">
+                                            <SelectValue placeholder="Teknisyen Seçin..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-card border-border text-foreground rounded-xl">
+                                            <SelectItem value="NONE" className="text-xs">Teknisyen Yok / Atanmadı</SelectItem>
+                                            {staffList.map((member: any) => (
+                                                <SelectItem key={member.id} value={member.id} className="text-xs">
+                                                    {member.name} {member.surname || ""} ({member.role})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                                <div>
-                                    <p className="text-xs  text-muted-foreground">GÖREVLİ TEKNİSYEN</p>
-                                    <p className="text-sm  text-foreground">{ticket.technician?.name || 'HENÜZ ATANMADI'}</p>
+                            ) : (
+                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 whisper-border border-border/50">
+                                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500  text-xs">
+                                        {ticket.technician?.name?.charAt(0) || '?'}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs  text-muted-foreground">GÖREVLİ TEKNİSYEN</p>
+                                        <p className="text-sm  text-foreground">{ticket.technician?.name || 'HENÜZ ATANMADI'}</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             <ServiceDetailActions ticket={ticket} />
                         </CardContent>
                     </Card>

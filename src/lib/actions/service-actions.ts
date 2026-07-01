@@ -444,6 +444,34 @@ export async function updateServiceCost(ticketId: string, estimatedCost: number,
   }
 }
 
+export async function updateServiceDetails(
+  ticketId: string,
+  estimatedCost: number,
+  actualCost: number,
+  problemDesc: string,
+  technicianId: string | null
+) {
+  try {
+    const shopId = await getShopId();
+    const ticket = await prisma.serviceTicket.update({
+      where: { id: ticketId, shopId },
+      data: {
+        estimatedCost: estimatedCost,
+        actualCost: actualCost,
+        problemDesc: problemDesc,
+        technicianId: technicianId || null,
+      },
+    });
+    revalidatePath(`/servis/liste`);
+    revalidatePath(`/servis/${ticketId}`);
+    revalidateTag(`tickets-${shopId}`);
+    return { success: true, data: serializePrisma(ticket) };
+  } catch (error) {
+    console.error("Error updating service details:", error);
+    return { success: false, error: "Servis detayları güncellenirken bir hata oluştu." };
+  }
+}
+
 export async function bulkUpdateServiceStatus(ticketIds: string[], status: ServiceStatus, message?: string) {
   try {
     const shopId = await getShopId();

@@ -74,6 +74,7 @@ interface CreateProductModalProps {
   autoOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  searchParams?: any;
 }
 
 export function CreateProductModal({
@@ -82,7 +83,8 @@ export function CreateProductModal({
   shop,
   autoOpen = false,
   open: controlledOpen,
-  onOpenChange: controlledOnOpenChange
+  onOpenChange: controlledOnOpenChange,
+  searchParams
 }: CreateProductModalProps) {
   const { rates: exchangeRates, defaultCurrency, shopId } = useDashboardData();
   const [internalOpen, setInternalOpen] = useState(autoOpen);
@@ -136,6 +138,20 @@ export function CreateProductModal({
     resolver: zodResolver(productSchema.passthrough()),
     defaultValues: { stock: "0", criticalStock: "1", buyPrice: "0", buyPriceUsd: "", sellPrice: "0", sellPriceUsd: "" }
   });
+
+  useEffect(() => {
+    if (searchParams?.addProduct) {
+      setOpen(true);
+      setValue("name", decodeURIComponent(searchParams.addProduct));
+      if (searchParams.price) {
+        setValue("buyPrice", searchParams.price);
+        setValue("sellPrice", searchParams.price);
+      }
+      // Remove query parameters from URL without reloading
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [searchParams, setValue, setOpen]);
 
   const calculateTryPrice = (val: string) => {
     const num = parseFloat(val) || 0;

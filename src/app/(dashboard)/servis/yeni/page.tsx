@@ -660,6 +660,10 @@ export default function NewServicePage() {
                   onAddPhoto={(files) => setPhotos(prev => [...prev, ...files].slice(0, 6))}
                   onRemovePhoto={(id) => setPhotos(prev => prev.filter(p => p.id !== id))}
                   getInputClass={getInputClass}
+                  onAddPartToStock={(partName, estimatedPrice) => {
+                    window.open(`/stok?addProduct=${encodeURIComponent(partName)}&price=${estimatedPrice}`, '_blank');
+                    toast({ title: "Stok Sayfası Açıldı", description: `${partName} ürünü eklemek için yeni sekme açıldı.` });
+                  }}
                 />
               )}
 

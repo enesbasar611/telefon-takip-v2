@@ -25,6 +25,7 @@ interface StepDeviceDetailsProps {
     onAddPhoto: (files: PhotoFile[]) => void;
     onRemovePhoto: (id: string) => void;
     getInputClass: (name: string) => string;
+    onAddPartToStock?: (partName: string, estimatedPrice: number) => void;
 }
 
 export const StepDeviceDetails = ({
@@ -40,7 +41,8 @@ export const StepDeviceDetails = ({
     photos,
     onAddPhoto,
     onRemovePhoto,
-    getInputClass
+    getInputClass,
+    onAddPartToStock
 }: StepDeviceDetailsProps) => {
     const { register, setValue, formState: { errors }, control } = useFormContext();
 
@@ -118,6 +120,7 @@ export const StepDeviceDetails = ({
                     isDiagnosticPending={aiDiagnosisMutation.isPending}
                     diagnosticResult={diagnosticResult}
                     onAnalyze={handleAIDiagnosis}
+                    onAddPartToStock={onAddPartToStock}
                 />
 
                 {!isSimpleMode && (

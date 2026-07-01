@@ -267,7 +267,7 @@ export async function getGlobalShortageList(dateStr?: string) {
       include: {
         shop: { select: { name: true } },
         shortageItems: {
-          where: { isResolved: false, assignedToId: null }
+          where: { isResolved: false }
         }
       }
     });
@@ -379,6 +379,8 @@ export async function assignShortageToCourier(id: string, courierId: string | nu
       });
     }
 
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -1136,7 +1138,9 @@ export async function resolveShortageItem(id: string) {
       where: { id, shopId },
       data: { isResolved: true },
     });
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
+    revalidatePath("/kurye");
     return { success: true };
   } catch (err) {
     return { success: false };
@@ -1152,7 +1156,9 @@ export async function resolveShortageItems(ids: string[]) {
       where: { id: { in: ids }, shopId },
       data: { isResolved: true },
     });
-    revalidatePath("/");
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
+    revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
     return { success: false, error: "Toplu güncelleme başarısız." };

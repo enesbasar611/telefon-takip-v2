@@ -1,4 +1,4 @@
-﻿# Basar Teknik V2 - JOURNAL
+# Basar Teknik V2 - JOURNAL
 
 ## Genel Proje Durumu
 
@@ -372,3 +372,20 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
     - **Hata Giderme**: Dolar ile yapılan satışlarda fiş üzerinde TL'den tekrar dolara çevrim yapan (21$ -> 0.35$ gibi) mantık hatası düzeltildi; sepet fiyatı neyse fişe o aktarılıyor.
     - **Hızlı Satış**: Navbar üzerindeki hızlı satış drawer'ı, ana satış sayfasıyla finansal olarak eşitlendi.
     - **Dosyalar**: `src/components/pos/pos-compact.tsx`, `src/components/pos/parts/checkout-summary.tsx`, `src/components/pos/receipt-modal.tsx`.
+
+- [x] 2026-07-01: Yapay Zeka Teşhis Arayüzü & Tema İyileştirmeleri:
+    - **Dosyalar**: `src/components/features/service-new/ai-diagnostic-panel.tsx`, `src/components/service/technical-service-analysis-modal.tsx`, `src/components/service/service-management-modal.tsx`.
+    - **Neden**: Yapay zeka teşhis panelindeki butonlar ve açılan modallerin koyu mod/açık mod uyumsuzluğu ve okunma zorluklarını gidermek.
+    - **Yapılanlar**: 
+        - "Muhtemel Sorun", "Gerekli Parça" ve "Öngörülen Süre" butonlarının arka plan ve yazıları belirgin ve yüksek kontrastlı hale getirildi.
+        - Tüm modallerin simsiyah (`bg-[#0A0B0D]`) olan arka planı dükkanın genel tema renklerine uyumlu olacak şekilde açık temada beyaz (`bg-white`), koyu temada ise modern koyu gri (`bg-[#121316]`) olarak güncellendi.
+        - Servis yönetim modalındaki tüm küçük yazılar (`text-[8px]/[9px]`) büyütülerek `text-xs`/`text-sm` yapıldı. Geniş harf boşlukları (`tracking-[0.2em]`, `tracking-widest` vb.) tamamen kaldırılarak `tracking-normal` düzenine geçildi ve metinlerin koyu moddaki okunabilirliği maksimize edildi.
+
+- [x] 2026-07-01: Servis Detay Sayfası Gelişmiş Düzenleme & Buton Düzeltmeleri:
+    - **Dosyalar**: `src/components/service/service-detail-client.tsx`, `src/lib/actions/service-actions.ts`, `src/components/service/service-detail-actions.tsx`.
+    - **Neden**: Gelişmiş arama veya detay linkiyle gidilen `/servis/[id]` sayfasında fiyatların yanı sıra arıza tanımı ve görevli teknisyenin dinamik düzenlenememesi; ayrıca açık temada "Fiş Yazdır" butonunun okunamaz olması.
+    - **Yapılanlar**:
+        - Detay sayfasındaki "DÜZENLE" butonu genişletilerek fiyatlara ek olarak **"Arıza Tanımı"** (Input) ve **"Görevli Teknisyen"** (Select dropdown) alanlarının da dinamik olarak düzenlenebilmesi sağlandı.
+        - Tüm güncellemeler, yeni eklenen `updateServiceDetails` sunucu aksiyonu ile tek seferde veritabanına kaydediliyor.
+        - "Fiş Yazdır" butonunun açık temada (light mode) arka planı ile metninin aynı renk olması (okunamazlık sorunu) giderildi; `text-foreground` ve responsive arka plan sınıfları ile düzeltildi.
+

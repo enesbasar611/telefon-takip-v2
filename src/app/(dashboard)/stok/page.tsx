@@ -58,6 +58,7 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
               categories={categories}
               suppliers={suppliers}
               shop={shop}
+              searchParams={searchParams}
             />
           </>
         }
