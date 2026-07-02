@@ -32,30 +32,58 @@ export const DebtStatementModern = ({
     // Sistemden gelen canlı kur bilgisini alıyoruz
     const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 32.50;
 
-    // Filtreleme ve sıralama
+    // Fişteki (slip) toplam tutar hesaplama mantığıyla birebir aynı şekilde ödenmemiş borçları filtreleyip genel bakiyeyi hesaplıyoruz
+    const unpaidDebts = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
+
+    const unpaidTRY = unpaidDebts
+        .filter((d: any) => d.currency !== 'USD')
+        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
+
+    const unpaidUSD = unpaidDebts
+        .filter((d: any) => d.currency === 'USD')
+        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
+
+    const portfolioTotalTRY = Math.ceil(unpaidTRY + (unpaidUSD * currentUsdRate));
+    const portfolioTotalUSD = (unpaidTRY / currentUsdRate) + unpaidUSD;
+
+    // Fişteki filtreleme mantığıyla birebir aynı şekilde en eski borç tarihini bulup listelenecek elemanları belirliyoruz
+    const earliestDate = (() => {
+        if (unpaidDebts.length === 0) return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const sorted = [...unpaidDebts].sort((a: any, b: any) => {
+            const da = new Date(a.createdAt).getTime();
+            const db = new Date(b.createdAt).getTime();
+            if (isNaN(da)) return 1;
+            if (isNaN(db)) return -1;
+            return da - db;
+        });
+        const first = new Date(sorted[0].createdAt);
+        return !isNaN(first.getTime()) ? first : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    })();
+
     const filteredDebts = debts
-        .filter(d => {
-            if (showPaid) return true; // Tümü seçiliyse her şeyi göster
-            if (d.type === 'PAYMENT') return true; // Tahsilatları her zaman göster (bakiyeyi etkiler)
-            return Number(d.remainingAmount) > 0; // Borç ise sadece kalan tutarı olanları göster
+        .filter((d: any) => {
+            if (showPaid) return true;
+            if (d.type === 'PAYMENT') {
+                const date = new Date(d.createdAt);
+                if (isNaN(date.getTime())) return false;
+                return date >= earliestDate;
+            }
+            return !d.isPaid;
         })
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-    // Borç ve Tahsilat Hesaplamaları
+    // Borç ve Tahsilat Hesaplamaları (Özet kutuları için filtrelenmiş veriden hesaplanır)
     const totalTRY = filteredDebts
         .filter(d => d.currency !== 'USD' && d.type !== 'PAYMENT')
-        .reduce((acc, d) => acc + d.amount, 0);
+        .reduce((acc, d) => acc + Number(d.amount), 0);
 
     const totalUSD = filteredDebts
         .filter(d => d.currency === 'USD' && d.type !== 'PAYMENT')
-        .reduce((acc, d) => acc + d.amount, 0);
+        .reduce((acc, d) => acc + Number(d.amount), 0);
 
     const totalTahsilat = filteredDebts
         .filter(d => d.type === 'PAYMENT')
-        .reduce((acc, d) => acc + (d.amountInTry || d.amount), 0);
-
-    const portfolioTotalTRY = (totalTRY + (totalUSD * currentUsdRate)) - totalTahsilat;
-    const portfolioTotalUSD = portfolioTotalTRY / currentUsdRate;
+        .reduce((acc, d) => acc + Number(d.amountInTry || d.amount), 0);
 
     // Tarih gruplama
     const groups = filteredDebts.reduce((groups: any, item: any) => {
