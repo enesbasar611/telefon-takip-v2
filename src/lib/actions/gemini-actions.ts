@@ -382,13 +382,27 @@ MEVCUT ÜRÜNLER (Mükerrer eklememek için kontrol et):
 ${JSON.stringify(productList.slice(0, 50))}
 
 Kurallara uy:
-1. Eğer bir ürün yukarıdaki MEVCUT ÜRÜNLER listesinde birebir aynı isimle varsa, onu tekrar EKLEME. 
-2. Mevcut kategorileri (ID ve isim) kullanmaya çalış. Eğer kullanıcı "Şarj" dediyse ve "Şarj Aletleri" kategorisi varsa onu eşleştir.
-3. "Şarj Aletleri > Type-C > 27W" gibi hiyerarşiler → her seviye ayrı kategori düğümü
-4. Her kategorinin parentName'ini bir üst seviyenin name'i olarak doldur (root → null)
-5. Seri modeller için HER MODEL ayrı ürün satırı olarak oluştur (max 20 ürün)
-6. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): Eğer kullanıcı fiyatı "dolar" veya "$" olarak belirttiyse, ilgili Usd alanına (buyPriceUsd/sellPriceUsd) o rakamı yaz, TL alanına (${usdRate} katı) ise rakamı yukarı yuvarlayarak yaz.
-7. EĞER PARA BİRİMİ BELİRTİLMEMİŞSE: Mağaza varsayılan para birimini (${defaultCurrency}) kullan.
+1. Girdi Formatı Analizi: Kullanıcı genellikle şu formatta yazar:
+   'Kategori > Alt Kategori [> ...] > Ürün Adı/Özelliği [— veya ,] Adet, Alış, Satış, Raf'
+   - '>' ile ayrılmış hiyerarşi zincirindeki en son eleman (örneğin '120W', 'Galaxy S24 Ultra Orijinal Ekran' veya 'iPhone 13 Pro') bir ÜRÜN ADI veya özelliğidir.
+   - Zincirde bu en son elemandan önce gelen tüm elemanlar (örneğin 'Şarj Aletleri > Type-C' veya 'Ekranlar > Samsung') kategori ve alt kategorilerdir. En son eleman ASLA tek başına boş bir kategori olarak bırakılmamalıdır.
+   - Eğer '>' zincirinden sonra '—' veya ',' ile ayrılmış ek bir ürün tanımı varsa (örneğin '120W — 12 adet şarj başlığı'), zincirin son elemanı ile bu açıklamadaki ürün tanımı birleştirilerek anlamlı bir Ürün Adı (örneğin '120W Şarj Başlığı') oluşturulmalıdır.
+   - ÇOKLU VARYASYON / ÜRÜN GİRİŞLERİ:
+     * Eğer zincirin son elemanında virgülle ayrılmış birden fazla model/varyasyon varsa (örn: '120W,67w,33w' veya 'iPhone 11,12,13'), bunların her biri için AYRI BİRER ÜRÜN oluştur. Her ürünün fiyatını, stok sayısını ve rafını ortak belirtilen değerlere göre ata. Ürün isimlerini '120W Şarj Başlığı', '67W Şarj Başlığı', '33W Şarj Başlığı' gibi birleştirerek oluştur.
+     * Eğer kullanıcı tek bir girdi içinde farklı modeller için farklı adetler belirtirse (örn: '120W — 12 adet şarj başlığı 33w 5 adet, 67w 4 adet'), belirtilen her model/özellik için kendi adetiyle ayrı birer ürün satırı oluştur (örn: '120W Şarj Başlığı' -> 12 adet, '33W Şarj Başlığı' -> 5 adet, '67W Şarj Başlığı' -> 4 adet). Fiyat ve raf ortak belirtilen değerler olacaktır.
+2. Virgüllerle veya tireyle ayrılmış alanlar sırasıyla:
+   - Adet (stock): sayısal değer (örn: 12)
+   - Alış Fiyatı (buyPrice/buyPriceUsd)
+   - Satış Fiyatı (sellPrice/sellPriceUsd)
+   - Raf Konumu (location) (örn: A-3)
+3. Eğer bir ürün yukarıdaki MEVCUT ÜRÜNLER listesinde birebir aynı isimle varsa, onu tekrar EKLEME. 
+4. Mevcut kategorileri (ID ve isim) kullanmaya çalış. Eğer kullanıcı "Şarj" dediyse ve "Şarj Aletleri" kategorisi varsa onu eşleştir.
+5. Her kategorinin parentName'ini bir üst seviyenin name'i olarak doldur (root → null).
+6. Seri modeller için HER MODEL ayrı ürün satırı olarak oluştur (max 20 ürün).
+7. FİYAT DÖNÜŞÜMÜ (KUR: ${usdRate}): 
+   - Kullanıcı fiyatı dolar/USD veya "$" olarak belirttiyse: buyPriceUsd / sellPriceUsd alanına o dolar tutarını yaz, buyPrice / sellPrice (TL) alanına ise dolar tutarının ${usdRate} ile çarpımını yaz.
+   - Kullanıcı fiyatı TL veya "₺" olarak belirttiyse: buyPrice / sellPrice alanına o TL tutarını yaz, buyPriceUsd / sellPriceUsd alanına ise TL tutarının ${usdRate} değerine bölünmüş halini yaz.
+   - Eğer para birimi belirtilmemişse, mağaza varsayılan para birimini (${defaultCurrency}) kullan ve ona göre diğer para birimini kur (${usdRate}) ile dönüştürerek her iki alanı da doldur.
 SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
     const userPrompt = `KULLANICI AÇIKLAMASI:\n${description}`;
@@ -401,17 +415,49 @@ SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
         const cats: AICategoryNode[] = (parsed.categories || []).map((c: any) => ({
             name: c.name || "",
             parentName: c.parentName || null,
-            products: (c.products || []).map((p: any) => ({
-                name: p.name || "",
-                buyPrice: Number(p.buyPrice) || 0,
-                buyPriceUsd: p.buyPriceUsd ? Number(p.buyPriceUsd) : null,
-                sellPrice: Number(p.sellPrice) || 0,
-                sellPriceUsd: p.sellPriceUsd ? Number(p.sellPriceUsd) : null,
-                stock: Number(p.stock) || 1,
-                criticalStock: Number(p.criticalStock) || 3,
-                barcode: p.barcode && p.barcode !== "null" ? p.barcode : undefined,
-                location: p.location && p.location !== "null" ? p.location : undefined,
-            }))
+            products: (c.products || []).map((p: any) => {
+                let buyPrice = Number(p.buyPrice) || 0;
+                let buyPriceUsd = p.buyPriceUsd ? Number(p.buyPriceUsd) : null;
+                let sellPrice = Number(p.sellPrice) || 0;
+                let sellPriceUsd = p.sellPriceUsd ? Number(p.sellPriceUsd) : null;
+
+                // Fiyatların varsayılan para birimine göre senkronizasyonunu ve temizliğini yapıyoruz
+                if (defaultCurrency === "USD") {
+                    if (buyPriceUsd === null || buyPriceUsd === buyPrice) {
+                        buyPriceUsd = Math.round((buyPrice / usdRate) * 100) / 100;
+                    } else if (buyPrice === 0 || buyPrice === buyPriceUsd) {
+                        buyPrice = Math.ceil(buyPriceUsd * usdRate);
+                    }
+
+                    if (sellPriceUsd === null || sellPriceUsd === sellPrice) {
+                        sellPriceUsd = Math.round((sellPrice / usdRate) * 100) / 100;
+                    } else if (sellPrice === 0 || sellPrice === sellPriceUsd) {
+                        sellPrice = Math.ceil(sellPriceUsd * usdRate);
+                    }
+                } else {
+                    if (buyPriceUsd !== null && (buyPrice === 0 || buyPrice === buyPriceUsd)) {
+                        buyPrice = Math.ceil(buyPriceUsd * usdRate);
+                    }
+                    buyPriceUsd = null;
+
+                    if (sellPriceUsd !== null && (sellPrice === 0 || sellPrice === sellPriceUsd)) {
+                        sellPrice = Math.ceil(sellPriceUsd * usdRate);
+                    }
+                    sellPriceUsd = null;
+                }
+
+                return {
+                    name: p.name || "",
+                    buyPrice,
+                    buyPriceUsd,
+                    sellPrice,
+                    sellPriceUsd,
+                    stock: Number(p.stock) || 1,
+                    criticalStock: Number(p.criticalStock) || 3,
+                    barcode: p.barcode && p.barcode !== "null" ? p.barcode : undefined,
+                    location: p.location && p.location !== "null" ? p.location : undefined,
+                };
+            })
         }));
         if (cats.length === 0) return { success: false, error: "Hiç kategori tespit edilemedi. Açıklamayı daha net yazın." };
         return { success: true, data: cats };

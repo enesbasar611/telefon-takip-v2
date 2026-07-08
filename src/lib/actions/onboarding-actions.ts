@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-export async function createShopOnboarding(data: { name: string; industry: string; address?: string; phone?: string; taxOffice?: string; taxNumber?: string; }) {
+export async function createShopOnboarding(data: { name: string; industry: string; address?: string; phone?: string; taxOffice?: string; taxNumber?: string; defaultCurrency?: string; }) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user || !session.user.id) {
@@ -49,6 +49,20 @@ export async function createShopOnboarding(data: { name: string; industry: strin
                         connect: { id: session.user.id }
                     }
                 }
+            });
+        }
+
+        // SAVE DEFAULT CURRENCY SETTING IF SUPPLIED
+        if (data.defaultCurrency) {
+            await prisma.setting.upsert({
+                where: { shopId_key: { shopId: shop.id, key: "defaultCurrency" } },
+                update: { value: data.defaultCurrency },
+                create: { shopId: shop.id, key: "defaultCurrency", value: data.defaultCurrency }
+            });
+            await prisma.setting.upsert({
+                where: { shopId_key: { shopId: shop.id, key: "finance_default_currency" } },
+                update: { value: data.defaultCurrency },
+                create: { shopId: shop.id, key: "finance_default_currency", value: data.defaultCurrency }
             });
         }
 
@@ -136,7 +150,25 @@ export async function getOnboardingAIAnalysis(sector: string) {
 
 export async function saveOnboardingModules(modules: string[], sector?: string, extraData?: any, overrideShopId?: string) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user || !session.user.id) {
+            return { success: false, error: "Yetkisiz işlem." };
+        }
+
         const shopId = overrideShopId || await getShopId();
+
+        // Security check: verify user belongs to the target shop (unless they are SUPER_ADMIN)
+        if (overrideShopId) {
+            const userShop = await prisma.shop.findFirst({
+                where: {
+                    id: overrideShopId,
+                    users: { some: { id: session.user.id } }
+                }
+            });
+            if (!userShop && session.user.role !== "SUPER_ADMIN") {
+                return { success: false, error: "Bu dükkan üzerinde yetkiniz yok." };
+            }
+        }
 
         let themeConfig: any = {};
         if (sector) {
@@ -192,16 +224,42 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
             } as any
         });
 
+        // SAVE DEFAULT CURRENCY SETTING IF SUPPLIED
+        if (extraData?.defaultCurrency) {
+            await prisma.setting.upsert({
+                where: { shopId_key: { shopId, key: "defaultCurrency" } },
+                update: { value: extraData.defaultCurrency },
+                create: { shopId, key: "defaultCurrency", value: extraData.defaultCurrency }
+            });
+            await prisma.setting.upsert({
+                where: { shopId_key: { shopId, key: "finance_default_currency" } },
+                update: { value: extraData.defaultCurrency },
+                create: { shopId, key: "finance_default_currency", value: extraData.defaultCurrency }
+            });
+        } else if (modules.includes("FINANCE")) {
+            // Only write fallback if not already set
+            const exists = await prisma.setting.findUnique({
+                where: { shopId_key: { shopId, key: "defaultCurrency" } }
+            });
+            if (!exists) {
+                await prisma.setting.create({
+                    data: { shopId, key: "defaultCurrency", value: "TRY" }
+                });
+                await prisma.setting.create({
+                    data: { shopId, key: "finance_default_currency", value: "TRY" }
+                });
+            }
+        }
+
         // Initialize default "Ayarlar" based on modules
         const defaultSettings = [];
-        if (modules.includes("FINANCE")) defaultSettings.push({ key: "finance_default_currency", value: "TRY" });
         if (modules.includes("SERVICE")) defaultSettings.push({ key: "service_auto_sms", value: "true" });
         if (modules.includes("STOCK")) defaultSettings.push({ key: "stock_critical_alert", value: "true" });
 
         for (const setting of defaultSettings) {
             await prisma.setting.upsert({
                 where: { shopId_key: { shopId, key: setting.key } },
-                update: { value: setting.value },
+                update: {}, // Do not overwrite existing settings
                 create: { shopId, key: setting.key, value: setting.value }
             });
         }

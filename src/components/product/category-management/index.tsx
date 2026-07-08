@@ -71,20 +71,9 @@ export function CategoryManagementContainer() {
     const [isCreatingProduct, setIsCreatingProduct] = useState(false);
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [stockMode, setStockMode] = useState<"plus" | "minus">("plus");
-    const [priceCurrency, setPriceCurrency] = useState<PriceCurrency>(() => {
-        if (typeof window === "undefined") return "TRY";
-        const saved = localStorage.getItem("category_price_currency");
-        return (saved as PriceCurrency) || (defaultCurrency as PriceCurrency) || "TRY";
-    });
+    const [priceCurrency, setPriceCurrency] = useState<PriceCurrency>(() => (defaultCurrency as PriceCurrency) || "TRY");
 
     const [searchQuery, setSearchQuery] = useState("");
-
-    useEffect(() => {
-        const saved = localStorage.getItem("category_price_currency");
-        if (!saved && defaultCurrency) {
-            setPriceCurrency(defaultCurrency as PriceCurrency);
-        }
-    }, [defaultCurrency]);
 
     // Para birimi değiştiğinde düzenleme verilerini temizle (simge-fiyat uyumsuzluğunu önlemek için)
     useEffect(() => {
@@ -92,18 +81,9 @@ export function CategoryManagementContainer() {
         setNewProductData({ name: "", buyPrice: 0, sellPrice: 0, stock: 0 });
     }, [priceCurrency]);
 
-    const [selectedCatId, setSelectedCatId] = useState<string | null>(() => {
-        if (typeof window !== 'undefined') return localStorage.getItem('category_selected_id');
-        return null;
-    });
+    const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
 
-    const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('category_expanded_state');
-            return saved ? JSON.parse(saved) : {};
-        }
-        return {};
-    });
+    const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
 
     const [activeId, setActiveId] = useState<string | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -119,14 +99,28 @@ export function CategoryManagementContainer() {
     const [isPending, startTransition] = useTransition();
 
     // Resizable Sidebar States
-    const [sidebarWidth, setSidebarWidth] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('category_sidebar_width');
-            return saved ? parseInt(saved, 10) : 320;
-        }
-        return 320;
-    });
+    const [sidebarWidth, setSidebarWidth] = useState(320);
     const [isResizing, setIsResizing] = useState(false);
+
+    // Load states from localStorage only after client-side mount to prevent Next.js hydration mismatch
+    useEffect(() => {
+        const savedCurrency = localStorage.getItem("category_price_currency");
+        if (savedCurrency) {
+            setPriceCurrency(savedCurrency as PriceCurrency);
+        } else if (defaultCurrency) {
+            setPriceCurrency(defaultCurrency as PriceCurrency);
+        }
+
+        const savedSelectedId = localStorage.getItem("category_selected_id");
+        if (savedSelectedId) {
+            setSelectedCatId(savedSelectedId);
+        }
+
+        const savedWidth = localStorage.getItem("category_sidebar_width");
+        if (savedWidth) {
+            setSidebarWidth(parseInt(savedWidth, 10));
+        }
+    }, [defaultCurrency]);
 
     // Bulk Add Modal state
     const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
@@ -142,7 +136,6 @@ export function CategoryManagementContainer() {
         else localStorage.removeItem('category_selected_id');
     }, [selectedCatId]);
 
-    useEffect(() => { localStorage.setItem('category_expanded_state', JSON.stringify(expandedNodes)); }, [expandedNodes]);
     useEffect(() => { localStorage.setItem("category_price_currency", priceCurrency); }, [priceCurrency]);
     useEffect(() => { localStorage.setItem('category_sidebar_width', sidebarWidth.toString()); }, [sidebarWidth]);
 

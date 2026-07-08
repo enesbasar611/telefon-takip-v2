@@ -8,6 +8,7 @@ import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { generateProductBarcode } from "@/lib/barcode-utils";
 import { formatTitleCase } from "@/lib/formatters";
 import { Role } from "@prisma/client";
+import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 
 type ShortagePriority = {
   courierPriorityScore: number;
@@ -381,6 +382,7 @@ export async function assignShortageToCourier(id: string, courierId: string | nu
 
     revalidateTag(`shortage-${shopId}`);
     revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {
@@ -405,6 +407,7 @@ export async function markShortageAsTaken(id: string, isTaken: boolean, supplier
 
     revalidateTag(`shortage-${shopId}`);
     revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     revalidatePath("/kurye");
     return { success: true };
   } catch (error) {

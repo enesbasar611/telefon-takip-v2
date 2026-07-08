@@ -680,18 +680,19 @@ export default function NewServicePage() {
               )}
 
               {/* Step Navigation Buttons */}
-              <div className="flex items-center justify-between pt-6">
+              {/* Step Navigation Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
                   disabled={currentStep === 1}
-                  className="h-12 px-8 rounded-xl font-bold text-sm tracking-tight text-muted-foreground hover:text-foreground transition-all"
+                  className="h-12 px-8 rounded-xl font-bold text-sm tracking-tight text-muted-foreground hover:text-foreground transition-all order-2 sm:order-1 w-full sm:w-auto"
                 >
                   Geri Git
                 </Button>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 order-1 sm:order-2">
                   <AnimatePresence>
                     {foundCustomer && (
                       <motion.div
@@ -699,12 +700,13 @@ export default function NewServicePage() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
                         transition={{ duration: 0.3 }}
+                        className="w-full sm:w-auto"
                       >
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setIsHistoryModalOpen(true)}
-                          className="h-12 px-6 rounded-xl border-blue-500/30 bg-blue-500/5 text-blue-500 hover:bg-blue-500/10 hover:text-blue-600 gap-2 font-bold text-xs shadow-sm transition-all"
+                          className="w-full sm:w-auto h-12 px-6 rounded-xl border-blue-500/30 bg-blue-500/5 text-blue-500 hover:bg-blue-500/10 hover:text-blue-600 gap-2 font-bold text-xs shadow-sm transition-all"
                         >
                           <History className="h-4 w-4" />
                           <span>MÜŞTERİ GEÇMİŞİ</span>
@@ -751,7 +753,7 @@ export default function NewServicePage() {
                         }
                         setCurrentStep(prev => Math.min(3, prev + 1));
                       }}
-                      className="h-12 px-10 rounded-xl font-bold text-sm tracking-tight bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      className="h-12 px-10 rounded-xl font-bold text-sm tracking-tight bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all w-full sm:w-auto"
                     >
                       Sonraki Adım <Zap className="h-4 w-4 ml-2 fill-current" />
                     </Button>
@@ -766,7 +768,7 @@ export default function NewServicePage() {
                         }
                       }}
                       className={cn(
-                        "h-12 px-12 rounded-xl font-black text-sm tracking-widest shadow-xl transition-all",
+                        "h-12 px-12 rounded-xl font-black text-sm tracking-widest shadow-xl transition-all w-full sm:w-auto",
                         canSubmitService
                           ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98]"
                           : "bg-muted text-muted-foreground/40 cursor-not-allowed"

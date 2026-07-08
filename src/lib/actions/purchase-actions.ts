@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { serializePrisma } from "@/lib/utils";
 import { OrderStatus, PaymentStatus, PaymentMethod, TransactionType } from "@prisma/client";
 import { getShopId } from "@/lib/auth";
+import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 
 export async function createPurchaseOrderAction(data: {
     supplierId: string;
@@ -94,6 +95,7 @@ export async function createPurchaseOrderAction(data: {
 
         revalidatePath("/tedarikciler");
         revalidatePath("/stok");
+        revalidateSmartReplenishment(shopId);
         return { success: true, order: serializePrisma(order) };
 
     } catch (error) {
@@ -418,6 +420,7 @@ export async function receivePurchaseOrderAction(
 
         revalidatePath("/tedarikciler");
         revalidatePath("/stok");
+        revalidateSmartReplenishment(shopId);
         return { success: true, order: serializePrisma(result) };
     } catch (error) {
         console.error("Error receiving order:", error);

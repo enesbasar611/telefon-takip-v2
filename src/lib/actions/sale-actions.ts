@@ -12,6 +12,7 @@ import { saleSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { recordAuditLog } from "./audit-actions";
+import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 
 // getOrCreateDevUser removed.
 
@@ -214,6 +215,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
     revalidatePath("/satis/kasa");
     revalidatePath("/veresiye");
     revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     if (data.customerId) {
       revalidatePath(`/musteriler/${data.customerId}`);
     }
@@ -356,6 +358,7 @@ export async function deleteSale(id: string, revertStock: boolean = true) {
     revalidatePath("/stok");
     revalidatePath("/veresiye");
     revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     return { success: true };
   } catch (error) {
     console.error("Delete sale error:", error);
@@ -411,6 +414,7 @@ export async function deleteSales(ids: string[], revertStock: boolean = true) {
     revalidatePath("/stok");
     revalidatePath("/veresiye");
     revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     return { success: true };
   } catch (error) {
     console.error("Delete sales error:", error);

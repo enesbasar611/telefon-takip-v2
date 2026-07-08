@@ -93,6 +93,7 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
     // Step 1: Modules & Industry
     const [selectedModules, setSelectedModules] = useState<string[]>(["SERVICE", "STOCK", "SALE", "FINANCE"]);
     const [sector, setSector] = useState("");
+    const [defaultCurrency, setDefaultCurrency] = useState("TRY");
 
     // Step 2: Integrations
     const [geminiKey, setGeminiKey] = useState("");
@@ -125,7 +126,7 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                     setLoading(false);
                     return;
                 }
-                const res = await saveOnboardingModules(selectedModules, sector);
+                const res = await saveOnboardingModules(selectedModules, sector, { defaultCurrency });
                 if (!res.success) {
                     toast.error(res.error || "İşlem başarısız oldu.");
                     setLoading(false);
@@ -233,14 +234,30 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                         <p className="text-gray-400 text-lg">İşletme sektörünüzü ve kullanmak istediğiniz modülleri seçin.</p>
                                     </div>
 
-                                    <div className="space-y-2 pb-2 border-b border-white/10 mb-4">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Sektörünüz / İş Alanınız</Label>
-                                        <Input
-                                            placeholder="Örn: Telefoncu, Terzi, Elektrikçi..."
-                                            value={sector}
-                                            onChange={(e) => setSector(e.target.value)}
-                                            className="bg-black/40 border-white/10 rounded-2xl h-14 text-lg focus:border-white transition-colors"
-                                        />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2 border-b border-white/10 mb-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Sektörünüz / İş Alanınız</Label>
+                                            <Input
+                                                placeholder="Örn: Telefoncu, Terzi, Elektrikçi..."
+                                                value={sector}
+                                                onChange={(e) => setSector(e.target.value)}
+                                                className="bg-black/40 border-white/10 rounded-2xl h-14 text-base focus:border-white transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1 flex items-center gap-1">
+                                                <Wallet className="h-3.5 w-3.5 text-indigo-400" /> Varsayılan Para Birimi
+                                            </Label>
+                                            <Select value={defaultCurrency} onValueChange={setDefaultCurrency}>
+                                                <SelectTrigger className="bg-black/40 border-white/10 rounded-2xl h-14 text-base">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-black border-white/10 text-white rounded-2xl p-2">
+                                                    <SelectItem value="TRY" className="h-12 rounded-xl focus:bg-white focus:text-black">₺ - Türk Lirası (TRY)</SelectItem>
+                                                    <SelectItem value="USD" className="h-12 rounded-xl focus:bg-white focus:text-black">$ - Amerikan Doları (USD)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
@@ -358,8 +375,8 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-3 custom-scrollbar">
                                         {accounts.map((acc, index) => (
                                             <div key={acc.id} className="p-6 rounded-[2rem] bg-white/[0.03] border border-white/10 group animate-in slide-in-from-right-4 duration-300">
-                                                <div className="grid grid-cols-12 gap-4 items-end">
-                                                    <div className="col-span-4 space-y-2">
+                                                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-black/20 p-4 rounded-2xl md:bg-transparent md:p-0">
+                                                    <div className="col-span-1 md:col-span-4 space-y-2">
                                                         <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Hesap Adı</Label>
                                                         <Input
                                                             value={acc.name}
@@ -368,7 +385,7 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                                             className="bg-black/20 border-white/5 rounded-2xl h-12"
                                                         />
                                                     </div>
-                                                    <div className="col-span-3 space-y-2">
+                                                    <div className="col-span-1 md:col-span-3 space-y-2">
                                                         <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Tür</Label>
                                                         <Select value={acc.type} onValueChange={(val) => updateAccount(acc.id, { type: val })}>
                                                             <SelectTrigger className="bg-black/20 border-white/5 rounded-2xl h-12">
@@ -381,7 +398,7 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
-                                                    <div className="col-span-3 space-y-2">
+                                                    <div className="col-span-1 md:col-span-3 space-y-2">
                                                         <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Bakiye</Label>
                                                         <Input
                                                             type="number"
@@ -390,7 +407,7 @@ export function OnboardingWizard({ isOpen, onClose, shopName }: OnboardingWizard
                                                             className="bg-black/20 border-white/5 rounded-2xl h-12"
                                                         />
                                                     </div>
-                                                    <div className="col-span-2 flex justify-center pb-1">
+                                                    <div className="col-span-1 md:col-span-2 flex justify-end md:justify-center pb-1">
                                                         {acc.isDefault ? (
                                                             <Badge className="bg-emerald-500 text-black font-bold h-10 px-4 rounded-xl">VARSAYILAN</Badge>
                                                         ) : (

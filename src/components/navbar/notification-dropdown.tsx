@@ -159,6 +159,8 @@ export function NotificationDropdown() {
             router.push(`/stok?highlight=${notification.referenceId}`);
         } else if (notification.type === "FINANCIAL_DELAY") {
             router.push(`/satis/kasa?highlight=${notification.referenceId}`);
+        } else if (notification.type === "PAYROLL_DUE") {
+            router.push(`/personel?salaryDue=${notification.referenceId}`);
         }
     };
 

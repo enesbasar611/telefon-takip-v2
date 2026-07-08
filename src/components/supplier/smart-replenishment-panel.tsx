@@ -224,9 +224,9 @@ function ReplenishmentRow({
                                         color: "text-blue-400",
                                     },
                                     {
-                                        icon: TrendingUp,
-                                        label: "Son 90 gün satış",
-                                        value: item.salesLast90,
+                                        icon: Package,
+                                        label: "Eksik talebi",
+                                        value: item.pendingShortageQty,
                                         suffix: "adet",
                                         color: "text-indigo-400",
                                     },
@@ -288,12 +288,8 @@ function ReplenishmentRow({
                                             Alış fiyatı
                                         </p>
                                         <p className="text-sm font-bold text-foreground">
-                                            ₺{item.buyPrice.toLocaleString("tr-TR")}
-                                            {item.buyPriceUsd && (
-                                                <span className="text-xs text-muted-foreground ml-1">
-                                                    (${item.buyPriceUsd})
-                                                </span>
-                                            )}
+                                            {item.costCurrency === "USD" ? "$" : "₺"}
+                                            {item.unitCostSource.toLocaleString("tr-TR")}
                                         </p>
                                     </div>
                                     <div>
@@ -301,8 +297,16 @@ function ReplenishmentRow({
                                             Tahmini maliyet
                                         </p>
                                         <p className="text-sm font-bold text-emerald-400">
-                                            ₺{Math.round(item.estimatedCost).toLocaleString("tr-TR")}
+                                            {item.costCurrency === "USD" ? "$" : "₺"}
+                                            {item.estimatedCostSource.toLocaleString("tr-TR")}
                                         </p>
+                                        {item.costCurrency === "USD" && (
+                                            <p className="text-[10px] text-muted-foreground">
+                                                {item.estimatedCostTry !== null
+                                                    ? `₺${item.estimatedCostTry.toLocaleString("tr-TR")}`
+                                                    : "TL karşılığı için kur gerekli"}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-0.5">
@@ -419,13 +423,15 @@ export function SmartReplenishmentPanel({ suppliers }: SmartReplenishmentPanelPr
         return recommendations.filter((r) => r.priorityLevel === filterLevel);
     }, [recommendations, filterLevel]);
 
-    const counts = useMemo(() => {
-        const c = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
-        for (const r of recommendations) c[r.priorityLevel]++;
-        return c;
-    }, [recommendations]);
-
-    const totalEstimatedCost = filtered.reduce((s, r) => s + r.estimatedCost, 0);
+    const summary = data?.pages[0]?.summary ?? {
+        totalCount: 0,
+        counts: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
+        totalTryCost: 0,
+        totalUsdSourceCost: 0,
+        hasUnconvertedCost: false,
+    };
+    const counts = summary.counts;
+    const totalEstimatedCost = summary.totalTryCost;
 
     const handleAddToOrder = (item: any, supplierId: string) => {
         const supplier = suppliers.find((s) => s.id === supplierId);
@@ -468,11 +474,16 @@ export function SmartReplenishmentPanel({ suppliers }: SmartReplenishmentPanelPr
                     {totalEstimatedCost > 0 && (
                         <div className="hidden sm:flex flex-col items-end pr-3 border-r border-border/30 mr-1">
                             <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
-                                Tahmini toplam
+                                Tüm önerilerin tahmini toplamı
                             </span>
                             <span className="text-sm font-bold text-emerald-400">
                                 ₺{Math.round(totalEstimatedCost).toLocaleString("tr-TR")}
                             </span>
+                            {summary.totalUsdSourceCost > 0 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                    Kaynak: ${summary.totalUsdSourceCost.toLocaleString("tr-TR")}
+                                </span>
+                            )}
                         </div>
                     )}
                     <Button

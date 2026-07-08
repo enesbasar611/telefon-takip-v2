@@ -51,6 +51,16 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, sho
     const [items, setItems] = useState<DashboardWidgetConfig[]>([]);
     const [activeId, setActiveId] = useState<string | null>(null);
     const prevEditMode = useRef(isEditMode);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     const normalize = (layout: (DashboardWidgetConfig | string)[]): DashboardWidgetConfig[] => {
         if (isCollapsedDashboardLayout(layout)) {
@@ -152,13 +162,13 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, sho
         ...widgetLabels
     };
 
-    // Tighter grid for better density
+    // Tighter grid for better density, responsive column styling on mobile
     const gridStyle: React.CSSProperties = {
         display: "grid",
-        gridTemplateColumns: "repeat(24, minmax(0, 1fr))",
-        gridAutoRows: "minmax(140px, auto)", // Slightly smaller base row, allow expansion
+        gridTemplateColumns: isMobile ? "repeat(1, minmax(0, 1fr))" : "repeat(24, minmax(0, 1fr))",
+        gridAutoRows: isMobile ? "auto" : "minmax(140px, auto)", // Slightly smaller base row, allow expansion
         gridAutoFlow: "dense",
-        gap: "1.25rem", // Reduced gap
+        gap: isMobile ? "1rem" : "1.25rem", // Reduced gap
     };
 
     return (
@@ -211,6 +221,7 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, sho
                                 onResize={(c: number, r: number) => updateSize(item.id, c, r)}
                                 widgetSettings={item.settings}
                                 onToggleView={(m: string) => handleToggleSetting(item.id, 'viewMode', m)}
+                                isMobile={isMobile}
                             >
                                 {React.isValidElement(widgets[item.id])
                                     ? React.cloneElement(widgets[item.id] as any, {
@@ -252,7 +263,7 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, sho
     );
 }
 
-function SortableItem({ id, children, cols, rows, isEditMode, onRemove, onResize, widgetSettings, onToggleView, isEmpty }: any) {
+function SortableItem({ id, children, cols, rows, isEditMode, onRemove, onResize, widgetSettings, onToggleView, isEmpty, isMobile }: any) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !isEditMode });
     const [isResizing, setIsResizing] = useState(false);
     const [previewSize, setPreviewSize] = useState<{ cols: number, rows: number } | null>(null);
@@ -265,8 +276,8 @@ function SortableItem({ id, children, cols, rows, isEditMode, onRemove, onResize
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 1000 : isResizing ? 500 : 1,
-        gridColumn: `span ${cols || 1} / span ${cols || 1}`,
-        gridRow: `span ${actualRows} / span ${actualRows}`,
+        gridColumn: isMobile ? "span 1 / span 1" : `span ${cols || 1} / span ${cols || 1}`,
+        gridRow: isMobile ? "auto" : `span ${actualRows} / span ${actualRows}`,
     };
 
     const handleResizeStart = (e: React.MouseEvent) => {

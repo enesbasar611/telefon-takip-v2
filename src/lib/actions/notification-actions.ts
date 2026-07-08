@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getShopId } from "@/lib/auth";
+import { getPayrollPeriodRange, getSalaryPaymentStatus } from "@/lib/staff-finance-calculations";
 
 export type NotificationType =
   | "CRITICAL_STOCK"
@@ -11,7 +12,8 @@ export type NotificationType =
   | "COMPLETED"
   | "WARRANTY_EXPIRY"
   | "PENDING_APPROVAL"
-  | "DEBT_TRACKING";
+  | "DEBT_TRACKING"
+  | "PAYROLL_DUE";
 
 export type NotificationCategory = "Tümü" | "Stok" | "Servis" | "Finans" | "Garanti";
 
@@ -76,7 +78,7 @@ export async function getSystemNotifications(options?: {
       if (!n.isDeleted && shouldInclude) {
         // If we are looking for snoozed ones, we include EVERYTHING that is snoozed
         // regardless of whether it's virtual or manual, as long as it has a record in dbStates
-        if (options?.showSnoozed || (!n.id.startsWith("stock-") && !n.id.startsWith("fin-") && !n.id.startsWith("pend-") && !n.id.startsWith("comp-") && !n.id.startsWith("deliv-") && !n.id.startsWith("warr-") && !n.id.startsWith("ai-") && !n.id.startsWith("debt-"))) {
+        if (options?.showSnoozed || (!n.id.startsWith("stock-") && !n.id.startsWith("fin-") && !n.id.startsWith("pend-") && !n.id.startsWith("comp-") && !n.id.startsWith("deliv-") && !n.id.startsWith("warr-") && !n.id.startsWith("ai-") && !n.id.startsWith("debt-") && !n.id.startsWith("payroll-"))) {
           notifications.push({
             id: n.id,
             type: n.type as any,
@@ -286,6 +288,54 @@ export async function getSystemNotifications(options?: {
           isRead: readIds.has(id)
         });
       }
+    });
+
+    // 6. PAYROLL_DUE (Finans)
+    const { period } = getPayrollPeriodRange(now);
+    const staffWithPayroll = await prisma.user.findMany({
+      where: {
+        shopId,
+        isApproved: true,
+        employmentEndedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        surname: true,
+        salaryPaymentDay: true,
+        baseSalary: true,
+        monthlyArchives: {
+          where: { shopId, period },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+
+    staffWithPayroll.forEach((staff: any) => {
+      const salaryStatus = getSalaryPaymentStatus(staff.salaryPaymentDay, now);
+      const id = `payroll-${staff.id}-${period}`;
+      if (!salaryStatus.shouldNotify || staff.monthlyArchives.length > 0 || deletedIds.has(id) || snoozedIds.has(id) || options?.showSnoozed) {
+        return;
+      }
+
+      notifications.push({
+        id,
+        type: "PAYROLL_DUE",
+        category: "Finans",
+        title: salaryStatus.isDueToday ? "Maaş günü geldi" : "Maaş gününe 1 gün kaldı",
+        message: `${staff.name || ""} ${staff.surname || ""} için ${period} bordrosunu kontrol edip arşivleyin.`,
+        createdAt: salaryStatus.dueDate,
+        referenceId: staff.id,
+        status: salaryStatus.isDueToday ? "DUE_TODAY" : "DUE_SOON",
+        isRead: readIds.has(id),
+        metadata: {
+          period,
+          salaryPaymentDay: staff.salaryPaymentDay,
+          baseSalary: Number(staff.baseSalary || 0),
+          daysRemaining: salaryStatus.daysRemaining,
+        },
+      });
     });
 
     // Filter by category if requested

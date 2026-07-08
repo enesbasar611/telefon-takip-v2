@@ -28,7 +28,7 @@
   - Amac: Firma bilgilerini (İsim, Tel, Adres, Logo, Vergi Bilgileri) tek merkezden (Profil Sayfası) yönetmek; fiş ve faturalarda mükerrer girişi önlemek.
   - Detay: `Shop` modeline `logoUrl` eklendi. Profil sayfasına dosya seçerek logo yükleme ve Gmail logosunu tek tıkla aktarma özelliği eklendi. Fiş şablonlarındaki (Termal, PDF) logo filtreleri (grayscale/contrast) temizlenerek PNG uyumu sağlandı. UI'daki kilitlenme (relative CSS hatası) giderildi.
 
-- [ ] Ozellik 1: Akilli Stok Yenileme ve Tedarik Planlama
+- [x] Ozellik 1: Akilli Stok Yenileme ve Tedarik Planlama
   - Graphify baglamlari: Community 9 (`addShortageItem`, shortage flow), Community 32 (`SupplierOrderContext`, supplier order lists), Community 33 (`AI alerts`, purchase orders), Community 67 (`getCriticalProducts`, stock movements).
   - Amac: Kritik stok, son satis hizi, bekleyen servis parca ihtiyaci ve tedarikci bilgilerini birlestirerek otomatik satin alma onerisi uretmek.
 
@@ -388,4 +388,99 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
         - Detay sayfasındaki "DÜZENLE" butonu genişletilerek fiyatlara ek olarak **"Arıza Tanımı"** (Input) ve **"Görevli Teknisyen"** (Select dropdown) alanlarının da dinamik olarak düzenlenebilmesi sağlandı.
         - Tüm güncellemeler, yeni eklenen `updateServiceDetails` sunucu aksiyonu ile tek seferde veritabanına kaydediliyor.
         - "Fiş Yazdır" butonunun açık temada (light mode) arka planı ile metninin aynı renk olması (okunamazlık sorunu) giderildi; `text-foreground` ve responsive arka plan sınıfları ile düzeltildi.
+
+- [x] 2026-07-04: Akıllı stok yenileme doğruluk iyileştirmeleri:
+    - Hızlı satan ürünler kritik seviyeye düşmeden 30 günlük hedef stok hesabına alındı.
+    - Servis ve eksik talepleri ayrıştırıldı; kategori uyumlu tedarikçi seçimi eklendi.
+    - TRY/USD maliyetleri kaynak para birimiyle korundu ve tam sonuç kümesi özetleri sayfalamadan ayrıldı.
+
+- [x] 2026-07-03: Veresiye Ekstresi Slip ve PDF Tutar Senkronizasyonu:
+    - **Dosyalar**: `src/components/finance/debt-statement-modern.tsx`.
+    - **Neden**: Veresiye (DebtReceiptModal) slip modalı ile PDF çıktısı (DebtStatementModern) arasındaki toplam tutarlar ve filtreleme mantığı uyuşmuyordu; PDF çıktısı hatalı bakiyeler hesaplıyordu.
+    - **Yapılanlar**:
+        - PDF şablonundaki (`DebtStatementModern`) genel bakiye hesaplama formülleri slip modalı ile birebir eşitlendi; artık `remainingAmount || amount` değerleri üzerinden kuruşu kuruşuna aynı genel TRY ve USD bakiye toplamı (`portfolioTotalTRY` / `portfolioTotalUSD`) gösteriliyor.
+        - PDF çıktısında `showPaid` (Tümü/Gizle) seçeneğine göre işlem tablosu listelenirken uygulanan filtreleme mantığı da slip ile uyumlu hale getirildi (en eski ödenmemiş borç tarihinden (`earliestDate`) önceki ödemeler gizlendi). Bu sayede tablonun kronolojik bakiye sütunu da doğru bir başlangıç ve bitiş değerine kavuştu.
+
+- [x] 2026-07-04: Akıllı stok yenileme performans optimizasyonu:
+    - Satış, servis ve eksik miktarları ham kayıtları belleğe taşımak yerine Prisma aggregate sorgularıyla ürün bazında toplandı.
+    - Tam öneri kümesine mağaza bazlı iki dakikalık cache ve satış/stok/servis/eksik/satın alma mutasyonlarında cache invalidation eklendi.
+    - 750 ms üzerindeki geliştirme hesaplamaları hassas veri içermeyen tek satırlık uyarıyla ölçülür hale getirildi.
+
+- [x] 2026-07-04: AI İle Eklenen Eski Hatalı Stok Kayıtlarının Düzeltilmesi:
+    - **Neden**: Önceki AI kategorisi ekleme işlemlerinde (mükerrer dolar/TL kayma hatasından ötürü) 4500 TL olan ekran 4500$, 150 TL olan bataryalar 150$ vb. olarak kaydedilmiş ve bu da TL karşılığı maliyet/fiyatların çok yüksek çıkmasına sebep olmuştur.
+    - **Yapılanlar**:
+        - Bir veritabanı düzeltme betiği yazılıp çalıştırılarak `Galaxy S24 Ultra Orijinal Ekran`, `iPhone 15 Pro Max Lansman Kılıf` serisi ve `iPhone 11-14 Batarya` serisi ürünlerin alış ve satış fiyatları (TL tutarları ve bunlara karşılık gelen güncel USD kur değerleri) veritabanında düzeltildi.
+
+- [x] 2026-07-04: AI Çoklu Kategori/Stok Ekleme Ekranının İnteraktif Hale Getirilmesi:
+    - **Dosyalar**: `src/components/product/ai-category-creator.tsx`.
+    - **Neden**: AI'ın analizinden sonra önizleme (review) aşamasında adetlerin, fiyatların veya ürün adlarının doğrudan düzenlenememesi, hatalı veya eksik veri girişlerini düzeltmeyi zorlaştırıyordu.
+    - **Yapılanlar**:
+        - Önizleme ekranındaki tüm ürün alanları (Ürün Adı, Adet, Alış Fiyatı, Satış Fiyatı, Raf Konumu) düzenlenebilir interaktif `<Input>` alanlarına dönüştürüldü.
+        - Para birimlerine göre (USD / TRY) dinamik döviz kuru dönüşümü entegre edildi.
+        - Değişiklikler toplu kaydetme aksiyonu (`bulkCreateAIInventory`) ile doğrudan senkronize edildi.
+
+- [x] 2026-07-04: AI Çoklu Kategori ve Ürün Ayrıştırma İyileştirmesi:
+    - **Dosyalar**: `src/lib/actions/gemini-actions.ts`.
+    - **Neden**: Kullanıcı `Kategori > Alt Kategori > Ürün Özelliği, Adet, Alış, Satış, Raf` şeklinde veri girdiğinde zincirin en sonundaki ürün adının/özelliğinin (örn: `120W`) kategori olarak algılanması ve ürünün kaybolması/boş kategori oluşması sorunu.
+    - **Yapılanlar**:
+        - `systemPrompt` içindeki kurallar güncellenerek zincirin son elemanının her zaman ürün adı/özelliği olarak kabul edilmesi ve hiyerarşi ile ürünün doğru ayrıştırılması kuralları netleştirildi.
+
+- [x] 2026-07-04: AI Çoklu Ekle Modalı Genişletme ve Otomatik Kapatma Cilası:
+    - **Dosyalar**: `src/components/product/ai-category-creator.tsx`.
+    - **Neden**: Modalın dar olmasından dolayı önizleme tablosundaki girdi alanlarının (özellikle Adet alanının) sıkışıp taşması; ayrıca "Tümünü Oluştur" dedikten sonra modalın otomatik kapanmaması.
+    - **Yapılanlar**:
+        - Modal genişliği `sm:max-w-[1100px] w-[95vw]` olarak güncellendi ve ferahlatıldı.
+        - Stok adedi input wrapper'ı `w-24`, input `w-14` genişliğine sabitlendi; etiket metnine `shrink-0` eklenerek üst üste binmeler önlendi.
+        - Başarılı kaydetme işleminde, yeşil çek onaylarının görünmesini takiben 1 saniye sonra modalı kapatan `setTimeout(() => setOpen(false), 1000)` eklendi.
+
+- [x] 2026-07-04: AI Çoklu Varyasyon Ayrıştırma ve Arayüzden Ürün Ekleme/Silme:
+    - **Dosyalar**: `src/lib/actions/gemini-actions.ts`, `src/components/product/ai-category-creator.tsx`.
+    - **Neden**: AI'ın `120W,67w,33w` gibi çoklu model varyasyonlarını ve model bazlı farklı adet girişlerini (örn: `120W 12 adet, 33W 5 adet`) tek seferde algılayamaması; ayrıca önizleme tablosunda arayüz üzerinden kategoriye ürün ekleme ve listeden ürün silme butonlarının eksikliği.
+    - **Yapılanlar**:
+        - `systemPrompt` varyasyon ve farklı adet ayrıştırma kuralları ile genişletilerek AI'ın çoklu ürün çıkarması sağlandı.
+        - Önizleme ekranındaki ürün listesine silme (`Trash2`) ve kategori bloğu altına `+ Yeni Ürün Ekle` (`Plus`) butonları eklendi. Yeni eklenen ürünler, mevcut ilk ürünün maliyet, fiyat ve konum bilgilerini otomatik miras alacak şekilde tasarlandı.
+
+- [x] 2026-07-04: Kategori Ağacı Varsayılan Kapalı Durumu ve Genişlik Koruma:
+    - **Dosyalar**: `src/components/product/category-management/index.tsx`.
+    - **Neden**: Kategori sayfasına girildiğinde veya sayfa yenilendiğinde alt kategorilerin otomatik olarak açık gelmesi ve kullanıcının ayarladığı kategori ağacı genişliğinin sayfa yenilenince sıfırlanması sorunları.
+    - **Yapılanlar**:
+        - Kategori genişletme durumunu (`expandedNodes`) local storage'a kaydetme işlemi sonlandırılarak her sayfa yenilendiğinde alt varyantların kapalı (sadece en üst seviye kategoriler görünecek şekilde) gelmesi sağlandı.
+        - Genişlik (`sidebarWidth`), seçili kategori ve para birimi state'lerinin client-side mount sonrası tek seferlik bir `useEffect` ile local storage'dan yüklenmesi sağlanarak Next.js hydration mismatch (arayüz eşleşmeme) hataları giderildi ve ayarlanmış olan kategori ağacı genişliğinin sayfa yenilendiğinde sıfırlanmadan aynen korunması sağlandı.
+
+- [x] 2026-07-04: Onboarding Yetkilendirme Güvenliği, Para Birimi Seçimi ve Mobil Uyum:
+    - **Dosyalar**: `src/lib/actions/onboarding-actions.ts`, `src/app/onboarding/page.tsx`, `src/components/setup/onboarding-wizard.tsx`.
+    - **Neden**: Kurulum esnasında kullanıcının para birimi seçememesi ve varsayılan olarak TRY atanması; finans adımındaki 12 kolonlu grid satırının mobil ekranlarda sığmayarak taşması/kırılması; ayrıca Server Action'da `overrideShopId` parametresinin sahiplik kontrolü olmadan güncellenmesi riski.
+    - **Yapılanlar**:
+        - `saveOnboardingModules` aksiyonuna yetkisiz mağaza modifikasyonunu engelleyen sahiplik/yetkilendirme kontrolü eklendi.
+        - Hem Onboarding sayfasına hem de onboarding modalına ₺, $, € seçenekleriyle "Varsayılan Para Birimi" seçicisi yerleştirildi. Seçilen birim veritabanındaki para birimi ayarlarıyla eşleştirildi.
+        - Finans hesap ekleme satırları `grid-cols-1 md:grid-cols-12` şeklinde responsive hale getirilerek mobilde dikey, geniş ekranlarda yatay yerleşmesi sağlandı ve taşmalar çözüldü.
+
+- [x] 2026-07-04: Kurulum Para Birimi Sınırlandırması ve Ana Sayfa Mobil Optimizasyonu:
+    - **Dosyalar**: `src/app/onboarding/page.tsx`, `src/components/setup/onboarding-wizard.tsx`, `src/components/dashboard/dashboard-client.tsx`.
+    - **Neden**: Varsayılan para birimlerinde Euro (EUR) seçeneğinin istenmemesi; 24 kolonlu ana sayfa dashboard gridinin mobil ekranlarda aşırı derecede sıkışıp kullanılamaz hale gelmesi.
+    - **Yapılanlar**:
+        - Onboarding sayfasındaki ve modalındaki seçicilerden Euro (EUR) seçeneği kaldırıldı; sadece TL (TRY) ve Dolar (USD) bırakıldı.
+        - `dashboard-client.tsx` üzerinde `isMobile` ekran boyutu algılayıcısı kuruldu. Mobil ekranlarda grid 1 kolona zorlandı, gap 1rem'e çekildi ve her bir widget kartının `gridColumn` değeri `span 1`, `gridRow` değeri ise `auto` yapılarak dikeyde tam genişlikte esnek ve kusursuz mobil yerleşim sağlandı.
+
+- [x] 2026-07-04: Müşteri Önerileri Popover Tema Uyumu ve Navigasyon Butonları Mobil İyileştirmesi:
+    - **Dosyalar**: `src/components/features/service-new/customer-section.tsx`, `src/app/(dashboard)/servis/yeni/page.tsx`.
+    - **Neden**: Açık modda (light mode) müşteri arama eşleşme popover'ının koyu gri arka plana sahip olması ve koyu yazı renklerinden dolayı okunamaması; navigasyon butonlarının (Geri Git, Müşteri Geçmişi, Sonraki Adım) mobilde ekrandan dışarı taşması.
+    - **Yapılanlar**:
+        - `customer-section.tsx` içindeki hardcoded koyu renk sınıfları (`bg-slate-900/95`, `text-white` vb.) yerine sistemin popover ve tema duyarlı değişkenleri (`bg-popover`, `text-foreground`, `border-border`) kullanılarak açık/koyu modlarda mükemmel kontrast sağlandı.
+        - Yeni servis kayıt adımındaki alt yönlendirme butonları mobilde dikey dizilecek (`flex-col sm:flex-row items-stretch gap-4`), buton genişlikleri ise tam genişlik (`w-full sm:w-auto`) alacak şekilde güncellendi. Taşma ve kesilme hataları sıfırlandı.
+
+- [x] 2026-07-04: Telefon Girişi Alan Kodu Silinmeme Hatasının Düzeltilmesi:
+    - **Dosyalar**: `src/components/ui/phone-input.tsx`.
+    - **Neden**: Telefon numarası formatlama fonksiyonunun, rakam adedi tam 3 olduğunda otomatik parantez kapama ve boşluk karakteri eklemesi nedeniyle kullanıcının geri (backspace) tuşuna basarak alan kodunu silmesini engellemesi (silinen karakterin anında geri gelmesi).
+    - **Yapılanlar**:
+        - Parantez kapatma ve boşluk ekleme koşulu rakam uzunluğunun 3'ten büyük olması durumuna (`d.length > 3`) bağlandı. Bu sayede 3 haneye inen alan kodu `(533` biçiminde serbest kalarak backspace ile kolayca silinebilir hale getirildi.
+
+
+
+
+
+
+
+
+
 

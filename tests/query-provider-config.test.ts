@@ -11,7 +11,7 @@ const providerPath = join(process.cwd(), "src", "components", "providers", "Quer
 const source = readFileSync(providerPath, "utf8");
 
 assert(
-  source.includes("staleTime: 1000 * 60 * 5"),
+  /staleTime:\s*(?:5\s*\*\s*60\s*\*\s*1000|1000\s*\*\s*60\s*\*\s*5)/.test(source),
   "QueryProvider default staleTime should be 5 minutes."
 );
 

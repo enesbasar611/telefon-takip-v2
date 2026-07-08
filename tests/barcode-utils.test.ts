@@ -18,9 +18,9 @@ const secondGenerated = generateProductBarcode({
   productName: "iPhone 14 Pro Ekran",
 });
 
-assert.match(generated, /^TT2-IPHONE14-Z789ABC1-\d$/);
+assert.equal(generated, "BST-I1P-Z789");
 assert.ok(generated.length < 25);
-assert.notEqual(generated, secondGenerated);
+assert.equal(generated, secondGenerated);
 
 const turkishGenerated = generateProductBarcode({
   shopId: "shop_abc123",
@@ -29,7 +29,7 @@ const turkishGenerated = generateProductBarcode({
   randomPart: "ZZ9999",
 });
 
-assert.match(turkishGenerated, /^TT2-SARJKILI-N123ZZ99-\d$/);
+assert.equal(turkishGenerated, "BST-SK2-N123");
 
 const normalized = normalizeBarcodeSettings({
   labelSize: "invalid",

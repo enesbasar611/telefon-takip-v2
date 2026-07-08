@@ -37,11 +37,8 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
             if (d.length === 0) return "";
 
             let f = "(" + d.slice(0, 3);
-            if (d.length >= 3) {
-                f += ") ";
-                if (d.length > 3) {
-                    f += d.slice(3, 6);
-                }
+            if (d.length > 3) {
+                f += ") " + d.slice(3, 6);
                 if (d.length > 6) {
                     f += " " + d.slice(6, 10);
                 }

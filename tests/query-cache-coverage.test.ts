@@ -15,6 +15,14 @@ const dashboardPage = source("src/app/(dashboard)/dashboard/page.tsx");
 const createTransactionModal = source("src/components/finance/create-transaction-modal.tsx");
 const createAccountModal = source("src/components/finance/create-account-modal.tsx");
 const accountDetailModal = source("src/components/finance/account-detail-modal.tsx");
+const replenishmentMutationFiles = [
+  "src/lib/actions/sale-actions.ts",
+  "src/lib/actions/product-actions.ts",
+  "src/lib/actions/service-actions.ts",
+  "src/lib/actions/shortage-actions.ts",
+  "src/lib/actions/purchase-actions.ts",
+  "src/lib/actions/supplier-actions.ts",
+];
 
 assert(statDetailModal.includes("useQuery"), "Dashboard stat detail modal should use React Query.");
 assert(statDetailModal.includes("invalidateQueries"), "Dashboard stat mutations should invalidate cached dashboard/finance queries.");
@@ -38,5 +46,12 @@ assert(createAccountModal.includes("useQuery"), "Finance account modal should ca
 assert(createAccountModal.includes("useMutation"), "Finance account modal should mutate accounts through React Query.");
 
 assert(accountDetailModal.includes("useQuery"), "Finance account detail analytics should use React Query.");
+
+for (const file of replenishmentMutationFiles) {
+  assert(
+    source(file).includes("revalidateSmartReplenishment"),
+    `${file} should invalidate the smart replenishment cache.`,
+  );
+}
 
 console.log("query-cache-coverage tests passed");

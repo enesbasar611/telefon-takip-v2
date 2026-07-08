@@ -1,8 +1,6 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
 import { auth, getShopId, getUserId } from "@/lib/auth";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { Role } from "@prisma/client";
@@ -20,6 +18,7 @@ const LeaveStatus = {
 } as const;
 import { recordAuditLog } from "./audit-actions";
 import { serializePrisma } from "@/lib/utils";
+import { calculatePayrollSnapshot, getPayrollPeriodRange, getSalaryPaymentStatus } from "@/lib/staff-finance-calculations";
 
 const CommissionStatus = {
     PENDING: "PENDING",
@@ -74,9 +73,10 @@ export async function approveCommission(commissionId: string) {
     const session = await auth();
     const isAdmin = session?.user?.role === Role.ADMIN || session?.user?.role === Role.SUPER_ADMIN || session?.user?.role === Role.SHOP_MANAGER;
     if (!isAdmin) throw new Error("Sadece yönetici onaylayabilir");
+    if (!session?.user?.shopId) throw new Error("Mağaza bilgisi bulunamadı");
 
     const commission = await (prisma as any).staffCommission.update({
-        where: { id: commissionId },
+        where: { id: commissionId, shopId: session.user.shopId },
         data: {
             status: CommissionStatus.APPROVED,
             approvedAt: new Date(),
@@ -100,15 +100,22 @@ export async function addStaffExpense({
     userId: string;
     amount: number;
     description: string;
-    type: "ADVANCE" | "MEAL" | "TRAVEL";
+    type: "ADVANCE" | "MEAL" | "TRAVEL" | "DEDUCTION";
 }) {
     const session = await auth();
     if (!session?.user?.shopId) throw new Error("Yetkisiz erişim");
+    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) throw new Error("Tutar pozitif olmalı");
+
+    const staff = await prisma.user.findUnique({
+        where: { id: userId, shopId: session.user.shopId },
+        select: { id: true },
+    });
+    if (!staff) throw new Error("Personel bulunamadı");
 
     const expense = await (prisma as any).staffExpense.create({
         data: {
             userId,
-            amount,
+            amount: Number(amount),
             description,
             type,
             shopId: session.user.shopId,
@@ -122,7 +129,7 @@ export async function addStaffExpense({
 /**
  * Çalışan Dashboard verilerini getirir (Hassas veri kısıtlamalı)
  */
-export async function getEmployeeDashboardData(userId: string) {
+export async function getEmployeeDashboardData(userId: string, options?: { employmentEndedAt?: Date }) {
     const session = await auth();
     if (!session?.user) throw new Error("Yetkisiz erişim");
 
@@ -133,8 +140,7 @@ export async function getEmployeeDashboardData(userId: string) {
 
     const shopId = session.user.shopId!;
     const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const { start: firstDayOfMonth, end: lastDayOfMonth } = getPayrollPeriodRange(now);
 
     // 1. Personel Temel Bilgileri
     const user = await (prisma.user as any).findUnique({
@@ -144,7 +150,10 @@ export async function getEmployeeDashboardData(userId: string) {
             surname: true,
             role: true,
             baseSalary: true,
+            salaryCurrency: true,
+            salaryPaymentDay: true,
             createdAt: true,
+            employmentEndedAt: true,
         },
     });
 
@@ -152,8 +161,9 @@ export async function getEmployeeDashboardData(userId: string) {
     const approvedCommissions = await (prisma as any).staffCommission.aggregate({
         where: {
             userId,
+            shopId,
             status: CommissionStatus.APPROVED,
-            approvedAt: { gte: firstDayOfMonth },
+            approvedAt: { gte: firstDayOfMonth, lte: lastDayOfMonth },
         },
         _sum: { amount: true },
     });
@@ -162,8 +172,9 @@ export async function getEmployeeDashboardData(userId: string) {
     const pendingCommissions = await (prisma as any).staffCommission.aggregate({
         where: {
             userId,
+            shopId,
             status: CommissionStatus.PENDING,
-            createdAt: { gte: firstDayOfMonth },
+            createdAt: { gte: firstDayOfMonth, lte: lastDayOfMonth },
         },
         _sum: { amount: true },
     });
@@ -172,19 +183,19 @@ export async function getEmployeeDashboardData(userId: string) {
     const expenses = await (prisma as any).staffExpense.findMany({
         where: {
             userId,
-            createdAt: { gte: firstDayOfMonth },
+            shopId,
+            createdAt: { gte: firstDayOfMonth, lte: lastDayOfMonth },
         },
         orderBy: { createdAt: "desc" },
     });
-
-    const totalExpensesSum = expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0);
 
     // 4b. Bu Ayki Onaylı Primlerin Detayları
     const commissions = await (prisma as any).staffCommission.findMany({
         where: {
             userId,
+            shopId,
             status: CommissionStatus.APPROVED,
-            approvedAt: { gte: firstDayOfMonth },
+            approvedAt: { gte: firstDayOfMonth, lte: lastDayOfMonth },
         },
         orderBy: { approvedAt: "desc" },
     });
@@ -206,17 +217,17 @@ export async function getEmployeeDashboardData(userId: string) {
             let currentProgress = 0;
             if (m.targetType === "SALES_AMOUNT") {
                 const sales = await prisma.sale.aggregate({
-                    where: { userId, createdAt: { gte: firstDayOfMonth } },
+                    where: { userId, shopId, createdAt: { gte: firstDayOfMonth, lte: lastDayOfMonth } },
                     _sum: { finalAmount: true },
                 });
                 currentProgress = Number(sales._sum.finalAmount || 0);
             } else if (m.targetType === "SERVICE_COUNT") {
                 currentProgress = await (prisma.serviceTicket as any).count({
-                    where: { technicianId: userId, deliveredAt: { gte: firstDayOfMonth }, status: "DELIVERED" },
+                    where: { technicianId: userId, shopId, deliveredAt: { gte: firstDayOfMonth, lte: lastDayOfMonth }, status: "DELIVERED" },
                 });
             } else if (m.targetType === "COURIER_TASK") {
                 currentProgress = await (prisma.shortageItem as any).count({
-                    where: { assignedToId: userId, takenAt: { gte: firstDayOfMonth }, isResolved: true },
+                    where: { assignedToId: userId, shopId, takenAt: { gte: firstDayOfMonth, lte: lastDayOfMonth }, isResolved: true },
                 });
             }
 
@@ -241,57 +252,29 @@ export async function getEmployeeDashboardData(userId: string) {
         orderBy: { createdAt: "desc" }
     });
 
-    let paidLeaveDays = 0;
-    let unpaidLeaveDays = 0;
-    let dailyLeaveCount = 0;
-
-    // Sadece onaylanmış ve bu aya sarkanlar finansal hesaplamada dikkate alınır
-    allLeaves.filter(l => l.status === "APPROVED" && l.startDate <= lastDayOfMonth && l.endDate >= firstDayOfMonth).forEach((leave: any) => {
-        const start = leave.startDate < firstDayOfMonth ? firstDayOfMonth : leave.startDate;
-        const end = leave.endDate > lastDayOfMonth ? lastDayOfMonth : leave.endDate;
-        const diffTime = Math.max(0, end.getTime() - start.getTime());
-        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-
-        if (leave.type === "UNPAID") unpaidLeaveDays += days;
-        else if (leave.type === "DAILY") dailyLeaveCount += 1;
-        else paidLeaveDays += days;
+    const baseSalary = Number(user?.baseSalary || 0);
+    const finance = calculatePayrollSnapshot({
+        baseSalary,
+        staffCreatedAt: user?.createdAt,
+        staffEndedAt: options?.employmentEndedAt || user?.employmentEndedAt,
+        periodStart: firstDayOfMonth,
+        periodEnd: lastDayOfMonth,
+        asOfDate: now,
+        approvedCommissions: totalCommissionsSum,
+        pendingCommissions: Number(pendingCommissions._sum.amount || 0),
+        expenses,
+        leaves: allLeaves,
     });
 
-    // 7. Pro-rata Maaş Hesaplama (30 gün üzerinden)
-    const daysInMonth = 30;
-    let activeDaysCount = 30;
-
-    const today = new Date();
-    const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    // Eğer personel bu ay işe girdiyse, başlangıç gününü ayın başı değil işe giriş günü yap
-    const effectiveStartDate = (user?.createdAt && user.createdAt > startOfCurrentMonth)
-        ? user.createdAt
-        : startOfCurrentMonth;
-
-    // Çalışılan gün: Bugün - Başlangıç + 1 (Aynı gün bile olsa 1 gün sayılır)
-    const timeDiff = today.getTime() - effectiveStartDate.getTime();
-    activeDaysCount = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) || 1;
-
-    // Sınırlar: 0 ile 30 arası
-    if (activeDaysCount < 1) activeDaysCount = 1;
-    if (activeDaysCount > 30) activeDaysCount = 30;
-
-    const baseSalary = Number(user?.baseSalary || 0);
-    const proRatedSalary = (baseSalary / 30) * activeDaysCount;
-
     return serializePrisma({
-        finance: {
-            baseSalary: baseSalary,
-            proRatedSalary: proRatedSalary,
-            activeDays: activeDaysCount,
-            approvedCommissions: totalCommissionsSum,
-            pendingCommissions: Number(pendingCommissions._sum.amount || 0),
-            totalExpenses: totalExpensesSum,
-            leaveDays: paidLeaveDays + unpaidLeaveDays,
-            unpaidLeaveDays,
-            dailyLeaveCount,
-            netPayout: proRatedSalary + totalCommissionsSum - totalExpensesSum,
+        finance,
+        payroll: {
+            periodStart: firstDayOfMonth,
+            periodEnd: lastDayOfMonth,
+            staffCreatedAt: user?.createdAt,
+            employmentEndedAt: options?.employmentEndedAt || user?.employmentEndedAt,
+            salaryPaymentDay: user?.salaryPaymentDay || 1,
+            salaryCurrency: user?.salaryCurrency || "TRY",
         },
         milestones: milestoneProgress,
         leaves: allLeaves,
@@ -385,30 +368,8 @@ export async function approveLeaveRequest(leaveId: string) {
             }
         });
 
-        // 2. Eğer ÜCRETSİZ İZİN ise maaş kesintisini oluştur
-        if (leave.type === "UNPAID") {
-            const startDate = new Date(leave.startDate);
-            const endDate = new Date(leave.endDate);
-            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-            const baseSalary = Number(leave.user.baseSalary || 0);
-            const dailyRate = baseSalary / 30;
-            const deductionAmount = dailyRate * diffDays;
-
-            if (deductionAmount > 0) {
-                await (tx as any).staffExpense.create({
-                    data: {
-                        userId: leave.userId,
-                        shopId: leave.shopId,
-                        amount: deductionAmount,
-                        type: "DEDUCTION",
-                        description: `${diffDays} Gün Ücretsiz İzin Kesintisi (${format(leave.startDate, "d MMM", { locale: tr })} - ${format(leave.endDate, "d MMM", { locale: tr })})`,
-                        createdAt: leave.startDate
-                    }
-                });
-            }
-        }
+        // 2. Ücretsiz izin kesintisi bordro snapshot hesabında dönemle çakışan gün kadar
+        // dinamik hesaplanır. Böylece aya taşan izinler yanlış döneme yazılmaz.
 
         // 3. (Opsiyonel) Yıllık izin/Ücretli izin durumunda Yemek Gideri duraklatma uyarısı veya otomatik kesinti
         // Bu sistemde yemek giderleri StaffExpense:MEAL olarak tutulduğu için, 
@@ -471,7 +432,7 @@ export async function addStaffDeduction({
 /**
  * Belirli bir personel için arşiv kaydı oluşturur
  */
-export async function createStaffArchive(userId: string, tx?: any) {
+export async function createStaffArchive(userId: string, tx?: any, options?: { employmentEndedAt?: Date; closeReason?: string }) {
     try {
         const session = await auth();
         const shopId = session?.user?.shopId;
@@ -480,18 +441,71 @@ export async function createStaffArchive(userId: string, tx?: any) {
             return null;
         }
 
-        const data = await getEmployeeDashboardData(userId);
+        const data = await getEmployeeDashboardData(userId, { employmentEndedAt: options?.employmentEndedAt });
         const now = new Date();
-        const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const { period } = getPayrollPeriodRange(now);
 
         const userData = await prisma.user.findUnique({
             where: { id: userId },
-            select: { name: true, surname: true, email: true }
+            select: {
+                name: true,
+                surname: true,
+                email: true,
+                createdAt: true,
+                employmentEndedAt: true,
+                salaryPaymentDay: true,
+                salaryCurrency: true,
+                baseSalary: true,
+            }
         });
 
         const db = tx || prisma;
         const staffName = userData ? `${userData.name} ${userData.surname || ""}`.trim() : "Bilinmeyen Personel";
         const staffEmail = userData?.email || "";
+        const employmentEndedAt = options?.employmentEndedAt || userData?.employmentEndedAt || null;
+        const metadata = {
+            ...data,
+            payroll: {
+                ...(data as any).payroll,
+                staffCreatedAt: userData?.createdAt || (data as any).payroll?.staffCreatedAt,
+                employmentEndedAt,
+                salaryPaymentDay: userData?.salaryPaymentDay || (data as any).payroll?.salaryPaymentDay || 1,
+                salaryCurrency: userData?.salaryCurrency || (data as any).payroll?.salaryCurrency || "TRY",
+                monthlyBaseSalary: Number(userData?.baseSalary || (data as any).finance?.baseSalary || 0),
+                closeReason: options?.closeReason || "MONTHLY_CLOSE",
+            },
+            statement: {
+                incomeItems: [
+                    {
+                        type: "SALARY",
+                        description: `${(data as any).finance.activeDays} gün dönem maaşı`,
+                        amount: (data as any).finance.proRatedSalary,
+                    },
+                    ...((data as any).commissions || []).map((commission: any) => ({
+                        type: commission.type || "COMMISSION",
+                        description: commission.description || "Prim",
+                        amount: Number(commission.amount || 0),
+                        createdAt: commission.createdAt,
+                        approvedAt: commission.approvedAt,
+                    })),
+                ],
+                deductionItems: [
+                    ...(((data as any).expenses || [])
+                        .filter((expense: any) => expense.type !== "DEDUCTION")
+                        .map((expense: any) => ({
+                            type: expense.type || "EXPENSE",
+                            description: expense.description || "Gider / avans",
+                            amount: Number(expense.amount || 0),
+                            createdAt: expense.createdAt,
+                        }))),
+                    ...(((data as any).finance.unpaidLeaveDeduction || 0) > 0 ? [{
+                        type: "UNPAID_LEAVE",
+                        description: `${(data as any).finance.unpaidLeaveDays} gün ücretsiz izin kesintisi`,
+                        amount: (data as any).finance.unpaidLeaveDeduction,
+                    }] : []),
+                ],
+            },
+        };
 
         // upsert yerine findFirst + create/update kullan (nullable userId ile compound unique sorun yaratıyor)
         const existing = await (db as any).monthlyStaffArchive.findFirst({
@@ -504,11 +518,11 @@ export async function createStaffArchive(userId: string, tx?: any) {
                 data: {
                     staffName,
                     staffEmail,
-                    baseSalary: data.finance.baseSalary,
+                    baseSalary: data.finance.proRatedSalary,
                     totalCommissions: data.finance.approvedCommissions,
                     totalExpenses: data.finance.totalExpenses,
                     netPayout: data.finance.netPayout,
-                    metadata: data,
+                    metadata,
                 }
             });
         } else {
@@ -518,12 +532,12 @@ export async function createStaffArchive(userId: string, tx?: any) {
                     staffName,
                     staffEmail,
                     period,
-                    baseSalary: data.finance.baseSalary,
+                    baseSalary: data.finance.proRatedSalary,
                     totalCommissions: data.finance.approvedCommissions,
                     totalExpenses: data.finance.totalExpenses,
                     netPayout: data.finance.netPayout,
                     shopId,
-                    metadata: data,
+                    metadata,
                 }
             });
         }
@@ -548,14 +562,88 @@ export async function closeFinancialPeriod() {
         where: { shopId, isApproved: true },
     });
 
+    const now = new Date();
+    const { period } = getPayrollPeriodRange(now);
+
     for (const user of users) {
         await createStaffArchive(user.id);
     }
 
     revalidatePath("/personel");
+    return { success: true, period, archivedCount: users.length };
+}
+
+/**
+ * Tek personelin aktif aylık bordro dönemini manuel kapatır.
+ */
+export async function closeStaffFinancialPeriod(userId: string) {
+    const session = await auth();
+    const isAdmin = session?.user?.role === Role.ADMIN || session?.user?.role === Role.SUPER_ADMIN || session?.user?.role === Role.SHOP_MANAGER;
+    if (!isAdmin) throw new Error("Yetkisiz işlem");
+    if (!session?.user?.shopId) throw new Error("Mağaza bilgisi bulunamadı");
+
+    const staff = await prisma.user.findUnique({
+        where: { id: userId, shopId: session.user.shopId },
+        select: { id: true, name: true, surname: true },
+    });
+    if (!staff) throw new Error("Personel bulunamadı");
+
+    const archive = await createStaffArchive(userId, undefined, { closeReason: "MANUAL_SALARY_CLOSE" });
+    if (!archive) throw new Error("Bordro arşivi oluşturulamadı");
+
+    const notificationId = `payroll-${userId}-${(archive as any).period}`;
+    await (prisma as any).notification.upsert({
+        where: { id: notificationId },
+        update: {
+            isRead: true,
+            isDeleted: true,
+            status: "ARCHIVED",
+        },
+        create: {
+            id: notificationId,
+            type: "PAYROLL_DUE",
+            category: "Finans",
+            title: "Maaş bordrosu arşivlendi",
+            message: `${staff.name || ""} ${staff.surname || ""} için ${(archive as any).period} dönemi kapatıldı.`,
+            referenceId: userId,
+            status: "ARCHIVED",
+            isRead: true,
+            isDeleted: true,
+            shopId: session.user.shopId,
+        },
+    });
+
+    revalidatePath("/personel");
+    return { success: true, archive: serializePrisma(archive), period: (archive as any).period };
+}
+
+export async function getSalaryDueStaff() {
+    const session = await auth();
+    const isAdmin = session?.user?.role === Role.ADMIN || session?.user?.role === Role.SUPER_ADMIN || session?.user?.role === Role.SHOP_MANAGER;
+    if (!isAdmin || !session?.user?.shopId) return [];
+
     const now = new Date();
-    const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    return { success: true, period };
+    const { period } = getPayrollPeriodRange(now);
+    const users = await prisma.user.findMany({
+        where: { shopId: session.user.shopId, isApproved: true, employmentEndedAt: null },
+        select: {
+            id: true,
+            name: true,
+            surname: true,
+            image: true,
+            salaryPaymentDay: true,
+            baseSalary: true,
+            monthlyArchives: {
+                where: { period, shopId: session.user.shopId },
+                select: { id: true },
+                take: 1,
+            },
+        },
+    });
+
+    return serializePrisma(users
+        .map((user) => ({ ...user, salaryStatus: getSalaryPaymentStatus((user as any).salaryPaymentDay, now) }))
+        .filter((user: any) => user.salaryStatus.shouldNotify && user.monthlyArchives.length === 0));
 }
 
 /**
@@ -621,7 +709,9 @@ export async function getDetailedArchive(archiveId: string) {
 
     return serializePrisma({
         ...archive,
-        metadata: archive.metadata ? JSON.parse(archive.metadata as string) : null
+        metadata: typeof archive.metadata === "string"
+            ? JSON.parse(archive.metadata)
+            : archive.metadata ?? null
     });
 }
 
@@ -689,37 +779,22 @@ export async function getManagerFinanceStats() {
     const isAdmin = session?.user?.role === Role.ADMIN || session?.user?.role === Role.SUPER_ADMIN || session?.user?.role === Role.SHOP_MANAGER;
     if (!isAdmin) throw new Error("Yetkisiz erişim");
     const shopId = session.user.shopId!;
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const users = await (prisma as any).user.findMany({
+        where: { shopId, isApproved: true },
+        select: { id: true },
+    });
 
-    const [totalSalaries, totalApprovedCommissions, totalExpenses, totalStaff] = await Promise.all([
-        (prisma as any).user.aggregate({
-            where: { shopId, isApproved: true },
-            _sum: { baseSalary: true }
-        }),
-        (prisma as any).staffCommission.aggregate({
-            where: {
-                shopId,
-                status: CommissionStatus.APPROVED,
-                approvedAt: { gte: firstDayOfMonth }
-            },
-            _sum: { amount: true }
-        }),
-        (prisma as any).staffExpense.aggregate({
-            where: { shopId, createdAt: { gte: firstDayOfMonth } },
-            _sum: { amount: true }
-        }),
-        prisma.user.count({ where: { shopId, isApproved: true } })
-    ]);
+    const summaries = await Promise.all(users.map((user: any) => getEmployeeDashboardData(user.id)));
+    const monthlyFixedCost = summaries.reduce((sum: number, data: any) => sum + Number(data.finance.proRatedSalary || 0), 0);
+    const monthlyVariableComm = summaries.reduce((sum: number, data: any) => sum + Number(data.finance.approvedCommissions || 0), 0);
+    const monthlyExpenses = summaries.reduce((sum: number, data: any) => sum + Number(data.finance.totalExpenses || 0), 0);
 
     return {
-        monthlyFixedCost: Number(totalSalaries._sum.baseSalary || 0),
-        monthlyVariableComm: Number(totalApprovedCommissions._sum.amount || 0),
-        monthlyExpenses: Number(totalExpenses._sum.amount || 0),
-        totalPersonnel: totalStaff,
-        totalMonthlyLiability: Number(totalSalaries._sum.baseSalary || 0) +
-            Number(totalApprovedCommissions._sum.amount || 0) -
-            Number(totalExpenses._sum.amount || 0)
+        monthlyFixedCost,
+        monthlyVariableComm,
+        monthlyExpenses,
+        totalPersonnel: users.length,
+        totalMonthlyLiability: monthlyFixedCost + monthlyVariableComm - monthlyExpenses
     };
 }
 

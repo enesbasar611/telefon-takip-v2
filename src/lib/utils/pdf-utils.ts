@@ -29,22 +29,106 @@ const getRoleLabel = (role: string) => {
 
 export const generatePayrollPDF = (archive: any) => {
     const doc = new jsPDF() as any;
-    doc.setFontSize(20);
-    doc.text(fixTurkish("PERSONEL MAAŞ BORDROSU"), 105, 20, { align: "center" });
+    const payroll = archive.metadata?.payroll || {};
+    const finance = archive.metadata?.finance || {};
+    const statement = archive.metadata?.statement || {};
+    const fullName = archive.user
+        ? `${archive.user?.name || ""} ${archive.user?.surname || ""}`.trim()
+        : archive.staffName || "Silinmiş Personel";
+    const monthlyBaseSalary = Number(payroll.monthlyBaseSalary || finance.baseSalary || archive.baseSalary || 0);
+    const periodSalary = Number(archive.baseSalary || finance.proRatedSalary || 0);
+    const totalCommissions = Number(archive.totalCommissions || finance.approvedCommissions || 0);
+    const totalExpenses = Number(archive.totalExpenses || finance.totalExpenses || 0);
+    const netPayout = Number(archive.netPayout || finance.netPayout || 0);
+    const activeDays = Number(finance.activeDays || 0);
+
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, 210, 28, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(fixTurkish("PERSONEL DÖNEM BORDROSU"), 105, 17, { align: "center" });
+    doc.setTextColor(0, 0, 0);
 
     autoTable(doc, {
-        startY: 30,
-        head: [[fixTurkish('Detay'), fixTurkish('Bilgi')]],
+        startY: 36,
+        head: [[fixTurkish('Personel / Dönem'), fixTurkish('Bilgi'), fixTurkish('Çalışma / Maaş'), fixTurkish('Bilgi')]],
         body: [
-            [fixTurkish('Ad Soyad'), fixTurkish(`${archive.user?.name} ${archive.user?.surname}`)],
-            [fixTurkish('Dönem'), fixTurkish(archive.period)],
-            [fixTurkish('Baz Maaş'), `${archive.baseSalary?.toLocaleString('tr-TR')} TL`],
-            [fixTurkish('Komisyonlar'), `${archive.totalCommissions?.toLocaleString('tr-TR')} TL`],
-            [fixTurkish('Kesintiler/Ödemeler'), `${archive.totalExpenses?.toLocaleString('tr-TR')} TL`],
-            [fixTurkish('Net Ödenecek'), `${archive.netPayout?.toLocaleString('tr-TR')} TL`],
+            [fixTurkish('Ad Soyad'), fixTurkish(fullName), fixTurkish('Dönem'), fixTurkish(archive.period || "-")],
+            [fixTurkish('İşe Giriş'), payroll.staffCreatedAt ? new Date(payroll.staffCreatedAt).toLocaleString('tr-TR') : "-", fixTurkish('Çıkış'), payroll.employmentEndedAt ? new Date(payroll.employmentEndedAt).toLocaleString('tr-TR') : fixTurkish("Aktif")],
+            [fixTurkish('Dönem Başlangıç'), payroll.periodStart ? new Date(payroll.periodStart).toLocaleDateString('tr-TR') : "-", fixTurkish('Dönem Bitiş'), payroll.periodEnd ? new Date(payroll.periodEnd).toLocaleDateString('tr-TR') : "-"],
+            [fixTurkish('Sabit Maaş'), `${monthlyBaseSalary.toLocaleString('tr-TR')} TL`, fixTurkish('Maaş Günü'), `${payroll.salaryPaymentDay || 1}`],
+            [fixTurkish('Çalışılan Gün'), `${activeDays} gün`, fixTurkish('Ücretsiz İzin'), `${finance.unpaidLeaveDays || 0} gün`],
         ],
+        theme: "grid",
+        headStyles: { fillColor: [15, 118, 110] },
+        styles: { fontSize: 8.5 },
     });
-    doc.save(`${fixTurkish(archive.user?.name)}_Bordro.pdf`);
+
+    const incomeItems = statement.incomeItems || [
+        { type: "SALARY", description: `${activeDays} gün dönem maaşı`, amount: periodSalary },
+    ];
+    const deductionItems = statement.deductionItems || [];
+
+    autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 8,
+        head: [[fixTurkish('Hak Ediş Kalemi'), fixTurkish('Açıklama'), fixTurkish('Tutar')]],
+        body: [
+            ...incomeItems.map((item: any) => [
+                fixTurkish(item.type || "GELİR"),
+                fixTurkish(item.description || "-"),
+                `${Number(item.amount || 0).toLocaleString('tr-TR')} TL`,
+            ]),
+            [{ content: fixTurkish('TOPLAM HAK EDİŞ'), colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } }, { content: `${(periodSalary + totalCommissions).toLocaleString('tr-TR')} TL`, styles: { fontStyle: 'bold' } }],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [34, 197, 94] },
+        styles: { fontSize: 8.5 },
+    });
+
+    autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 6,
+        head: [[fixTurkish('Kesinti / Avans'), fixTurkish('Açıklama'), fixTurkish('Tutar')]],
+        body: deductionItems.length > 0 ? [
+            ...deductionItems.map((item: any) => [
+                fixTurkish(item.type || "KESİNTİ"),
+                fixTurkish(item.description || "-"),
+                `${Number(item.amount || 0).toLocaleString('tr-TR')} TL`,
+            ]),
+            [{ content: fixTurkish('TOPLAM KESİNTİ'), colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } }, { content: `${totalExpenses.toLocaleString('tr-TR')} TL`, styles: { fontStyle: 'bold' } }],
+        ] : [[fixTurkish('Kesinti yok'), "-", "0 TL"]],
+        theme: "grid",
+        headStyles: { fillColor: [239, 68, 68] },
+        styles: { fontSize: 8.5 },
+    });
+
+    const summaryY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFillColor(243, 244, 246);
+    doc.rect(112, summaryY, 78, 32, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(fixTurkish("Dönem Maaşı:"), 116, summaryY + 8);
+    doc.text(`${periodSalary.toLocaleString('tr-TR')} TL`, 186, summaryY + 8, { align: "right" });
+    doc.text(fixTurkish("Primler:"), 116, summaryY + 15);
+    doc.text(`${totalCommissions.toLocaleString('tr-TR')} TL`, 186, summaryY + 15, { align: "right" });
+    doc.text(fixTurkish("Kesintiler:"), 116, summaryY + 22);
+    doc.text(`- ${totalExpenses.toLocaleString('tr-TR')} TL`, 186, summaryY + 22, { align: "right" });
+    doc.setFont("helvetica", "bold");
+    doc.text(fixTurkish("NET ÖDEME:"), 116, summaryY + 29);
+    doc.text(`${netPayout.toLocaleString('tr-TR')} TL`, 186, summaryY + 29, { align: "right" });
+
+    const legalY = summaryY + 44;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(doc.splitTextToSize(fixTurkish("Bu bordro ilgili dönemin kapanış anındaki maaş, prim, avans, gider ve izin snapshot verilerine göre üretilmiştir."), 170), 20, legalY);
+    doc.setFont("helvetica", "bold");
+    doc.text(fixTurkish("İŞVEREN / KAŞE"), 35, legalY + 26);
+    doc.text(fixTurkish("PERSONEL İMZA"), 135, legalY + 26);
+
+    doc.setTextColor(156, 163, 175);
+    doc.setFontSize(7);
+    doc.text(fixTurkish(`Oluşturma: ${new Date().toLocaleString('tr-TR')}`), 105, 285, { align: "center" });
+    doc.save(`${fixTurkish(fullName || "Personel")}_${fixTurkish(archive.period || "Bordro")}.pdf`);
 };
 
 export const generateCorporatePayrollPDF = (data: {

@@ -101,7 +101,8 @@ export default function OnboardingPage() {
         address: "",
         phone: "",
         taxOffice: "",
-        taxNumber: ""
+        taxNumber: "",
+        defaultCurrency: "TRY"
     });
 
     // Check for existing shop on mount
@@ -125,7 +126,8 @@ export default function OnboardingPage() {
                     address: existingShop.address || "",
                     phone: existingShop.phone || "",
                     taxOffice: existingShop.taxOffice || "",
-                    taxNumber: existingShop.taxNumber || ""
+                    taxNumber: existingShop.taxNumber || "",
+                    defaultCurrency: "TRY"
                 });
 
                 // Restore step if possible, or trigger analysis
@@ -205,7 +207,8 @@ export default function OnboardingPage() {
                 address: shopData.address,
                 phone: shopData.phone,
                 taxOffice: shopData.taxOffice,
-                taxNumber: shopData.taxNumber
+                taxNumber: shopData.taxNumber,
+                defaultCurrency: shopData.defaultCurrency
             });
 
             if (res.success && res.shopId) {
@@ -230,7 +233,8 @@ export default function OnboardingPage() {
                 shopData.industry === "DIGER" ? shopData.customIndustry : shopData.industry,
                 {
                     labels: aiAnalysis?.labels,
-                    categories: aiAnalysis?.suggestedCategories
+                    categories: aiAnalysis?.suggestedCategories,
+                    defaultCurrency: shopData.defaultCurrency
                 },
                 shopId || undefined
             );
@@ -369,6 +373,20 @@ export default function OnboardingPage() {
                                                         {ind.label}
                                                     </SelectItem>
                                                 ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                            <Wallet className="h-3 w-3 text-indigo-400" /> Varsayılan Para Birimi
+                                        </Label>
+                                        <Select value={shopData.defaultCurrency} onValueChange={v => setShopData({ ...shopData, defaultCurrency: v })}>
+                                            <SelectTrigger className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-black border-white/10 text-white rounded-2xl p-2">
+                                                <SelectItem value="TRY" className="h-12 rounded-xl focus:bg-white focus:text-black">₺ - Türk Lirası (TRY)</SelectItem>
+                                                <SelectItem value="USD" className="h-12 rounded-xl focus:bg-white focus:text-black">$ - Amerikan Doları (USD)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -764,8 +782,8 @@ export default function OnboardingPage() {
                             <div className="space-y-4 bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem]">
                                 {accounts.map((acc, index) => (
                                     <div key={acc.id} className="space-y-4 pb-6 border-b border-white/5 last:border-0 last:pb-0">
-                                        <div className="grid grid-cols-12 gap-4 items-end">
-                                            <div className="col-span-5 space-y-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-black/20 p-4 rounded-2xl md:bg-transparent md:p-0">
+                                            <div className="col-span-1 md:col-span-5 space-y-2">
                                                 <Label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest pl-1">Hesap / Kasa Adı</Label>
                                                 <Input
                                                     placeholder="Örn: Garanti Bankası"
@@ -774,7 +792,7 @@ export default function OnboardingPage() {
                                                     className="h-14 bg-black/40 border-white/10 rounded-2xl"
                                                 />
                                             </div>
-                                            <div className="col-span-3 space-y-2">
+                                            <div className="col-span-1 md:col-span-3 space-y-2">
                                                 <Label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest pl-1">Tür</Label>
                                                 <Select value={acc.type} onValueChange={v => setAccounts(accounts.map(a => a.id === acc.id ? { ...a, type: v, limit: undefined, billingDay: undefined, balance: 0 } : a))}>
                                                     <SelectTrigger className="h-14 bg-black/40 border-white/10 rounded-2xl">
@@ -788,7 +806,7 @@ export default function OnboardingPage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <div className="col-span-3 space-y-2">
+                                            <div className="col-span-1 md:col-span-3 space-y-2">
                                                 <Label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest pl-1">
                                                     {acc.type === 'CREDIT_CARD' ? 'GÜNCEL BORÇ' : 'AÇILIŞ BAKİYESİ'}
                                                 </Label>
@@ -799,7 +817,7 @@ export default function OnboardingPage() {
                                                     className="h-14 bg-black/40 border-white/10 rounded-2xl"
                                                 />
                                             </div>
-                                            <div className="col-span-1 flex justify-center pb-2">
+                                            <div className="col-span-1 md:col-span-1 flex justify-end md:justify-center pb-2">
                                                 {index === 0 ? (
                                                     <div className="h-10 w-10 flex items-center justify-center text-emerald-500"><Lock className="h-5 w-5" /></div>
                                                 ) : (

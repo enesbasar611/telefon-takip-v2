@@ -10,6 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { generateProductBarcode } from "@/lib/barcode-utils";
 import { z } from "zod";
 import { recordAuditLog } from "./audit-actions";
+import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
@@ -360,6 +361,7 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
     revalidatePath("/ikinci-el");
     revalidateTag(`dashboard-${shopId}`);
     revalidateTag(`products-${shopId}`);
+    revalidateSmartReplenishment(shopId);
 
     await recordAuditLog({
       action: "CREATE",
@@ -588,6 +590,7 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
     revalidatePath("/stok");
     revalidateTag(`dashboard-${shopId}`);
     revalidateTag(`products-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     if (newStock !== undefined && newStock <= 0) {
       await checkStockAndAddShortage(id, product.name);
     }
@@ -641,6 +644,7 @@ export async function applyBulkAIUpdates(updates: any[]) {
     revalidatePath("/stok");
     revalidateTag(`dashboard-${shopId}`);
     revalidateTag(`products-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     return { success: true, count: results.length };
   } catch (error) {
     console.error("Bulk AI Update error:", error);
@@ -683,6 +687,7 @@ export async function addInventoryStock(productId: string, quantity: number, not
     revalidatePath("/stok");
     revalidateTag(`dashboard-${shopId}`);
     revalidateTag(`products-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     return { success: true };
   } catch (error) {
     console.error("Add inventory stock error:", error);
@@ -766,6 +771,7 @@ export async function quickSellProduct(productId: string, quantity: number) {
     revalidatePath("/");
     revalidateTag(`dashboard-${shopId}`);
     revalidateTag(`products-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     return { success: true };
   } catch (error: any) {
     console.error("Quick sell error:", error);
@@ -1473,6 +1479,7 @@ export async function bulkCreateAIInventory(nodes: any[]) {
     revalidatePath("/stok");
     revalidateTag(`dashboard-${shopId}`);
     revalidateTag(`products-${shopId}`);
+    revalidateSmartReplenishment(shopId);
 
     return {
       success: true,
@@ -1578,6 +1585,7 @@ export async function fixInflatedPrices() {
 
     revalidatePath("/stok");
     revalidateTag(`products-${shopId}`);
+    revalidateSmartReplenishment(shopId);
 
     return {
       success: true,

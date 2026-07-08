@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { generatePayrollPDF } from "@/lib/utils/pdf-utils";
 import {
     getPendingLeaves,
@@ -84,6 +85,8 @@ import {
     getAllStaffArchives,
     getDetailedArchive,
     closeFinancialPeriod,
+    closeStaffFinancialPeriod,
+    getSalaryDueStaff,
     getMilestones,
     createMilestone,
     deleteMilestone
@@ -131,6 +134,7 @@ export function StaffManagementClient({
     usdRate = 1
 }: any) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<any>("all");
@@ -139,6 +143,11 @@ export function StaffManagementClient({
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [selectedArchive, setSelectedArchive] = useState<any | null>(null);
+    const [selectedArchivePeriod, setSelectedArchivePeriod] = useState<string>("all");
+    const [expenseMember, setExpenseMember] = useState<any | null>(null);
+    const [expenseType, setExpenseType] = useState<"ADVANCE" | "MEAL" | "TRAVEL" | "DEDUCTION">("ADVANCE");
+    const [expenseAmount, setExpenseAmount] = useState("");
+    const [expenseDescription, setExpenseDescription] = useState("");
     const [isPeriodPending, startPeriodTransition] = useTransition();
     const [isCommPending, startCommTransition] = useTransition();
     const [isActionPending, setIsActionPending] = useState(false);
@@ -176,6 +185,12 @@ export function StaffManagementClient({
     const { data: pendingLeaves, refetch: refetchPendingLeaves } = useQuery({
         queryKey: ["pending-leaves"],
         queryFn: () => getPendingLeaves(),
+        enabled: (userRole === "ADMIN" || userRole === "SHOP_MANAGER" || userRole === "SUPER_ADMIN") && typeof window !== 'undefined'
+    });
+
+    const { data: salaryDueStaff, refetch: refetchSalaryDueStaff } = useQuery({
+        queryKey: ["salary-due-staff"],
+        queryFn: () => getSalaryDueStaff(),
         enabled: (userRole === "ADMIN" || userRole === "SHOP_MANAGER" || userRole === "SUPER_ADMIN") && typeof window !== 'undefined'
     });
 
@@ -300,6 +315,86 @@ export function StaffManagementClient({
             return matchesSearch && matchesTab;
         });
     }, [localStaff, searchTerm, filter]);
+
+    const highlightedSalaryDueId = searchParams.get("salaryDue");
+
+    const archivePeriods = useMemo<string[]>(() => {
+        return Array.from(new Set<string>((archives || []).map((archive: any) => String(archive.period)))).sort().reverse();
+    }, [archives]);
+
+    const filteredArchives = useMemo(() => {
+        return (archives || []).filter((archive: any) => (
+            selectedArchivePeriod === "all" || archive.period === selectedArchivePeriod
+        ));
+    }, [archives, selectedArchivePeriod]);
+
+    const archivePeriodSummary = useMemo(() => {
+        return filteredArchives.reduce((summary: any, archive: any) => {
+            summary.baseSalary += Number(archive.baseSalary || 0);
+            summary.totalCommissions += Number(archive.totalCommissions || 0);
+            summary.totalExpenses += Number(archive.totalExpenses || 0);
+            summary.netPayout += Number(archive.netPayout || 0);
+            return summary;
+        }, { baseSalary: 0, totalCommissions: 0, totalExpenses: 0, netPayout: 0 });
+    }, [filteredArchives]);
+
+    const handleAddExpense = async () => {
+        if (!expenseMember) return;
+
+        const amount = Number(expenseAmount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            toast({ title: "Hata", description: "Tutar pozitif olmalı.", variant: "destructive" });
+            return;
+        }
+
+        setIsActionPending(true);
+        try {
+            await addStaffExpense({
+                userId: expenseMember.id,
+                amount,
+                type: expenseType,
+                description: expenseDescription.trim() || (
+                    expenseType === "ADVANCE" ? "Personel avansı" :
+                        expenseType === "MEAL" ? "Yemek gideri" :
+                            expenseType === "TRAVEL" ? "Yol gideri" :
+                                "Ek kesinti"
+                ),
+            });
+            toast({ title: "Başarılı", description: "Personel finans kaydı eklendi." });
+            setExpenseMember(null);
+            setExpenseAmount("");
+            setExpenseDescription("");
+            setExpenseType("ADVANCE");
+            refetchStats();
+            refetchArchives();
+            refetchStaff();
+        } catch (error: any) {
+            toast({ title: "Hata", description: error.message || "Kayıt eklenemedi.", variant: "destructive" });
+        } finally {
+            setIsActionPending(false);
+        }
+    };
+
+    const handleCloseStaffPeriod = async (userId: string) => {
+        if (!confirm("Bu personelin aktif ay bordrosunu arşivlemek istediğinize emin misiniz?")) return;
+
+        setIsActionPending(true);
+        try {
+            const res = await closeStaffFinancialPeriod(userId);
+            toast({ title: "Bordro arşivlendi", description: `${res.period} dönemi kapatıldı.` });
+            refetchArchives();
+            refetchStats();
+            refetchSalaryDueStaff();
+            router.refresh();
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("notification-update"));
+            }
+        } catch (error: any) {
+            toast({ title: "Hata", description: error.message || "Bordro arşivlenemedi.", variant: "destructive" });
+        } finally {
+            setIsActionPending(false);
+        }
+    };
 
     return (
         <div className="space-y-8 pb-20">
@@ -579,6 +674,14 @@ export function StaffManagementClient({
                                                             >
                                                                 <Activity className="h-4 w-4" />
                                                             </Button>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-9 w-9 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/5 shadow-sm text-slate-600 hover:text-amber-600 hover:border-amber-500/20 transition-all"
+                                                                onClick={() => setExpenseMember(member)}
+                                                            >
+                                                                <Wallet className="h-4 w-4" />
+                                                            </Button>
                                                             <CreateStaffModal staff={member} onSuccess={refetchStaff} />
                                                             <Button
                                                                 size="icon"
@@ -603,6 +706,70 @@ export function StaffManagementClient({
 
                         {/* Yan Panel: Prim ve İzin Talepleri */}
                         <div className="lg:col-span-4 space-y-8 flex flex-col">
+                            <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl flex flex-col">
+                                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-emerald-500/5">
+                                    <div className="flex items-center gap-2">
+                                        <Banknote className="h-5 w-5 text-emerald-600" />
+                                        <h2 className="font-black text-lg text-slate-900 dark:text-white uppercase">MAAŞ TAKİBİ</h2>
+                                    </div>
+                                    <Badge className="bg-emerald-600 text-white border-none">{salaryDueStaff?.length || 0}</Badge>
+                                </div>
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 max-h-[360px]">
+                                    {!salaryDueStaff || salaryDueStaff.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-10 text-slate-400 opacity-60">
+                                            <CheckCircle2 className="h-10 w-10 mb-2" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">MAAŞ İŞLEMİ BEKLEYEN YOK</span>
+                                        </div>
+                                    ) : (
+                                        salaryDueStaff.map((staff: any) => (
+                                            <div
+                                                key={staff.id}
+                                                className={cn(
+                                                    "p-4 rounded-3xl bg-white dark:bg-muted/10 border space-y-3 transition-all group",
+                                                    highlightedSalaryDueId === staff.id
+                                                        ? "border-emerald-500 shadow-lg shadow-emerald-500/10"
+                                                        : "border-slate-100 dark:border-white/5 hover:shadow-lg"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <Avatar className="h-9 w-9 rounded-xl">
+                                                            <AvatarImage src={staff.image} />
+                                                            <AvatarFallback className="text-[10px] font-bold">{staff.name?.[0] || "?"}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col leading-none min-w-0">
+                                                            <span className="font-bold text-xs truncate">{staff.name} {staff.surname}</span>
+                                                            <span className="text-[8px] text-slate-500 uppercase tracking-tighter">
+                                                                Maaş günü: Ayın {staff.salaryPaymentDay}. günü
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <Badge className={cn(
+                                                        "border-none rounded-lg font-black text-[8px]",
+                                                        staff.salaryStatus?.isDueToday
+                                                            ? "bg-rose-500/10 text-rose-600"
+                                                            : "bg-amber-500/10 text-amber-600"
+                                                    )}>
+                                                        {staff.salaryStatus?.isDueToday ? "BUGÜN" : "1 GÜN KALDI"}
+                                                    </Badge>
+                                                </div>
+                                                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 text-[10px] text-slate-500 font-medium">
+                                                    Bordroyu kontrol edip arşivleyin. Arşiv sonrası bu ay için bildirim kapanır.
+                                                </div>
+                                                <Button
+                                                    disabled={isActionPending}
+                                                    onClick={() => handleCloseStaffPeriod(staff.id)}
+                                                    className="w-full h-10 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest gap-2"
+                                                >
+                                                    {isActionPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+                                                    BORDROYU ARŞİVLE
+                                                </Button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </Card>
+
                             {/* Prim Onay Havuzu */}
                             <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl flex flex-col">
                                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-amber-500/5">
@@ -723,8 +890,34 @@ export function StaffManagementClient({
 
                 <TabsContent value="archives" className="m-0">
                     <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
-                        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                            <h2 className="font-black text-lg text-slate-900 dark:text-white uppercase tracking-wider">GEÇMİŞ DÖNEM ARŞİVLERİ (BORDROLAR)</h2>
+                        <div className="p-6 border-b border-white/5 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h2 className="font-black text-lg text-slate-900 dark:text-white uppercase tracking-wider">GEÇMİŞ DÖNEM ARŞİVLERİ (BORDROLAR)</h2>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    Dönem kapatınca kayıtlar burada snapshot olarak saklanır.
+                                </p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                                <Select value={selectedArchivePeriod} onValueChange={setSelectedArchivePeriod}>
+                                    <SelectTrigger className="h-10 w-full sm:w-44 rounded-xl bg-white/60 dark:bg-white/5 border-white/10 text-xs font-bold">
+                                        <SelectValue placeholder="Dönem seç" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Tüm dönemler</SelectItem>
+                                        {archivePeriods.map((period: string) => (
+                                            <SelectItem key={period} value={period}>{period}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <div className="grid grid-cols-2 sm:flex gap-2">
+                                    <Badge className="bg-emerald-500/10 text-emerald-600 border-none rounded-xl px-3 py-2 font-black">
+                                        Net: {archivePeriodSummary.netPayout.toLocaleString('tr-TR')} ₺
+                                    </Badge>
+                                    <Badge className="bg-rose-500/10 text-rose-600 border-none rounded-xl px-3 py-2 font-black">
+                                        Kesinti: {archivePeriodSummary.totalExpenses.toLocaleString('tr-TR')} ₺
+                                    </Badge>
+                                </div>
+                            </div>
                         </div>
                         <Table>
                             <TableHeader>
@@ -739,7 +932,7 @@ export function StaffManagementClient({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {archives?.map((archive: any) => (
+                                {filteredArchives?.map((archive: any) => (
                                     <TableRow key={archive.id} className="border-white/5 hover:bg-white/5 transition-colors group">
                                         <TableCell className="pl-8 py-4">
                                             <Badge className="bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white font-black px-3 py-1 rounded-xl">
@@ -750,9 +943,11 @@ export function StaffManagementClient({
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-8 w-8 rounded-lg">
                                                     <AvatarImage src={archive.user?.image} />
-                                                    <AvatarFallback className="text-[10px] font-bold">{archive.user?.name?.[0]}</AvatarFallback>
+                                                    <AvatarFallback className="text-[10px] font-bold">{(archive.user?.name || archive.staffName || "?")?.[0]}</AvatarFallback>
                                                 </Avatar>
-                                                <span className="font-bold text-xs">{archive.user?.name} {archive.user?.surname}</span>
+                                                <span className="font-bold text-xs">
+                                                    {archive.user ? `${archive.user.name} ${archive.user.surname || ""}`.trim() : archive.staffName || "Silinmiş personel"}
+                                                </span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-xs font-medium">{(archive.baseSalary || 0).toLocaleString('tr-TR')} ₺</TableCell>
@@ -784,6 +979,12 @@ export function StaffManagementClient({
                                 <p className="text-xs mt-2 font-medium">Ay sonunda "Dönemi Kapat" butonu ile ilk arşivinizi oluşturabilirsiniz.</p>
                             </div>
                         )}
+                        {archives && archives.length > 0 && filteredArchives.length === 0 && (
+                            <div className="p-16 text-center text-slate-400 opacity-60 flex flex-col items-center">
+                                <Archive className="h-12 w-12 mb-4" />
+                                <h3 className="font-black uppercase tracking-widest text-sm">BU DÖNEMDE ARŞİV YOK</h3>
+                            </div>
+                        )}
                     </Card>
                 </TabsContent>
 
@@ -804,9 +1005,12 @@ export function StaffManagementClient({
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-1">
                                         <Badge className="bg-white/20 text-white border-none font-black text-[10px]">{selectedArchive.period} DÖNEMİ BORDROSU</Badge>
-                                        <h2 className="text-3xl font-black">{selectedArchive.user?.name} {selectedArchive.user?.surname}</h2>
+                                        <h2 className="text-3xl font-black">
+                                            {selectedArchive.user ? `${selectedArchive.user.name} ${selectedArchive.user.surname || ""}`.trim() : selectedArchive.staffName || "Silinmiş personel"}
+                                        </h2>
                                         <p className="text-xs opacity-70 font-medium uppercase tracking-widest">
-                                            {selectedArchive.user?.role === "ADMIN" ? "YÖNETİCİ" :
+                                            {!selectedArchive.user ? selectedArchive.staffEmail || "ARŞİV KAYDI" :
+                                                selectedArchive.user?.role === "ADMIN" ? "YÖNETİCİ" :
                                                 selectedArchive.user?.role === "TECHNICIAN" ? "TEKNİSYEN" :
                                                     selectedArchive.user?.role === "CASHIER" ? "KASİYER" :
                                                         selectedArchive.user?.role === "COURIER" ? "KURYE" :
@@ -819,7 +1023,7 @@ export function StaffManagementClient({
                                 </div>
                                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10">
                                     <div className="text-center">
-                                        <span className="block text-[8px] opacity-70 font-black uppercase tracking-widest">SABİT MAAŞ</span>
+                                        <span className="block text-[8px] opacity-70 font-black uppercase tracking-widest">DÖNEM MAAŞI</span>
                                         <span className="text-sm font-bold">{(selectedArchive.baseSalary || 0).toLocaleString('tr-TR')} ₺</span>
                                     </div>
                                     <div className="text-center">
@@ -829,6 +1033,24 @@ export function StaffManagementClient({
                                     <div className="text-center">
                                         <span className="block text-[8px] opacity-70 font-black uppercase tracking-widest">KESİNTİLER</span>
                                         <span className="text-sm font-bold">{(selectedArchive.totalExpenses || 0).toLocaleString('tr-TR')} ₺</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 pt-4 text-[10px]">
+                                    <div className="rounded-2xl bg-white/10 p-3">
+                                        <span className="block opacity-60 font-black uppercase tracking-widest">İşe Giriş</span>
+                                        <span className="font-bold">{selectedArchive.metadata?.payroll?.staffCreatedAt ? new Date(selectedArchive.metadata.payroll.staffCreatedAt).toLocaleString('tr-TR') : "-"}</span>
+                                    </div>
+                                    <div className="rounded-2xl bg-white/10 p-3">
+                                        <span className="block opacity-60 font-black uppercase tracking-widest">Çıkış</span>
+                                        <span className="font-bold">{selectedArchive.metadata?.payroll?.employmentEndedAt ? new Date(selectedArchive.metadata.payroll.employmentEndedAt).toLocaleString('tr-TR') : "Aktif"}</span>
+                                    </div>
+                                    <div className="rounded-2xl bg-white/10 p-3">
+                                        <span className="block opacity-60 font-black uppercase tracking-widest">Çalışılan Gün</span>
+                                        <span className="font-bold">{selectedArchive.metadata?.finance?.activeDays || 0} gün</span>
+                                    </div>
+                                    <div className="rounded-2xl bg-white/10 p-3">
+                                        <span className="block opacity-60 font-black uppercase tracking-widest">Sabit Maaş / Maaş Günü</span>
+                                        <span className="font-bold">{Number(selectedArchive.metadata?.payroll?.monthlyBaseSalary || selectedArchive.metadata?.finance?.baseSalary || 0).toLocaleString('tr-TR')} ₺ / Ayın {selectedArchive.metadata?.payroll?.salaryPaymentDay || 1}. günü</span>
                                     </div>
                                 </div>
                             </div>
@@ -842,6 +1064,40 @@ export function StaffManagementClient({
                                         <span className="font-bold text-slate-600 dark:text-slate-400">TOPLAM HAKEDİŞ:</span>
                                         <span className="text-3xl font-black text-slate-900 dark:text-white">{(selectedArchive.netPayout || 0).toLocaleString('tr-TR')} ₺</span>
                                     </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                                            <span className="block text-[9px] font-black uppercase tracking-widest text-emerald-600">Brüt Hakediş</span>
+                                            <span className="text-lg font-black">{Number((selectedArchive.baseSalary || 0) + (selectedArchive.totalCommissions || 0)).toLocaleString('tr-TR')} ₺</span>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                                            <span className="block text-[9px] font-black uppercase tracking-widest text-rose-600">Toplam Kesinti</span>
+                                            <span className="text-lg font-black">{Number(selectedArchive.totalExpenses || 0).toLocaleString('tr-TR')} ₺</span>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Hakediş Kalemleri</h4>
+                                            {(selectedArchive.metadata?.statement?.incomeItems || []).map((item: any, index: number) => (
+                                                <div key={`${item.type}-${index}`} className="flex justify-between gap-3 text-[10px] p-3 rounded-xl bg-slate-50 dark:bg-white/5">
+                                                    <span className="font-bold text-slate-500">{item.description}</span>
+                                                    <span className="font-black">{Number(item.amount || 0).toLocaleString('tr-TR')} ₺</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-600">Kesinti / Avans Kalemleri</h4>
+                                            {(selectedArchive.metadata?.statement?.deductionItems || []).length === 0 ? (
+                                                <div className="text-[10px] p-3 rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 font-bold">Kesinti yok</div>
+                                            ) : (
+                                                selectedArchive.metadata.statement.deductionItems.map((item: any, index: number) => (
+                                                    <div key={`${item.type}-${index}`} className="flex justify-between gap-3 text-[10px] p-3 rounded-xl bg-slate-50 dark:bg-white/5">
+                                                        <span className="font-bold text-slate-500">{item.description}</span>
+                                                        <span className="font-black text-rose-600">-{Number(item.amount || 0).toLocaleString('tr-TR')} ₺</span>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-4">
@@ -849,7 +1105,7 @@ export function StaffManagementClient({
                                         <Clock className="h-4 w-4 text-blue-500" /> SİSTEM NOTLARI & METADATA
                                     </h3>
                                     <div className="p-5 rounded-2xl bg-blue-500/5 border border-blue-500/10 text-[10px] font-medium text-slate-500 leading-relaxed italic">
-                                        Bu kayıt ilgili ayın {new Date(selectedArchive.createdAt).toLocaleDateString('tr-TR')} tarihindeki finansal snapshot verilerine dayanılarak otomatik oluşturulmuştur. Onaylı tüm primler ve o aya ait giderler net ödemeye dahil edilmiştir.
+                                        Bu kayıt {new Date(selectedArchive.closedAt || selectedArchive.createdAt).toLocaleDateString('tr-TR')} tarihindeki finansal snapshot verilerine dayanılarak otomatik oluşturulmuştur. Onaylı primler, avanslar, giderler ve ücretsiz izin kesintileri net ödemeye dahil edilmiştir.
                                     </div>
                                 </div>
                             </div>
@@ -867,6 +1123,71 @@ export function StaffManagementClient({
                             </div>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+            <Dialog open={!!expenseMember} onOpenChange={() => setExpenseMember(null)}>
+                <DialogContent className="sm:max-w-[460px] bg-white dark:bg-slate-900 border-none shadow-2xl rounded-[2rem]">
+                    <DialogHeader>
+                        <DialogTitle className="font-black uppercase tracking-wider text-base">Avans / Kesinti Ekle</DialogTitle>
+                        <DialogDescription className="text-xs">
+                            {expenseMember?.name} {expenseMember?.surname} için aktif döneme finans kaydı girilir.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">İşlem tipi</Label>
+                            <Select value={expenseType} onValueChange={(value: any) => setExpenseType(value)}>
+                                <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-white/10 text-xs font-bold">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ADVANCE">Avans</SelectItem>
+                                    <SelectItem value="MEAL">Yemek gideri</SelectItem>
+                                    <SelectItem value="TRAVEL">Yol gideri</SelectItem>
+                                    <SelectItem value="DEDUCTION">Ek kesinti</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tutar</Label>
+                            <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={expenseAmount}
+                                onChange={(event) => setExpenseAmount(event.target.value)}
+                                placeholder="0.00"
+                                className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-white/10 font-bold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Açıklama</Label>
+                            <Input
+                                value={expenseDescription}
+                                onChange={(event) => setExpenseDescription(event.target.value)}
+                                placeholder="Örn. Temmuz avansı"
+                                className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-white/10 text-xs"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => setExpenseMember(null)}
+                            disabled={isActionPending}
+                        >
+                            İptal
+                        </Button>
+                        <Button
+                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black"
+                            onClick={handleAddExpense}
+                            disabled={isActionPending}
+                        >
+                            {isActionPending ? <Loader2 className="h-4 w-4 mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                            Kaydet
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
             <StaffDeleteModal

@@ -13,6 +13,7 @@ import { sendWhatsAppAction } from "./data-management-actions";
 import { getSettings } from "./setting-actions";
 import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
 import { serviceTicketSchema } from "@/lib/validations/schemas";
+import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 import { recordAuditLog } from "./audit-actions";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -682,6 +683,7 @@ export async function addPartToService(ticketId: string, productId: string, quan
     revalidatePath("/stok");
     revalidateTag(`tickets-${shopId}`);
     revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     return { success: true };
   } catch (error: any) {
     console.error("Error adding part to service:", error);
@@ -733,6 +735,7 @@ export async function removePartFromService(partId: string) {
     revalidatePath("/stok");
     revalidateTag(`tickets-${shopId}`);
     revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
     return { success: true };
   } catch (error: any) {
     console.error("Error removing part from service:", error);

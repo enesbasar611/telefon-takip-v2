@@ -51,6 +51,7 @@ const staffSchema = z.object({
   // commissionRate removed
   baseSalary: z.number().min(0),
   salaryCurrency: z.string().min(1),
+  salaryPaymentDay: z.number().int().min(1).max(31),
   serviceCommissionAmount: z.number().min(0),
   canSell: z.boolean(),
   canService: z.boolean(),
@@ -90,6 +91,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
       baseSalary: Number(staff.baseSalary || 0),
       serviceCommissionAmount: Number(staff.serviceCommissionAmount || 0),
       salaryCurrency: staff.salaryCurrency || "TRY",
+      salaryPaymentDay: Number(staff.salaryPaymentDay || 1),
       phone: staff.phone || "",
       customImage: staff.customImage || "",
     } : {
@@ -106,6 +108,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
       baseSalary: 0,
       serviceCommissionAmount: 0,
       salaryCurrency: "TRY",
+      salaryPaymentDay: 1,
       ...getDefaultStaffPermissions("STAFF"),
     }
   });
@@ -122,6 +125,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
         baseSalary: Number(staff.baseSalary || 0),
         serviceCommissionAmount: Number(staff.serviceCommissionAmount || 0),
         salaryCurrency: staff.salaryCurrency || "TRY",
+        salaryPaymentDay: Number(staff.salaryPaymentDay || 1),
         phone: staff.phone || "",
         customImage: staff.customImage || "",
       });
@@ -321,6 +325,20 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
                   step="0.01"
                   className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-medium text-[10px] text-emerald-600 uppercase tracking-widest ml-1">MAAŞ GÜNÜ</Label>
+                <Input
+                  {...register("salaryPaymentDay", { valueAsNumber: true })}
+                  type="number"
+                  min={1}
+                  max={31}
+                  className="h-11 bg-white dark:bg-muted/50 border-none rounded-xl text-xs"
+                />
+                <p className="text-[9px] text-slate-400 font-medium ml-1">
+                  Maaş günü geldiğinde veya 1 gün kaldığında finans bildirimi oluşturulur.
+                </p>
               </div>
             </div>
 

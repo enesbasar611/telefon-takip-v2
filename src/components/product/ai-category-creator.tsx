@@ -13,10 +13,13 @@ import { createCategory } from "@/lib/actions/category-actions";
 import { createProduct, addInventoryStock, bulkCreateAIInventory } from "@/lib/actions/product-actions";
 import {
     Sparkles, Loader2, FolderPlus, CheckCircle2,
-    AlertTriangle, RotateCcw, ArrowRight, Folder, Package, ChevronRight
+    AlertTriangle, RotateCcw, ArrowRight, Folder, Package, ChevronRight,
+    Plus, Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUI } from "@/lib/context/ui-context";
+import { useQuery } from "@tanstack/react-query";
+import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
 
 interface Category {
     id: string;
@@ -72,6 +75,73 @@ export function AICategoryCreator({
     onProductsUpdated
 }: AICategoryCreatorProps) {
     const { setAiLoading, setAiInputFocused } = useUI();
+    const { data: liveRates } = useQuery({
+        queryKey: ["rates"],
+        queryFn: () => getCurrentExchangeRates(),
+    });
+    const currentUsdRate = liveRates?.usd || 35.00;
+
+    const updateProductField = (rowId: string, productIndex: number, field: string, value: any) => {
+        setRows(prev => prev.map(r => {
+            if (r._id !== rowId) return r;
+            const updatedProducts = [...r.products];
+            updatedProducts[productIndex] = {
+                ...updatedProducts[productIndex],
+                [field]: value
+            };
+            return {
+                ...r,
+                products: updatedProducts
+            };
+        }));
+    };
+
+    const addNewProductToRow = (rowId: string) => {
+        setRows(prev => prev.map(r => {
+            if (r._id !== rowId) return r;
+            
+            const template = r.products[0] || {
+                buyPrice: 0,
+                buyPriceUsd: null,
+                sellPrice: 0,
+                sellPriceUsd: null,
+                stock: 1,
+                criticalStock: 3,
+                location: ""
+            };
+
+            const newProduct = {
+                name: "",
+                buyPrice: template.buyPrice,
+                buyPriceUsd: template.buyPriceUsd,
+                sellPrice: template.sellPrice,
+                sellPriceUsd: template.sellPriceUsd,
+                stock: 1,
+                criticalStock: 3,
+                location: template.location
+            };
+
+            return {
+                ...r,
+                products: [...r.products, newProduct],
+                _prodStatuses: [...r._prodStatuses, "pending" as const]
+            };
+        }));
+    };
+
+    const removeProductFromRow = (rowId: string, productIndex: number) => {
+        setRows(prev => prev.map(r => {
+            if (r._id !== rowId) return r;
+            const updatedProducts = r.products.filter((_, pi) => pi !== productIndex);
+            const updatedStatuses = r._prodStatuses.filter((_, pi) => pi !== productIndex);
+            return {
+                ...r,
+                products: updatedProducts,
+                _prodStatuses: updatedStatuses
+            };
+        }));
+    };
+
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState<"input" | "review">("input");
     const [description, setDescription] = useState("");
@@ -161,6 +231,10 @@ export function AICategoryCreator({
             onCategoriesUpdated(finalCats);
             onProductsUpdated(finalProds);
             toast.success(`${newCategories.length} kategori ve ${newProducts.length} ürün başarıyla işlendi!`);
+            
+            setTimeout(() => {
+                setOpen(false);
+            }, 1000);
         });
     };
 
@@ -179,7 +253,7 @@ export function AICategoryCreator({
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[760px] bg-white/90 dark:bg-[#111111]/90 backdrop-blur-xl border-zinc-200 dark:border-[#333333] text-foreground dark:text-white p-0 shadow-2xl gemini-aura-modal">
+            <DialogContent className="sm:max-w-[1100px] w-[95vw] bg-white/90 dark:bg-[#111111]/90 backdrop-blur-xl border-zinc-200 dark:border-[#333333] text-foreground dark:text-white p-0 shadow-2xl gemini-aura-modal">
                 <DialogHeader className="p-6 pb-2 border-b border-zinc-100 dark:border-zinc-800/50">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-indigo-600 dark:bg-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -286,26 +360,125 @@ export function AICategoryCreator({
                                         </div>
 
                                         {/* Products */}
-                                        {row.products.length > 0 && (
+                                        {row.products.length >= 0 && (
                                             <div className="ml-6 space-y-2">
-                                                {row.products.map((p, pi) => (
-                                                    <div key={pi} className="flex items-center gap-3 flex-wrap">
-                                                        <Package className="h-3.5 w-3.5 text-muted-foreground/80 shrink-0" />
-                                                        <span className="text-[11px] text-foreground font-medium flex-1 min-w-[120px]">{p.name}</span>
-                                                        <div className="flex items-center gap-3 flex-wrap">
-                                                            <span className="text-[11px] text-amber-600 dark:text-amber-300 font-bold">Alış: <b className="text-amber-700 dark:text-amber-200">{getAIPriceDisplay(p.buyPrice, p.buyPriceUsd)}</b></span>
-                                                            <span className="text-[11px] text-emerald-600 dark:text-emerald-300 font-bold">Satış: <b className="text-emerald-700 dark:text-emerald-200">{getAIPriceDisplay(p.sellPrice, p.sellPriceUsd)}</b></span>
-                                                            <span className="text-[11px] text-indigo-600 dark:text-blue-300 font-bold">{p.stock} adet</span>
-                                                            {p.location && <span className="text-[11px] text-zinc-500 dark:text-muted-foreground/80 font-medium">📍 {p.location}</span>}
+                                                {row.products.map((p, pi) => {
+                                                    const isUsd = p.buyPriceUsd !== null && p.buyPriceUsd !== undefined;
+                                                    return (
+                                                        <div key={pi} className="flex items-center gap-3 p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-zinc-100 dark:border-zinc-800/40 w-full flex-wrap md:flex-nowrap">
+                                                            <Package className="h-4 w-4 text-zinc-400 shrink-0" />
+                                                            
+                                                            {/* Product Name Input */}
+                                                            <div className="flex-1 min-w-[180px]">
+                                                                <Input 
+                                                                    value={p.name} 
+                                                                    onChange={e => updateProductField(row._id, pi, "name", e.target.value)}
+                                                                    disabled={row._catStatus === "saved" || row._catStatus === "skipped"}
+                                                                    placeholder="Ürün adı"
+                                                                    className="h-8 text-xs rounded-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-semibold"
+                                                                />
+                                                            </div>
+
+                                                            {/* Stock Input */}
+                                                            <div className="w-24 shrink-0 flex items-center gap-1">
+                                                                <Input 
+                                                                    type="number"
+                                                                    value={p.stock} 
+                                                                    onChange={e => updateProductField(row._id, pi, "stock", Math.max(0, Number(e.target.value) || 0))}
+                                                                    disabled={row._catStatus === "saved" || row._catStatus === "skipped"}
+                                                                    placeholder="Stok"
+                                                                    className="h-8 w-14 text-xs rounded-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold text-center"
+                                                                />
+                                                                <span className="text-[10px] text-zinc-400 font-bold uppercase shrink-0">Adet</span>
+                                                            </div>
+
+                                                            {/* Buy Price Input */}
+                                                            <div className="w-28 shrink-0 flex items-center gap-1">
+                                                                <span className="text-xs text-amber-500 font-black">{isUsd ? "$" : "₺"}</span>
+                                                                <Input 
+                                                                    type="number"
+                                                                    value={(isUsd ? p.buyPriceUsd : p.buyPrice) ?? ""} 
+                                                                    onChange={e => {
+                                                                        const val = Number(e.target.value) || 0;
+                                                                        if (isUsd) {
+                                                                            updateProductField(row._id, pi, "buyPriceUsd", val);
+                                                                            updateProductField(row._id, pi, "buyPrice", Math.ceil(val * currentUsdRate));
+                                                                        } else {
+                                                                            updateProductField(row._id, pi, "buyPrice", val);
+                                                                        }
+                                                                    }}
+                                                                    disabled={row._catStatus === "saved" || row._catStatus === "skipped"}
+                                                                    placeholder="Alış"
+                                                                    className="h-8 text-xs rounded-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold text-center text-amber-600 dark:text-amber-300"
+                                                                />
+                                                            </div>
+
+                                                            {/* Sell Price Input */}
+                                                            <div className="w-28 shrink-0 flex items-center gap-1">
+                                                                <span className="text-xs text-emerald-500 font-black">{isUsd ? "$" : "₺"}</span>
+                                                                <Input 
+                                                                    type="number"
+                                                                    value={(isUsd ? p.sellPriceUsd : p.sellPrice) ?? ""} 
+                                                                    onChange={e => {
+                                                                        const val = Number(e.target.value) || 0;
+                                                                        if (isUsd) {
+                                                                            updateProductField(row._id, pi, "sellPriceUsd", val);
+                                                                            updateProductField(row._id, pi, "sellPrice", Math.ceil(val * currentUsdRate));
+                                                                        } else {
+                                                                            updateProductField(row._id, pi, "sellPrice", val);
+                                                                        }
+                                                                    }}
+                                                                    disabled={row._catStatus === "saved" || row._catStatus === "skipped"}
+                                                                    placeholder="Satış"
+                                                                    className="h-8 text-xs rounded-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold text-center text-emerald-600 dark:text-emerald-300"
+                                                                />
+                                                            </div>
+
+                                                            {/* Location Input */}
+                                                            <div className="w-24 shrink-0">
+                                                                <Input 
+                                                                    value={p.location || ""} 
+                                                                    onChange={e => updateProductField(row._id, pi, "location", e.target.value)}
+                                                                    disabled={row._catStatus === "saved" || row._catStatus === "skipped"}
+                                                                    placeholder="Raf/Konum"
+                                                                    className="h-8 text-xs rounded-lg bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-medium text-center"
+                                                                />
+                                                            </div>
+
+                                                            {/* Status Icon & Delete Button */}
+                                                            <div className="shrink-0 pl-1 flex items-center gap-1.5">
+                                                                {row._prodStatuses[pi] === "pending" && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700/50 text-muted-foreground uppercase">—</span>}
+                                                                {row._prodStatuses[pi] === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-400" />}
+                                                                {row._prodStatuses[pi] === "saved" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+                                                                {row._prodStatuses[pi] === "error" && <AlertTriangle className="h-3.5 w-3.5 text-red-400" />}
+                                                                
+                                                                {row._catStatus !== "saved" && row._catStatus !== "skipped" && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => removeProductFromRow(row._id, pi)}
+                                                                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-lg shrink-0"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            {row._prodStatuses[pi] === "pending" && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700/50 text-muted-foreground  uppercase">—</span>}
-                                                            {row._prodStatuses[pi] === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-400" />}
-                                                            {row._prodStatuses[pi] === "saved" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-                                                            {row._prodStatuses[pi] === "error" && <AlertTriangle className="h-3.5 w-3.5 text-red-400" />}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
+                                                
+                                                {/* Add Product Button */}
+                                                {row._catStatus !== "saved" && row._catStatus !== "skipped" && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => addNewProductToRow(row._id)}
+                                                        className="h-8 text-xs font-bold text-indigo-600 dark:text-violet-400 hover:text-indigo-700 dark:hover:text-violet-300 hover:bg-indigo-500/10 dark:hover:bg-violet-500/10 rounded-xl gap-1 px-3 mt-1"
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                        Yeni Ürün Ekle
+                                                    </Button>
+                                                )}
                                             </div>
                                         )}
                                     </div>

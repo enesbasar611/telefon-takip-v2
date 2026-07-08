@@ -119,6 +119,8 @@ model User {
   points               Int                   @default(0)
   baseSalary           Decimal?              @default(0) @db.Decimal(12, 2)
   salaryCurrency       String                @default("TRY")
+  salaryPaymentDay     Int                   @default(1)
+  employmentEndedAt    DateTime?
   serviceCommissionAmount Decimal?              @default(0) @db.Decimal(12, 2)
   accounts             Account[]
   auditLogs            AuditLog[]
@@ -329,6 +331,7 @@ model Notification {
   status      String?
   isRead      Boolean  @default(false)
   isDeleted   Boolean  @default(false)
+  metadata    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   snoozedUntil DateTime?

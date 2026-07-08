@@ -144,6 +144,7 @@ export async function createStaff(data: any) {
                 canEdit: data.canEdit ?? defaults.canEdit,
                 baseSalary: Number(data.baseSalary || 0),
                 salaryCurrency: data.salaryCurrency || "TRY",
+                salaryPaymentDay: Math.min(31, Math.max(1, Number(data.salaryPaymentDay || 1))),
                 serviceCommissionAmount: Number(data.serviceCommissionAmount || 0),
                 isApproved: true,
                 shopId
@@ -181,7 +182,8 @@ export async function updateStaff(userId: string, data: any) {
         if (data.name) updateData.name = formatName(data.name);
         if (data.surname) updateData.surname = formatName(data.surname);
         if (data.phone) updateData.phone = data.phone.replace(/\D/g, '');
-        if (data.baseSalary) updateData.baseSalary = Number(data.baseSalary);
+        if (data.baseSalary !== undefined) updateData.baseSalary = Number(data.baseSalary);
+        if (data.salaryPaymentDay !== undefined) updateData.salaryPaymentDay = Math.min(31, Math.max(1, Number(data.salaryPaymentDay || 1)));
         if (data.serviceCommissionAmount !== undefined) updateData.serviceCommissionAmount = Number(data.serviceCommissionAmount);
 
         if (data.password?.length > 0) updateData.password = await bcrypt.hash(data.password, 10);
@@ -239,7 +241,7 @@ export async function deleteStaff(userId: string, options?: any) {
         if (targetUser.role === Role.SUPER_ADMIN && session?.user?.role !== Role.SUPER_ADMIN) return { success: false, error: "Süper Admin silinemez." };
 
         // FAZ 1: Arşiv ve Nullable İşlemler
-        await createStaffArchive(userId);
+        await createStaffArchive(userId, undefined, { employmentEndedAt: new Date(), closeReason: "STAFF_DELETE" });
         const tables = ["Transaction", "Sale", "ReturnTicket", "InventoryLog", "ServiceTicket", "DailySession"];
         for (const t of tables) {
             try { await prisma.$executeRawUnsafe(`ALTER TABLE "${t}" ALTER COLUMN "${t === "ServiceTicket" ? "createdById" : (t === "DailySession" ? "openedById" : "userId")}" DROP NOT NULL`); } catch (e) { }

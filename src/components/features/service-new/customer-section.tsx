@@ -100,9 +100,9 @@ export function CustomerSection({
 
                     {/* Suggestions Dropdown */}
                     {showNameSuggestions && nameSuggestions.length > 0 && (
-                        <div className="absolute z-[110] left-0 right-0 top-full mt-2 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="p-2 border-b border-white/5 bg-white/[0.02]">
-                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest px-2">EŞLEŞEN MÜŞTERİLER</span>
+                        <div className="absolute z-[110] left-0 right-0 top-full mt-2 bg-popover border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="p-2 border-b border-border bg-muted/30">
+                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2">EŞLEŞEN MÜŞTERİLER</span>
                             </div>
                             <div className="max-h-[200px] overflow-y-auto">
                                 {nameSuggestions.map((customer) => (
@@ -110,13 +110,13 @@ export function CustomerSection({
                                         key={customer.id}
                                         type="button"
                                         onClick={() => onSuggestionSelect(customer)}
-                                        className="w-full flex items-center justify-between p-3 hover:bg-primary/10 transition-colors border-b border-white/5 last:border-0 group/item"
+                                        className="w-full flex items-center justify-between p-3 hover:bg-accent hover:text-accent-foreground transition-colors border-b border-border last:border-0 group/item"
                                     >
                                         <div className="flex flex-col items-start">
-                                            <span className="text-xs font-black text-white group-hover/item:text-primary transition-colors">{customer.name}</span>
-                                            <span className="text-[10px] font-medium text-muted-foreground/60">{customer.phone}</span>
+                                            <span className="text-xs font-black text-foreground group-hover/item:text-primary transition-colors">{customer.name}</span>
+                                            <span className="text-[10px] font-medium text-muted-foreground">{customer.phone}</span>
                                         </div>
-                                        <Badge variant="outline" className="text-[10px] font-bold border-white/10">{customer.loyaltyPoints || 0} PUAN</Badge>
+                                        <Badge variant="outline" className="text-[10px] font-bold border-border bg-transparent text-foreground">{customer.loyaltyPoints || 0} PUAN</Badge>
                                     </button>
                                 ))}
                             </div>
