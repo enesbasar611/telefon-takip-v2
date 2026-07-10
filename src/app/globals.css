@@ -578,7 +578,77 @@
   white-space: nowrap;
 }
 
+.service-ticket-label {
+  justify-content: flex-start;
+  gap: 0.6mm;
+  padding: 1.5mm 2mm;
+  border: 0;
+}
+
+.service-ticket-label-shop {
+  color: #000;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.service-ticket-label-shop-sub {
+  color: #111;
+  font-size: 5.2px;
+  font-weight: 700;
+  line-height: 1.05;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.service-ticket-label .barcode-svg {
+  padding: 0;
+}
+
+.service-ticket-label svg {
+  max-height: 9mm;
+}
+
+.service-ticket-label-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10mm 1fr;
+  column-gap: 1mm;
+  row-gap: 0.35mm;
+  color: #000;
+  font-size: 5.6px;
+  line-height: 1.05;
+}
+
+.service-ticket-label-grid span {
+  font-weight: 800;
+  color: #333;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.service-ticket-label-grid strong {
+  min-width: 0;
+  font-weight: 900;
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media print {
+  @page service-ticket-label {
+    size: 60mm 30mm;
+    margin: 0;
+  }
+
   @page {
     size: A4;
     margin: 0;
@@ -624,6 +694,28 @@
     overflow: hidden;
     page-break-after: always;
     break-after: page;
+  }
+
+  body.service-ticket-label-printing .barcode-print-root.service-ticket-label-print-area {
+    page: service-ticket-label;
+    width: var(--barcode-label-width);
+    height: var(--barcode-label-height);
+    min-height: var(--barcode-label-height);
+  }
+
+  body.service-ticket-label-printing .barcode-print-root.service-ticket-label-print-area .barcode-print-page {
+    width: var(--barcode-label-width);
+    height: var(--barcode-label-height);
+    min-height: var(--barcode-label-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.service-ticket-label-printing .barcode-print-root.service-ticket-label-print-area .barcode-label {
+    width: var(--barcode-label-width);
+    height: var(--barcode-label-height);
+    min-height: var(--barcode-label-height);
   }
 
   body.barcode-label-printing .barcode-print-page:last-child {

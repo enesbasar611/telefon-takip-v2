@@ -484,3 +484,20 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
 
 
 
+- [x] 2026-07-09: Personel odeme takibi, servis barkod etiketi ve Dymo LabelWriter 450 hazirligi:
+    - **Dosyalar**: `prisma/schema.prisma`, `src/app/(dashboard)/personel/page.tsx`, `src/components/staff/staff-form.tsx`, `src/components/staff/staff-page-client.tsx`, `src/lib/actions/staff-actions.ts`, `src/lib/actions/staff-finance-actions.ts`, `src/lib/staff-finance-calculations.ts`, `tests/staff-finance-calculations.test.ts`, `src/components/service/create-service-modal.tsx`, `src/components/service/service-list-table.tsx`, `src/components/service/service-ticket-label-print.tsx`, `src/app/globals.css`.
+    - **Neden**: Personel prim/avans/maas donemi takibi daha izlenebilir olsun; kapanan donem arsiv/PDF ve modal detaylari guclensin; servis kaydi alindiktan sonra veya eski kayit tablosundan telefon arkasina yapistirilacak barkodlu etiket basilsin.
+    - **Yapilanlar**:
+        - Personel maas odeme gunu, ise giris/cikis zamanlari, calistigi gun ve hak edis detaylari icin schema ve hesaplama katmani genisletildi.
+        - Donem kapatma ve arsiv bordro goruntuleme akislari aylik takip mantigina yaklastirildi; PDF ve modal detaylari daha acik hale getirildi.
+        - Hizli servis modalinda acik moddaki zorunlu alan uyarisi okunur amber/siyah kontrastina cekildi.
+        - Yeni servis kaydi sonrasi modal kapanip sayfa yenilenirken servis etiketi otomatik yazdirilacak hale getirildi.
+        - `/servis` sayfasindaki onceki kayitlar tablosuna barkod ikonlu "Barkod etiketi yazdir" butonu eklendi; mobil kartlarda da ayni aksiyon var.
+        - Servis etiketi ortak `ServiceTicketLabelPrintArea` bilesenine tasindi. Etikette firma bilgisi, fis/barkod, musteri adi, telefon, cihaz, fiyat ve alis tarihi gosteriliyor.
+        - Dymo LabelWriter 450 icin servis etiketi tekli yapiskan etiket olarak `60mm x 30mm` baski sayfasina ayarlandi; genel A4 urun barkod duzeni korunuyor.
+    - **Dogrulama**:
+        - `npx prisma migrate dev`: Veritabani semasi guncel, yeni/pending migration yok.
+        - `npx prisma generate`: Windows dosya kilidi icin dev server kisa sure durdurulduktan sonra basarili.
+        - `npx prisma migrate status`: `Database schema is up to date!`.
+        - `npx tsc --noEmit`: Basarili.
+        - `npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' tests/staff-finance-calculations.test.ts`: Basarili.

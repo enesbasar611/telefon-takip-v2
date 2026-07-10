@@ -22,6 +22,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PriceInput } from "@/components/ui/price-input";
 import { cn, formatCurrency } from "@/lib/utils";
+import { ServiceTicketLabelPrintArea, type ServiceTicketLabelData } from "@/components/service/service-ticket-label-print";
 import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-lookup-actions";
 import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
@@ -54,6 +55,7 @@ export function CreateServiceModal({
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
   const [isLookingUpName, setIsLookingUpName] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [serviceLabel, setServiceLabel] = useState<ServiceTicketLabelData | null>(null);
   const [showMissingRequired, setShowMissingRequired] = useState(false);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [tempPattern, setTempPattern] = useState<number[]>([]);
@@ -145,7 +147,20 @@ export function CreateServiceModal({
         });
 
         if (result?.success) {
+          const ticket = result.data;
           setShowSuccessModal(true);
+          setServiceLabel({
+            ticketNumber: ticket.ticketNumber,
+            customerName: data.customerName,
+            customerPhone: data.customerPhone,
+            deviceBrand: deviceBrand || "GENEL",
+            deviceModel: deviceModel || "HIZLI İŞLEM",
+            estimatedCost: Number(data.estimatedCost || 0),
+            createdAt: ticket.createdAt || new Date().toISOString(),
+            shopName: shop?.name || "BAŞAR TEKNİK",
+            shopPhone: shop?.phone || shop?.gsm || "",
+            shopAddress: shop?.address || "",
+          });
           setOpen(false);
           reset({
             estimatedCost: "0",
@@ -153,6 +168,10 @@ export function CreateServiceModal({
             accessories: [],
           });
           setDiagnosticResult(null);
+          setShowMissingRequired(false);
+          setFoundCustomer(null);
+          setPhoneValue("");
+          router.refresh();
         } else {
           toast({
             title: "Hata",
@@ -513,14 +532,14 @@ export function CreateServiceModal({
               </div>
 
               {showMissingRequired && !canCompleteService && (
-                <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3">
-                  <div className="flex items-center gap-2 text-amber-300">
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 shadow-sm dark:border-amber-400/25 dark:bg-amber-400/10">
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
                     <AlertCircle className="h-4 w-4" />
                     <span className="text-[10px] font-black uppercase tracking-[0.18em]">Kaydi tamamlamak icin gerekli alanlar</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {missingRequiredFields.map((field) => (
-                      <span key={field.key} className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-[10px] font-bold text-amber-100">
+                      <span key={field.key} className="rounded-full border border-amber-300 bg-white px-3 py-1 text-[10px] font-black text-slate-700 shadow-sm dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100">
                         {field.label}
                       </span>
                     ))}
@@ -579,6 +598,11 @@ export function CreateServiceModal({
           </DialogContent>
         </Dialog>
       </Dialog>
+
+      <ServiceTicketLabelPrintArea
+        label={serviceLabel}
+        onPrinted={() => setServiceLabel(null)}
+      />
 
       {showSuccessModal && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">

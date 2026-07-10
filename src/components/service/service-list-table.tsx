@@ -48,7 +48,8 @@ import {
   XCircle,
   Trash2,
   UserCircle,
-  Loader2
+  Loader2,
+  Barcode as BarcodeIcon
 } from "lucide-react";
 import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
@@ -64,6 +65,7 @@ import { deleteServiceTicket, bulkUpdateServiceStatus } from "@/lib/actions/serv
 import { STATUS_CONFIG } from "@/lib/constants/service";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ServiceTicketLabelPrintArea, buildServiceTicketLabelData, type ServiceTicketLabelData } from "@/components/service/service-ticket-label-print";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +92,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showManagement, setShowManagement] = useState(false);
+  const [serviceLabel, setServiceLabel] = useState<ServiceTicketLabelData | null>(null);
   const [isQuickDeliver, setIsQuickDeliver] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -244,12 +247,22 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
               variant="ghost"
               size="icon"
               className="h-10 w-10 text-blue-500 hover:bg-blue-500/10 rounded-xl border border-blue-500/10"
+              title="Servis fişi yazdır"
               onClick={() => {
                 setSelectedTicket(ticket);
                 setShowReceipt(true);
               }}
             >
               <Printer className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-amber-500 hover:bg-amber-500/10 rounded-xl border border-amber-500/20"
+              title="Barkod etiketi yazdır"
+              onClick={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop))}
+            >
+              <BarcodeIcon className="h-4 w-4" />
             </Button>
             <Link href={`/musteriler/${ticket.customerId}`}>
               <Button variant="ghost" size="icon" className="h-10 w-10 text-blue-500 hover:bg-blue-500/10 rounded-xl border border-blue-500/10" title="Müşteri Profili">
@@ -479,6 +492,11 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
         />
       )}
 
+      <ServiceTicketLabelPrintArea
+        label={serviceLabel}
+        onPrinted={() => setServiceLabel(null)}
+      />
+
       {/* Mobile View */}
       <div className="lg:hidden space-y-4 px-6 pb-6">
         {table.getRowModel().rows?.length ? (
@@ -547,6 +565,18 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                       }}
                     >
                       <Wrench className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                      title="Barkod etiketi yazdır"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setServiceLabel(buildServiceTicketLabelData(ticket, shop));
+                      }}
+                    >
+                      <BarcodeIcon className="h-5 w-5" />
                     </Button>
                     <Link href={`/musteriler/${ticket.customerId}`} onClick={(e) => e.stopPropagation()}>
                       <Button
