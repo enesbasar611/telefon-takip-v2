@@ -507,8 +507,7 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
 
                             {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.restockProduct && <span className="text-emerald-500 font-medium">• {selectedTicket.quantity} Adet ürün stoğa geri eklenecektir.<br /></span>}
                             {returnAction === "EXCHANGED" && <span className="text-rose-500 font-medium">• {selectedTicket?.quantity} Adet sağlam ürün stoktan düşülecektir.<br /></span>}
-
-                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "DEBT" && <span className="text-emerald-500 font-medium">• Müşteri borcu iade kaydı açılırken düşüldü; bu işlem tekrar borç düşmez.</span>}
+                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "DEBT" && <span className="text-emerald-500 font-medium">Musteri borcu bu islem onaylaninca iade tutari kadar dusecektir.</span>}
                             {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "SALE" && <span className="text-rose-500 font-medium">• Kasa hesabından {(selectedTicket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} para iadesi çıkışı yapılacaktır.</span>}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -571,3 +570,4 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
         </div>
     );
 }
+

@@ -579,15 +579,29 @@
 }
 
 .service-ticket-label {
-  justify-content: flex-start;
-  gap: 0.6mm;
-  padding: 1.5mm 2mm;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 18.5mm minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.8mm;
+  padding: 0.9mm;
   border: 0;
+  overflow: hidden;
+}
+
+.service-ticket-label-code {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5mm;
+  overflow: hidden;
 }
 
 .service-ticket-label-shop {
   color: #000;
-  font-size: 8px;
+  font-size: 6.3px;
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -599,9 +613,9 @@
 
 .service-ticket-label-shop-sub {
   color: #111;
-  font-size: 5.2px;
+  font-size: 4.8px;
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -613,18 +627,30 @@
 }
 
 .service-ticket-label svg {
-  max-height: 9mm;
+  max-width: 18mm;
+  max-height: 7mm;
+}
+
+.service-ticket-label-ticket {
+  color: #000;
+  font-size: 5px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .service-ticket-label-grid {
+  min-width: 0;
   width: 100%;
   display: grid;
-  grid-template-columns: 10mm 1fr;
-  column-gap: 1mm;
+  grid-template-columns: 6.2mm minmax(0, 1fr);
+  align-content: center;
+  column-gap: 0.55mm;
   row-gap: 0.35mm;
   color: #000;
-  font-size: 5.6px;
+  font-size: 5.1px;
   line-height: 1.05;
+  overflow: hidden;
 }
 
 .service-ticket-label-grid span {
@@ -729,6 +755,11 @@
     border: 0;
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  body.service-ticket-label-printing .barcode-print-root.service-ticket-label-print-area .service-ticket-label {
+    display: grid;
+    grid-template-columns: 18.5mm minmax(0, 1fr);
   }
 }
 

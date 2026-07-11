@@ -43,7 +43,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface InitialReturnItem {
-    productId: string;
+    productId?: string;
     name: string;
     quantity: number;
     refundAmount: number;
@@ -69,7 +69,7 @@ interface AddReturnModalProps {
 
 interface ReturnItem {
     id: string;
-    productId: string;
+    productId?: string;
     name: string;
     quantity: number;
     reason: string;
@@ -119,14 +119,14 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             if (initialData.items && initialData.items.length > 0) {
                 setItems(initialData.items.map(i => ({
                     id: Math.random().toString(36).substr(2, 9),
-                    productId: i.productId,
+                    productId: i.productId || undefined,
                     name: i.name,
                     quantity: i.quantity,
                     reason: "GENERAL_RETURN",
                     refundAmount: i.refundAmount,
                     refundCurrency: i.refundCurrency || "TRY",
-                    restockProduct: true,
-                    immediateRestock: true,
+                    restockProduct: !!i.productId,
+                    immediateRestock: !!i.productId,
                     newBuyPrice: undefined,
                     newSellPrice: undefined,
                     ...(i.unitPrice ? { unitPrice: i.unitPrice } : {}),
@@ -282,7 +282,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
         try {
             const tickets = items.map(item => ({
                 sourceType: (item as any).debtId ? "DEBT" : sourceType,
-                productId: item.productId,
+                productId: item.productId || undefined,
                 quantity: item.quantity,
                 refundAmount: item.refundAmount,
                 refundCurrency: item.refundCurrency,
@@ -676,12 +676,16 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                             <Label className="text-[10px] font-bold uppercase cursor-pointer" htmlFor={`restock-${item.id}`}>Stokla</Label>
                                                             <Checkbox
                                                                 id={`restock-${item.id}`}
-                                                                checked={item.restockProduct}
-                                                                onCheckedChange={(v) => updateItem(item.id, { restockProduct: !!v })}
+                                                                checked={!!item.productId && item.restockProduct}
+                                                                disabled={!item.productId}
+                                                                onCheckedChange={(v) => {
+                                                                    if (!item.productId) return;
+                                                                    updateItem(item.id, { restockProduct: !!v, immediateRestock: !!v ? item.immediateRestock : false });
+                                                                }}
                                                                 className="rounded-md border-border/40 h-5 w-5 data-[state=checked]:bg-emerald-500"
                                                             />
                                                         </div>
-                                                        {item.restockProduct && (
+                                                        {item.productId && item.restockProduct && (
                                                             <div className="flex items-center justify-between w-full h-10 px-1 border-t border-border/20 pt-1 mt-1">
                                                                 <Label className="text-[10px] font-bold uppercase cursor-pointer" htmlFor={`quick-${item.id}`}>Hızlı</Label>
                                                                 <Checkbox
@@ -697,7 +701,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                             </div>
 
                                             {
-                                                item.restockProduct && item.immediateRestock && (
+                                                item.productId && item.restockProduct && item.immediateRestock && (
                                                     <div className="grid grid-cols-2 gap-4 pb-2 animate-in slide-in-from-top-1 duration-200">
                                                         <div className="space-y-1.5">
                                                             <Label className="text-[10px] uppercase font-bold text-indigo-500 pl-1">Yeni Alış Fiyatı (Opsiyonel)</Label>

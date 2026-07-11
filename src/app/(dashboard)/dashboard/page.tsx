@@ -3,7 +3,7 @@ import { getSession, getShopId } from "@/lib/auth";
 import { Role } from "@prisma/client";
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard";
 import { StaffDashboardClient } from "@/components/dashboard/staff-dashboard-client";
-import { getEmployeeDashboardData } from "@/lib/actions/staff-finance-actions";
+import { getDashboardStaffOverview, getEmployeeDashboardData } from "@/lib/actions/staff-finance-actions";
 import { getDashboardInit } from "@/lib/actions/dashboard-actions";
 import { getShop, getSettings } from "@/lib/actions/setting-actions";
 import { getCategories } from "@/lib/actions/product-actions";
@@ -24,12 +24,13 @@ export default async function DashboardPage() {
     const shopId = await getShopId(false);
 
     // Fetch essential data for hydration and initial render
-    const [initialStats, shop, categories, suppliers, staffData, settings] = await Promise.all([
+    const [initialStats, shop, categories, suppliers, staffData, staffOverview, settings] = await Promise.all([
       getDashboardInit(shopId ?? undefined),
       getShop(),
       getCategories(),
       getSuppliers(),
       getEmployeeDashboardData(session.user.id),
+      getDashboardStaffOverview(),
       getSettings()
     ]);
 
@@ -50,6 +51,7 @@ export default async function DashboardPage() {
               categories={categories}
               suppliers={suppliers}
               staffData={staffData}
+              staffOverview={staffOverview}
               userName={session.user.name || "Yönetici"}
               shopId={shopId ?? undefined}
               defaultCurrency={defaultCurrency}
@@ -61,8 +63,9 @@ export default async function DashboardPage() {
   }
 
   // Staff/Technician/Courier view
-  const [staffData, settings, dashboardData] = await Promise.all([
+  const [staffData, staffOverview, settings, dashboardData] = await Promise.all([
     getEmployeeDashboardData(session.user.id),
+    getDashboardStaffOverview(),
     getSettings(),
     getDashboardInit(session.user.shopId)
   ]);
@@ -85,6 +88,7 @@ export default async function DashboardPage() {
 
       <StaffDashboardClient
         data={staffData}
+        teamData={staffOverview}
         defaultCurrency={defaultCurrency}
         usdRate={usdRate}
       />

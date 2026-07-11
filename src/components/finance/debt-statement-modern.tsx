@@ -3,6 +3,11 @@
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+    buildOpenDebtStatementEntries,
+    buildDebtStatementEntries,
+    getCurrentDebtTotals
+} from "@/lib/debt-statement-calculator";
 
 interface DebtStatementModernProps {
     customer: any;
@@ -30,18 +35,16 @@ export const DebtStatementModern = ({
     defaultCurrency = 'TRY'
 }: DebtStatementModernProps) => {
     // Sistemden gelen canlı kur bilgisini alıyoruz
-    const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 32.50;
+    const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 1;
+    const formatTRY = (amount: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+    const formatUSD = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
     // Fişteki (slip) toplam tutar hesaplama mantığıyla birebir aynı şekilde ödenmemiş borçları filtreleyip genel bakiyeyi hesaplıyoruz
     const unpaidDebts = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
 
-    const unpaidTRY = unpaidDebts
-        .filter((d: any) => d.currency !== 'USD')
-        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
-
-    const unpaidUSD = unpaidDebts
-        .filter((d: any) => d.currency === 'USD')
-        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
+    const currentTotals = getCurrentDebtTotals(debts);
+    const unpaidTRY = currentTotals.try;
+    const unpaidUSD = currentTotals.usd;
 
     const portfolioTotalTRY = Math.ceil(unpaidTRY + (unpaidUSD * currentUsdRate));
     const portfolioTotalUSD = (unpaidTRY / currentUsdRate) + unpaidUSD;
@@ -68,36 +71,30 @@ export const DebtStatementModern = ({
                 if (isNaN(date.getTime())) return false;
                 return date >= earliestDate;
             }
-            return !d.isPaid;
+            return (d.type === 'DEBT' || !d.type) && !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0;
         })
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     // Borç ve Tahsilat Hesaplamaları (Özet kutuları için filtrelenmiş veriden hesaplanır)
-    const totalTRY = filteredDebts
-        .filter(d => d.currency !== 'USD' && d.type !== 'PAYMENT')
-        .reduce((acc, d) => acc + Number(d.amount), 0);
+    const totalTRY = unpaidTRY;
+    const totalUSD = unpaidUSD;
 
-    const totalUSD = filteredDebts
-        .filter(d => d.currency === 'USD' && d.type !== 'PAYMENT')
-        .reduce((acc, d) => acc + Number(d.amount), 0);
-
-    const totalTahsilat = filteredDebts
-        .filter(d => d.type === 'PAYMENT')
-        .reduce((acc, d) => acc + Number(d.amountInTry || d.amount), 0);
+    const statementEntries = showPaid
+        ? buildDebtStatementEntries(filteredDebts, currentUsdRate)
+        : buildOpenDebtStatementEntries(debts, currentUsdRate);
+    const totalTahsilat = statementEntries
+        .filter((entry) => entry.type === 'PAYMENT')
+        .reduce((acc, entry) => acc + Number(entry.amountTRY), 0);
 
     // Tarih gruplama
-    const groups = filteredDebts.reduce((groups: any, item: any) => {
-        const date = format(new Date(item.createdAt), "yyyy-MM-dd");
+    const groups = statementEntries.reduce((groups: any, item: any) => {
+        const date = format(new Date(item.date), "yyyy-MM-dd");
         if (!groups[date]) groups[date] = [];
-        groups[date].push({
-            ...item,
-            amountInTry: item.currency === 'USD' ? (item.amount * (item.rate || currentUsdRate)) : item.amount
-        });
+        groups[date].push(item);
         return groups;
     }, {});
 
     const sortedDates = Object.keys(groups).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    let runningBalance = 0;
 
     return (
         <div className="w-[210mm] min-h-[297mm] bg-white p-10 font-sans text-slate-900 flex flex-col">
@@ -169,19 +166,22 @@ export const DebtStatementModern = ({
                             <th className="w-24 py-3 px-4 text-[10px] font-black uppercase tracking-wider rounded-tl-lg">TARİH</th>
                             <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider">AÇIKLAMA / ÜRÜN DETAYI</th>
                             <th className="w-32 py-3 px-4 text-[10px] font-black uppercase tracking-wider text-right">İŞLEM TUTARI</th>
-                            <th className="w-32 py-3 px-4 text-[10px] font-black uppercase tracking-wider text-right rounded-tr-lg">BAKİYE (TL)</th>
+                            <th className="w-28 py-3 px-4 text-[10px] font-black uppercase tracking-wider text-right">KALAN TL</th>
+                            <th className="w-28 py-3 px-4 text-[10px] font-black uppercase tracking-wider text-right rounded-tr-lg">KALAN USD</th>
                         </tr>
                     </thead>
                     <tbody className="border-x border-slate-200">
                         {sortedDates.map((date) => {
                             const dailyItems = groups[date];
-                            return dailyItems.map((item: any, idx: number) => {
-                                const amountInTry = item.currency === 'USD' ? (item.amount * (item.rate || currentUsdRate)) : item.amount;
-                                const isPayment = item.type === 'PAYMENT';
-                                runningBalance += (isPayment ? -amountInTry : amountInTry);
+                            return dailyItems.map((entry: any, idx: number) => {
+                                const item = entry.item;
+                                const isPayment = entry.type === 'PAYMENT';
+                                const paidAmount = Number(entry.paidAmount || 0);
+                                const remainingAmount = Number(entry.remainingAmount || 0);
+                                const formatEntryCurrency = (amount: number) => entry.currency === 'USD' ? formatUSD(amount) : formatTRY(amount);
 
                                 return (
-                                    <tr key={`${item.id}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
+                                    <tr key={`${item.id || entry.date.getTime()}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
                                         <td className="py-2.5 px-4 text-[11px] font-bold text-slate-400 tabular-nums align-top">
                                             {idx === 0 ? format(new Date(date), 'dd.MM.yyyy') : ""}
                                         </td>
@@ -194,9 +194,15 @@ export const DebtStatementModern = ({
                                                     {isPayment && "✓ "}
                                                     {item.notes || item.description || (isPayment ? 'TAHSİLAT' : 'ÜRÜN / HİZMET')}
                                                 </span>
-                                                {item.currency === 'USD' && (
+                                                {entry.currency === 'USD' && (
                                                     <span className="text-[9px] font-bold text-blue-500 bg-blue-50 self-start px-1.5 rounded">
                                                         ${item.amount.toLocaleString('tr-TR')} (₺{(item.amount * (item.rate || currentUsdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                                    </span>
+                                                )}
+                                                {!showPaid && !isPayment && (
+                                                    <span className="text-[10px] font-black text-slate-500 self-start">
+                                                        Kalan: {formatEntryCurrency(remainingAmount)}
+                                                        {paidAmount > 0 ? ` / Odenen: ${formatEntryCurrency(paidAmount)}` : ""}
                                                     </span>
                                                 )}
                                             </div>
@@ -207,15 +213,25 @@ export const DebtStatementModern = ({
                                                 isPayment ? "text-emerald-600" : "text-slate-900"
                                             )}>
                                                 {isPayment ? "-" : "+"}
-                                                {new Intl.NumberFormat(item.currency === 'USD' ? 'en-US' : 'tr-TR', {
+                                                {new Intl.NumberFormat(entry.currency === 'USD' ? 'en-US' : 'tr-TR', {
                                                     style: 'currency',
-                                                    currency: item.currency || 'TRY'
-                                                }).format(item.amount)}
+                                                    currency: entry.currency || 'TRY'
+                                                }).format(entry.amount)}
+                                                {isPayment && entry.currency === 'TRY' && (
+                                                    <span className="block text-[10px] font-bold text-slate-500">
+                                                        ({formatUSD(entry.amountUSD)})
+                                                    </span>
+                                                )}
                                             </span>
                                         </td>
                                         <td className="py-2.5 px-4 text-right align-top whitespace-nowrap">
                                             <span className="text-xs font-black text-slate-800 tabular-nums">
-                                                {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(runningBalance)}
+                                                {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(entry.runningTRY)}
+                                            </span>
+                                        </td>
+                                        <td className="py-2.5 px-4 text-right align-top whitespace-nowrap">
+                                            <span className="text-xs font-black text-blue-600 tabular-nums">
+                                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(entry.runningUSD)}
                                             </span>
                                         </td>
                                     </tr>
@@ -224,6 +240,44 @@ export const DebtStatementModern = ({
                         })}
                     </tbody>
                 </table>
+            </div>
+
+            <div className="mt-8 pt-6 border-t-2 border-slate-200">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">EKSTRE OZETI</div>
+                <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 shadow-sm">
+                        <div className="text-[9px] font-black text-emerald-600 uppercase mb-1 tracking-widest">TOPLAM TL BORCU</div>
+                        <div className="text-base font-black text-emerald-700">
+                            {formatTRY(totalTRY)}
+                        </div>
+                    </div>
+
+                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 shadow-sm">
+                        <div className="text-[9px] font-black text-blue-600 uppercase mb-1 tracking-widest">TOPLAM USD BORCU</div>
+                        <div className="text-base font-black text-blue-700">
+                            {formatUSD(totalUSD)}
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="text-[9px] font-black text-slate-500 uppercase mb-1 tracking-widest">TOPLAM TAHSILAT</div>
+                        <div className="text-base font-black text-slate-700 italic">
+                            {formatTRY(totalTahsilat)}
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-900 p-3 rounded-xl text-center shadow-xl flex flex-col justify-center">
+                        <div className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-widest border-b border-slate-700 pb-1">GENEL BAKIYE</div>
+                        <div className="flex flex-col gap-0.5">
+                            <div className="text-lg font-black text-white leading-none">
+                                {formatTRY(portfolioTotalTRY)}
+                            </div>
+                            <div className="text-[10px] font-black text-blue-400 tabular-nums">
+                                {formatUSD(portfolioTotalUSD)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Bottom Footer */}

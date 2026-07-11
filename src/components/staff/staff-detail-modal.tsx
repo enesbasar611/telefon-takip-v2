@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { Fragment, useState, useEffect, useTransition } from "react";
 import {
     Dialog,
     DialogContent,
@@ -176,6 +176,14 @@ export function StaffDetailModal({ member, isOpen, onClose }: StaffDetailModalPr
             currency: member.salaryCurrency || 'TRY',
         }).format(amount);
     };
+    const formatMovementDate = (date?: string | Date | null) => {
+        if (!date) return "-";
+        return new Date(date).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" });
+    };
+    const movementBadgeClass = (movement: any) => movement.category === "INCOME"
+        ? "bg-emerald-500/10 text-emerald-600"
+        : "bg-rose-500/10 text-rose-600";
+    const archiveMovements = (archive: any) => archive.metadata?.movements || [];
 
     if (!member) return null;
 
@@ -414,6 +422,37 @@ export function StaffDetailModal({ member, isOpen, onClose }: StaffDetailModalPr
                                             </div>
                                         </Card>
                                     </div>
+                                    <Card className="border-none shadow-sm bg-white dark:bg-slate-900 rounded-2xl overflow-hidden">
+                                        <CardContent className="p-0">
+                                            <div className="px-6 py-5 border-b dark:border-white/5 flex items-center justify-between">
+                                                <div>
+                                                    <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-[10px]">BU AY FİNANS HAREKETLERİ</h4>
+                                                    <p className="text-[10px] text-slate-400 mt-1">Avans, kesinti, prim ve diğer giriş/çıkış kayıtları</p>
+                                                </div>
+                                                <History className="h-4 w-4 text-slate-400" />
+                                            </div>
+                                            <div className="divide-y dark:divide-white/5">
+                                                {(data?.movements || []).length === 0 ? (
+                                                    <div className="px-6 py-8 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">Bu dönem hareket yok</div>
+                                                ) : (
+                                                    data.movements.map((movement: any) => (
+                                                        <div key={movement.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                                                            <div className="min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge className={cn("border-none rounded-lg text-[8px] font-black", movementBadgeClass(movement))}>{movement.label}</Badge>
+                                                                    <span className="text-[10px] font-bold text-slate-400">{formatMovementDate(movement.date)}</span>
+                                                                </div>
+                                                                <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{movement.description}</p>
+                                                            </div>
+                                                            <span className={cn("shrink-0 text-xs font-black", movement.category === "INCOME" ? "text-emerald-600" : "text-rose-600")}>
+                                                                {movement.category === "INCOME" ? "+" : "-"}{formatCurrency(Number(movement.amount || 0))}
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </TabsContent>
 
                                 <TabsContent value="history" className="mt-0">
@@ -436,13 +475,36 @@ export function StaffDetailModal({ member, isOpen, onClose }: StaffDetailModalPr
                                                         </tr>
                                                     ) : (
                                                         archives.map((archive) => (
-                                                            <tr key={archive.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                                                                <td className="px-6 py-4 font-bold text-xs text-slate-900 dark:text-white uppercase">{archive.period}</td>
-                                                                <td className="px-6 py-4 text-xs font-medium">{formatCurrency(archive.baseSalary)}</td>
-                                                                <td className="px-6 py-4 text-xs font-medium text-emerald-600">+{formatCurrency(archive.totalCommissions)}</td>
-                                                                <td className="px-6 py-4 text-xs font-medium text-red-500">-{formatCurrency(archive.totalExpenses)}</td>
-                                                                <td className="px-6 py-4 text-xs font-black text-right">{formatCurrency(archive.netPayout)}</td>
-                                                            </tr>
+                                                            <Fragment key={archive.id}>
+                                                                <tr className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                                                                    <td className="px-6 py-4 font-bold text-xs text-slate-900 dark:text-white uppercase">{archive.period}</td>
+                                                                    <td className="px-6 py-4 text-xs font-medium">{formatCurrency(archive.baseSalary)}</td>
+                                                                    <td className="px-6 py-4 text-xs font-medium text-emerald-600">+{formatCurrency(archive.totalCommissions)}</td>
+                                                                    <td className="px-6 py-4 text-xs font-medium text-red-500">-{formatCurrency(archive.totalExpenses)}</td>
+                                                                    <td className="px-6 py-4 text-xs font-black text-right">{formatCurrency(archive.netPayout)}</td>
+                                                                </tr>
+                                                                {archiveMovements(archive).length > 0 && (
+                                                                    <tr key={`${archive.id}-movements`} className="bg-slate-50/60 dark:bg-white/[0.02]">
+                                                                        <td colSpan={5} className="px-6 py-4">
+                                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                                {archiveMovements(archive).map((movement: any) => (
+                                                                                    <div key={movement.id} className="flex items-center justify-between gap-3 rounded-xl bg-white dark:bg-white/5 px-3 py-2 text-[10px]">
+                                                                                        <div className="min-w-0">
+                                                                                            <span className="font-black text-slate-700 dark:text-slate-200">{movement.label}</span>
+                                                                                            <span className="mx-1 text-slate-300">-</span>
+                                                                                            <span className="font-medium text-slate-500">{formatMovementDate(movement.date)}</span>
+                                                                                            <p className="truncate text-slate-400">{movement.description}</p>
+                                                                                        </div>
+                                                                                        <span className={cn("shrink-0 font-black", movement.category === "INCOME" ? "text-emerald-600" : "text-rose-600")}>
+                                                                                            {movement.category === "INCOME" ? "+" : "-"}{formatCurrency(Number(movement.amount || 0))}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </Fragment>
                                                         ))
                                                     )}
                                                 </tbody>

@@ -337,6 +337,11 @@ export function StaffManagementClient({
             return summary;
         }, { baseSalary: 0, totalCommissions: 0, totalExpenses: 0, netPayout: 0 });
     }, [filteredArchives]);
+    const formatMovementDate = (date?: string | Date | null) => {
+        if (!date) return "-";
+        return new Date(date).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" });
+    };
+    const movementAmountClass = (movement: any) => movement.category === "INCOME" ? "text-emerald-600" : "text-rose-600";
 
     const handleAddExpense = async () => {
         if (!expenseMember) return;
@@ -1098,6 +1103,36 @@ export function StaffManagementClient({
                                             )}
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="font-black text-xs text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <Activity className="h-4 w-4 text-emerald-500" /> TARİHLİ FİNANS HAREKETLERİ
+                                    </h3>
+                                    {(selectedArchive.metadata?.movements || []).length === 0 ? (
+                                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 text-[10px] font-bold text-slate-400">
+                                            Bu bordro arşivinde hareket detayı yok.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {selectedArchive.metadata.movements.map((movement: any) => (
+                                                <div key={movement.id} className="flex items-center justify-between gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 text-[10px]">
+                                                    <div className="min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <Badge className={cn("border-none rounded-lg text-[8px] font-black", movement.category === "INCOME" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600")}>
+                                                                {movement.label}
+                                                            </Badge>
+                                                            <span className="font-bold text-slate-400">{formatMovementDate(movement.date)}</span>
+                                                        </div>
+                                                        <p className="mt-1 truncate font-bold text-slate-600 dark:text-slate-300">{movement.description}</p>
+                                                    </div>
+                                                    <span className={cn("shrink-0 font-black", movementAmountClass(movement))}>
+                                                        {movement.category === "INCOME" ? "+" : "-"}{Number(movement.amount || 0).toLocaleString('tr-TR')} ₺
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-4">

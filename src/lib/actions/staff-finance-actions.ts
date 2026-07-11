@@ -18,7 +18,7 @@ const LeaveStatus = {
 } as const;
 import { recordAuditLog } from "./audit-actions";
 import { serializePrisma } from "@/lib/utils";
-import { calculatePayrollSnapshot, getPayrollPeriodRange, getSalaryPaymentStatus } from "@/lib/staff-finance-calculations";
+import { buildStaffFinanceMovements, calculateCareerPoints, calculatePayrollSnapshot, getDashboardStaffPeriodRange, getPayrollPeriodRange, getSalaryPaymentStatus, type DashboardStaffRangeMode } from "@/lib/staff-finance-calculations";
 
 const CommissionStatus = {
     PENDING: "PENDING",
@@ -129,7 +129,7 @@ export async function addStaffExpense({
 /**
  * Çalışan Dashboard verilerini getirir (Hassas veri kısıtlamalı)
  */
-export async function getEmployeeDashboardData(userId: string, options?: { employmentEndedAt?: Date }) {
+export async function getEmployeeDashboardData(userId: string, options?: { employmentEndedAt?: Date; periodStart?: Date; periodEnd?: Date; asOfDate?: Date }) {
     const session = await auth();
     if (!session?.user) throw new Error("Yetkisiz erişim");
 
@@ -139,8 +139,10 @@ export async function getEmployeeDashboardData(userId: string, options?: { emplo
     }
 
     const shopId = session.user.shopId!;
-    const now = new Date();
-    const { start: firstDayOfMonth, end: lastDayOfMonth } = getPayrollPeriodRange(now);
+    const now = options?.asOfDate || new Date();
+    const defaultRange = getPayrollPeriodRange(now);
+    const firstDayOfMonth = options?.periodStart || defaultRange.start;
+    const lastDayOfMonth = options?.periodEnd || defaultRange.end;
 
     // 1. Personel Temel Bilgileri
     const user = await (prisma.user as any).findUnique({
@@ -265,6 +267,13 @@ export async function getEmployeeDashboardData(userId: string, options?: { emplo
         expenses,
         leaves: allLeaves,
     });
+    const movements = buildStaffFinanceMovements({
+        commissions,
+        expenses,
+        unpaidLeaveDeduction: finance.unpaidLeaveDeduction,
+        unpaidLeaveDays: finance.unpaidLeaveDays,
+        periodEnd: lastDayOfMonth,
+    });
 
     return serializePrisma({
         finance,
@@ -280,6 +289,7 @@ export async function getEmployeeDashboardData(userId: string, options?: { emplo
         leaves: allLeaves,
         expenses: expenses,
         commissions: commissions,
+        movements,
     });
 }
 
@@ -505,6 +515,7 @@ export async function createStaffArchive(userId: string, tx?: any, options?: { e
                     }] : []),
                 ],
             },
+            movements: (data as any).movements || [],
         };
 
         // upsert yerine findFirst + create/update kullan (nullable userId ile compound unique sorun yaratıyor)
@@ -796,6 +807,237 @@ export async function getManagerFinanceStats() {
         totalPersonnel: users.length,
         totalMonthlyLiability: monthlyFixedCost + monthlyVariableComm - monthlyExpenses
     };
+}
+
+/**
+ * Dashboard personel sekmesi için yönetici + ekip performans özetini getirir.
+ */
+export async function getDashboardStaffOverview(options?: { mode?: DashboardStaffRangeMode; referenceDate?: Date | string }) {
+    const session = await auth();
+    if (!session?.user?.shopId || !session.user.id) throw new Error("Yetkisiz erişim");
+
+    const isAdmin = session.user.role === Role.ADMIN || session.user.role === Role.SUPER_ADMIN || session.user.role === Role.SHOP_MANAGER;
+    const shopId = session.user.shopId;
+    const { start, end, period, mode } = getDashboardStaffPeriodRange({
+        mode: options?.mode || "month",
+        referenceDate: options?.referenceDate || new Date(),
+    });
+
+    const users = await prisma.user.findMany({
+        where: {
+            shopId,
+            isApproved: true,
+            ...(isAdmin ? {} : { id: session.user.id }),
+        },
+        select: {
+            id: true,
+            name: true,
+            surname: true,
+            role: true,
+            image: true,
+            email: true,
+            createdAt: true,
+        },
+        orderBy: [
+            { role: "asc" },
+            { createdAt: "asc" },
+        ],
+    });
+
+    const rows = await Promise.all(users.map(async (user) => {
+        const asOfDate = end < new Date() ? end : new Date();
+        const [financeData, sales, services, tasks] = await Promise.all([
+            getEmployeeDashboardData(user.id, { periodStart: start, periodEnd: end, asOfDate }),
+            prisma.sale.findMany({
+                where: { shopId, userId: user.id, createdAt: { gte: start, lte: end } },
+                select: { id: true, saleNumber: true, finalAmount: true, createdAt: true },
+                orderBy: { createdAt: "desc" },
+                take: 8,
+            }),
+            prisma.serviceTicket.findMany({
+                where: {
+                    shopId,
+                    technicianId: user.id,
+                    OR: [
+                        { deliveredAt: { gte: start, lte: end } },
+                        { updatedAt: { gte: start, lte: end } },
+                    ],
+                },
+                select: { id: true, ticketNumber: true, status: true, actualCost: true, estimatedCost: true, updatedAt: true, deliveredAt: true, createdAt: true },
+                orderBy: { updatedAt: "desc" },
+                take: 8,
+            }),
+            (prisma.shortageItem as any).findMany({
+                where: {
+                    shopId,
+                    assignedToId: user.id,
+                    OR: [
+                        { takenAt: { gte: start, lte: end } },
+                        { updatedAt: { gte: start, lte: end } },
+                        { createdAt: { gte: start, lte: end } },
+                    ],
+                },
+                select: { id: true, name: true, isResolved: true, createdAt: true, updatedAt: true, takenAt: true },
+                orderBy: { updatedAt: "desc" },
+                take: 8,
+            }),
+        ]);
+
+        const salesRevenue = sales.reduce((sum, sale) => sum + Number(sale.finalAmount || 0), 0);
+        const serviceRevenue = services.reduce((sum, ticket) => sum + Number(ticket.actualCost || ticket.estimatedCost || 0), 0);
+        const approvedCommissionsForCareer = ((financeData as any).commissions || [])
+            .filter((commission: any) => commission.type !== "CAREER_POINTS")
+            .reduce((sum: number, commission: any) => sum + Number(commission.amount || 0), 0);
+        const careerBase = calculateCareerPoints({
+            serviceCount: services.length,
+            salesCount: sales.length,
+            completedTaskCount: tasks.filter((task: any) => task.isResolved).length,
+            approvedCommissions: approvedCommissionsForCareer,
+        });
+        const redemptionReferenceId = `career-points-${mode}-${period}-${user.id}`;
+        const redeemedCommission = await (prisma as any).staffCommission.findFirst({
+            where: { shopId, userId: user.id, referenceId: redemptionReferenceId },
+            select: { id: true, amount: true, createdAt: true },
+        });
+
+        const recentActions = [
+            ...sales.map((sale) => ({
+                id: `sale-${sale.id}`,
+                type: "SALE",
+                label: "Satış",
+                description: sale.saleNumber ? `Satış #${sale.saleNumber}` : "Satış işlemi",
+                amount: Number(sale.finalAmount || 0),
+                createdAt: sale.createdAt,
+            })),
+            ...services.map((ticket) => ({
+                id: `service-${ticket.id}`,
+                type: "SERVICE",
+                label: "Servis",
+                description: `${ticket.ticketNumber || "Servis"} - ${ticket.status}`,
+                amount: Number(ticket.actualCost || ticket.estimatedCost || 0),
+                createdAt: ticket.deliveredAt || ticket.updatedAt || ticket.createdAt,
+            })),
+            ...tasks.map((task: any) => ({
+                id: `task-${task.id}`,
+                type: "TASK",
+                label: task.isResolved ? "Görev tamamlandı" : "Görev",
+                description: task.name || "Personel görevi",
+                amount: 0,
+                createdAt: task.takenAt || task.updatedAt || task.createdAt,
+            })),
+            ...((financeData as any).movements || []).slice(0, 6).map((movement: any) => ({
+                id: `finance-${movement.id}`,
+                type: movement.source,
+                label: movement.label,
+                description: movement.description,
+                amount: movement.category === "INCOME" ? Number(movement.amount || 0) : -Number(movement.amount || 0),
+                createdAt: movement.date,
+            })),
+        ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 10);
+
+        return {
+            user,
+            finance: (financeData as any).finance,
+            milestones: (financeData as any).milestones || [],
+            movements: (financeData as any).movements || [],
+            metrics: {
+                salesCount: sales.length,
+                serviceCount: services.length,
+                taskCount: tasks.length,
+                completedTaskCount: tasks.filter((task: any) => task.isResolved).length,
+                salesRevenue,
+                serviceRevenue,
+                totalRevenue: salesRevenue + serviceRevenue,
+            },
+            career: {
+                ...careerBase,
+                redemptionReferenceId,
+                redeemed: !!redeemedCommission,
+                redeemedAmount: Number(redeemedCommission?.amount || 0),
+                redeemedAt: redeemedCommission?.createdAt || null,
+            },
+            recentActions,
+            isCurrentUser: user.id === session.user.id,
+        };
+    }));
+
+    const totals = rows.reduce((summary: any, row: any) => {
+        summary.netPayout += Number(row.finance?.netPayout || 0);
+        summary.approvedCommissions += Number(row.finance?.approvedCommissions || 0);
+        summary.pendingCommissions += Number(row.finance?.pendingCommissions || 0);
+        summary.expenses += Number(row.finance?.totalExpenses || 0);
+        summary.salesCount += Number(row.metrics.salesCount || 0);
+        summary.serviceCount += Number(row.metrics.serviceCount || 0);
+        summary.taskCount += Number(row.metrics.taskCount || 0);
+        summary.totalRevenue += Number(row.metrics.totalRevenue || 0);
+        summary.careerPoints += Number(row.career?.points || 0);
+        summary.redeemableBonus += row.career?.redeemed ? 0 : Number(row.career?.redeemableBonus || 0);
+        return summary;
+    }, {
+        netPayout: 0,
+        approvedCommissions: 0,
+        pendingCommissions: 0,
+        expenses: 0,
+        salesCount: 0,
+        serviceCount: 0,
+        taskCount: 0,
+        totalRevenue: 0,
+        careerPoints: 0,
+        redeemableBonus: 0,
+    });
+
+    return serializePrisma({
+        period,
+        mode,
+        periodStart: start,
+        periodEnd: end,
+        currentUserId: session.user.id,
+        isAdmin,
+        totals,
+        staff: rows,
+        recentActions: rows
+            .flatMap((row: any) => row.recentActions.map((action: any) => ({ ...action, user: row.user })))
+            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 12),
+    });
+}
+
+export async function redeemCareerPointsAsBonus(options?: { userId?: string; mode?: DashboardStaffRangeMode; referenceDate?: Date | string }) {
+    const session = await auth();
+    if (!session?.user?.shopId || !session.user.id) throw new Error("Yetkisiz erişim");
+
+    const isAdmin = session.user.role === Role.ADMIN || session.user.role === Role.SUPER_ADMIN || session.user.role === Role.SHOP_MANAGER;
+    const targetUserId = options?.userId || session.user.id;
+    if (!isAdmin && targetUserId !== session.user.id) throw new Error("Sadece kendi puanınızı prime çevirebilirsiniz");
+
+    const overview = await getDashboardStaffOverview({
+        mode: options?.mode || "month",
+        referenceDate: options?.referenceDate || new Date(),
+    }) as any;
+    const row = overview.staff.find((item: any) => item.user.id === targetUserId);
+    if (!row) throw new Error("Personel performansı bulunamadı");
+    if (row.career?.redeemed) throw new Error("Bu dönem kariyer puanı zaten prime çevrilmiş");
+
+    const amount = Number(row.career?.redeemableBonus || 0);
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error("Prime çevrilecek kariyer puanı yok");
+
+    const commission = await (prisma as any).staffCommission.create({
+        data: {
+            userId: targetUserId,
+            amount,
+            description: `${overview.period} ${overview.mode === "week" ? "haftalık" : "aylık"} kariyer puanı primi`,
+            type: "CAREER_POINTS",
+            referenceId: row.career.redemptionReferenceId,
+            shopId: session.user.shopId,
+            status: CommissionStatus.APPROVED,
+            approvedAt: new Date(),
+            approvedById: session.user.id,
+        },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/personel");
+    return { success: true, commission: serializePrisma(commission), amount };
 }
 
 /**

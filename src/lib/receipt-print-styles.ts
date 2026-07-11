@@ -458,12 +458,28 @@ export async function generateProfessionalPDF(
     filename: string
 ): Promise<void> {
     try {
+        const blob = await generateProfessionalPDFBlob(element);
+        if (!blob) return;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+        console.error("PDF generation failed", err);
+    }
+}
+
+export async function generateProfessionalPDFBlob(element: HTMLElement): Promise<Blob | null> {
+    try {
         const { jsPDF } = await import("jspdf");
         const html2canvasModule = await import("html2canvas");
         const html2canvas = html2canvasModule.default;
 
         const canvas = await html2canvas(element, {
-            scale: 4, // 4-5x scale is best for high-quality printing
+            scale: 4,
             useCORS: true,
             logging: false,
             backgroundColor: "#ffffff"
@@ -471,7 +487,7 @@ export async function generateProfessionalPDF(
 
         const imgData = canvas.toDataURL("image/jpeg", 1.0);
 
-        const pdfWidth = 210; // A4 width in mm
+        const pdfWidth = 210;
         const imgWidthPx = canvas.width;
         const imgHeightPx = canvas.height;
         const imgRatio = imgHeightPx / imgWidthPx;
@@ -479,9 +495,10 @@ export async function generateProfessionalPDF(
 
         const pdf = new jsPDF("p", "mm", [pdfWidth, pdfHeight]);
         pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save(filename);
+        return pdf.output("blob");
     } catch (err) {
-        console.error("PDF generation failed", err);
+        console.error("PDF blob generation failed", err);
+        return null;
     }
 }
 

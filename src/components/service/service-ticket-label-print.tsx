@@ -101,14 +101,17 @@ export function ServiceTicketLabelPrintArea({ label, onPrinted }: ServiceTicketL
       >
         <div className="barcode-print-page barcode-print-page-single bg-white">
           <div className="service-ticket-label barcode-label">
-            <div className="service-ticket-label-shop">{label.shopName}</div>
-            {(label.shopPhone || label.shopAddress) && (
-              <div className="service-ticket-label-shop-sub">
-                {[label.shopPhone, label.shopAddress].filter(Boolean).join(" • ")}
-              </div>
-            )}
-            <Barcode value={label.ticketNumber} width={1.1} height={22} fontSize={8} displayValue />
+            <div className="service-ticket-label-code">
+              <div className="service-ticket-label-shop">{label.shopName}</div>
+              {label.shopPhone && (
+                <div className="service-ticket-label-shop-sub">{label.shopPhone}</div>
+              )}
+              <Barcode value={label.ticketNumber} width={0.58} height={11} fontSize={6} displayValue={false} />
+              <div className="service-ticket-label-ticket">{label.ticketNumber}</div>
+            </div>
             <div className="service-ticket-label-grid">
+              <span>Fiş</span>
+              <strong>{label.ticketNumber}</strong>
               <span>Müşteri</span>
               <strong>{label.customerName}</strong>
               <span>Telefon</span>

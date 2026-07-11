@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send, Smartphone, CheckCheck, Sparkles, Loader2, Globe, Monitor, Users } from "lucide-react";
+import { Send, Smartphone, CheckCheck, Sparkles, Loader2, Globe, Monitor, Users, FileText, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { sendWhatsAppClientSide } from "@/lib/utils/notifications";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,12 @@ interface WhatsAppConfirmModalProps {
     customerName?: string;
     initialMessage: string;
     mode?: "single" | "bulk" | "selection"; // selection: single customer, multiple numbers
+    attachment?: {
+        filename: string;
+        url?: string;
+        description?: string;
+    };
+    onBeforeSend?: () => void | Promise<void>;
 }
 
 export function WhatsAppConfirmModal({
@@ -25,7 +31,9 @@ export function WhatsAppConfirmModal({
     phones = [],
     customerName,
     initialMessage,
-    mode = "single"
+    mode = "single",
+    attachment,
+    onBeforeSend
 }: WhatsAppConfirmModalProps) {
     const [message, setMessage] = useState(initialMessage);
     const [isSending, setIsSending] = useState(false);
@@ -81,6 +89,7 @@ export function WhatsAppConfirmModal({
         setIsSending(true);
 
         try {
+            await onBeforeSend?.();
             for (const p of targetPhones) {
                 sendWhatsAppClientSide(p, message);
                 await new Promise(r => setTimeout(r, mode === "bulk" ? 800 : 0));
@@ -109,7 +118,7 @@ export function WhatsAppConfirmModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !isSending && onClose()}>
-            <DialogContent className="sm:max-w-[425px] bg-[#EFEAE2] dark:bg-[#0F172A] p-0 border-none overflow-hidden outline-none shadow-2xl">
+            <DialogContent className="w-[calc(100vw-1rem)] sm:max-w-[720px] lg:max-w-[820px] max-h-[92dvh] bg-[#EFEAE2] dark:bg-[#0F172A] p-0 border-none overflow-hidden outline-none shadow-2xl flex flex-col">
 
                 {/* WhatsApp Header Mockup */}
                 <div className="bg-[#00A884] dark:bg-[#202C33] flex items-center gap-3 px-4 py-3 text-white">
@@ -149,18 +158,18 @@ export function WhatsAppConfirmModal({
                 )}
 
                 {/* Chat Background & Bubble */}
-                <div className="p-4 bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-repeat min-h-[250px] flex flex-col justify-end relative">
+                <div className="p-4 sm:p-6 bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-repeat min-h-[360px] flex-1 overflow-y-auto flex flex-col justify-end relative">
                     {isSending && (
                         <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center flex-col gap-3">
                             <Loader2 className="w-10 h-10 text-white animate-spin" />
                             <p className="text-white font-bold text-sm">Hazırlanıyor...</p>
                         </div>
                     )}
-                    <div className="bg-[#D9FDD3] dark:bg-[#005C4B] md:max-w-[90%] max-w-[95%] self-end rounded-lg rounded-tr-none p-2 shadow-md relative border border-emerald-500/10">
+                    <div className="bg-[#D9FDD3] dark:bg-[#005C4B] w-full sm:max-w-[92%] self-end rounded-xl rounded-tr-none p-3 sm:p-4 shadow-md relative border border-emerald-500/10">
                         <textarea
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
-                            className="w-full bg-transparent border-none focus:ring-0 resize-none min-h-[100px] text-sm text-[#111B21] dark:text-[#E9EDEF] font-sans outline-none leading-relaxed"
+                            className="w-full bg-transparent border-none focus:ring-0 resize-y min-h-[220px] sm:min-h-[300px] max-h-[52dvh] text-sm sm:text-base text-[#111B21] dark:text-[#E9EDEF] font-sans outline-none leading-relaxed"
                             placeholder="Mesajınızı yazın..."
                             autoFocus
                         />
@@ -189,6 +198,29 @@ export function WhatsAppConfirmModal({
                                 <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
                             </div>
                         </div>
+                        {attachment && (
+                            <div className="mt-3 rounded-xl border border-emerald-700/10 bg-white/70 dark:bg-black/15 p-3 flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                                    <FileText className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-black text-[#111B21] dark:text-[#E9EDEF] truncate">{attachment.filename}</p>
+                                    <p className="text-[10px] font-semibold text-black/55 dark:text-white/55">
+                                        {attachment.description || "PDF dosyasi hazir. WhatsApp acildiginda dosyayi sohbete ekleyin."}
+                                    </p>
+                                </div>
+                                {attachment.url && (
+                                    <a
+                                        href={attachment.url}
+                                        download={attachment.filename}
+                                        className="h-9 w-9 rounded-lg bg-[#00A884]/10 text-[#00A884] hover:bg-[#00A884]/20 flex items-center justify-center transition-colors shrink-0"
+                                        title="PDF indir"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                    </a>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 

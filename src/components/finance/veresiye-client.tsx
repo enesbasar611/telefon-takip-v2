@@ -107,6 +107,10 @@ import { AddReturnModal } from "@/components/stock/add-return-modal";
 import { DebtReceiptModal } from "./debt-receipt-modal";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import {
+    buildDebtStatementEntries,
+    getStatementItemTitle
+} from "@/lib/debt-statement-calculator";
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -207,6 +211,51 @@ const getSafeDebtRemaining = (debt: any) => {
     return Math.min(Math.max(remaining, 0), amount);
 };
 
+const RETURNED_STATUSES = ["APPROVED", "RESTOCKED", "REFUNDED", "EXCHANGED", "SENT_TO_SUPPLIER"];
+
+const getCompletedReturns = (returns: any[] = []) =>
+    returns.filter((returnTicket: any) => RETURNED_STATUSES.includes(returnTicket.returnStatus));
+
+const getReturnedDebtAmount = (debt: any, returns: any[] = []) => {
+    const debtId = debt?.id;
+    if (!debtId) return 0;
+    return getCompletedReturns(returns)
+        .filter((returnTicket: any) => returnTicket.debtId === debtId)
+        .reduce((sum: number, returnTicket: any) => sum + Number(returnTicket.refundAmount || 0), 0);
+};
+
+const getReturnedSaleItemAmount = (debt: any, saleItem: any, returns: any[] = []) =>
+    getCompletedReturns(returns)
+        .filter((returnTicket: any) =>
+            (!debt?.id || returnTicket.debtId === debt.id) &&
+            (!debt?.saleId || returnTicket.saleId === debt.saleId || returnTicket.saleId === debt.sale?.id) &&
+            (!saleItem?.productId || returnTicket.productId === saleItem.productId)
+        )
+        .reduce((sum: number, returnTicket: any) => sum + Number(returnTicket.refundAmount || 0), 0);
+
+const adjustDebtForReturns = (debt: any, returns: any[] = []) => {
+    const amount = Number(debt?.amount || 0);
+    const returnedAmount = Math.min(amount, getReturnedDebtAmount(debt, returns));
+    if (returnedAmount <= 0) return debt;
+
+    const adjustedAmount = Math.max(0, amount - returnedAmount);
+    if (adjustedAmount <= 0.01) return null;
+
+    const adjustedRemaining = Math.min(getSafeDebtRemaining(debt), adjustedAmount);
+    return {
+        ...debt,
+        amount: adjustedAmount,
+        remainingAmount: adjustedRemaining,
+        isPaid: adjustedRemaining <= 0.01,
+        returnedAmount,
+    };
+};
+
+const getPrintableDebts = (debts: any[] = [], returns: any[] = []) =>
+    debts
+        .map((debt) => adjustDebtForReturns(debt, returns))
+        .filter(Boolean);
+
 export function VeresiyeClient({
     debts: propsDebts,
     thisMonthCollected: propsThisMonthCollected,
@@ -267,7 +316,7 @@ export function VeresiyeClient({
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const defaultCurrency = settings?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
-    const usdRate = rates?.usd || 32.5;
+    const usdRate = rates?.usd || 1;
 
     // Payment States
     const [paymentAmount, setPaymentAmount] = useState("");
@@ -301,6 +350,7 @@ export function VeresiyeClient({
     const [receiptCustomer, setReceiptCustomer] = useState<any>(null);
     const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
     const [receiptShowPaid, setReceiptShowPaid] = useState(false);
+    const [receiptAutoPDF, setReceiptAutoPDF] = useState(false);
 
     // Stats Detail Modal State
     const [statsModalOpen, setStatsModalOpen] = useState(false);
@@ -341,14 +391,16 @@ export function VeresiyeClient({
     const handleBulkReturn = () => {
         if (selectedDebtIds.length === 0 && selectedSaleItemIds.length === 0) return;
 
-        const debtsToProcess = (statementData?.debts || []).filter((d: any) => selectedDebtIds.includes(d.id));
+        const debtsToProcess = getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => selectedDebtIds.includes(d.id));
         const returnItems: any[] = [];
 
         // 1. Process selected debts (whole)
         debtsToProcess.forEach((debt: any) => {
             const debtCurrency = debt.currency || "TRY";
             if (debt.sale?.items && debt.sale.items.length > 0) {
-                debt.sale.items.forEach((si: any) => {
+	                debt.sale.items
+	                    .filter((si: any) => getReturnedSaleItemAmount(debt, si, statementData?.activeReturns || []) <= 0)
+	                    .forEach((si: any) => {
                     // Avoid double counting if specific items are also selected
                     if (!selectedSaleItemIds.includes(si.id)) {
                         returnItems.push({
@@ -363,8 +415,8 @@ export function VeresiyeClient({
                             debtId: debt.id,
                             saleId: debt.saleId,
                         });
-                    }
-                });
+	                    }
+	                });
             } else {
                 returnItems.push({
                     productId: debt.productId || "",
@@ -381,7 +433,9 @@ export function VeresiyeClient({
         if (selectedSaleItemIds.length > 0) {
             (statementData?.debts || []).forEach((debt: any) => {
                 if (debt.sale?.items) {
-                    debt.sale.items.forEach((si: any) => {
+	                    debt.sale.items
+	                        .filter((si: any) => getReturnedSaleItemAmount(debt, si, statementData?.activeReturns || []) <= 0)
+	                        .forEach((si: any) => {
                         if (selectedSaleItemIds.includes(si.id)) {
                             returnItems.push({
                                 productId: si.productId,
@@ -395,8 +449,8 @@ export function VeresiyeClient({
                                 debtId: debt.id,
                                 saleId: debt.saleId,
                             });
-                        }
-                    });
+	                        }
+	                    });
                 }
             });
         }
@@ -482,7 +536,7 @@ export function VeresiyeClient({
         if (!confirm("Tahsilatı geri almak istiyor musunuz? Bu işlem kasanızdan tutarı düşecek ve borcu geri yükleyecektir.")) return;
 
         startTransition(async () => {
-            const res = await deleteCustomerPayment(txId);
+            const res = await deleteCustomerPayment(txId, rates?.usd || 1);
             if (res.success && res.before && res.after) {
                 const diffTRY = res.after.totalRemainingTRY - res.before.totalRemainingTRY;
                 const diffUSD = res.after.totalRemainingUSD - res.before.totalRemainingUSD;
@@ -508,7 +562,7 @@ export function VeresiyeClient({
                 editingTransaction.id,
                 Number(editTxAmount),
                 editTxNotes,
-                rates?.usd || 32.5
+                rates?.usd || 1
             );
             if (res.success && res.after) {
                 toast.success(`Tahsilat güncellendi. Yeni Borç: ₺${res.after.totalRemainingTRY.toLocaleString('tr-TR')}${res.after.totalRemainingUSD > 0 ? ` + $${res.after.totalRemainingUSD.toLocaleString('tr-TR')}` : ""}`);
@@ -754,7 +808,7 @@ export function VeresiyeClient({
         if (paymentCurrency === newCurrency) return;
         setIgnoreBalance(false);
 
-        const usdRate = rates?.usd || 32.5;
+        const usdRate = rates?.usd || 1;
         const currentAmount = Number(paymentAmount) || 0;
 
         let converted = 0;
@@ -798,7 +852,7 @@ export function VeresiyeClient({
                 paymentCurrency,
                 paymentMethod,
                 accountId: selectedAccountId || undefined,
-                usdRate: rates?.usd || 32.5,
+                usdRate: rates?.usd || 1,
                 notes: paymentNotes,
                 debtIds: selectedDebtIds,
                 ignoreExcess: ignoreBalance
@@ -822,8 +876,8 @@ export function VeresiyeClient({
                     msg += `*📊 Borç Durum Özeti:*\n`;
                     msg += `--------------------\n`;
 
-                    const beforeTotal = before.totalRemainingTRY + (before.totalRemainingUSD * (rates?.usd || 32.5));
-                    const afterTotal = after.totalRemainingTRY + (after.totalRemainingUSD * (rates?.usd || 32.5));
+                    const beforeTotal = before.totalRemainingTRY + (before.totalRemainingUSD * (rates?.usd || 1));
+                    const afterTotal = after.totalRemainingTRY + (after.totalRemainingUSD * (rates?.usd || 1));
 
                     if (before.totalRemainingTRY > 0 || after.totalRemainingTRY > 0) {
                         msg += `*Türk Lirası (₺):*\n`;
@@ -1231,12 +1285,14 @@ export function VeresiyeClient({
                 const statement = await getCustomerStatement(customer.customerId);
                 const statementDebts = statement.success ? (statement.debts || []) : [];
                 const statementPayments = statement.success ? (statement.transactions || []) : [];
-                const debtsForExport = statementDebts.length > 0 ? statementDebts : customer.debtItems;
+                const statementReturns = statement.success ? (statement.activeReturns || []) : [];
+                const debtsForExport = getPrintableDebts(statementDebts.length > 0 ? statementDebts : customer.debtItems, statementReturns);
 
                 return {
                     customer,
                     debts: debtsForExport,
                     payments: statementPayments,
+                    returns: statementReturns,
                 };
             }));
 
@@ -1249,13 +1305,29 @@ export function VeresiyeClient({
         }
     };
 
-    const exportRowsForCustomer = (section: any) => {
-        const { customer, debts, payments } = section;
+	    const exportRowsForCustomer = (section: any) => {
+	        const { customer, debts, payments } = section;
+	        const outputTotalTRY = (debts || [])
+	            .filter((debt: any) => (debt.currency || "TRY") !== "USD")
+	            .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
+	        const outputTotalUSD = (debts || [])
+	            .filter((debt: any) => debt.currency === "USD")
+	            .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
+	        const statementRows = buildDebtStatementEntries([
+            ...(debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+            ...(payments || []).map((p: any) => ({
+                ...p,
+                type: 'PAYMENT',
+                notes: p.description || p.notes || 'Tahsilat / Odeme',
+                amount: p.amount,
+                currency: p.currency || 'TRY',
+            })),
+        ], rates?.usd || 1);
         const rows: any[][] = [
             ["Müşteri", customer.name],
             ["Telefon", customer.phone || "-"],
-            ["Kalan Borç (TL)", Number(customer.totalRemainingTRY || 0)],
-            ["Kalan Borç (USD)", Number(customer.totalRemainingUSD || 0)],
+            ["Kalan Borç (TL)", outputTotalTRY],
+            ["Kalan Borç (USD)", outputTotalUSD],
             ["Kayıt Sayısı", debts.length],
             [],
             ["ALINAN ÜRÜNLER / BORÇLAR"],
@@ -1292,6 +1364,30 @@ export function VeresiyeClient({
                     Number(payment.amount || 0),
                     payment.currency || "TRY",
                     payment.paymentMethod || payment.type || "-",
+                ]);
+            });
+        }
+
+        rows.push([]);
+        rows.push(["KRONOLOJIK EKSTRE"]);
+        rows.push(["Tarih", "Tip", "Islem", "Tutar", "Para Birimi", "USD Karsiligi", "TL'ye Uygulanan", "USD'ye Uygulanan", "Kalan TL", "Kalan USD"]);
+
+        if (statementRows.length === 0) {
+            rows.push(["-", "Kayit yok", "-", 0, "-", 0, 0, 0, 0, 0]);
+        } else {
+            statementRows.forEach((entry: any) => {
+                const item = entry.item;
+                rows.push([
+                    safeExportDate(item.createdAt),
+                    entry.type === 'PAYMENT' ? "TAHSILAT" : "BORC",
+                    getStatementItemTitle(item),
+                    Number(entry.amount || 0),
+                    entry.currency || "TRY",
+                    entry.type === 'PAYMENT' && entry.currency === 'TRY' ? entry.amountUSD : "",
+                    entry.appliedTRY,
+                    entry.appliedUSD,
+                    entry.runningTRY,
+                    entry.runningUSD,
                 ]);
             });
         }
@@ -1474,7 +1570,7 @@ export function VeresiyeClient({
                                                             const res = await getCustomerStatement(item.customerId);
                                                             if (res.success) {
                                                                 const combined = [
-                                                                    ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+	                                                                    ...getPrintableDebts(res.debts || [], res.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
                                                                     ...(res.transactions || []).map((t: any) => ({
                                                                         ...t,
                                                                         type: 'PAYMENT',
@@ -1497,7 +1593,7 @@ export function VeresiyeClient({
                                                     onPayment={(item) => {
                                                         setPaymentCustomer(item);
                                                         setPaymentCurrency("TRY");
-                                                        setPaymentAmount((item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 32.5))).toFixed(2));
+                                                        setPaymentAmount((item.totalRemainingTRY + (item.totalRemainingUSD * (rates?.usd || 1))).toFixed(2));
                                                     }}
                                                 />
                                             ))}
@@ -1588,8 +1684,9 @@ export function VeresiyeClient({
                                 title="Ekstre (Excel)"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-                                    const data = [
-                                        ...statementData.debts.map((d: any) => {
+	                                    const printableDebts = getPrintableDebts(statementData.debts || [], statementData.activeReturns || []);
+	                                    const data = [
+	                                        ...printableDebts.map((d: any) => {
                                             const date = new Date(d.createdAt);
                                             const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy") : "-";
                                             return { Tarih: dateStr, İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" };
@@ -1604,8 +1701,29 @@ export function VeresiyeClient({
                                         // Standard sort might be tricky with strings but we'll keep it simple for now as it was before
                                         return b.Tarih.localeCompare(a.Tarih);
                                     });
+                                    const statementExcelRows = buildDebtStatementEntries([
+	                                        ...printableDebts.map((d: any) => ({ ...d, type: 'DEBT' })),
+                                        ...(statementData.transactions || []).map((t: any) => ({
+                                            ...t,
+                                            type: 'PAYMENT',
+                                            notes: t.description || 'Tahsilat / Odeme',
+                                            amount: t.amount,
+                                            currency: t.currency || "TRY",
+                                        })),
+                                    ], rates?.usd || 1).map((entry: any) => ({
+                                        Tarih: safeExportDate(entry.item.createdAt),
+                                        Tip: entry.type === 'PAYMENT' ? "TAHSILAT" : "BORC",
+                                        Islem: getStatementItemTitle(entry.item),
+                                        Tutar: entry.amount,
+                                        ParaBirim: entry.currency,
+                                        "USD Karsiligi": entry.type === 'PAYMENT' && entry.currency === 'TRY' ? entry.amountUSD : "",
+                                        "TL'ye Uygulanan": entry.appliedTRY,
+                                        "USD'ye Uygulanan": entry.appliedUSD,
+                                        "Kalan TL": entry.runningTRY,
+                                        "Kalan USD": entry.runningUSD,
+                                    }));
                                     const XLSX = await import("xlsx");
-                                    const ws = XLSX.utils.json_to_sheet(data);
+                                    const ws = XLSX.utils.json_to_sheet(statementExcelRows);
                                     const wb = XLSX.utils.book_new();
                                     XLSX.utils.book_append_sheet(wb, ws, "Ekstre");
                                     XLSX.writeFile(wb, `${historyCustomer?.name}_Ekstre.xlsx`);
@@ -1621,7 +1739,7 @@ export function VeresiyeClient({
                                 onClick={() => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     let message = `*${historyCustomer?.name} - Hesap Özeti*\n\n`;
-                                    const unpaidDebts = (statementData.debts || []).filter((d: any) => !d.isPaid);
+	                                    const unpaidDebts = getPrintableDebts(statementData.debts || [], statementData.activeReturns || []).filter((d: any) => !d.isPaid);
                                     const earliestDate = unpaidDebts.length > 0
                                         ? new Date(unpaidDebts.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
                                         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -1672,8 +1790,12 @@ export function VeresiyeClient({
                                         message += `\n`;
                                     });
                                     message += `*🔴 TOPLAM GÜNCEL BORÇ*\n`;
-                                    const totalTRY = historyCustomer?.totalRemainingTRY || 0;
-                                    const totalUSD = historyCustomer?.totalRemainingUSD || 0;
+	                                    const totalTRY = unpaidDebts
+	                                        .filter((debt: any) => (debt.currency || "TRY") !== "USD")
+	                                        .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
+	                                    const totalUSD = unpaidDebts
+	                                        .filter((debt: any) => debt.currency === "USD")
+	                                        .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
                                     const isDefaultUSD = defaultCurrency === 'USD';
 
                                     if (isDefaultUSD) {
@@ -1700,17 +1822,37 @@ export function VeresiyeClient({
                                 <MessageCircle className="w-4 h-4" />
                                 <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">WhatsApp Ekstre</span>
                             </button>
+                            {/* PDF */}
+                            <button
+                                title="PDF Ekstre"
+                                onClick={async () => {
+                                    if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
+                                    const combined = [
+	                                        ...getPrintableDebts(statementData.debts || [], statementData.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                        ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
+                                    ];
+                                    setReceiptCustomer({ id: historyCustomer.customerId, customerId: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
+                                    setReceiptDebts(combined);
+                                    setReceiptShowPaid(true);
+                                    setReceiptAutoPDF(true);
+                                }}
+                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all"
+                            >
+                                <FileText className="w-4 h-4" />
+                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">PDF Ekstre</span>
+                            </button>
                             {/* Fiş Yazdır */}
                             <button
                                 title="Fiş Yazdır"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
                                     const combined = [
-                                        ...(statementData.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+	                                        ...getPrintableDebts(statementData.debts || [], statementData.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
                                         ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
                                     ];
                                     setReceiptCustomer({ id: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
                                     setReceiptDebts(combined);
+                                    setReceiptAutoPDF(false);
                                 }}
                                 className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
                             >
@@ -1721,12 +1863,14 @@ export function VeresiyeClient({
                             <button
                                 title="Tümünü Seç"
                                 onClick={() => {
-                                    const selectableDebts = (statementData?.debts || []).filter((d: any) => !d.isPaid);
+	                                    const selectableDebts = getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => !d.isPaid);
                                     const allSelectableIds = selectableDebts.map((d: any) => d.id);
                                     const allItemIds: string[] = [];
                                     selectableDebts.forEach((d: any) => {
                                         if (d.sale?.items) {
-                                            d.sale.items.forEach((si: any) => allItemIds.push(si.id));
+	                                            d.sale.items
+	                                                .filter((si: any) => getReturnedSaleItemAmount(d, si, statementData?.activeReturns || []) <= 0)
+	                                                .forEach((si: any) => allItemIds.push(si.id));
                                         }
                                     });
 
@@ -1740,7 +1884,7 @@ export function VeresiyeClient({
                                 }}
                                 className={cn(
                                     "group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all border",
-                                    selectedDebtIds.length > 0 && selectedDebtIds.length === (statementData?.debts?.filter((d: any) => !d.isPaid).length || 0)
+	                                    selectedDebtIds.length > 0 && selectedDebtIds.length === (getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => !d.isPaid).length || 0)
                                         ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20"
                                         : "bg-muted/60 text-foreground hover:bg-muted border-border/50"
                                 )}
@@ -1802,7 +1946,7 @@ export function VeresiyeClient({
                                                 key={`debt-${item.id}`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (item.isPaid) return;
+	                                                    if (item.isPaid || getReturnedDebtAmount(item, statementData?.activeReturns || []) >= Number(item.amount || 0) - 0.01) return;
                                                     setSelectedDebtIds(prev =>
                                                         prev.includes(item.id)
                                                             ? prev.filter(id => id !== item.id)
@@ -1811,14 +1955,14 @@ export function VeresiyeClient({
                                                 }}
                                                 className={cn(
                                                     "flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group",
-                                                    item.isPaid ? "bg-muted/50 opacity-60 grayscale cursor-default" :
+	                                                    (item.isPaid || getReturnedDebtAmount(item, statementData?.activeReturns || []) >= Number(item.amount || 0) - 0.01) ? "bg-muted/50 opacity-60 grayscale cursor-default" :
                                                         selectedDebtIds.includes(item.id)
                                                             ? "bg-indigo-500/5 dark:bg-indigo-500/10 border-indigo-500/30"
                                                             : "bg-muted/20 border-border/50 hover:border-indigo-500/20"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    {!item.isPaid ? (
+	                                                    {!item.isPaid && getReturnedDebtAmount(item, statementData?.activeReturns || []) < Number(item.amount || 0) - 0.01 ? (
                                                         <div className={cn(
                                                             "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
                                                             selectedDebtIds.includes(item.id)
@@ -1842,7 +1986,10 @@ export function VeresiyeClient({
                                                             {item.sale && (
                                                                 <span className="text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 rounded-full font-black border border-indigo-500/10">POS SATIŞI</span>
                                                             )}
-                                                            {Number(item.amount) !== getSafeDebtRemaining(item) && (
+	                                                            {getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 && (
+	                                                                <span className="text-[9px] px-2 py-0.5 bg-orange-500/10 text-orange-600 rounded-full font-black border border-orange-500/10">iade edildi</span>
+	                                                            )}
+	                                                            {Number(item.amount) !== getSafeDebtRemaining(item) && (
                                                                 <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded italic">
                                                                     Orijinal: {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                                 </span>
@@ -1854,16 +2001,17 @@ export function VeresiyeClient({
                                                                     const itemCurrency = item.currency || "TRY";
                                                                     const returnAlreadyActive = hasActiveReturn(item.id, item.saleId || item.sale?.id, si.productId);
                                                                     const isItemUSD = itemCurrency === "USD";
-                                                                    const unitPrice = Number(si.unitPrice);
-                                                                    const altPrice = isItemUSD ? (unitPrice * usdRate) : (unitPrice / usdRate);
-                                                                    const isDefaultUSD = defaultCurrency === "USD";
+	                                                                    const unitPrice = Number(si.unitPrice);
+	                                                                    const altPrice = isItemUSD ? (unitPrice * usdRate) : (unitPrice / usdRate);
+	                                                                    const isDefaultUSD = defaultCurrency === "USD";
+	                                                                    const returnedItemAmount = getReturnedSaleItemAmount(item, si, statementData?.activeReturns || []);
 
                                                                     return (
                                                                         <div
                                                                             key={sidx}
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                if (item.isPaid) return;
+	                                                                                if (item.isPaid || returnedItemAmount > 0) return;
                                                                                 setSelectedSaleItemIds(prev =>
                                                                                     prev.includes(si.id) ? prev.filter(id => id !== si.id) : [...prev, si.id]
                                                                                 );
@@ -1874,7 +2022,7 @@ export function VeresiyeClient({
                                                                             )}
                                                                         >
                                                                             <div className="flex items-center gap-2 min-w-0">
-                                                                                {!item.isPaid && (
+	                                                                                {!item.isPaid && returnedItemAmount <= 0 && (
                                                                                     <div className={cn(
                                                                                         "w-3 h-3 rounded border flex items-center justify-center transition-all shrink-0",
                                                                                         selectedSaleItemIds.includes(si.id) ? "bg-indigo-500 border-indigo-500" : "border-border bg-card"
@@ -1883,9 +2031,12 @@ export function VeresiyeClient({
                                                                                     </div>
                                                                                 )}
                                                                                 <span className="w-1 h-1 rounded-full bg-indigo-500/40 shrink-0" />
-                                                                                <span className="font-bold text-foreground/80">{si.quantity}x</span>
-                                                                                <span className="truncate max-w-[160px]">{si.product?.name}</span>
-                                                                                <div className="flex items-center gap-1.5 shrink-0">
+	                                                                                <span className="font-bold text-foreground/80">{si.quantity}x</span>
+	                                                                                <span className="truncate max-w-[160px]">{si.product?.name}</span>
+	                                                                                {returnedItemAmount > 0 && (
+	                                                                                    <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 border border-orange-500/10 text-[8px] font-black uppercase shrink-0">iade edildi</span>
+	                                                                                )}
+	                                                                                <div className="flex items-center gap-1.5 shrink-0">
                                                                                     <span className="font-black text-foreground">
                                                                                         {isDefaultUSD
                                                                                             ? `$${(isItemUSD ? unitPrice : (unitPrice / usdRate)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -1902,7 +2053,7 @@ export function VeresiyeClient({
                                                                                 <Button
                                                                                     variant="ghost"
                                                                                     size="sm"
-                                                                                    disabled={returnAlreadyActive}
+	                                                                                    disabled={returnAlreadyActive || returnedItemAmount > 0}
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
                                                                                         if (returnAlreadyActive) {
@@ -1942,7 +2093,7 @@ export function VeresiyeClient({
                                                 <div className="text-right flex items-center gap-4">
                                                     <div className="flex flex-col items-end">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">{item.isPaid ? "ÖDENDİ" : "KALAN"}:</span>
+	                                                            <span className={cn("text-[9px] font-bold uppercase tracking-tighter", getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 ? "text-rose-500" : "text-muted-foreground")}>{getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 ? "\u0130ADE ED\u0130LD\u0130" : item.isPaid ? "\u00D6DEND\u0130" : "KALAN"}:</span>
                                                             <div className="flex flex-col items-end">
                                                                 <span className={cn("text-2xl font-black tabular-nums leading-none tracking-tight", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
                                                                     {defaultCurrency === "USD"
@@ -1957,7 +2108,7 @@ export function VeresiyeClient({
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    {!item.isPaid && (
+	                                                    {!item.isPaid && getReturnedDebtAmount(item, statementData?.activeReturns || []) < Number(item.amount || 0) - 0.01 && (
                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             {(() => {
                                                                 const returnAlreadyActive = hasActiveReturn(item.id);
@@ -2074,10 +2225,10 @@ export function VeresiyeClient({
                                         setPaymentCurrency(isDefaultUSD ? "USD" : "TRY");
 
                                         if (isDefaultUSD) {
-                                            const totalInUSD = sumUSD + (sumTRY / (rates?.usd || 32.5));
+                                            const totalInUSD = sumUSD + (sumTRY / (rates?.usd || 1));
                                             setPaymentAmount(totalInUSD.toFixed(2));
                                         } else {
-                                            const totalInTRY = Math.round(sumTRY + (sumUSD * (rates?.usd || 32.5)));
+                                            const totalInTRY = Math.round(sumTRY + (sumUSD * (rates?.usd || 1)));
                                             setPaymentAmount(String(totalInTRY));
                                         }
                                         setHistoryCustomer(null);
@@ -2226,7 +2377,7 @@ export function VeresiyeClient({
                                         const res = await getCustomerStatement(portfolioCustomer.customerId || portfolioCustomer.id);
                                         if (res.success) {
                                             const combined = [
-                                                ...(res.debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+	                                                ...getPrintableDebts(res.debts || [], res.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
                                                 ...(res.transactions || []).map((t: any) => ({
                                                     ...t,
                                                     type: 'PAYMENT',
@@ -2266,7 +2417,7 @@ export function VeresiyeClient({
                                         <span className="text-[10px] font-black opacity-60 uppercase tracking-widest">TOPLAM ALACAK (₺ KARŞILIĞI)</span>
                                     </div>
                                     <span className="text-4xl font-black tabular-nums tracking-tighter">
-                                        ₺{Math.round((portfolioCustomer?.totalRemainingTRY || 0) + ((portfolioCustomer?.totalRemainingUSD || 0) * (rates?.usd || 32.5))).toLocaleString('tr-TR')}
+                                        ₺{Math.round((portfolioCustomer?.totalRemainingTRY || 0) + ((portfolioCustomer?.totalRemainingUSD || 0) * (rates?.usd || 1))).toLocaleString('tr-TR')}
                                     </span>
                                     <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
                                         <div className="flex flex-col">
@@ -2338,7 +2489,7 @@ export function VeresiyeClient({
                                                     </span>
                                                     {item.currency === 'USD' && (
                                                         <span className="text-[10px] font-bold text-muted-foreground tabular-nums">
-                                                            ~₺{Math.round(Number(item.amount) * (rates?.usd || 32.5)).toLocaleString('tr-TR')}
+                                                            ~₺{Math.round(Number(item.amount) * (rates?.usd || 1)).toLocaleString('tr-TR')}
                                                         </span>
                                                     )}
                                                     {item.type === 'COLLECTION' && (
@@ -2396,7 +2547,7 @@ export function VeresiyeClient({
                                         phone: cust.phone || ""
                                     });
                                     const mergedDebts = [
-                                        ...(res.debts || []).map((d: any) => ({ ...d, type: "DEBT" })),
+	                                        ...getPrintableDebts(res.debts || [], res.activeReturns || []).map((d: any) => ({ ...d, type: "DEBT" })),
                                         ...(res.transactions || []).map((t: any) => ({
                                             ...t,
                                             type: "PAYMENT",
@@ -2686,8 +2837,8 @@ export function VeresiyeClient({
                 receiptCustomer && (
                     <DebtReceiptModal
                         open={!!receiptCustomer}
-                        onClose={() => { setReceiptCustomer(null); setReceiptDebts([]); setReceiptShowPaid(false); }}
-                        customer={{ name: receiptCustomer.name, phone: receiptCustomer.phone, id: receiptCustomer.customerId }}
+                        onClose={() => { setReceiptCustomer(null); setReceiptDebts([]); setReceiptShowPaid(false); setReceiptAutoPDF(false); }}
+                        customer={{ name: receiptCustomer.name, phone: receiptCustomer.phone, id: receiptCustomer.customerId || receiptCustomer.id }}
                         debts={receiptDebts}
                         shopName={receiptSettings?.title || shop?.name}
                         shopPhone={receiptSettings?.phone || shop?.phone}
@@ -2695,6 +2846,8 @@ export function VeresiyeClient({
                         initialShowPaid={receiptShowPaid}
                         shopLogo={receiptSettings?.logoUrl}
                         defaultCurrency={defaultCurrency}
+                        autoPDF={receiptAutoPDF}
+                        onAutoPDFComplete={() => setReceiptAutoPDF(false)}
                     />
                 )
             }
@@ -2738,4 +2891,6 @@ export function VeresiyeClient({
         </div>
     );
 }
+
+
 

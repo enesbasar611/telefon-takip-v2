@@ -18,7 +18,7 @@ interface ReceiptModalWrapperProps {
     /** WhatsApp phone number (raw digits) */
     whatsappPhone?: string;
     /** Custom action to replace default WhatsApp behavior */
-    onWhatsApp?: () => void;
+    onWhatsApp?: () => void | Promise<void>;
     /** Additional header actions (e.g. toggle buttons) */
     headerActions?: ReactNode;
     /** The receipt content to render inside the preview area */
@@ -64,7 +64,12 @@ export function ReceiptModalWrapper({
 
     const handleWhatsApp = useCallback(async () => {
         if (onWhatsApp) {
-            onWhatsApp();
+            setIsGenerating(true);
+            try {
+                await onWhatsApp();
+            } finally {
+                setIsGenerating(false);
+            }
             return;
         }
 

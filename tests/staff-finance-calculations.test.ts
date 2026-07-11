@@ -1,4 +1,4 @@
-import { calculatePayrollSnapshot, getSalaryPaymentStatus, inclusiveDayCount } from "../src/lib/staff-finance-calculations";
+import { buildStaffFinanceMovements, calculateCareerPoints, calculatePayrollSnapshot, getDashboardStaffPeriodRange, getSalaryPaymentStatus, inclusiveDayCount } from "../src/lib/staff-finance-calculations";
 
 function assert(condition: unknown, message: string) {
   if (!condition) throw new Error(message);
@@ -60,5 +60,37 @@ assert(dueTomorrow.shouldNotify, "Salary payment status should notify one day be
 
 const clampedEndOfMonth = getSalaryPaymentStatus(31, new Date(2026, 1, 27));
 assert(clampedEndOfMonth.dueDate.getDate() === 28, "Salary payment day should clamp to the month's last day.");
+
+const movements = buildStaffFinanceMovements({
+  commissions: [
+    { id: "c1", amount: 2500, type: "SERVICE", description: "Servis primi", approvedAt: new Date(2026, 6, 15), status: "APPROVED" },
+  ],
+  expenses: [
+    { id: "e1", amount: 1500, type: "ADVANCE", description: "Temmuz avansı", createdAt: new Date(2026, 6, 12) },
+    { id: "e2", amount: 500, type: "DEDUCTION", description: "Ekran hasarı kesintisi", createdAt: new Date(2026, 6, 20) },
+  ],
+  unpaidLeaveDeduction: 3000,
+  unpaidLeaveDays: 3,
+  periodEnd: new Date(2026, 6, 31),
+});
+
+assert(movements.length === 4, "Finance movements should include commissions, advances, deductions, and unpaid leave deductions.");
+assert(movements.some((movement) => movement.type === "ADVANCE" && movement.label === "Avans"), "Advance movement should be labeled.");
+assert(movements.some((movement) => movement.type === "DEDUCTION" && movement.description === "Ekran hasarı kesintisi"), "Manual deductions should be visible in movement history.");
+assert(movements.some((movement) => movement.source === "UNPAID_LEAVE" && movement.amount === 3000), "Unpaid leave deduction should be visible in movement history.");
+assert(new Date(movements[0].date).getTime() >= new Date(movements[1].date).getTime(), "Finance movements should be newest-first.");
+
+const monthRange = getDashboardStaffPeriodRange({ mode: "month", referenceDate: new Date(2026, 6, 10) });
+assert(monthRange.start.getDate() === 1, "Monthly staff dashboard range should start on the first day.");
+assert(monthRange.end.getDate() === 31, "Monthly staff dashboard range should end on the last day.");
+assert(monthRange.period === "2026-07", "Monthly staff dashboard range should expose archive-like period key.");
+
+const weekRange = getDashboardStaffPeriodRange({ mode: "week", referenceDate: new Date(2026, 6, 10) });
+assert(weekRange.start.getDay() === 1, "Weekly staff dashboard range should start on Monday.");
+assert(weekRange.end.getDay() === 0, "Weekly staff dashboard range should end on Sunday.");
+
+const career = calculateCareerPoints({ serviceCount: 5, salesCount: 3, completedTaskCount: 4, approvedCommissions: 1250 });
+assert(career.points === 163, "Career points should combine services, sales, tasks, and approved commissions.");
+assert(career.redeemableBonus === 163, "Career points should be redeemable as bonus amount.");
 
 console.log("staff-finance-calculations tests passed");

@@ -3,15 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Receipt, Eye, EyeOff, FileText, Download } from "lucide-react";
+import { Receipt, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ReceiptTemplate } from "@/components/common/receipt-template";
 import { ReceiptModalWrapper } from "@/components/common/receipt-modal-wrapper";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { getReceiptSettings } from "@/lib/actions/receipt-settings";
 import { cn } from "@/lib/utils";
-import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { generateProfessionalPDF } from "@/lib/receipt-print-styles";
+import { generateProfessionalPDF, generateProfessionalPDFBlob } from "@/lib/receipt-print-styles";
+import {
+    buildOpenDebtStatementEntries,
+    buildDebtStatementEntries,
+    getCurrentDebtTotals
+} from "@/lib/debt-statement-calculator";
 
 import { DebtStatementModern } from "./debt-statement-modern";
 import { useQuery } from "@tanstack/react-query";
@@ -30,7 +35,12 @@ interface DebtReceiptModalProps {
     rates?: any;
     initialShowPaid?: boolean;
     defaultCurrency?: string;
+    autoPDF?: boolean;
+    onAutoPDFComplete?: () => void;
 }
+
+const formatTRY = (amount: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+const formatUSD = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
 const ReceiptContent = ({
     customer,
@@ -45,21 +55,18 @@ const ReceiptContent = ({
     settings,
     defaultCurrency = 'TRY'
 }: any) => {
-    const unpaidDebts = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
-
-    const totalTRY = unpaidDebts
-        .filter((d: any) => d.currency !== 'USD')
-        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
-
-    const totalUSD = unpaidDebts
-        .filter((d: any) => d.currency === 'USD')
-        .reduce((acc: number, d: any) => acc + Number(d.remainingAmount || d.amount), 0);
-
-    const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 32.50;
+    const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 1;
+    const currentTotals = getCurrentDebtTotals(debts);
+    const totalTRY = currentTotals.try;
+    const totalUSD = currentTotals.usd;
     const portfolioTotalTRY = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
     const portfolioTotalUSD = (totalTRY / currentUsdRate) + totalUSD;
 
-    const unpaid = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
+    const unpaid = debts.filter((d: any) => (
+        (d.type === 'DEBT' || !d.type)
+        && !d.isPaid
+        && Number(d.remainingAmount ?? d.amount ?? 0) > 0
+    ));
     const earliestDate = (() => {
         if (unpaid.length === 0) return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const sorted = [...unpaid].sort((a: any, b: any) => {
@@ -80,20 +87,17 @@ const ReceiptContent = ({
             if (isNaN(date.getTime())) return false;
             return date >= earliestDate;
         }
-        return !d.isPaid;
+        return (d.type === 'DEBT' || !d.type) && !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0;
     });
 
-    const groups = displayDebts
-        .sort((a: any, b: any) => {
-            const da = new Date(a.createdAt).getTime();
-            const db = new Date(b.createdAt).getTime();
-            if (isNaN(da)) return 1;
-            if (isNaN(db)) return -1;
-            return da - db;
-        })
+    const statementEntries = showPaid
+        ? buildDebtStatementEntries(displayDebts, currentUsdRate)
+        : buildOpenDebtStatementEntries(debts, currentUsdRate);
+
+    const groups = statementEntries
         .reduce((groups: any, item: any) => {
             const date = (() => {
-                const d = new Date(item.createdAt);
+                const d = new Date(item.date);
                 return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }) : "-";
             })();
             if (!groups[date]) {
@@ -130,14 +134,14 @@ const ReceiptContent = ({
             <div className="space-y-2 mb-4 min-h-[50px]">
                 {sortedDates.map((date) => {
                     const dailyTRY = groups[date]
-                        .filter((item: any) => item.type !== 'PAYMENT' && item.currency !== 'USD')
-                        .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
+                        .filter((entry: any) => entry.type !== 'PAYMENT' && entry.currency !== 'USD')
+                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
                     const dailyUSD = groups[date]
-                        .filter((item: any) => item.type !== 'PAYMENT' && item.currency === 'USD')
-                        .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
+                        .filter((entry: any) => entry.type !== 'PAYMENT' && entry.currency === 'USD')
+                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
                     const dailyPayment = groups[date]
-                        .filter((item: any) => item.type === 'PAYMENT')
-                        .reduce((acc: number, item: any) => acc + Number(item.amount), 0);
+                        .filter((entry: any) => entry.type === 'PAYMENT')
+                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
 
                     return (
                         <div key={date}>
@@ -154,8 +158,12 @@ const ReceiptContent = ({
                             </div>
 
                             <div className="space-y-1.5">
-                                {groups[date].map((item: any, idx: number) => {
-                                    const isPayment = item.type === 'PAYMENT';
+                                {groups[date].map((entry: any, idx: number) => {
+                                    const item = entry.item;
+                                    const isPayment = entry.type === 'PAYMENT';
+                                    const paidAmount = Number(entry.paidAmount || 0);
+                                    const remainingAmount = Number(entry.remainingAmount || 0);
+                                    const formatEntryCurrency = (amount: number) => entry.currency === 'USD' ? formatUSD(amount) : formatTRY(amount);
                                     return (
                                         <div key={idx} className="flex justify-between items-start py-1.5 border-b border-black/5 last:border-0">
                                             <div className="flex flex-col flex-1 pr-4">
@@ -165,14 +173,24 @@ const ReceiptContent = ({
                                                 )}>
                                                     {isPayment && "[TAHSİLAT] "}
                                                     {item.notes || item.description || (isPayment ? 'TAHSİLAT' : 'BORÇ KAYDI')}
+                                                    <span className="block text-[8px] font-bold text-black/60 mt-0.5">
+                                                        {!showPaid && !isPayment
+                                                            ? `Kalan: ${formatEntryCurrency(remainingAmount)}${paidAmount > 0 ? ` / Odenen: ${formatEntryCurrency(paidAmount)}` : ""}`
+                                                            : `Kalan: TL ${entry.runningTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${entry.runningUSD > 0 ? ` + $${entry.runningUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}`}
+                                                    </span>
                                                 </span>
                                             </div>
                                             <div className="text-right whitespace-nowrap">
                                                 <div className="text-[10px] font-black text-black">
-                                                    {isPayment ? '-' : ''}{new Intl.NumberFormat(item.currency === 'USD' ? 'en-US' : 'tr-TR', {
+                                                    {isPayment ? '-' : ''}{new Intl.NumberFormat(entry.currency === 'USD' ? 'en-US' : 'tr-TR', {
                                                         style: 'currency',
-                                                        currency: item.currency || 'TRY'
-                                                    }).format(item.amount)}
+                                                        currency: entry.currency || 'TRY'
+                                                    }).format(entry.amount)}
+                                                    {isPayment && entry.currency === 'TRY' && (
+                                                        <span className="block text-[8px] font-bold text-black/55">
+                                                            ({formatUSD(entry.amountUSD)})
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -188,13 +206,13 @@ const ReceiptContent = ({
             <div className="border-t-[1.5px] border-black pt-2 space-y-1">
                 <div className="flex justify-between items-center py-1">
                     <span className="text-[10px] font-black text-black uppercase">TL BORCU:</span>
-                    <span className="text-[12px] font-black text-black">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalTRY)}</span>
+                    <span className="text-[12px] font-black text-black">{formatTRY(totalTRY)}</span>
                 </div>
                 {totalUSD > 0 && (
                     <div className="flex justify-between items-center py-1">
                         <span className="text-[10px] font-black text-black uppercase">USD BORCU:</span>
                         <div className="flex flex-col items-end">
-                            <span className="text-[12px] font-black text-black">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUSD)}</span>
+                            <span className="text-[12px] font-black text-black">{formatUSD(totalUSD)}</span>
                             <span className="text-[8px] font-bold text-black">(~₺{(totalUSD * currentUsdRate).toLocaleString('tr-TR')})</span>
                         </div>
                     </div>
@@ -206,13 +224,13 @@ const ReceiptContent = ({
                     </div>
                     <span className="text-lg font-black text-black">
                         {defaultCurrency === 'USD'
-                            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(portfolioTotalUSD)
-                            : new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(portfolioTotalTRY)
+                            ? formatUSD(portfolioTotalUSD)
+                            : formatTRY(portfolioTotalTRY)
                         }
                     </span>
                 </div>
 
-                {unpaidDebts.length === 0 && (
+                {unpaid.length === 0 && (
                     <div className="mt-4 py-3 border-2 border-black border-dashed text-center">
                         <span className="text-[11px] font-black uppercase tracking-[0.2em]">HESAP KAPALIDIR</span>
                     </div>
@@ -234,10 +252,15 @@ export function DebtReceiptModal({
     shopLogo,
     rates,
     initialShowPaid = false,
-    defaultCurrency = 'TRY'
+    defaultCurrency = 'TRY',
+    autoPDF = false,
+    onAutoPDFComplete
 }: DebtReceiptModalProps) {
     const [settings, setSettings] = useState<any>(null);
     const [showPaid, setShowPaid] = useState(initialShowPaid);
+    const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+    const [whatsappMessage, setWhatsappMessage] = useState("");
+    const [whatsappPdf, setWhatsappPdf] = useState<{ filename: string; url: string } | null>(null);
 
     const { data: liveRates } = useQuery({
         queryKey: ["rates"],
@@ -246,12 +269,20 @@ export function DebtReceiptModal({
     });
 
     const activeRates = liveRates || rates;
+    const customerSlug = (customer?.name || "musteri").replace(/\s+/g, "-");
+    const pdfFilename = `ekstre-${customerSlug}.pdf`;
 
     useEffect(() => {
         if (open) {
             getReceiptSettings("debt").then(setSettings);
         }
     }, [open]);
+
+    useEffect(() => {
+        return () => {
+            if (whatsappPdf?.url) URL.revokeObjectURL(whatsappPdf.url);
+        };
+    }, [whatsappPdf?.url]);
 
     const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -269,7 +300,7 @@ export function DebtReceiptModal({
             // Gerekli fontlar ve resimlerin render olması için kısa bir bekleme
             await new Promise(resolve => setTimeout(resolve, 200));
 
-            await generateProfessionalPDF(element, `ekstre-${customer.name.replace(/\s+/g, "-")}`);
+            await generateProfessionalPDF(element, pdfFilename);
             toast.success("PDF başarıyla oluşturuldu");
         } catch (error) {
             console.error("PDF Export Error:", error);
@@ -278,6 +309,64 @@ export function DebtReceiptModal({
             setPdfLoading(false);
         }
     };
+
+    const handleWhatsAppPDF = async () => {
+        try {
+            setPdfLoading(true);
+            const id = `debt-statement-modern-${customer.id}`;
+            const element = document.getElementById(id);
+
+            if (!element) {
+                toast.error("WhatsApp PDF hazirlanamadi: PDF gorunumu olusmadi");
+                return;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 200));
+            const blob = await generateProfessionalPDFBlob(element);
+
+            if (!blob) {
+                toast.error("WhatsApp PDF hazirlanamadi");
+                return;
+            }
+
+            if (whatsappPdf?.url) URL.revokeObjectURL(whatsappPdf.url);
+            const url = URL.createObjectURL(blob);
+            setWhatsappPdf({ filename: pdfFilename, url });
+            setWhatsappMessage(
+                `Merhaba ${customer?.name || ""},\n\nGuncel borc ekstresini PDF olarak iletiyorum.\n\nIyi gunler dileriz.`
+            );
+            setWhatsappModalOpen(true);
+            toast.success("PDF hazirlandi, WhatsApp mesaji aciliyor");
+        } catch (error) {
+            console.error("WhatsApp PDF Error:", error);
+            toast.error("WhatsApp PDF hazirlanirken hata olustu");
+        } finally {
+            setPdfLoading(false);
+        }
+    };
+
+    const downloadWhatsAppPdf = () => {
+        if (!whatsappPdf) return;
+        const a = document.createElement("a");
+        a.href = whatsappPdf.url;
+        a.download = whatsappPdf.filename;
+        a.click();
+    };
+
+    const autoPDFKeyRef = useRef<string>("");
+    useEffect(() => {
+        if (!open || !autoPDF || !settings || !customer?.id) return;
+
+        const key = `${customer.id}-${debts.length}-${showPaid}`;
+        if (autoPDFKeyRef.current === key) return;
+        autoPDFKeyRef.current = key;
+
+        const timer = window.setTimeout(() => {
+            handlePDF().finally(() => onAutoPDFComplete?.());
+        }, 350);
+
+        return () => window.clearTimeout(timer);
+    }, [open, autoPDF, settings, customer?.id, debts.length, showPaid, onAutoPDFComplete]);
 
     const currentPaperSize = settings?.paperSize || "72mm";
 
@@ -291,6 +380,7 @@ export function DebtReceiptModal({
                 paperSize={currentPaperSize}
                 downloadFilename={`ekstre-${customer.name.replace(/\s+/g, "-")}.png`}
                 whatsappPhone={customer.phone}
+                onWhatsApp={handleWhatsAppPDF}
                 onPDF={handlePDF}
                 icon={<Receipt className="h-4 w-4 text-foreground" />}
                 headerActions={
@@ -360,6 +450,20 @@ export function DebtReceiptModal({
                     />
                 )}
             </div>
+
+            <WhatsAppConfirmModal
+                isOpen={whatsappModalOpen}
+                onClose={() => setWhatsappModalOpen(false)}
+                phone={customer?.phone || ""}
+                customerName={customer?.name}
+                initialMessage={whatsappMessage}
+                attachment={whatsappPdf ? {
+                    filename: whatsappPdf.filename,
+                    url: whatsappPdf.url,
+                    description: "PDF hazir. Gonder tusuna basinca dosya indirilecek; WhatsApp sohbetinde belge olarak ekleyin."
+                } : undefined}
+                onBeforeSend={downloadWhatsAppPdf}
+            />
         </>
     );
 }

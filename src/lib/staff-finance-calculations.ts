@@ -8,8 +8,35 @@ export type StaffLeaveForPayroll = {
 };
 
 export type StaffExpenseForPayroll = {
+  id?: string | null;
   amount: number | string | null;
   type?: string | null;
+  description?: string | null;
+  createdAt?: Date | string | null;
+};
+
+export type StaffCommissionForPayroll = {
+  id?: string | null;
+  amount: number | string | null;
+  description?: string | null;
+  type?: string | null;
+  status?: string | null;
+  referenceId?: string | null;
+  createdAt?: Date | string | null;
+  approvedAt?: Date | string | null;
+};
+
+export type StaffFinanceMovement = {
+  id: string;
+  category: "INCOME" | "DEDUCTION";
+  source: "COMMISSION" | "EXPENSE" | "UNPAID_LEAVE";
+  type: string;
+  label: string;
+  description: string;
+  amount: number;
+  date: Date | string;
+  status?: string | null;
+  referenceId?: string | null;
 };
 
 export function getPayrollPeriodRange(referenceDate = new Date()) {
@@ -18,6 +45,69 @@ export function getPayrollPeriodRange(referenceDate = new Date()) {
   const period = `${referenceDate.getFullYear()}-${String(referenceDate.getMonth() + 1).padStart(2, "0")}`;
 
   return { start, end, period };
+}
+
+export type DashboardStaffRangeMode = "week" | "month";
+
+export function getDashboardStaffPeriodRange({
+  mode = "month",
+  referenceDate = new Date(),
+}: {
+  mode?: DashboardStaffRangeMode;
+  referenceDate?: Date | string;
+} = {}) {
+  const ref = new Date(referenceDate);
+  if (Number.isNaN(ref.getTime())) return getDashboardStaffPeriodRange({ mode, referenceDate: new Date() });
+
+  if (mode === "week") {
+    const start = new Date(ref);
+    const day = start.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + diffToMonday);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+
+    const period = `${start.getFullYear()}-W${String(Math.ceil((((start.getTime() - new Date(start.getFullYear(), 0, 1).getTime()) / DAY_MS) + 1) / 7)).padStart(2, "0")}`;
+    return { start, end, period, mode };
+  }
+
+  const monthRange = getPayrollPeriodRange(ref);
+  return { ...monthRange, mode };
+}
+
+export function calculateCareerPoints({
+  serviceCount = 0,
+  salesCount = 0,
+  completedTaskCount = 0,
+  approvedCommissions = 0,
+}: {
+  serviceCount?: number;
+  salesCount?: number;
+  completedTaskCount?: number;
+  approvedCommissions?: number;
+}) {
+  const points = Math.max(0, Math.round(
+    serviceCount * 20 +
+    salesCount * 10 +
+    completedTaskCount * 5 +
+    Number(approvedCommissions || 0) / 100
+  ));
+  const levelSize = 500;
+  const level = Math.floor(points / levelSize) + 1;
+  const progressPoints = points % levelSize;
+  const progressPercent = Math.min(100, Math.round((progressPoints / levelSize) * 100));
+
+  return {
+    points,
+    level,
+    progressPoints,
+    nextLevelPoints: levelSize,
+    progressPercent,
+    redeemableBonus: points,
+  };
 }
 
 export function getSalaryPaymentStatus(paymentDay: number | null | undefined, referenceDate = new Date()) {
@@ -139,4 +229,77 @@ export function calculatePayrollSnapshot({
     dailyLeaveCount,
     netPayout: proRatedSalary + approvedCommissions - totalExpenses,
   };
+}
+
+export function buildStaffFinanceMovements({
+  commissions = [],
+  expenses = [],
+  unpaidLeaveDeduction = 0,
+  unpaidLeaveDays = 0,
+  periodEnd = new Date(),
+}: {
+  commissions?: StaffCommissionForPayroll[];
+  expenses?: StaffExpenseForPayroll[];
+  unpaidLeaveDeduction?: number;
+  unpaidLeaveDays?: number;
+  periodEnd?: Date | string;
+}): StaffFinanceMovement[] {
+  const expenseLabels: Record<string, string> = {
+    ADVANCE: "Avans",
+    DEDUCTION: "Kesinti",
+    MEAL: "Yemek gideri",
+    TRAVEL: "Yol gideri",
+  };
+
+  const commissionLabels: Record<string, string> = {
+    SERVICE: "Servis primi",
+    SALE: "Satış primi",
+    COMMISSION: "Prim",
+  };
+
+  const rows: StaffFinanceMovement[] = [
+    ...commissions.map((commission, index) => {
+      const type = String(commission.type || "COMMISSION").toUpperCase();
+      return {
+        id: commission.id || `commission-${index}`,
+        category: "INCOME" as const,
+        source: "COMMISSION" as const,
+        type,
+        label: commissionLabels[type] || "Prim",
+        description: commission.description || "Prim",
+        amount: Number(commission.amount || 0),
+        date: commission.approvedAt || commission.createdAt || periodEnd,
+        status: commission.status,
+        referenceId: commission.referenceId,
+      };
+    }),
+    ...expenses.map((expense, index) => {
+      const type = String(expense.type || "ADVANCE").toUpperCase();
+      return {
+        id: expense.id || `expense-${index}`,
+        category: "DEDUCTION" as const,
+        source: "EXPENSE" as const,
+        type,
+        label: expenseLabels[type] || "Gider / kesinti",
+        description: expense.description || expenseLabels[type] || "Gider / kesinti",
+        amount: Number(expense.amount || 0),
+        date: expense.createdAt || periodEnd,
+      };
+    }),
+  ];
+
+  if (unpaidLeaveDeduction > 0) {
+    rows.push({
+      id: "unpaid-leave-deduction",
+      category: "DEDUCTION",
+      source: "UNPAID_LEAVE",
+      type: "UNPAID_LEAVE",
+      label: "Ücretsiz izin",
+      description: `${unpaidLeaveDays} gün ücretsiz izin kesintisi`,
+      amount: unpaidLeaveDeduction,
+      date: periodEnd,
+    });
+  }
+
+  return rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

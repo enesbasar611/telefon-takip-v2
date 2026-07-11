@@ -53,6 +53,7 @@ interface AdminDashboardProps {
     categories: any;
     suppliers: any;
     staffData: any;
+    staffOverview?: any;
     userName: string;
     shopId?: string;
     defaultCurrency?: string;
@@ -66,6 +67,7 @@ export function AdminDashboard({
     categories,
     suppliers,
     staffData,
+    staffOverview,
     userName,
     shopId,
     defaultCurrency = "TRY"
@@ -280,7 +282,7 @@ export function AdminDashboard({
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.4, ease: "easeOut" }}
                     >
-                        <StaffDashboardClient data={staffData} />
+                        <StaffDashboardClient data={staffData} teamData={staffOverview} defaultCurrency={defaultCurrency} usdRate={usdRate} />
                     </motion.div>
                 )}
             </AnimatePresence>

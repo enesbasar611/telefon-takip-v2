@@ -65,7 +65,7 @@ export async function syncAllRates(providedShopId?: string) {
 export const getExchangeRates = async (shopId: string | null) => {
   if (!shopId) {
     return {
-      usd: 35.0, eur: 38.0, ga: 3100, dealerProfit: 200, customerProfit: 700, lastUpdate: new Date()
+      usd: 1, eur: 1, ga: 1, dealerProfit: 200, customerProfit: 700, lastUpdate: new Date(0)
     };
   }
 
@@ -90,9 +90,9 @@ export const getExchangeRates = async (shopId: string | null) => {
       }
 
       return {
-        usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "45.0"),
-        eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "55.0"),
-        ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "6500"),
+        usd: parseFloat(settings.find(s => s.key === "exchange_rate_usd")?.value || "1"),
+        eur: parseFloat(settings.find(s => s.key === "exchange_rate_eur")?.value || "1"),
+        ga: parseFloat(settings.find(s => s.key === "exchange_rate_ga")?.value || "1"),
         dealerProfit: parseFloat(settings.find(s => s.key === "dealer_profit_tl")?.value || "200"),
         customerProfit: parseFloat(settings.find(s => s.key === "customer_profit_tl")?.value || "700"),
         lastUpdate

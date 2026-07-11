@@ -23,6 +23,66 @@ function buildActiveReturnWhere(data: {
   };
 }
 
+async function normalizeReturnProduct(
+  tx: any,
+  shopId: string,
+  data: {
+    productId?: string | null;
+    restockProduct?: boolean;
+    immediateRestock?: boolean;
+  }
+) {
+  const productId = data.productId?.trim() || undefined;
+  if (!productId) {
+    return {
+      productId: undefined,
+      restockProduct: false,
+      immediateRestock: false,
+    };
+  }
+
+  const product = await tx.product.findFirst({
+    where: { id: productId, shopId },
+    select: { id: true },
+  });
+
+  if (!product) {
+    return {
+      productId: undefined,
+      restockProduct: false,
+      immediateRestock: false,
+    };
+  }
+
+  return {
+    productId: product.id,
+    restockProduct: data.restockProduct ?? true,
+    immediateRestock: data.immediateRestock ?? false,
+  };
+}
+
+async function reduceDebtForReturn(
+  tx: any,
+  shopId: string,
+  debtId?: string | null,
+  refundAmount?: unknown
+) {
+  const refundVal = Number(refundAmount || 0);
+  if (!debtId || refundVal <= 0) return;
+
+  const debt = await tx.debt.findUnique({ where: { id: debtId, shopId } });
+  if (!debt) return;
+
+  const newRemaining = Math.max(0, Number(debt.remainingAmount) - refundVal);
+  await tx.debt.update({
+    where: { id: debtId },
+    data: {
+      remainingAmount: newRemaining,
+      isPaid: newRemaining <= 0,
+    },
+  });
+}
+
 export async function getReturnTickets(filters?: {
   sourceType?: string;
   status?: string;
@@ -76,11 +136,13 @@ export async function createReturnTicket(data: {
 
     const count = await prisma.returnTicket.count({ where: { shopId } });
     const ticketNumber = `RET-${new Date().getFullYear()}${(count + 1).toString().padStart(4, "0")}`;
+    const normalizedProduct = await normalizeReturnProduct(prisma, shopId, data);
+    const normalizedData = { ...data, ...normalizedProduct };
 
     const existingActiveReturn = await prisma.returnTicket.findFirst({
       where: {
         shopId,
-        ...buildActiveReturnWhere(data),
+        ...buildActiveReturnWhere(normalizedData),
       },
       select: { ticketNumber: true },
     });
@@ -95,8 +157,8 @@ export async function createReturnTicket(data: {
     const ticket = await prisma.returnTicket.create({
       data: {
         ticketNumber,
-        sourceType: data.sourceType,
-        productId: data.productId,
+        sourceType: normalizedData.sourceType,
+        productId: normalizedData.productId,
         quantity: data.quantity,
         refundAmount: data.refundAmount,
         refundCurrency: data.refundCurrency || "TRY",
@@ -107,26 +169,12 @@ export async function createReturnTicket(data: {
         serviceTicketId: data.serviceTicketId,
         returnReason: data.reason as any,
         notes: data.notes,
-        restockProduct: data.restockProduct ?? true,
+        restockProduct: normalizedData.restockProduct,
         shopId,
         userId,
         returnStatus: "PENDING",
       },
     });
-
-    if (data.debtId && data.refundAmount) {
-      const debt = await prisma.debt.findUnique({ where: { id: data.debtId, shopId } });
-      if (debt) {
-        const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(data.refundAmount));
-        await prisma.debt.update({
-          where: { id: data.debtId },
-          data: {
-            remainingAmount: newRemaining,
-            isPaid: newRemaining <= 0,
-          },
-        });
-      }
-    }
 
     revalidatePath("/stok/iade");
     revalidatePath("/veresiye");
@@ -239,18 +287,8 @@ export async function processReturn(id: string, action: any, extraNotes?: string
 
       // Handle Finance
       if (action === "RESTOCKED" || action === "REFUNDED") {
-        if (ticket.debtId && ticket.refundAmount && ticket.sourceType !== "DEBT") {
-          const debt = await tx.debt.findUnique({ where: { id: ticket.debtId } });
-          if (debt) {
-            const newRemaining = Math.max(0, Number(debt.remainingAmount) - Number(ticket.refundAmount));
-            await tx.debt.update({
-              where: { id: ticket.debtId },
-              data: {
-                remainingAmount: newRemaining,
-                isPaid: newRemaining <= 0,
-              },
-            });
-          }
+        if (ticket.debtId && ticket.refundAmount) {
+          await reduceDebtForReturn(tx, shopId, ticket.debtId, ticket.refundAmount);
         } else if (ticket.sourceType === "SALE" && ticket.refundAmount) {
           await tx.transaction.create({
             data: {
@@ -283,20 +321,6 @@ export async function rejectReturn(id: string, notes?: string) {
       const ticket = await tx.returnTicket.findUnique({ where: { id, shopId } });
       if (!ticket) throw new Error("İade kaydı bulunamadı.");
       if (ticket.returnStatus !== "PENDING") throw new Error("Sadece bekleyen iadeler reddedilebilir.");
-
-      if (ticket.debtId && ticket.refundAmount && ticket.sourceType === "DEBT") {
-        const debt = await tx.debt.findUnique({ where: { id: ticket.debtId, shopId } });
-        if (debt) {
-          const restoredRemaining = Number(debt.remainingAmount) + Number(ticket.refundAmount);
-          await tx.debt.update({
-            where: { id: ticket.debtId },
-            data: {
-              remainingAmount: Math.min(Number(debt.amount), restoredRemaining),
-              isPaid: false,
-            },
-          });
-        }
-      }
 
       await tx.returnTicket.update({
         where: { id, shopId },
@@ -342,12 +366,14 @@ export async function createMultipleReturnTickets(tickets: {
 
       for (let i = 0; i < tickets.length; i++) {
         const data = tickets[i];
+        const normalizedProduct = await normalizeReturnProduct(tx, shopId, data);
+        const normalizedData = { ...data, ...normalizedProduct };
         const ticketNumber = `RET-${new Date().getFullYear()}${(baseCount + i + 1).toString().padStart(4, "0")}`;
 
         const existingActiveReturn = await tx.returnTicket.findFirst({
           where: {
             shopId,
-            ...buildActiveReturnWhere(data),
+            ...buildActiveReturnWhere(normalizedData),
           },
           select: { ticketNumber: true },
         });
@@ -356,13 +382,13 @@ export async function createMultipleReturnTickets(tickets: {
           throw new Error(`Bu ürün için ${existingActiveReturn.ticketNumber} numaralı iade işlemi henüz tamamlanmamış.`);
         }
 
-        const isImmediate = data.immediateRestock && data.restockProduct;
+        const isImmediate = !!(normalizedData.productId && normalizedData.immediateRestock && normalizedData.restockProduct);
 
         const ticket = await tx.returnTicket.create({
           data: {
             ticketNumber,
-            sourceType: data.sourceType,
-            productId: data.productId,
+            sourceType: normalizedData.sourceType,
+            productId: normalizedData.productId,
             quantity: data.quantity,
             refundAmount: data.refundAmount,
             refundCurrency: data.refundCurrency || "TRY",
@@ -373,7 +399,7 @@ export async function createMultipleReturnTickets(tickets: {
             serviceTicketId: data.serviceTicketId,
             returnReason: data.reason as any,
             notes: data.notes,
-            restockProduct: data.restockProduct ?? true,
+            restockProduct: normalizedData.restockProduct,
             shopId,
             userId,
             returnStatus: isImmediate ? "RESTOCKED" : "PENDING",
@@ -382,10 +408,10 @@ export async function createMultipleReturnTickets(tickets: {
         createdTickets.push(ticket);
 
         // Immediate restock logic
-        if (isImmediate && data.productId) {
+        if (isImmediate && normalizedData.productId) {
           // 1. Update Product Stockholm and Prices
           await tx.product.update({
-            where: { id: data.productId },
+            where: { id: normalizedData.productId },
             data: {
               stock: { increment: data.quantity },
               ...(data.newBuyPrice !== undefined ? { buyPrice: data.newBuyPrice } : {}),
@@ -396,7 +422,7 @@ export async function createMultipleReturnTickets(tickets: {
           // 2. Create Inventory Movement
           await tx.inventoryMovement.create({
             data: {
-              productId: data.productId,
+              productId: normalizedData.productId,
               quantity: data.quantity,
               type: "IN",
               notes: `İade Alındı (Hızlı): ${ticketNumber}${data.notes ? ` - ${data.notes}` : ''}`,
@@ -410,7 +436,7 @@ export async function createMultipleReturnTickets(tickets: {
           // 3. Create Inventory Log for history
           await tx.inventoryLog.create({
             data: {
-              productId: data.productId,
+              productId: normalizedData.productId,
               userId,
               quantity: data.quantity,
               type: "RETURN",
@@ -423,18 +449,8 @@ export async function createMultipleReturnTickets(tickets: {
         // Handle Finance / Debt impact
         const refundVal = Number(data.refundAmount || 0);
         if (refundVal > 0) {
-          if (data.debtId) {
-            const debt = await tx.debt.findUnique({ where: { id: data.debtId, shopId } });
-            if (debt) {
-              const newRemaining = Math.max(0, Number(debt.remainingAmount) - refundVal);
-              await tx.debt.update({
-                where: { id: data.debtId },
-                data: {
-                  remainingAmount: newRemaining,
-                  isPaid: newRemaining <= 0,
-                },
-              });
-            }
+          if (data.debtId && isImmediate) {
+            await reduceDebtForReturn(tx, shopId, data.debtId, refundVal);
           } else if (data.saleId || data.sourceType === "SALE" || data.sourceType === "CUSTOMER") {
             // For completed sales or general customer returns, create an Expense transaction
             if (financeAccountId) {

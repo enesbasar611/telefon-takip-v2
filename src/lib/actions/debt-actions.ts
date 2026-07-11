@@ -13,11 +13,30 @@ const normalizeMoney = (value: unknown) => {
   return amount;
 };
 
+const roundMoney = (value: number) => Math.round(value * 100) / 100;
+
 const clampRemainingAmount = (remaining: unknown, amount: unknown) => {
   const safeAmount = Math.max(0, normalizeMoney(amount));
   const safeRemaining = Math.max(0, normalizeMoney(remaining));
   return Math.min(safeRemaining, safeAmount);
 };
+
+const debtPaymentPriority = (debtCurrency: string | null | undefined, paymentCurrency: string) =>
+  (debtCurrency || "TRY") === paymentCurrency ? 0 : 1;
+
+const sortDebtsForPayment = <T extends { currency?: string | null; createdAt: Date }>(debts: T[], paymentCurrency: string) =>
+  [...debts].sort((a, b) => {
+    const priorityDiff = debtPaymentPriority(a.currency, paymentCurrency) - debtPaymentPriority(b.currency, paymentCurrency);
+    if (priorityDiff !== 0) return priorityDiff;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+
+const sortDebtsForPaymentRollback = <T extends { currency?: string | null; createdAt: Date }>(debts: T[], paymentCurrency: string) =>
+  [...debts].sort((a, b) => {
+    const priorityDiff = debtPaymentPriority(b.currency, paymentCurrency) - debtPaymentPriority(a.currency, paymentCurrency);
+    if (priorityDiff !== 0) return priorityDiff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
 export async function getDebts() {
   try {
@@ -515,7 +534,7 @@ export async function collectGlobalCustomerPayment(data: {
       paymentCurrency = "TRY",
       paymentMethod = "CASH",
       accountId,
-      usdRate: initialUsdRate = 32.5,
+      usdRate: initialUsdRate = 1,
       notes,
       ignoreExcess = false,
       debtIds,
@@ -540,7 +559,7 @@ export async function collectGlobalCustomerPayment(data: {
       return { success: false, error: "Geçerli bir ödeme tutarı giriniz." };
     }
 
-    const usdRate = initialUsdRate || 32.5;
+    const usdRate = initialUsdRate || 1;
 
     // 1. Capture Balance BEFORE
     const beforeSummary = await getCustomerDebtSummary(customerId);
@@ -548,7 +567,7 @@ export async function collectGlobalCustomerPayment(data: {
     let remainingPayment = paymentAmount;
 
     await prisma.$transaction(async (tx) => {
-      for (const debt of unpaidDebts) {
+      for (const debt of sortDebtsForPayment(unpaidDebts, paymentCurrency)) {
         if (remainingPayment <= 0.001) break;
 
         let amountToApplyFromPayment = 0;
@@ -561,14 +580,14 @@ export async function collectGlobalCustomerPayment(data: {
           amountToReduceFromDebt = amountToApplyFromPayment;
         }
         else if (debt.currency === "USD" && paymentCurrency === "TRY") {
-          const debtRemainingInTRY = parseFloat((debtRemaining * usdRate).toFixed(2));
+          const debtRemainingInTRY = roundMoney(debtRemaining * usdRate);
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInTRY);
-          amountToReduceFromDebt = parseFloat((amountToApplyFromPayment / usdRate).toFixed(2));
+          amountToReduceFromDebt = roundMoney(amountToApplyFromPayment / usdRate);
         }
         else if (debt.currency === "TRY" && paymentCurrency === "USD") {
-          const debtRemainingInUSD = parseFloat((debtRemaining / usdRate).toFixed(2));
+          const debtRemainingInUSD = roundMoney(debtRemaining / usdRate);
           amountToApplyFromPayment = Math.min(remainingPayment, debtRemainingInUSD);
-          amountToReduceFromDebt = parseFloat((amountToApplyFromPayment * usdRate).toFixed(2));
+          amountToReduceFromDebt = roundMoney(amountToApplyFromPayment * usdRate);
         }
 
         if (amountToReduceFromDebt > 0.001) {
@@ -580,7 +599,7 @@ export async function collectGlobalCustomerPayment(data: {
               isPaid: newRemaining <= 0.01
             }
           });
-          remainingPayment -= amountToApplyFromPayment;
+          remainingPayment = roundMoney(remainingPayment - amountToApplyFromPayment);
         }
       }
 
@@ -803,7 +822,7 @@ export async function getDebtStatsDetails(filter: {
   }
 }
 
-export async function deleteCustomerPayment(transactionId: string) {
+export async function deleteCustomerPayment(transactionId: string, usdRate: number = 1) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -826,35 +845,54 @@ export async function deleteCustomerPayment(transactionId: string) {
       let amountToRestore = Number(amount);
       const { financeAccountId } = transaction;
 
-      // 1. Restore Debts (Start from most recently modified)
+      const txCurrency = transaction.currency || "TRY";
+      const safeUsdRate = usdRate || 1;
+
+      // 1. Restore Debts in the exact reverse of collection priority.
       const debtsToRestore = await tx.debt.findMany({
         where: { customerId, shopId },
-        orderBy: { updatedAt: "desc" }
+        orderBy: { createdAt: "asc" }
       });
 
-      for (const debt of debtsToRestore) {
+      for (const debt of sortDebtsForPaymentRollback(debtsToRestore, txCurrency)) {
         if (amountToRestore <= 0.001) break;
 
-        const paidAmount = Number(debt.amount) - Number(debt.remainingAmount);
-        if (paidAmount <= 0) continue;
+        const debtAmount = normalizeMoney(debt.amount);
+        const debtRemaining = clampRemainingAmount(debt.remainingAmount, debt.amount);
+        const paidAmountInDebtCurrency = roundMoney(debtAmount - debtRemaining);
+        if (paidAmountInDebtCurrency <= 0) continue;
 
-        // Simplify currency handling for restoration (assume match or simple rate)
-        // Since we didn't store the exact rate of the original payment in the debt row,
-        // we use a best-effort approach.
-        const restoreForThisDebt = Math.min(amountToRestore, paidAmount);
+        let amountFromPaymentCurrency = 0;
+        let restoreForThisDebt = 0;
+
+        if ((debt.currency || "TRY") === txCurrency) {
+          amountFromPaymentCurrency = Math.min(amountToRestore, paidAmountInDebtCurrency);
+          restoreForThisDebt = amountFromPaymentCurrency;
+        } else if (debt.currency === "USD" && txCurrency === "TRY") {
+          const paidInTRY = roundMoney(paidAmountInDebtCurrency * safeUsdRate);
+          amountFromPaymentCurrency = Math.min(amountToRestore, paidInTRY);
+          restoreForThisDebt = roundMoney(amountFromPaymentCurrency / safeUsdRate);
+        } else if ((debt.currency || "TRY") === "TRY" && txCurrency === "USD") {
+          const paidInUSD = roundMoney(paidAmountInDebtCurrency / safeUsdRate);
+          amountFromPaymentCurrency = Math.min(amountToRestore, paidInUSD);
+          restoreForThisDebt = roundMoney(amountFromPaymentCurrency * safeUsdRate);
+        }
+
+        if (restoreForThisDebt <= 0.001) continue;
+        const newRemaining = clampRemainingAmount(debtRemaining + restoreForThisDebt, debt.amount);
 
         await tx.debt.update({
           where: { id: debt.id },
           data: {
-            remainingAmount: { increment: restoreForThisDebt },
+            remainingAmount: newRemaining,
             isPaid: false
           }
         });
 
-        amountToRestore -= restoreForThisDebt;
+        amountToRestore = roundMoney(amountToRestore - amountFromPaymentCurrency);
       }
 
-      const balanceField = transaction.currency === "USD" ? "balanceUsd" : "balance";
+      const balanceField = txCurrency === "USD" ? "balanceUsd" : "balance";
       const isBalancePayment = !financeAccountId && (transaction.description?.includes("Bakiye") || transaction.description?.includes("Emanet"));
 
       if (isBalancePayment) {
@@ -914,7 +952,7 @@ export async function updateCustomerPayment(
   transactionId: string,
   newAmount: number,
   description?: string,
-  usdRate: number = 32.5
+  usdRate: number = 1
 ) {
   try {
     const shopId = await getShopId();
@@ -951,7 +989,7 @@ export async function updateCustomerPayment(
             orderBy: { createdAt: "asc" }
           });
 
-          for (const debt of unpaidDebts) {
+          for (const debt of sortDebtsForPayment(unpaidDebts, txCurrency)) {
             if (remainingDiff <= 0.001) break;
             const debtRemaining = Number(debt.remainingAmount);
             let toReduce = 0;
@@ -961,13 +999,13 @@ export async function updateCustomerPayment(
               toApply = Math.min(remainingDiff, debtRemaining);
               toReduce = toApply;
             } else if (debt.currency === "USD" && txCurrency === "TRY") {
-              const inTRY = Math.round(debtRemaining * usdRate);
+              const inTRY = roundMoney(debtRemaining * usdRate);
               toApply = Math.min(remainingDiff, inTRY);
-              toReduce = Math.round(toApply / usdRate);
+              toReduce = roundMoney(toApply / usdRate);
             } else if (debt.currency === "TRY" && txCurrency === "USD") {
-              const inUSD = Math.round(debtRemaining / usdRate);
+              const inUSD = roundMoney(debtRemaining / usdRate);
               toApply = Math.min(remainingDiff, inUSD);
-              toReduce = Math.round(toApply * usdRate);
+              toReduce = roundMoney(toApply * usdRate);
             }
 
             if (toReduce > 0.001) {
@@ -975,7 +1013,7 @@ export async function updateCustomerPayment(
                 where: { id: debt.id },
                 data: { remainingAmount: { decrement: toReduce }, isPaid: (debtRemaining - toReduce) <= 0.01 }
               });
-              remainingDiff -= toApply;
+              remainingDiff = roundMoney(remainingDiff - toApply);
             }
           }
         } else if (diff < 0) {
@@ -985,7 +1023,7 @@ export async function updateCustomerPayment(
             orderBy: { updatedAt: "desc" }
           });
 
-          for (const debt of partiallyPaidDebts) {
+          for (const debt of sortDebtsForPaymentRollback(partiallyPaidDebts, txCurrency)) {
             if (remainingRestore <= 0.001) break;
             const paidamt = Number(debt.amount) - Number(debt.remainingAmount);
             if (paidamt <= 0) continue;
@@ -996,13 +1034,13 @@ export async function updateCustomerPayment(
               toGap = Math.min(remainingRestore, paidamt);
               toRestore = toGap;
             } else if (debt.currency === "USD" && txCurrency === "TRY") {
-              const inTRY = Math.round(paidamt * usdRate);
+              const inTRY = roundMoney(paidamt * usdRate);
               toGap = Math.min(remainingRestore, inTRY);
-              toRestore = Math.round(toGap / usdRate);
+              toRestore = roundMoney(toGap / usdRate);
             } else if (debt.currency === "TRY" && txCurrency === "USD") {
-              const inUSD = Math.round(paidamt / usdRate);
+              const inUSD = roundMoney(paidamt / usdRate);
               toGap = Math.min(remainingRestore, inUSD);
-              toRestore = Math.round(toGap * usdRate);
+              toRestore = roundMoney(toGap * usdRate);
             }
 
             if (toRestore > 0.001) {
@@ -1010,7 +1048,7 @@ export async function updateCustomerPayment(
                 where: { id: debt.id },
                 data: { remainingAmount: { increment: toRestore }, isPaid: false }
               });
-              remainingRestore -= toGap;
+              remainingRestore = roundMoney(remainingRestore - toGap);
             }
           }
         }
@@ -1024,7 +1062,7 @@ export async function updateCustomerPayment(
             orderBy: { createdAt: "asc" }
           });
 
-          for (const debt of unpaidDebts) {
+          for (const debt of sortDebtsForPayment(unpaidDebts, txCurrency)) {
             if (remainingDiff <= 0.001) break;
 
             let amountToApplyFromDiff = 0;
@@ -1035,13 +1073,13 @@ export async function updateCustomerPayment(
               amountToApplyFromDiff = Math.min(remainingDiff, debtRemaining);
               amountToReduceFromDebt = amountToApplyFromDiff;
             } else if (debt.currency === "USD" && txCurrency === "TRY") {
-              const debtRemainingInTRY = Math.round(debtRemaining * usdRate);
+              const debtRemainingInTRY = roundMoney(debtRemaining * usdRate);
               amountToApplyFromDiff = Math.min(remainingDiff, debtRemainingInTRY);
-              amountToReduceFromDebt = Math.round(amountToApplyFromDiff / usdRate);
+              amountToReduceFromDebt = roundMoney(amountToApplyFromDiff / usdRate);
             } else if (debt.currency === "TRY" && txCurrency === "USD") {
-              const debtRemainingInUSD = Math.round(debtRemaining / usdRate);
+              const debtRemainingInUSD = roundMoney(debtRemaining / usdRate);
               amountToApplyFromDiff = Math.min(remainingDiff, debtRemainingInUSD);
-              amountToReduceFromDebt = Math.round(amountToApplyFromDiff * usdRate);
+              amountToReduceFromDebt = roundMoney(amountToApplyFromDiff * usdRate);
             }
 
             if (amountToReduceFromDebt > 0.001) {
@@ -1053,7 +1091,7 @@ export async function updateCustomerPayment(
                   isPaid: newRemaining <= 0.01
                 }
               });
-              remainingDiff -= amountToApplyFromDiff;
+              remainingDiff = roundMoney(remainingDiff - amountToApplyFromDiff);
             }
           }
 
@@ -1084,7 +1122,7 @@ export async function updateCustomerPayment(
               orderBy: { updatedAt: "desc" }
             });
 
-            for (const debt of partiallyPaidDebts) {
+            for (const debt of sortDebtsForPaymentRollback(partiallyPaidDebts, txCurrency)) {
               if (remainingRestore <= 0.001) break;
 
               const paidAmtOnDebt = Number(debt.amount) - Number(debt.remainingAmount);
@@ -1097,13 +1135,13 @@ export async function updateCustomerPayment(
                 amountToRestoreFromGap = Math.min(remainingRestore, paidAmtOnDebt);
                 amountToIncreaseOnDebt = amountToRestoreFromGap;
               } else if (debt.currency === "USD" && txCurrency === "TRY") {
-                const paidAmtInTRY = Math.round(paidAmtOnDebt * usdRate);
+                const paidAmtInTRY = roundMoney(paidAmtOnDebt * usdRate);
                 amountToRestoreFromGap = Math.min(remainingRestore, paidAmtInTRY);
-                amountToIncreaseOnDebt = Math.round(amountToRestoreFromGap / usdRate);
+                amountToIncreaseOnDebt = roundMoney(amountToRestoreFromGap / usdRate);
               } else if (debt.currency === "TRY" && txCurrency === "USD") {
-                const paidAmtInUSD = Math.round(paidAmtOnDebt / usdRate);
+                const paidAmtInUSD = roundMoney(paidAmtOnDebt / usdRate);
                 amountToRestoreFromGap = Math.min(remainingRestore, paidAmtInUSD);
-                amountToIncreaseOnDebt = Math.round(amountToRestoreFromGap * usdRate);
+                amountToIncreaseOnDebt = roundMoney(amountToRestoreFromGap * usdRate);
               }
 
               if (amountToIncreaseOnDebt > 0.001) {
@@ -1114,7 +1152,7 @@ export async function updateCustomerPayment(
                     isPaid: false
                   }
                 });
-                remainingRestore -= amountToRestoreFromGap;
+                remainingRestore = roundMoney(remainingRestore - amountToRestoreFromGap);
               }
             }
           }
