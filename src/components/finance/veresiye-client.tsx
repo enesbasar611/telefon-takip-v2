@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useTransition, useEffect } from "react";
+import React, { useState, useMemo, useTransition, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
     CreditCard,
@@ -124,6 +124,7 @@ import {
     AlertDialogTitle,
     AlertDialogDescription,
     AlertDialogFooter,
+    AlertDialogAction,
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 
@@ -256,6 +257,11 @@ const getPrintableDebts = (debts: any[] = [], returns: any[] = []) =>
         .map((debt) => adjustDebtForReturns(debt, returns))
         .filter(Boolean);
 
+const filterPaidForOutput = (debts: any[] = [], includePaidItems: boolean) =>
+    includePaidItems
+        ? debts
+        : debts.filter((debt: any) => !debt.isPaid && getSafeDebtRemaining(debt) > 0);
+
 export function VeresiyeClient({
     debts: propsDebts,
     thisMonthCollected: propsThisMonthCollected,
@@ -351,16 +357,35 @@ export function VeresiyeClient({
     const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
     const [receiptShowPaid, setReceiptShowPaid] = useState(false);
     const [receiptAutoPDF, setReceiptAutoPDF] = useState(false);
+    const outputPromptResolverRef = useRef<((includePaidItems: boolean) => void) | null>(null);
+    const [outputPromptOpen, setOutputPromptOpen] = useState(false);
+
+    const requestIncludePaidItemsInOutput = useCallback(() => {
+        return new Promise<boolean>((resolve) => {
+            outputPromptResolverRef.current = resolve;
+            setOutputPromptOpen(true);
+        });
+    }, []);
+
+    const resolveOutputPrompt = useCallback((includePaidItems: boolean) => {
+        outputPromptResolverRef.current?.(includePaidItems);
+        outputPromptResolverRef.current = null;
+        setOutputPromptOpen(false);
+    }, []);
 
     // Stats Detail Modal State
     const [statsModalOpen, setStatsModalOpen] = useState(false);
-    const [statsModalType, setStatsModalType] = useState<'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'OVERDUE' | 'COLLECTED' | null>(null);
+    const [statsModalType, setStatsModalType] = useState<'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'GENERAL_TOTAL' | 'OVERDUE' | 'COLLECTED' | null>(null);
     const [statsDates, setStatsDates] = useState<{ start?: string; end?: string }>({});
     const [editNotes, setEditNotes] = useState<string>("");
     const [editDescription, setEditDescription] = useState<string>("");
     const [editCurrency, setEditCurrency] = useState<string>("TRY");
     const [statsSearchQuery, setStatsSearchQuery] = useState("");
     const [statsViewMode, setStatsViewMode] = useState<'list' | 'grid'>('list');
+    const [statsCustomerDetail, setStatsCustomerDetail] = useState<any>(null);
+    const [statsSortMode, setStatsSortMode] = useState<'amount_desc' | 'amount_asc' | 'date_desc' | 'date_asc'>('amount_desc');
+    const [statsPage, setStatsPage] = useState(1);
+    const statsPageSize = 12;
 
     const [portfolioCustomer, setPortfolioCustomer] = useState<any>(null);
 
@@ -496,6 +521,98 @@ export function VeresiyeClient({
             normalizeSearchText(item.description || item.notes || "").includes(lowQuery)
         );
     }, [statsModalResults, statsSearchQuery]);
+
+    const getStatsDisplayAmount = useCallback((item: any) => {
+        if (statsModalType === 'GENERAL_TOTAL') {
+            return defaultCurrency === 'USD'
+                ? Number(item.totalUSDValue || 0)
+                : Number(item.totalTRYValue || 0);
+        }
+        return item.remainingAmount !== undefined ? getSafeDebtRemaining(item) : Number(item.amount || 0);
+    }, [defaultCurrency, statsModalType]);
+
+    const statsDisplayData = useMemo(() => {
+        if (statsModalType !== 'RECEIVABLE_TRY' && statsModalType !== 'RECEIVABLE_USD' && statsModalType !== 'GENERAL_TOTAL') {
+            return [...statsModalData].sort((a: any, b: any) => {
+                const amountA = getStatsDisplayAmount(a);
+                const amountB = getStatsDisplayAmount(b);
+                const dateA = new Date(a.createdAt).getTime() || 0;
+                const dateB = new Date(b.createdAt).getTime() || 0;
+                if (statsSortMode === 'amount_asc') return amountA - amountB;
+                if (statsSortMode === 'date_asc') return dateA - dateB;
+                if (statsSortMode === 'date_desc') return dateB - dateA;
+                return amountB - amountA;
+            });
+        }
+
+        const grouped = new Map<string, any>();
+        statsModalData.forEach((item: any) => {
+            const customer = item.customer || {};
+            const key = customer.id || item.customerId || customer.phone || customer.name || item.id;
+            const amount = getSafeDebtRemaining(item);
+            const isUSD = item.currency === 'USD';
+            const amountTRY = isUSD ? 0 : amount;
+            const amountUSD = isUSD ? amount : 0;
+            const existing = grouped.get(key);
+
+            if (existing) {
+                existing.remainingAmount += amount;
+                existing.amount += Number(item.amount || 0);
+                existing.totalTRY += amountTRY;
+                existing.totalUSD += amountUSD;
+                existing.totalTRYValue += amountTRY + (amountUSD * usdRate);
+                existing.totalUSDValue += amountUSD + (amountTRY / usdRate);
+                existing.itemCount += 1;
+                existing.items.push(item);
+                if (new Date(item.createdAt).getTime() > new Date(existing.createdAt).getTime()) {
+                    existing.createdAt = item.createdAt;
+                }
+            } else {
+                grouped.set(key, {
+                    ...item,
+                    id: key,
+                    customer,
+                    currency: statsModalType === 'RECEIVABLE_USD' ? "USD" : "TRY",
+                    amount: Number(item.amount || 0),
+                    remainingAmount: amount,
+                    totalTRY: amountTRY,
+                    totalUSD: amountUSD,
+                    totalTRYValue: amountTRY + (amountUSD * usdRate),
+                    totalUSDValue: amountUSD + (amountTRY / usdRate),
+                    itemCount: 1,
+                    items: [item],
+                    description: statsModalType === 'RECEIVABLE_USD'
+                        ? "Müşteri toplam USD borcu"
+                        : statsModalType === 'GENERAL_TOTAL'
+                            ? "Müşteri toplam portföy borcu"
+                            : "Müşteri toplam TL borcu",
+                });
+            }
+        });
+
+        return Array.from(grouped.values())
+            .sort((a: any, b: any) => {
+                const amountA = getStatsDisplayAmount(a);
+                const amountB = getStatsDisplayAmount(b);
+                const dateA = new Date(a.createdAt).getTime() || 0;
+                const dateB = new Date(b.createdAt).getTime() || 0;
+                if (statsSortMode === 'amount_asc') return amountA - amountB;
+                if (statsSortMode === 'date_asc') return dateA - dateB;
+                if (statsSortMode === 'date_desc') return dateB - dateA;
+                return amountB - amountA;
+            });
+    }, [getStatsDisplayAmount, statsModalData, statsModalType, statsSortMode, usdRate]);
+
+    const statsTotalPages = Math.max(1, Math.ceil(statsDisplayData.length / statsPageSize));
+    const statsPagedData = useMemo(() => {
+        const safePage = Math.min(Math.max(statsPage, 1), statsTotalPages);
+        const start = (safePage - 1) * statsPageSize;
+        return statsDisplayData.slice(start, start + statsPageSize);
+    }, [statsDisplayData, statsPage, statsTotalPages]);
+
+    useEffect(() => {
+        setStatsPage(1);
+    }, [statsDates, statsModalType, statsSearchQuery, statsSortMode]);
 
     const { data: portfolioData } = useQuery({
         queryKey: ["customer-portfolio", portfolioCustomer?.id || portfolioCustomer?.customerId],
@@ -1270,7 +1387,7 @@ export function VeresiyeClient({
         return customers.sort((a, b) => a.name.localeCompare(b.name, "tr"));
     };
 
-    const buildCustomerExportSections = async () => {
+    const buildCustomerExportSections = async (includePaidItems: boolean) => {
         const customers = getExportCustomers();
 
         if (customers.length === 0) {
@@ -1286,7 +1403,10 @@ export function VeresiyeClient({
                 const statementDebts = statement.success ? (statement.debts || []) : [];
                 const statementPayments = statement.success ? (statement.transactions || []) : [];
                 const statementReturns = statement.success ? (statement.activeReturns || []) : [];
-                const debtsForExport = getPrintableDebts(statementDebts.length > 0 ? statementDebts : customer.debtItems, statementReturns);
+                const debtsForExport = filterPaidForOutput(
+                    getPrintableDebts(statementDebts.length > 0 ? statementDebts : customer.debtItems, statementReturns),
+                    includePaidItems
+                );
 
                 return {
                     customer,
@@ -1396,7 +1516,8 @@ export function VeresiyeClient({
     };
 
     const exportToExcel = async () => {
-        const sections = await buildCustomerExportSections();
+        const includePaidItems = await requestIncludePaidItemsInOutput();
+        const sections = await buildCustomerExportSections(includePaidItems);
         if (sections.length === 0) return;
 
         const XLSX = await import("xlsx");
@@ -1421,7 +1542,8 @@ export function VeresiyeClient({
     };
 
     const exportToCsv = async () => {
-        const sections = await buildCustomerExportSections();
+        const includePaidItems = await requestIncludePaidItemsInOutput();
+        const sections = await buildCustomerExportSections(includePaidItems);
         if (sections.length === 0) return;
 
         const rows = sections.flatMap((section, index) => [
@@ -1565,12 +1687,13 @@ export function VeresiyeClient({
                                                     }}
                                                     onWhatsApp={handleWhatsAppMessage}
                                                     onReceipt={async (item) => {
+                                                        const includePaidItems = await requestIncludePaidItemsInOutput();
                                                         const toastId = toast.loading("Hesap dökümü hazırlanıyor...");
                                                         try {
                                                             const res = await getCustomerStatement(item.customerId);
                                                             if (res.success) {
                                                                 const combined = [
-	                                                                    ...getPrintableDebts(res.debts || [], res.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+	                                                                    ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                                                     ...(res.transactions || []).map((t: any) => ({
                                                                         ...t,
                                                                         type: 'PAYMENT',
@@ -1581,6 +1704,7 @@ export function VeresiyeClient({
                                                                 ];
                                                                 setReceiptCustomer(item);
                                                                 setReceiptDebts(combined);
+                                                                setReceiptShowPaid(includePaidItems);
                                                                 toast.success("Hesap dökümü yüklendi.", { id: toastId });
                                                             } else {
                                                                 toast.error("Hata: " + res.error, { id: toastId });
@@ -1611,6 +1735,38 @@ export function VeresiyeClient({
                     </div>
                 </LayoutCustomizer>
             </div>
+
+            <AlertDialog
+                open={outputPromptOpen}
+                onOpenChange={(open) => {
+                    if (!open && outputPromptResolverRef.current) {
+                        resolveOutputPrompt(false);
+                    }
+                }}
+            >
+                <AlertDialogContent className="max-w-[420px] rounded-3xl bg-card border-border/60">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-base font-black tracking-tight">Ödenen ürünler görünsün mü?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-xs leading-relaxed">
+                            Çıktıda ödemesi alınmış ürünleri göstermek için Evet, sadece açık kalan ürünleri listelemek için Hayır seçin.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-2">
+                        <AlertDialogCancel
+                            onClick={() => resolveOutputPrompt(false)}
+                            className="rounded-xl font-black uppercase tracking-widest text-[10px]"
+                        >
+                            Hayır
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => resolveOutputPrompt(true)}
+                            className="rounded-xl font-black uppercase tracking-widest text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white"
+                        >
+                            Evet
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* --- Payment Dialogs --- */}
             <VeresiyePaymentModal
@@ -1684,7 +1840,8 @@ export function VeresiyeClient({
                                 title="Ekstre (Excel)"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-	                                    const printableDebts = getPrintableDebts(statementData.debts || [], statementData.activeReturns || []);
+                                    const includePaidItems = await requestIncludePaidItemsInOutput();
+	                                    const printableDebts = filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems);
 	                                    const data = [
 	                                        ...printableDebts.map((d: any) => {
                                             const date = new Date(d.createdAt);
@@ -1736,16 +1893,17 @@ export function VeresiyeClient({
                             {/* WhatsApp */}
                             <button
                                 title="WhatsApp Ekstre"
-                                onClick={() => {
+                                onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
+                                    const includePaidItems = await requestIncludePaidItemsInOutput();
                                     let message = `*${historyCustomer?.name} - Hesap Özeti*\n\n`;
-	                                    const unpaidDebts = getPrintableDebts(statementData.debts || [], statementData.activeReturns || []).filter((d: any) => !d.isPaid);
-                                    const earliestDate = unpaidDebts.length > 0
-                                        ? new Date(unpaidDebts.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
+	                                    const outputDebts = filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems);
+                                    const earliestDate = outputDebts.length > 0
+                                        ? new Date([...outputDebts].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
                                         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
                                     const relevantTransactions = (statementData.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
                                     const combined = [
-                                        ...unpaidDebts.map((d: any) => ({ date: new Date(d.createdAt), type: 'DEBT', currency: d.currency || 'TRY', amount: Number(d.amount), notes: d.notes || 'Hizmet/Ürün' })),
+                                        ...outputDebts.map((d: any) => ({ date: new Date(d.createdAt), type: 'DEBT', currency: d.currency || 'TRY', amount: Number(d.amount), notes: d.notes || 'Hizmet/Ürün' })),
                                         ...relevantTransactions.map((t: any) => ({ date: new Date(t.createdAt), type: 'PAYMENT', currency: t.currency || 'TRY', amount: Number(t.amount), notes: t.description || 'Tahsilat' }))
                                     ].sort((a, b) => a.date.getTime() - b.date.getTime());
                                     const dateGroups: { [key: string]: any[] } = {};
@@ -1790,10 +1948,10 @@ export function VeresiyeClient({
                                         message += `\n`;
                                     });
                                     message += `*🔴 TOPLAM GÜNCEL BORÇ*\n`;
-	                                    const totalTRY = unpaidDebts
+	                                    const totalTRY = outputDebts
 	                                        .filter((debt: any) => (debt.currency || "TRY") !== "USD")
 	                                        .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
-	                                    const totalUSD = unpaidDebts
+	                                    const totalUSD = outputDebts
 	                                        .filter((debt: any) => debt.currency === "USD")
 	                                        .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
                                     const isDefaultUSD = defaultCurrency === 'USD';
@@ -1827,13 +1985,14 @@ export function VeresiyeClient({
                                 title="PDF Ekstre"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
+                                    const includePaidItems = await requestIncludePaidItemsInOutput();
                                     const combined = [
-	                                        ...getPrintableDebts(statementData.debts || [], statementData.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+	                                        ...filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                         ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
                                     ];
                                     setReceiptCustomer({ id: historyCustomer.customerId, customerId: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
                                     setReceiptDebts(combined);
-                                    setReceiptShowPaid(true);
+                                    setReceiptShowPaid(includePaidItems);
                                     setReceiptAutoPDF(true);
                                 }}
                                 className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all"
@@ -1846,12 +2005,14 @@ export function VeresiyeClient({
                                 title="Fiş Yazdır"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
+                                    const includePaidItems = await requestIncludePaidItemsInOutput();
                                     const combined = [
-	                                        ...getPrintableDebts(statementData.debts || [], statementData.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+	                                        ...filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                         ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
                                     ];
                                     setReceiptCustomer({ id: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
                                     setReceiptDebts(combined);
+                                    setReceiptShowPaid(includePaidItems);
                                     setReceiptAutoPDF(false);
                                 }}
                                 className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
@@ -2372,12 +2533,13 @@ export function VeresiyeClient({
                         <div className="absolute top-10 right-10 z-20 flex gap-4">
                             <Button
                                 onClick={async () => {
+                                    const includePaidItems = await requestIncludePaidItemsInOutput();
                                     const toastId = toast.loading("Fiş hazırlanıyor...");
                                     try {
                                         const res = await getCustomerStatement(portfolioCustomer.customerId || portfolioCustomer.id);
                                         if (res.success) {
                                             const combined = [
-	                                                ...getPrintableDebts(res.debts || [], res.activeReturns || []).map((d: any) => ({ ...d, type: 'DEBT' })),
+	                                                ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                                 ...(res.transactions || []).map((t: any) => ({
                                                     ...t,
                                                     type: 'PAYMENT',
@@ -2392,6 +2554,7 @@ export function VeresiyeClient({
                                                 phone: portfolioCustomer.phone
                                             });
                                             setReceiptDebts(combined);
+                                            setReceiptShowPaid(includePaidItems);
                                             toast.success("Fiş dökümü hazır.", { id: toastId });
                                         } else {
                                             toast.error("Hata: " + res.error, { id: toastId });
@@ -2535,6 +2698,7 @@ export function VeresiyeClient({
                 isPending={isPending}
                 onPrintReceipt={async () => {
                     if (paymentSummary) {
+                        const includePaidItems = await requestIncludePaidItemsInOutput();
                         startTransition(async () => {
                             const res = await getCustomerStatement(paymentSummary.customerId);
                             if (res.success) {
@@ -2547,7 +2711,7 @@ export function VeresiyeClient({
                                         phone: cust.phone || ""
                                     });
                                     const mergedDebts = [
-	                                        ...getPrintableDebts(res.debts || [], res.activeReturns || []).map((d: any) => ({ ...d, type: "DEBT" })),
+	                                        ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: "DEBT" })),
                                         ...(res.transactions || []).map((t: any) => ({
                                             ...t,
                                             type: "PAYMENT",
@@ -2557,7 +2721,7 @@ export function VeresiyeClient({
                                         }))
                                     ];
                                     setReceiptDebts(mergedDebts);
-                                    setReceiptShowPaid(true);
+                                    setReceiptShowPaid(includePaidItems);
                                 }
                             }
                             setPaymentSummary(null);
@@ -2587,6 +2751,8 @@ export function VeresiyeClient({
                 if (!o) {
                     setStatsSearchQuery("");
                     setStatsDates({});
+                    setStatsCustomerDetail(null);
+                    setStatsPage(1);
                 }
             }}>
                 <AlertDialogContent className="max-w-[1000px] w-[95vw] bg-white/95 dark:bg-zinc-900/90 backdrop-blur-3xl rounded-[3rem] p-0 overflow-hidden shadow-[0_50px_200px_-50px_rgba(0,0,0,0.4)] border-border/50 border flex flex-col h-[90vh]">
@@ -2604,11 +2770,12 @@ export function VeresiyeClient({
                                     </div>
                                     {statsModalType === 'RECEIVABLE_TRY' && "TL Alacakları"}
                                     {statsModalType === 'RECEIVABLE_USD' && "USD Alacakları"}
+                                    {statsModalType === 'GENERAL_TOTAL' && "Toplam Portföy"}
                                     {statsModalType === 'OVERDUE' && "Vadesi Geçenler"}
                                     {statsModalType === 'COLLECTED' && "Tahsilat Detayları"}
                                 </AlertDialogTitle>
                                 <p className="text-indigo-100/80 text-sm font-medium tracking-wide">
-                                    {statsModalData.length} Kayıt Listeleniyor • Detaylı Döküm ve Analiz
+                                    {statsDisplayData.length} Kayıt Listeleniyor • Detaylı Döküm ve Analiz
                                 </p>
                             </div>
                             <Button variant="ghost" onClick={() => setStatsModalOpen(false)} className="text-white hover:bg-white/10 rounded-2xl h-10 w-10 p-0 flex items-center justify-center font-bold text-2xl transition-all active:scale-90">
@@ -2619,7 +2786,7 @@ export function VeresiyeClient({
                         {/* Controls Bar */}
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end relative z-10">
                             {/* Search */}
-                            <div className="md:col-span-5 space-y-2">
+                            <div className="md:col-span-4 space-y-2">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Kayıtlarda Ara</Label>
                                 <div className="relative group">
                                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-white transition-colors" />
@@ -2633,7 +2800,20 @@ export function VeresiyeClient({
                             </div>
 
                             {/* Date Picker Range */}
-                            <div className="md:col-span-1 border-white/10 h-10 hidden md:block" /> {/* Spacer */}
+                            <div className="md:col-span-2 space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Sıralama</Label>
+                                <Select value={statsSortMode} onValueChange={(value) => setStatsSortMode(value as any)}>
+                                    <SelectTrigger className="bg-white/10 border-white/10 text-white h-12 rounded-2xl focus:ring-2 focus:ring-white/20">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="amount_desc">Yüksekten küçüğe</SelectItem>
+                                        <SelectItem value="amount_asc">Küçükten yükseğe</SelectItem>
+                                        <SelectItem value="date_asc">Eskiden yeniye</SelectItem>
+                                        <SelectItem value="date_desc">Yeniden eskiye</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
                             <div className="md:col-span-4 grid grid-cols-2 gap-2">
                                 <div className="space-y-2">
@@ -2691,7 +2871,7 @@ export function VeresiyeClient({
                                 </div>
                                 <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Veriler İşleniyor...</span>
                             </div>
-                        ) : statsModalData.length === 0 ? (
+                        ) : statsDisplayData.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full gap-5 opacity-40">
                                 <div className="w-20 h-20 rounded-[2.5rem] bg-slate-200 dark:bg-zinc-800 flex items-center justify-center">
                                     <Search className="w-10 h-10 text-slate-400 dark:text-zinc-500" />
@@ -2706,23 +2886,33 @@ export function VeresiyeClient({
                                 "gap-3 md:gap-4",
                                 statsViewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2" : "flex flex-col"
                             )}>
-                                {statsModalData.map((item: any, idx: number) => {
+                                {statsPagedData.map((item: any, idx: number) => {
                                     const isIncome = statsModalType === 'COLLECTED' || item.type === 'INCOME';
-                                    const amount = item.remainingAmount !== undefined ? getSafeDebtRemaining(item) : Number(item.amount || 0);
+                                    const amount = getStatsDisplayAmount(item);
+                                    const displayCurrency = statsModalType === 'GENERAL_TOTAL'
+                                        ? defaultCurrency
+                                        : (item.currency === 'USD' ? 'USD' : 'TRY');
+                                    const isGroupedReceivable = Array.isArray(item.items);
 
                                     return (
-                                        <div key={idx} className={cn(
-                                            "group flex items-center gap-3 p-2 md:p-2.5 bg-white/40 dark:bg-[#1a2231]/40 border border-border/40 shadow-sm hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 rounded-[1.5rem] transition-all cursor-default relative overflow-hidden",
+                                        <div
+                                            key={idx}
+                                            onClick={() => {
+                                                if (isGroupedReceivable) setStatsCustomerDetail(item);
+                                            }}
+                                            className={cn(
+                                            "group flex items-center gap-3 p-3 md:p-3.5 bg-white/40 dark:bg-[#1a2231]/40 border border-border/40 shadow-sm hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 rounded-[1.5rem] transition-all relative overflow-hidden",
+                                            isGroupedReceivable ? "cursor-pointer" : "cursor-default",
                                             statsViewMode === 'grid' ? "w-full" : ""
                                         )}>
-                                            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100/50 dark:border-indigo-500/20">
-                                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100/50 dark:border-indigo-500/20">
+                                                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
                                                     {item.customer?.name?.[0].toUpperCase()}
                                                 </span>
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="text-[11px] font-black text-foreground truncate uppercase tracking-tight">{item.customer?.name}</span>
+                                                    <span className="text-sm font-black text-foreground truncate uppercase tracking-tight">{item.customer?.name}</span>
                                                     {item.paymentMethod && (
                                                         <Badge variant="secondary" className="text-[6px] h-3 px-1 font-black uppercase tracking-tighter bg-indigo-500/10 text-indigo-500 border-none">
                                                             {item.paymentMethod}
@@ -2730,15 +2920,15 @@ export function VeresiyeClient({
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[8px] font-bold text-muted-foreground/60 flex items-center gap-1 shrink-0">
+                                                    <span className="text-[11px] font-bold text-muted-foreground/70 flex items-center gap-1 shrink-0">
                                                         {(() => {
                                                             const d = new Date(item.createdAt);
                                                             return !isNaN(d.getTime()) ? format(d, "dd.MM.yy", { locale: tr }) : "-";
                                                         })()}
                                                     </span>
                                                     <div className="w-0.5 h-0.5 rounded-full bg-border" />
-                                                    <span className="text-[8px] font-medium text-muted-foreground/50 truncate max-w-[150px] italic">
-                                                        {item.description || item.notes || "İşlem"}
+                                                    <span className="text-[11px] font-semibold text-muted-foreground/70 truncate max-w-[260px] italic">
+                                                        {isGroupedReceivable ? `${item.itemCount} işlem • detay için tıklayın` : (item.description || item.notes || "İşlem")}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2764,10 +2954,10 @@ export function VeresiyeClient({
 
                                                 <div className="text-right">
                                                     <span className={cn(
-                                                        "text-xs font-black tabular-nums tracking-tighter",
+                                                        "text-base font-black tabular-nums tracking-tighter",
                                                         isIncome ? "text-emerald-600" : "text-rose-600"
                                                     )}>
-                                                        {item.currency === 'USD' ? '$' : '₺'}{amount.toLocaleString('tr-TR')}
+                                                        {displayCurrency === 'USD' ? '$' : '₺'}{amount.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2783,24 +2973,45 @@ export function VeresiyeClient({
                         <div className="flex items-center gap-6">
                             <div className="flex flex-col">
                                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Toplam Kayıt</span>
-                                <span className="text-xl font-black text-foreground">{statsModalData.length} Adet</span>
+                                <span className="text-xl font-black text-foreground">{statsDisplayData.length} Adet</span>
                             </div>
                             <div className="w-px h-10 bg-border/50" />
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Dönem Toplamı (TRY)</span>
+                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Dönem Toplamı ({statsModalType === 'GENERAL_TOTAL' ? defaultCurrency : statsModalType === 'RECEIVABLE_USD' ? 'USD' : 'TRY'})</span>
                                 <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
-                                    ₺{statsModalData.reduce((acc: number, curr: any) => acc + (curr.currency === 'USD' ? 0 : (curr.remainingAmount !== undefined ? getSafeDebtRemaining(curr) : Number(curr.amount))), 0).toLocaleString('tr-TR')}
+                                    {statsModalType === 'GENERAL_TOTAL' && defaultCurrency === 'USD' ? '$' : statsModalType === 'RECEIVABLE_USD' ? '$' : '₺'}{statsDisplayData.reduce((acc: number, curr: any) => acc + getStatsDisplayAmount(curr), 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
                                 </span>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    disabled={statsPage <= 1}
+                                    onClick={() => setStatsPage((page) => Math.max(1, page - 1))}
+                                    className="h-10 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Önceki
+                                </Button>
+                                <span className="min-w-16 text-center text-[10px] font-black text-muted-foreground tabular-nums">
+                                    {Math.min(statsPage, statsTotalPages)} / {statsTotalPages}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    disabled={statsPage >= statsTotalPages}
+                                    onClick={() => setStatsPage((page) => Math.min(statsTotalPages, page + 1))}
+                                    className="h-10 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                                >
+                                    Sonraki
+                                </Button>
+                            </div>
                             <Button
                                 variant="outline"
                                 onClick={async () => {
                                     // Excel Export for stats
                                     const XLSX = await import("xlsx");
-                                    const data = statsModalData.map((item: any) => {
+                                    const data = statsDisplayData.map((item: any) => {
                                         const date = new Date(item.createdAt);
                                         const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy HH:mm") : "-";
                                         return {
@@ -2808,7 +3019,8 @@ export function VeresiyeClient({
                                             Tarih: dateStr,
                                             İşlem: item.description || item.notes || "-",
                                             ÖdemeYöntemi: item.paymentMethod || "-",
-                                            Tutar: item.amount || 0,
+                                            Tutar: item.remainingAmount !== undefined ? getSafeDebtRemaining(item) : (item.amount || 0),
+                                            Detay: item.itemCount ? `${item.itemCount} işlem toplamı` : (item.description || item.notes || "-"),
                                             Döviz: item.currency || "TRY"
                                         };
                                     });
@@ -2833,6 +3045,72 @@ export function VeresiyeClient({
             </AlertDialog >
 
             {/* Borç Fişi Modal */}
+            <AlertDialog open={!!statsCustomerDetail} onOpenChange={(o) => { if (!o) setStatsCustomerDetail(null); }}>
+                <AlertDialogContent className="max-w-[720px] w-[94vw] bg-card rounded-[2rem] p-0 overflow-hidden border border-border/60 shadow-2xl">
+                    <div className="p-6 bg-muted/30 border-b border-border/50 flex items-start justify-between gap-4">
+                        <AlertDialogHeader className="space-y-1">
+                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tight">
+                                {statsCustomerDetail?.customer?.name || "Müşteri Detayı"}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-xs font-medium text-muted-foreground">
+                                {statsCustomerDetail?.itemCount || 0} alacak işlemi müşteri altında toplandı.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <Button variant="ghost" size="icon" onClick={() => setStatsCustomerDetail(null)} className="rounded-xl shrink-0">
+                            <span className="text-xl leading-none">×</span>
+                        </Button>
+                    </div>
+
+                    <div className="max-h-[58vh] overflow-y-auto p-5 space-y-3 bg-slate-50/50 dark:bg-[#111827]/40">
+                        {[...(statsCustomerDetail?.items || [])]
+                            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                            .map((item: any, index: number) => {
+                                const date = new Date(item.createdAt);
+                                const amount = getSafeDebtRemaining(item);
+
+                                return (
+                                    <div key={item.id || index} className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/80 p-3">
+                                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-[10px] font-black border border-emerald-500/20">
+                                            {index + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[11px] font-black uppercase text-foreground truncate">
+                                                {item.description || item.notes || "Borç işlemi"}
+                                            </div>
+                                            <div className="text-[9px] font-bold text-muted-foreground">
+                                                {!isNaN(date.getTime()) ? format(date, "dd.MM.yyyy HH:mm", { locale: tr }) : "-"}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-black text-rose-600 tabular-nums">
+                                                {item.currency === 'USD' ? '$' : '₺'}{amount.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                                            </div>
+                                            {Number(item.amount || 0) !== amount && (
+                                                <div className="text-[9px] font-bold text-muted-foreground">
+                                                    Orijinal: {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                    </div>
+
+                    <div className="p-5 border-t border-border/50 bg-background flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Müşteri Toplamı</div>
+                            <div className="text-2xl font-black text-emerald-600 tabular-nums">
+                                {statsModalType === 'GENERAL_TOTAL' && defaultCurrency === 'USD' ? '$' : statsModalType === 'RECEIVABLE_USD' ? '$' : '₺'}
+                                {getStatsDisplayAmount(statsCustomerDetail || {}).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                            </div>
+                        </div>
+                        <Button onClick={() => setStatsCustomerDetail(null)} className="h-11 px-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest">
+                            Kapat
+                        </Button>
+                    </div>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {
                 receiptCustomer && (
                     <DebtReceiptModal

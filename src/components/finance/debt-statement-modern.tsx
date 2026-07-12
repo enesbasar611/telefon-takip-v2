@@ -5,8 +5,7 @@ import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import {
     buildOpenDebtStatementEntries,
-    buildDebtStatementEntries,
-    getCurrentDebtTotals
+    buildDebtStatementEntries
 } from "@/lib/debt-statement-calculator";
 
 interface DebtStatementModernProps {
@@ -38,16 +37,14 @@ export const DebtStatementModern = ({
     const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 1;
     const formatTRY = (amount: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
     const formatUSD = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    const money = (amount: unknown) => {
+        const value = Number(amount);
+        if (!Number.isFinite(value)) return 0;
+        return Math.round(value * 100) / 100;
+    };
 
     // Fişteki (slip) toplam tutar hesaplama mantığıyla birebir aynı şekilde ödenmemiş borçları filtreleyip genel bakiyeyi hesaplıyoruz
     const unpaidDebts = debts.filter((d: any) => (d.type === 'DEBT' || !d.type) && !d.isPaid);
-
-    const currentTotals = getCurrentDebtTotals(debts);
-    const unpaidTRY = currentTotals.try;
-    const unpaidUSD = currentTotals.usd;
-
-    const portfolioTotalTRY = Math.ceil(unpaidTRY + (unpaidUSD * currentUsdRate));
-    const portfolioTotalUSD = (unpaidTRY / currentUsdRate) + unpaidUSD;
 
     // Fişteki filtreleme mantığıyla birebir aynı şekilde en eski borç tarihini bulup listelenecek elemanları belirliyoruz
     const earliestDate = (() => {
@@ -76,15 +73,75 @@ export const DebtStatementModern = ({
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     // Borç ve Tahsilat Hesaplamaları (Özet kutuları için filtrelenmiş veriden hesaplanır)
-    const totalTRY = unpaidTRY;
-    const totalUSD = unpaidUSD;
-
     const statementEntries = showPaid
         ? buildDebtStatementEntries(filteredDebts, currentUsdRate)
         : buildOpenDebtStatementEntries(debts, currentUsdRate);
-    const totalTahsilat = statementEntries
-        .filter((entry) => entry.type === 'PAYMENT')
-        .reduce((acc, entry) => acc + Number(entry.amountTRY), 0);
+    const debtSummaryEntries = statementEntries.filter((entry) => entry.type === 'DEBT');
+    const paymentSummaryEntries = statementEntries.filter((entry) => entry.type === 'PAYMENT');
+    const totalTRY = debtSummaryEntries
+        .filter((entry) => entry.currency !== 'USD')
+        .reduce((sum, entry) => sum + money(showPaid ? entry.amount : entry.remainingAmount), 0);
+    const totalUSD = debtSummaryEntries
+        .filter((entry) => entry.currency === 'USD')
+        .reduce((sum, entry) => sum + money(showPaid ? entry.amount : entry.remainingAmount), 0);
+    const totalTahsilatTRY = showPaid
+        ? paymentSummaryEntries
+            .filter((entry) => entry.currency !== 'USD')
+            .reduce((sum, entry) => sum + money(entry.amount), 0)
+        : debtSummaryEntries
+            .filter((entry) => entry.currency !== 'USD')
+            .reduce((sum, entry) => sum + money(entry.paidAmount), 0);
+    const totalTahsilatUSD = showPaid
+        ? paymentSummaryEntries
+            .filter((entry) => entry.currency === 'USD')
+            .reduce((sum, entry) => sum + money(entry.amount), 0)
+        : debtSummaryEntries
+            .filter((entry) => entry.currency === 'USD')
+            .reduce((sum, entry) => sum + money(entry.paidAmount), 0);
+    const lastStatementEntry = statementEntries[statementEntries.length - 1];
+    const remainingTRY = showPaid ? money(lastStatementEntry?.runningTRY) : totalTRY;
+    const remainingUSD = showPaid ? money(lastStatementEntry?.runningUSD) : totalUSD;
+    const remainingTotalTRY = Math.ceil(remainingTRY + (remainingUSD * currentUsdRate));
+    const remainingTotalUSD = money((remainingTRY / currentUsdRate) + remainingUSD);
+    const totalTahsilat = money(totalTahsilatTRY + (totalTahsilatUSD * currentUsdRate));
+    const portfolioTotalTRY = remainingTotalTRY;
+    const portfolioTotalUSD = remainingTotalUSD;
+
+    const renderSummaryGrid = () => (
+        <div className="grid grid-cols-5 gap-3">
+            <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 shadow-sm">
+                <div className="text-[8px] font-black text-emerald-600 uppercase mb-1 tracking-widest">TOPLAM TL BORCU</div>
+                <div className="text-sm font-black text-emerald-700">{formatTRY(totalTRY)}</div>
+                <div className="text-[9px] font-bold text-emerald-700/70">({formatUSD(totalTRY / currentUsdRate)})</div>
+            </div>
+
+            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 shadow-sm">
+                <div className="text-[8px] font-black text-blue-600 uppercase mb-1 tracking-widest">TOPLAM USD BORCU</div>
+                <div className="text-sm font-black text-blue-700">{formatUSD(totalUSD)}</div>
+                <div className="text-[9px] font-bold text-blue-700/70">({formatTRY(totalUSD * currentUsdRate)})</div>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm">
+                <div className="text-[8px] font-black text-slate-500 uppercase mb-1 tracking-widest">TL TAHSILAT</div>
+                <div className="text-sm font-black text-slate-700 italic">{formatTRY(totalTahsilatTRY)}</div>
+                <div className="text-[9px] font-bold text-slate-500">({formatUSD(totalTahsilatTRY / currentUsdRate)})</div>
+            </div>
+
+            <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 shadow-sm">
+                <div className="text-[8px] font-black text-amber-600 uppercase mb-1 tracking-widest">USD TAHSILAT</div>
+                <div className="text-sm font-black text-amber-700 italic">{formatUSD(totalTahsilatUSD)}</div>
+                <div className="text-[9px] font-bold text-amber-700/70">({formatTRY(totalTahsilatUSD * currentUsdRate)})</div>
+            </div>
+
+            <div className="bg-slate-900 p-3 rounded-xl text-center shadow-xl flex flex-col justify-center">
+                <div className="text-[8px] font-black text-slate-400 uppercase mb-1 tracking-widest border-b border-slate-700 pb-1">KALAN BAKIYE</div>
+                <div className="flex flex-col gap-0.5">
+                    <div className="text-base font-black text-white leading-none">{formatTRY(remainingTotalTRY)}</div>
+                    <div className="text-[10px] font-black text-blue-400 tabular-nums">{formatUSD(remainingTotalUSD)}</div>
+                </div>
+            </div>
+        </div>
+    );
 
     // Tarih gruplama
     const groups = statementEntries.reduce((groups: any, item: any) => {
@@ -119,7 +176,10 @@ export const DebtStatementModern = ({
             </div>
 
             {/* Totals Grid */}
-            <div className="grid grid-cols-4 gap-4 mb-8">
+            <div className="mb-8">
+                {renderSummaryGrid()}
+            </div>
+            <div className="hidden">
                 {/* TL Borcu - Yeşil */}
                 <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 shadow-sm">
                     <div className="text-[9px] font-black text-emerald-600 uppercase mb-1 tracking-widest">TOPLAM TL BORCU</div>
@@ -244,7 +304,8 @@ export const DebtStatementModern = ({
 
             <div className="mt-8 pt-6 border-t-2 border-slate-200">
                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">EKSTRE OZETI</div>
-                <div className="grid grid-cols-4 gap-4">
+                {renderSummaryGrid()}
+                <div className="hidden">
                     <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 shadow-sm">
                         <div className="text-[9px] font-black text-emerald-600 uppercase mb-1 tracking-widest">TOPLAM TL BORCU</div>
                         <div className="text-base font-black text-emerald-700">

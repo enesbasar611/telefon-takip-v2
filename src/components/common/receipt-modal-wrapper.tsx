@@ -26,7 +26,7 @@ interface ReceiptModalWrapperProps {
     /** Icon to show in the header */
     icon?: ReactNode;
     /** Action for PDF download */
-    onPDF?: () => void;
+    onPDF?: () => void | Promise<void>;
 }
 
 export function ReceiptModalWrapper({
@@ -98,6 +98,16 @@ export function ReceiptModalWrapper({
         if (waWindow) waWindow.focus();
     }, [whatsappPhone, downloadFilename, onWhatsApp]);
 
+    const handlePDF = useCallback(async () => {
+        if (!onPDF) return;
+        setIsGenerating(true);
+        try {
+            await onPDF();
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [onPDF]);
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-[500px] p-0 gap-0 bg-[#0F172A] border border-border/50 rounded-[2.5rem] overflow-hidden shadow-2xl">
@@ -125,6 +135,15 @@ export function ReceiptModalWrapper({
                         {children(receiptRef, widthClass)}
                     </div>
                 </div>
+
+                {isGenerating && (
+                    <div className="px-5 pt-4 bg-muted/20 border-t border-border/30">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div className="h-full w-full rounded-full bg-primary/70 animate-pulse" />
+                        </div>
+                        <p className="mt-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Çıktı hazırlanıyor, lütfen bekleyin...</p>
+                    </div>
+                )}
 
                 {/* Bottom Actions - Monochrome neutral buttons */}
                 <div className="p-5 flex flex-wrap items-center gap-3 bg-muted/20 border-t border-border/30">
@@ -154,7 +173,7 @@ export function ReceiptModalWrapper({
                     {onPDF && (
                         <Button
                             variant="outline"
-                            onClick={onPDF}
+                            onClick={handlePDF}
                             disabled={isGenerating}
                             className="flex-1 h-12 rounded-xl gap-2 font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all border-border/50 text-[#E11D48] hover:bg-rose-500/10"
                         >

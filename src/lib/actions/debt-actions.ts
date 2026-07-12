@@ -760,7 +760,7 @@ export async function getCustomerStatement(customerId: string) {
 
 
 export async function getDebtStatsDetails(filter: {
-  type: 'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'OVERDUE' | 'COLLECTED';
+  type: 'RECEIVABLE_TRY' | 'RECEIVABLE_USD' | 'GENERAL_TOTAL' | 'OVERDUE' | 'COLLECTED';
   startDate?: Date;
   endDate?: Date;
 }) {
