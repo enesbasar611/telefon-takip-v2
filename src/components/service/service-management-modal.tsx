@@ -287,6 +287,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 setSearchQuery("");
                 queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
                 queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
+                queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] });
                 refreshTicket();
             } else {
                 toast.error(res.error);
@@ -305,6 +306,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 toast.success("Parça çıkarıldı.");
                 queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
                 queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
+                queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] });
                 refreshTicket();
                 router.refresh();
             }
@@ -318,6 +320,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             const res = await updateServiceUsedPart(partId, data);
             if (res.success) {
                 queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
+                queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] });
                 refreshTicket();
             } else {
                 toast.error(res.error);
@@ -383,6 +386,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
                 queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
                 queryClient.invalidateQueries({ queryKey: ["transactions"] });
+                queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] });
                 refreshTicket();
             } else {
                 toast.error(res.error);
@@ -420,6 +424,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             setSelectedStatus("");
             queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
             queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
+            queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] });
             refreshTicket();
             router.refresh();
         } catch (err) {
@@ -449,6 +454,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
             queryClient.invalidateQueries({ queryKey: ["service-tickets"] });
             queryClient.invalidateQueries({ queryKey: ["warranty-stats"] });
+            queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] });
             refreshTicket();
             router.refresh();
         } catch (err) {

@@ -106,10 +106,12 @@ import { AddDebtModal } from "./add-debt-modal";
 import { AddReturnModal } from "@/components/stock/add-return-modal";
 import { DebtReceiptModal } from "./debt-receipt-modal";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
+import { buildReturnWhatsAppSummaryMessage } from "@/lib/returns/return-whatsapp-message";
 import {
     buildDebtStatementEntries,
     getStatementItemTitle
 } from "@/lib/debt-statement-calculator";
+import { VERESIYE_LIVE_QUERY_OPTIONS } from "@/lib/finance/veresiye-query-options";
 import {
     Select,
     SelectContent,
@@ -275,7 +277,8 @@ export function VeresiyeClient({
     // Data Fetching
     const { data: debtsData, isLoading: debtsLoading } = useQuery({
         queryKey: ["debts", shopId],
-        queryFn: () => getDebts()
+        queryFn: () => getDebts(),
+        ...VERESIYE_LIVE_QUERY_OPTIONS,
     });
 
     const { data: accountsData, isLoading: accountsLoading } = useQuery({
@@ -290,12 +293,14 @@ export function VeresiyeClient({
 
     const { data: collectedData, isLoading: collectedLoading } = useQuery({
         queryKey: ["thisMonthCollected", shopId],
-        queryFn: () => getThisMonthCollected()
+        queryFn: () => getThisMonthCollected(),
+        ...VERESIYE_LIVE_QUERY_OPTIONS,
     });
 
     const { data: todayCollectedData } = useQuery({
         queryKey: ["todayCollected", shopId],
-        queryFn: () => getTodayCollected()
+        queryFn: () => getTodayCollected(),
+        ...VERESIYE_LIVE_QUERY_OPTIONS,
     });
 
     const { data: settingsData, isLoading: settingsLoading } = useQuery({
@@ -413,10 +418,31 @@ export function VeresiyeClient({
         queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
     };
 
+    const openInlineReturnModal = (items: any[]) => {
+        if (items.length === 0) {
+            toast.error("Iade edilecek urun bulunamadi.");
+            return;
+        }
+
+        setBulkReturnInitialData({
+            sourceType: "CUSTOMER",
+            sourceId: historyCustomer?.customerId || historyCustomer?.id,
+            sourceName: historyCustomer?.name,
+            sourcePhone: historyCustomer?.phone || "",
+            items: items.map((item) => ({
+                ...item,
+                processImmediately: item.processImmediately ?? true,
+            })),
+        });
+        setBulkReturnModalOpen(true);
+    };
+
     const handleBulkReturn = () => {
         if (selectedDebtIds.length === 0 && selectedSaleItemIds.length === 0) return;
 
-        const debtsToProcess = getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => selectedDebtIds.includes(d.id));
+        const debtSource = statementData?.debts || historyCustomer?.debtItems || [];
+        const returnSource = statementData?.activeReturns || [];
+        const debtsToProcess = getPrintableDebts(debtSource, returnSource).filter((d: any) => selectedDebtIds.includes(d.id));
         const returnItems: any[] = [];
 
         // 1. Process selected debts (whole)
@@ -424,7 +450,7 @@ export function VeresiyeClient({
             const debtCurrency = debt.currency || "TRY";
             if (debt.sale?.items && debt.sale.items.length > 0) {
 	                debt.sale.items
-	                    .filter((si: any) => getReturnedSaleItemAmount(debt, si, statementData?.activeReturns || []) <= 0)
+	                    .filter((si: any) => getReturnedSaleItemAmount(debt, si, returnSource) <= 0)
 	                    .forEach((si: any) => {
                     // Avoid double counting if specific items are also selected
                     if (!selectedSaleItemIds.includes(si.id)) {
@@ -432,6 +458,7 @@ export function VeresiyeClient({
                             productId: si.productId,
                             name: si.product?.name || si.productName || "Ürün",
                             quantity: si.quantity,
+                            maxQuantity: si.quantity,
                             refundAmount: Number(si.unitPrice) * si.quantity,
                             refundCurrency: debtCurrency,
                             unitPrice: Number(si.unitPrice),
@@ -439,33 +466,37 @@ export function VeresiyeClient({
                             soldAt: debt.sale?.createdAt,
                             debtId: debt.id,
                             saleId: debt.saleId,
+                            processImmediately: true,
                         });
 	                    }
 	                });
             } else {
                 returnItems.push({
-                    productId: debt.productId || "",
-                    name: debt.notes || "Ürün İadesi",
+                    productId: debt.productId || undefined,
+                    name: debt.product?.name || debt.productName || debt.notes || debt.description || "Urun Iadesi",
                     quantity: 1,
+                    maxQuantity: 1,
                     refundAmount: getSafeDebtRemaining(debt),
                     refundCurrency: debtCurrency,
                     debtId: debt.id,
+                    processImmediately: true,
                 });
             }
         });
 
         // 2. Process specifically selected sale items
         if (selectedSaleItemIds.length > 0) {
-            (statementData?.debts || []).forEach((debt: any) => {
+            debtSource.forEach((debt: any) => {
                 if (debt.sale?.items) {
 	                    debt.sale.items
-	                        .filter((si: any) => getReturnedSaleItemAmount(debt, si, statementData?.activeReturns || []) <= 0)
+	                        .filter((si: any) => getReturnedSaleItemAmount(debt, si, returnSource) <= 0)
 	                        .forEach((si: any) => {
                         if (selectedSaleItemIds.includes(si.id)) {
                             returnItems.push({
                                 productId: si.productId,
                                 name: si.product?.name || si.productName || "Ürün",
                                 quantity: si.quantity,
+                                maxQuantity: si.quantity,
                                 refundAmount: Number(si.unitPrice) * si.quantity,
                                 refundCurrency: debt.currency || "TRY",
                                 unitPrice: Number(si.unitPrice),
@@ -473,6 +504,7 @@ export function VeresiyeClient({
                                 soldAt: debt.sale?.createdAt,
                                 debtId: debt.id,
                                 saleId: debt.saleId,
+                                processImmediately: true,
                             });
 	                        }
 	                    });
@@ -485,13 +517,7 @@ export function VeresiyeClient({
             return;
         }
 
-        setBulkReturnInitialData({
-            sourceType: "CUSTOMER",
-            sourceId: historyCustomer?.customerId || historyCustomer?.id,
-            sourceName: historyCustomer?.name,
-            items: returnItems
-        });
-        setBulkReturnModalOpen(true);
+        openInlineReturnModal(returnItems);
     };
 
     // Queries
@@ -499,6 +525,7 @@ export function VeresiyeClient({
         queryKey: ["customer-statement", historyCustomer?.id || historyCustomer?.customerId],
         queryFn: () => getCustomerStatement(historyCustomer?.id || historyCustomer?.customerId),
         enabled: !!(historyCustomer?.id || historyCustomer?.customerId),
+        ...VERESIYE_LIVE_QUERY_OPTIONS,
     });
 
     const { data: statsModalResults, isLoading: statsIsLoading } = useQuery({
@@ -1251,6 +1278,30 @@ export function VeresiyeClient({
             console.error(error);
             toast.error("Bağlantı hatası oluştu.", { id: toastId });
         }
+    };
+
+    const handleReturnWhatsAppMessage = (tickets: any[] = []) => {
+        const customerTicket = tickets.find((ticket) => ticket.customer?.phone);
+        if (!customerTicket) return;
+
+        const customerTickets = tickets.filter((ticket) => ticket.customer?.id === customerTicket.customer?.id || ticket.customer?.phone === customerTicket.customer?.phone);
+        const messageTickets = customerTickets.map((ticket) => ({
+            customerName: ticket.customer?.name,
+            ticketNumber: ticket.ticketNumber,
+            productName: ticket.product?.name || ticket.productName,
+            quantity: ticket.quantity,
+            refundAmount: ticket.refundAmount,
+            refundCurrency: ticket.refundCurrency,
+            returnReason: ticket.returnReason,
+        }));
+
+        setWhatsappCustomer({
+            id: customerTicket.customer?.id || customerTicket.customerId,
+            name: customerTicket.customer?.name,
+            phone: customerTicket.customer?.phone,
+        });
+        setWhatsappMessageContent(buildReturnWhatsAppSummaryMessage(messageTickets));
+        setWhatsappModalOpen(true);
     };
 
     const handleBulkWhatsAppReminders = () => {
@@ -2221,21 +2272,20 @@ export function VeresiyeClient({
                                                                                             toast.error("Bu ürün için tamamlanmamış bir iade kaydı var.");
                                                                                             return;
                                                                                         }
-                                                                                        const params = new URLSearchParams({
-                                                                                            customerId: historyCustomer.customerId,
-                                                                                            customerName: historyCustomer.name,
+                                                                                        openInlineReturnModal([{
                                                                                             productId: si.productId,
-                                                                                            productName: si.product.name,
-                                                                                            quantity: String(si.quantity),
-                                                                                            refundAmount: String(Number(si.unitPrice) * si.quantity),
+                                                                                            name: si.product?.name || si.productName || item.notes || "Urun Iadesi",
+                                                                                            quantity: si.quantity,
+                                                                                            maxQuantity: si.quantity,
+                                                                                            refundAmount: Number(si.unitPrice) * si.quantity,
                                                                                             refundCurrency: itemCurrency,
-                                                                                            unitPrice: String(Number(si.unitPrice)),
+                                                                                            unitPrice: Number(si.unitPrice),
                                                                                             saleNumber: item.sale?.saleNumber || "",
                                                                                             soldAt: item.sale?.createdAt || item.createdAt || "",
                                                                                             saleId: item.saleId || item.sale?.id || "",
                                                                                             debtId: item.id,
-                                                                                        });
-                                                                                        router.push(`/stok/iade?${params.toString()}`);
+                                                                                            processImmediately: true,
+                                                                                        }]);
                                                                                     }}
                                                                                     className="h-5 px-2 text-[9px] font-bold rounded-lg bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white opacity-0 group-hover/item:opacity-100 transition-all shrink-0 uppercase tracking-widest disabled:opacity-60 disabled:hover:bg-muted disabled:hover:text-muted-foreground"
                                                                                 >
@@ -2284,16 +2334,16 @@ export function VeresiyeClient({
                                                                                 toast.error("Bu borç için tamamlanmamış bir iade kaydı var.");
                                                                                 return;
                                                                             }
-                                                                            const params = new URLSearchParams({
-                                                                                customerId: historyCustomer.customerId,
-                                                                                customerName: historyCustomer.name,
-                                                                                debtId: item.id,
-                                                                                productName: item.notes || 'Borç/Ürün İadesi',
-                                                                                refundAmount: String(item.amount),
+                                                                            openInlineReturnModal([{
+                                                                                productId: item.productId || undefined,
+                                                                                name: item.product?.name || item.productName || item.notes || item.description || "Borc/Urun Iadesi",
+                                                                                quantity: 1,
+                                                                                maxQuantity: 1,
+                                                                                refundAmount: getSafeDebtRemaining(item),
                                                                                 refundCurrency: item.currency || "TRY",
-                                                                                quantity: "1"
-                                                                            });
-                                                                            router.push(`/stok/iade?${params.toString()}`);
+                                                                                debtId: item.id,
+                                                                                processImmediately: true,
+                                                                            }]);
                                                                         }}
                                                                         className="h-6 w-6 p-0 text-muted-foreground hover:text-orange-600 bg-muted hover:bg-muted/80 rounded-lg disabled:opacity-60"
                                                                         title={returnAlreadyActive ? "İade işlemi tamamlanmadan tekrar gönderilemez" : "İadeye Gönder"}
@@ -3161,9 +3211,11 @@ export function VeresiyeClient({
                 open={bulkReturnModalOpen}
                 onOpenChange={setBulkReturnModalOpen}
                 initialData={bulkReturnInitialData}
-                onSuccess={() => {
+                onSuccess={(tickets) => {
                     invalidateReceivables();
                     setSelectedDebtIds([]);
+                    setSelectedSaleItemIds([]);
+                    handleReturnWhatsAppMessage(tickets || []);
                 }}
             />
         </div>

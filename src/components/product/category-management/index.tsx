@@ -22,6 +22,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { PriceInput } from "@/components/ui/price-input";
@@ -96,6 +106,7 @@ export function CategoryManagementContainer() {
     const [stockNotes, setStockNotes] = useState("");
     const [deleteCountdown, setDeleteCountdown] = useState(0);
     const [deleteMode, setDeleteMode] = useState<"full" | "products">("full");
+    const [productDeleteWarning, setProductDeleteWarning] = useState<{ productId: string; message: string } | null>(null);
     const [isPending, startTransition] = useTransition();
 
     // Resizable Sidebar States
@@ -437,9 +448,13 @@ export function CategoryManagementContainer() {
             const res = await deleteProduct(productId, force);
             if (res.success) {
                 setAllProducts(prev => prev.filter(p => p.id !== productId));
+                setProductDeleteWarning(null);
                 toast.success("Ürün silindi");
             } else if (res.requiresConfirmation) {
-                toast.warning(res.error, { action: { label: "Hepsini Sil", onClick: () => handleDeleteProduct(productId, true) } });
+                setProductDeleteWarning({
+                    productId,
+                    message: res.message || res.error || "Bu ürün bağlı kayıtlarda kullanılmış. Ürünü stok ekranından kaldırabiliriz; bağlı kayıtlar silinmez."
+                });
             } else toast.error(res.error);
         });
     };
@@ -777,6 +792,32 @@ export function CategoryManagementContainer() {
             <CategoryBulkAddModal isOpen={isBulkAddModalOpen} onOpenChange={setIsBulkAddModalOpen} onSubmit={handleBulkAddSubmit} formData={formData} categories={categories} bulkNames={bulkNames} setBulkNames={setBulkNames} isPending={isPending} />
             <CategoryEditModal isOpen={isEditModalOpen} onOpenChange={setIsEditModalOpen} onSubmit={handleEditSubmit} formData={formData} setFormData={setFormData} categories={categories} editCatId={editCatId} isPending={isPending} />
             <CategoryDeleteModal isOpen={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} onDelete={handleDeleteCategory} categoryName={selectedNode?.name || ""} totalStock={selectedStats.totalStock} deleteMode={deleteMode} setDeleteMode={setDeleteMode} deleteCountdown={deleteCountdown} />
+            <AlertDialog open={!!productDeleteWarning} onOpenChange={(open) => !open && setProductDeleteWarning(null)}>
+                <AlertDialogContent className="max-w-md rounded-2xl">
+                    <AlertDialogHeader>
+                        <div className="mx-auto sm:mx-0 h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                        </div>
+                        <AlertDialogTitle>Ürün bağlı kayıtlarda kullanılmış</AlertDialogTitle>
+                        <AlertDialogDescription className="leading-relaxed">
+                            {productDeleteWarning?.message}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isPending}>Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={isPending || !productDeleteWarning}
+                            onClick={(event) => {
+                                event.preventDefault();
+                                if (productDeleteWarning) handleDeleteProduct(productDeleteWarning.productId, true);
+                            }}
+                            className="bg-red-600 text-white hover:bg-red-700"
+                        >
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Stoktan Kaldır"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </DndContext>
     );
 }

@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { convertTransactionAmount, type TransactionCurrency } from "@/lib/finance/transaction-currency";
 
 
 interface Account {
@@ -28,9 +29,32 @@ export function AccountDetailModal({ account }: { account: Account }) {
     const [open, setOpen] = useState(false);
     const [period, setPeriod] = useState<"DAY" | "WEEK" | "MONTH">("WEEK");
 
-    const { rates } = useDashboardData();
-    const usdRate = rates?.usd || 35.0;
-    const eurRate = rates?.eur || 38.0;
+    const { rates, defaultCurrency } = useDashboardData();
+    const usdRate = Number(rates?.usd) > 0 ? Number(rates.usd) : 35.0;
+    const eurRate = Number(rates?.eur) > 0 ? Number(rates.eur) : 38.0;
+    const displayCurrency = defaultCurrency === "USD" || defaultCurrency === "EUR" ? defaultCurrency : "TRY";
+    const toCurrency = (currency?: string | null): TransactionCurrency => {
+        return currency === "USD" || currency === "EUR" ? currency : "TRY";
+    };
+    const symbolFor = (currency: TransactionCurrency) => {
+        if (currency === "USD") return "$";
+        if (currency === "EUR") return "€";
+        return "₺";
+    };
+    const formatMoney = (amount: number, currency: TransactionCurrency = displayCurrency) => {
+        const minimumFractionDigits = currency === "TRY" ? 2 : 2;
+        return `${symbolFor(currency)}${Number(amount || 0).toLocaleString("tr-TR", {
+            minimumFractionDigits,
+            maximumFractionDigits: 2,
+        })}`;
+    };
+    const convertTryToDisplay = (amountTry: number) => {
+        return convertTransactionAmount(Number(amountTry || 0), "TRY", { usd: usdRate, eur: eurRate })[displayCurrency];
+    };
+    const amountTryForTransaction = (transaction: any) => {
+        if (transaction?.amountTry !== undefined && transaction?.amountTry !== null) return Number(transaction.amountTry);
+        return convertTransactionAmount(Number(transaction?.amount || 0), toCurrency(transaction?.currency), { usd: usdRate, eur: eurRate }).TRY;
+    };
     const { data: analytics, isLoading, isFetching, refetch } = useQuery<any>({
         queryKey: ["account-analytics", account.id, period],
         queryFn: () => getAccountAnalytics(account.id, period),
@@ -89,10 +113,18 @@ export function AccountDetailModal({ account }: { account: Account }) {
                             <p className="text-[11px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">
                                 {account.type === 'CREDIT_CARD' ? 'GÜNCEL BORÇ' : 'GÜNCEL BAKİYE'}
                             </p>
-                            <p className={cn("text-4xl  tracking-tight", account.balance < 0 ? "text-rose-500" : "text-foreground")}>
+                            <p className={cn("text-4xl tracking-tight", account.balance < 0 ? "text-rose-500" : "text-foreground")}>
+                                {formatMoney(convertTryToDisplay(Number(account.balance)), displayCurrency)}
+                            </p>
+                            <p className={cn("hidden text-4xl  tracking-tight", account.balance < 0 ? "text-rose-500" : "text-foreground")}>
                                 ₺{Number(account.balance).toLocaleString('tr-TR')}
                             </p>
                             <div className="flex justify-end gap-3 mt-1 opacity-60">
+                                <span className="text-xs font-medium text-muted-foreground">~{formatMoney(Number(account.balance), "TRY")}</span>
+                                <span className="text-xs font-medium text-muted-foreground">~{formatMoney(Number(account.balance) / usdRate, "USD")}</span>
+                                <span className="text-xs font-medium text-muted-foreground">~{formatMoney(Number(account.balance) / eurRate, "EUR")}</span>
+                            </div>
+                            <div className="hidden justify-end gap-3 mt-1 opacity-60">
                                 <span className="text-xs font-medium text-muted-foreground">~${(Number(account.balance) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
                                 <span className="text-xs font-medium text-muted-foreground">~€{(Number(account.balance) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
                             </div>
@@ -110,7 +142,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                     <div>
                                         <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">KART LİMİT DURUMU</h4>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-3xl font-black text-foreground">₺{(Number(account.limit || 0) - Number(account.balance || 0)).toLocaleString('tr-TR')}</span>
+                                            <span className="text-3xl font-black text-foreground">{formatMoney(convertTryToDisplay(Number(account.limit || 0) - Number(account.balance || 0)), displayCurrency)}</span>
                                             <span className="text-xs text-muted-foreground">kullanılabilir</span>
                                         </div>
                                     </div>
@@ -122,7 +154,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                                 const diff = account.balance - opening;
                                                 return (
                                                     <Badge variant="secondary" className={cn("font-black h-8 px-4 text-xs border-none", diff <= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400")}>
-                                                        {diff > 0 ? '+' : ''}{diff.toLocaleString('tr-TR')} ₺
+                                                        {diff > 0 ? '+' : ''}{formatMoney(convertTryToDisplay(diff), displayCurrency)}
                                                     </Badge>
                                                 );
                                             })()
@@ -135,8 +167,8 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase">
-                                        <span>Kullanılan: ₺{Number(account.balance || 0).toLocaleString('tr-TR')}</span>
-                                        <span>Toplam: ₺{Number(account.limit || 0).toLocaleString('tr-TR')}</span>
+                                        <span>Kullanılan: {formatMoney(convertTryToDisplay(Number(account.balance || 0)), displayCurrency)}</span>
+                                        <span>Toplam: {formatMoney(convertTryToDisplay(Number(account.limit || 0)), displayCurrency)}</span>
                                     </div>
                                     <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
                                         <div
@@ -152,7 +184,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                     <div>
                                         <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">HESAP DURUMU</h4>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-3xl font-black text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</span>
+                                            <span className="text-3xl font-black text-foreground">{formatMoney(convertTryToDisplay(Number(account.balance)), displayCurrency)}</span>
                                             <span className="text-xs text-muted-foreground">toplam bakiye</span>
                                         </div>
                                     </div>
@@ -164,7 +196,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                                 const diff = account.balance - opening;
                                                 return (
                                                     <Badge variant="secondary" className={cn("font-black h-8 px-4 text-xs border-none", diff >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400")}>
-                                                        {diff >= 0 ? '+' : ''}{diff.toLocaleString('tr-TR')} ₺
+                                                        {diff >= 0 ? '+' : ''}{formatMoney(convertTryToDisplay(diff), displayCurrency)}
                                                     </Badge>
                                                 );
                                             })()
@@ -190,6 +222,16 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Toplam Hareket</p>
                                 </div>
                                 <div className="flex gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-emerald-400">{formatMoney(convertTryToDisplay(analytics?.chartData.reduce((s: any, d: any) => s + d.income, 0) || 0), displayCurrency)}</p>
+                                        <p className="text-[8px] text-muted-foreground font-bold uppercase">Giriş</p>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-rose-400">{formatMoney(convertTryToDisplay(analytics?.chartData.reduce((s: any, d: any) => s + d.expense, 0) || 0), displayCurrency)}</p>
+                                        <p className="text-[8px] text-muted-foreground font-bold uppercase">Çıkış</p>
+                                    </div>
+                                </div>
+                                <div className="hidden gap-4">
                                     <div className="flex-1">
                                         <p className="text-sm font-bold text-emerald-400">₺{analytics?.chartData.reduce((s: any, d: any) => s + d.income, 0).toLocaleString('tr-TR')}</p>
                                         <p className="text-[8px] text-muted-foreground font-bold uppercase">Giriş</p>
@@ -239,7 +281,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#888888" opacity={0.1} vertical={false} />
                                             <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 800, fill: '#888' }} dy={10} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 800, fill: '#888' }} tickFormatter={(v) => `₺${v}`} dx={-10} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 800, fill: '#888' }} tickFormatter={(v) => formatMoney(convertTryToDisplay(Number(v)), displayCurrency)} dx={-10} />
                                             <Tooltip
                                                 contentStyle={{ backgroundColor: 'rgba(26, 27, 30, 0.95)', borderColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '24px', fontSize: '12px', fontWeight: 900, backdropFilter: 'blur(10px)', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}
                                                 itemStyle={{ fontWeight: 900 }}
@@ -285,7 +327,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
                                                 <span className="text-[10px]  text-muted-foreground uppercase">{entry.name}</span>
                                             </div>
-                                            <span className="text-[10px] font-extrabold">₺{entry.value.toLocaleString('tr-TR')}</span>
+                                            <span className="text-[10px] font-extrabold">{formatMoney(convertTryToDisplay(Number(entry.value || 0)), displayCurrency)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -343,6 +385,26 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex flex-col items-end">
+                                                        {(() => {
+                                                            const baseAmountTry = amountTryForTransaction(t);
+                                                            const displayAmount = convertTryToDisplay(baseAmountTry);
+                                                            const originalCurrency = toCurrency(t.currency);
+                                                            const originalText = formatMoney(Number(t.amount || 0), originalCurrency);
+                                                            return (
+                                                                <>
+                                                                    <p className={cn("text-[13px] font-semibold", t.type === 'INCOME' ? "text-emerald-500" : "text-rose-500")}>
+                                                                        {t.type === 'INCOME' ? '+' : '-'}{formatMoney(displayAmount, displayCurrency)}
+                                                                    </p>
+                                                                    {originalCurrency !== displayCurrency && (
+                                                                        <p className="text-[9px] text-muted-foreground/60 font-medium">
+                                                                            Orijinal: {originalText}
+                                                                        </p>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div className="hidden flex-col items-end">
                                                         <p className={cn("text-[13px] font-semibold", t.type === 'INCOME' ? "text-emerald-500" : "text-rose-500")}>
                                                             {t.type === 'INCOME' ? '+' : '-'}
                                                             {t.currency === "USD" ? "$" : t.currency === "EUR" ? "€" : "₺"}

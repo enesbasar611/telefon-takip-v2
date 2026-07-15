@@ -4,7 +4,10 @@ import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
-import { ReturnStatus, ReturnReason } from "@prisma/client";
+import { Prisma, ReturnStatus, ReturnReason } from "@prisma/client";
+import { pickReturnProductName } from "@/lib/returns/return-product-name";
+import { getReturnProcessingPlan, type ReturnProcessingAction } from "@/lib/returns/return-processing";
+import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
 
 const ACTIVE_RETURN_STATUSES: ReturnStatus[] = ["PENDING", "APPROVED", "SENT_TO_SUPPLIER"];
 
@@ -83,6 +86,124 @@ async function reduceDebtForReturn(
   });
 }
 
+async function recordReturnExpense(
+  tx: any,
+  data: {
+    financeAccountId?: string;
+    amount: number;
+    currency?: string;
+    ticketNumber: string;
+    userId: string;
+    shopId: string;
+    saleId?: string;
+  }
+) {
+  if (data.financeAccountId) {
+    const account = await tx.financeAccount.findUnique({ where: { id: data.financeAccountId } });
+    if (!account) return;
+
+    const newBalance = Number(account.balance) - data.amount;
+    await tx.financeAccount.update({
+      where: { id: data.financeAccountId },
+      data: {
+        balance: newBalance,
+        availableBalance: account.type === "CREDIT_CARD" ? (account.limit ? Number(account.limit) - newBalance : null) : newBalance,
+      },
+    });
+
+    await tx.transaction.create({
+      data: {
+        type: "EXPENSE",
+        amount: data.amount,
+        currency: data.currency || "TRY",
+        description: `${data.ticketNumber} - Iade Geri Odemesi`,
+        category: "Iade",
+        userId: data.userId,
+        shopId: data.shopId,
+        financeAccountId: data.financeAccountId,
+        saleId: data.saleId,
+        runningBalance: newBalance,
+      },
+    });
+    return;
+  }
+
+  await tx.transaction.create({
+    data: {
+      type: "EXPENSE",
+      amount: data.amount,
+      currency: data.currency || "TRY",
+      description: `${data.ticketNumber} - Iade Geri Odemesi`,
+      category: "Iade",
+      userId: data.userId,
+      shopId: data.shopId,
+      saleId: data.saleId,
+    },
+  });
+}
+
+async function hydrateReturnTicketProductNames(tickets: any[], shopId: string) {
+  const debtIds = Array.from(new Set(tickets.map((ticket) => ticket.debtId).filter(Boolean)));
+  const saleIds = Array.from(new Set(tickets.map((ticket) => ticket.saleId).filter(Boolean)));
+  const ticketIds = tickets.map((ticket) => ticket.id).filter(Boolean);
+
+  const [debts, sales, storedProductNames] = await Promise.all([
+    debtIds.length
+      ? prisma.debt.findMany({
+        where: { shopId, id: { in: debtIds } },
+        include: {
+          sale: {
+            include: {
+              items: { include: { product: true } },
+            },
+          },
+        },
+      })
+      : Promise.resolve([]),
+    saleIds.length
+      ? prisma.sale.findMany({
+        where: { shopId, id: { in: saleIds } },
+        include: {
+          items: { include: { product: true } },
+        },
+      })
+      : Promise.resolve([]),
+    ticketIds.length
+      ? prisma.$queryRaw<Array<{ id: string; productName: string | null }>>(Prisma.sql`
+        SELECT "id", "productName"
+        FROM "ReturnTicket"
+        WHERE "id" IN (${Prisma.join(ticketIds)})
+      `)
+      : Promise.resolve([]),
+  ]);
+
+  const debtById = new Map(debts.map((debt) => [debt.id, debt]));
+  const saleById = new Map(sales.map((sale) => [sale.id, sale]));
+  const storedProductNameById = new Map(storedProductNames.map((row) => [row.id, row.productName]));
+
+  return tickets.map((ticket) => ({
+    ...ticket,
+    productName: pickReturnProductName({
+      productName: storedProductNameById.get(ticket.id) || ticket.productName,
+      product: ticket.product,
+      serviceTicket: ticket.serviceTicket,
+      debt: ticket.debtId ? debtById.get(ticket.debtId) : undefined,
+      sale: ticket.saleId ? saleById.get(ticket.saleId) : undefined,
+    }),
+  }));
+}
+
+async function setReturnTicketProductName(tx: any, ticketId: string, productName?: string | null) {
+  const cleanName = productName?.trim();
+  if (!cleanName) return;
+
+  await tx.$executeRaw(Prisma.sql`
+    UPDATE "ReturnTicket"
+    SET "productName" = ${cleanName}
+    WHERE "id" = ${ticketId}
+  `);
+}
+
 export async function getReturnTickets(filters?: {
   sourceType?: string;
   status?: string;
@@ -108,7 +229,8 @@ export async function getReturnTickets(filters?: {
       },
       orderBy: { createdAt: "desc" },
     });
-    return serializePrisma(tickets);
+    const hydratedTickets = await hydrateReturnTicketProductNames(tickets, shopId);
+    return serializePrisma(hydratedTickets);
   } catch (error) {
     console.error("getReturnTickets error:", error);
     return [];
@@ -118,6 +240,7 @@ export async function getReturnTickets(filters?: {
 export async function createReturnTicket(data: {
   sourceType: string;
   productId?: string;
+  productName?: string;
   quantity: number;
   refundAmount?: number;
   refundCurrency?: string;
@@ -175,6 +298,7 @@ export async function createReturnTicket(data: {
         returnStatus: "PENDING",
       },
     });
+    await setReturnTicketProductName(prisma, ticket.id, data.productName);
 
     revalidatePath("/stok/iade");
     revalidatePath("/veresiye");
@@ -232,10 +356,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
       } else if (action === "EXCHANGED") {
         if (ticket.productId) {
           // Decrement stock because we gave them a new replacement product from our stock
-          await tx.product.update({
-            where: { id: ticket.productId },
-            data: { stock: { decrement: ticket.quantity } },
-          });
+          await decrementProductStockSafely(tx, ticket.productId, shopId, ticket.quantity);
 
           await tx.inventoryMovement.create({
             data: {
@@ -266,10 +387,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
       } else if (action === "SENT_TO_SUPPLIER") {
         if (ticket.productId) {
           // Decrement stock as it leaves the shop to the supplier
-          await tx.product.update({
-            where: { id: ticket.productId },
-            data: { stock: { decrement: ticket.quantity } },
-          });
+          await decrementProductStockSafely(tx, ticket.productId, shopId, ticket.quantity);
 
           await tx.inventoryMovement.create({
             data: {
@@ -341,6 +459,7 @@ export async function rejectReturn(id: string, notes?: string) {
 export async function createMultipleReturnTickets(tickets: {
   sourceType: string;
   productId?: string;
+  productName?: string;
   quantity: number;
   refundAmount?: number;
   refundCurrency?: string;
@@ -353,6 +472,8 @@ export async function createMultipleReturnTickets(tickets: {
   notes?: string;
   restockProduct?: boolean;
   immediateRestock?: boolean;
+  processImmediately?: boolean;
+  returnAction?: ReturnProcessingAction;
   newBuyPrice?: number;
   newSellPrice?: number;
 }[], financeAccountId?: string) {
@@ -382,7 +503,14 @@ export async function createMultipleReturnTickets(tickets: {
           throw new Error(`Bu ürün için ${existingActiveReturn.ticketNumber} numaralı iade işlemi henüz tamamlanmamış.`);
         }
 
-        const isImmediate = !!(normalizedData.productId && normalizedData.immediateRestock && normalizedData.restockProduct);
+        const processingPlan = getReturnProcessingPlan({
+          productId: normalizedData.productId,
+          restockProduct: normalizedData.restockProduct,
+          immediateRestock: normalizedData.immediateRestock,
+          processImmediately: data.processImmediately,
+          action: data.returnAction,
+        });
+        const isImmediate = processingPlan.status !== "PENDING";
 
         const ticket = await tx.returnTicket.create({
           data: {
@@ -402,18 +530,19 @@ export async function createMultipleReturnTickets(tickets: {
             restockProduct: normalizedData.restockProduct,
             shopId,
             userId,
-            returnStatus: isImmediate ? "RESTOCKED" : "PENDING",
+            returnStatus: processingPlan.status,
           },
         });
+        await setReturnTicketProductName(tx, ticket.id, data.productName);
         createdTickets.push(ticket);
 
         // Immediate restock logic
-        if (isImmediate && normalizedData.productId) {
+        if (isImmediate && normalizedData.productId && processingPlan.stockMovement !== "NONE") {
           // 1. Update Product Stockholm and Prices
           await tx.product.update({
             where: { id: normalizedData.productId },
             data: {
-              stock: { increment: data.quantity },
+              stock: processingPlan.stockMovement === "IN" ? { increment: data.quantity } : { decrement: data.quantity },
               ...(data.newBuyPrice !== undefined ? { buyPrice: data.newBuyPrice } : {}),
               ...(data.newSellPrice !== undefined ? { sellPrice: data.newSellPrice } : {}),
             },
@@ -424,7 +553,7 @@ export async function createMultipleReturnTickets(tickets: {
             data: {
               productId: normalizedData.productId,
               quantity: data.quantity,
-              type: "IN",
+              type: processingPlan.stockMovement === "IN" ? "IN" : "OUT",
               notes: `İade Alındı (Hızlı): ${ticketNumber}${data.notes ? ` - ${data.notes}` : ''}`,
               shopId,
               returnTicketId: ticket.id,
@@ -439,7 +568,7 @@ export async function createMultipleReturnTickets(tickets: {
               productId: normalizedData.productId,
               userId,
               quantity: data.quantity,
-              type: "RETURN",
+              type: processingPlan.stockMovement === "IN" ? "RETURN" : "OUT",
               notes: `İade: ${ticketNumber}${data.notes ? ` - ${data.notes}` : ''}`,
               shopId
             }
@@ -449,8 +578,17 @@ export async function createMultipleReturnTickets(tickets: {
         // Handle Finance / Debt impact
         const refundVal = Number(data.refundAmount || 0);
         if (refundVal > 0) {
-          if (data.debtId && isImmediate) {
+          if (data.debtId && processingPlan.reduceDebt) {
             await reduceDebtForReturn(tx, shopId, data.debtId, refundVal);
+            await recordReturnExpense(tx, {
+              financeAccountId,
+              amount: refundVal,
+              currency: data.refundCurrency || "TRY",
+              ticketNumber,
+              userId,
+              shopId,
+              saleId: data.saleId,
+            });
           } else if (data.saleId || data.sourceType === "SALE" || data.sourceType === "CUSTOMER") {
             // For completed sales or general customer returns, create an Expense transaction
             if (financeAccountId) {

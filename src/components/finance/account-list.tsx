@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Landmark, CreditCard, Plus, ArrowRightLeft, Trash2 } from "lucide-react";
+import { Wallet, Landmark, CreditCard, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CreateAccountModal } from "./create-account-modal";
 import { AccountDetailModal } from "./account-detail-modal";
 import { TransferModal } from "./transfer-modal";
+import { CashResetModal } from "./cash-reset-modal";
 import { useToast } from "@/hooks/use-toast";
 import { deleteAccount } from "@/lib/actions/finance-actions";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -34,6 +35,7 @@ interface Account {
     availableBalance?: number;
     limit?: number;
     billingDay?: number;
+    currency?: string;
 }
 
 export function AccountList({ accounts }: { accounts: Account[] }) {
@@ -64,9 +66,14 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
     const searchParams = useSearchParams();
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-    const { rates } = useDashboardData();
+    const { rates, defaultCurrency } = useDashboardData();
     const usdRate = rates?.usd || 35.0;
     const eurRate = rates?.eur || 38.0;
+    const formatDisplayMoney = (value: number) => {
+        const amount = defaultCurrency === "USD" ? value / usdRate : defaultCurrency === "EUR" ? value / eurRate : value;
+        const symbol = defaultCurrency === "USD" ? "$" : defaultCurrency === "EUR" ? "€" : "₺";
+        return `${symbol}${amount.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}`;
+    };
 
     const handleDelete = async (id: string) => {
         setIsDeleting(id);
@@ -89,13 +96,15 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                    <h2 className="font-medium text-sm  tracking-tight text-muted-foreground uppercase">HESAPLARIM</h2>
+                    <h2 className="font-medium text-sm tracking-tight text-muted-foreground uppercase">HESAPLARIM</h2>
                 </div>
-                <CreateAccountModal />
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <CashResetModal accounts={accounts} />
+                    <CreateAccountModal />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Total Balance Card */}
                 <Card
                     onClick={() => {
                         const params = new URLSearchParams(searchParams.toString());
@@ -120,29 +129,19 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                         <div>
                             <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">Toplam Kasa</h3>
                             <p className="text-2xl tracking-tighter text-foreground">
-                                ₺{accounts.reduce((sum, acc) => {
+                                {formatDisplayMoney(accounts.reduce((sum, acc) => {
                                     if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
                                     return sum + Number(acc.balance);
-                                }, 0).toLocaleString('tr-TR')}
+                                }, 0))}
                             </p>
-                            <div className="flex gap-2 mt-0.5 opacity-60">
-                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
-                                    ~${(accounts.reduce((sum, acc) => {
-                                        if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
-                                        return sum + Number(acc.balance);
-                                    }, 0) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
-                                </span>
-                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
-                                    ~€{(accounts.reduce((sum, acc) => {
-                                        if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
-                                        return sum + Number(acc.balance);
-                                    }, 0) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
-                                </span>
-                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 opacity-60">
+                                Varsayılan para birimi: {defaultCurrency}
+                            </p>
                             <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest opacity-60">TÜM HAREKETLERİ GÖR</p>
                         </div>
                     </CardContent>
                 </Card>
+
                 {accounts.map((account) => {
                     const Icon = icons[account.type] || Wallet;
                     const isCentral = account.name.toLowerCase().includes("merkez") || (account as any).isDefault;
@@ -185,7 +184,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent className="bg-card border-border/40 rounded-[2rem]">
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle className="text-xl ">Hesabı Sil?</AlertDialogTitle>
+                                                        <AlertDialogTitle className="text-xl">Hesabı Sil?</AlertDialogTitle>
                                                         <AlertDialogDescription className="text-xs font-medium text-muted-foreground">
                                                             <strong>{account.name}</strong> hesabını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
                                                             <br /><br />
@@ -193,10 +192,10 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter className="gap-3">
-                                                        <AlertDialogCancel className="rounded-xl border-zinc-200 dark:border-zinc-800 h-10 px-6 text-xs ">Vazgeç</AlertDialogCancel>
+                                                        <AlertDialogCancel className="rounded-xl border-zinc-200 dark:border-zinc-800 h-10 px-6 text-xs">Vazgeç</AlertDialogCancel>
                                                         <AlertDialogAction
                                                             onClick={() => handleDelete(account.id)}
-                                                            className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white border-none h-10 px-8 text-xs "
+                                                            className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white border-none h-10 px-8 text-xs"
                                                         >
                                                             {isDeleting === account.id ? "Siliniyor..." : "Hesabı Kalıcı Olarak Sil"}
                                                         </AlertDialogAction>
@@ -204,28 +203,29 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         )}
-                                        <Badge variant="outline" className="text-[10px]  tracking-widest uppercase px-2 py-0.5 rounded-lg bg-background/50 backdrop-blur-sm border-zinc-200 dark:border-zinc-800 h-fit">
+                                        <Badge variant="outline" className="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-lg bg-background/50 backdrop-blur-sm border-zinc-200 dark:border-zinc-800 h-fit">
                                             {typeLabels[account.type]}
                                         </Badge>
                                     </div>
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
-                                    <p className="text-2xl tracking-tighter text-foreground">₺{Number(account.balance).toLocaleString('tr-TR')}</p>
+                                    <p className="text-2xl tracking-tighter text-foreground">{formatDisplayMoney(Number(account.balance))}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Hesap para birimi: {account.currency || "TRY"}</p>
                                     <div className="flex gap-2 mt-0.5 opacity-60">
                                         <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
-                                            ~${(Number(account.balance) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
+                                            ~${(Number(account.balance) / usdRate).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}
                                         </span>
                                         <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
-                                            ~€{(Number(account.balance) / eurRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
+                                            ~€{(Number(account.balance) / eurRate).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}
                                         </span>
                                     </div>
 
                                     {account.type === "CREDIT_CARD" && account.limit && (
-                                        <div className="mt-3 space-y-1.5 ">
+                                        <div className="mt-3 space-y-1.5">
                                             <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground/60">
-                                                <span>LİMİT: ₺{Number(account.limit).toLocaleString('tr-TR')}</span>
-                                                <span className="text-emerald-500">BOŞ: ₺{Number(account.availableBalance || 0).toLocaleString('tr-TR')}</span>
+                                                <span>LİMİT: ₺{Number(account.limit).toLocaleString("tr-TR")}</span>
+                                                <span className="text-emerald-500">BOŞ: ₺{Number(account.availableBalance || 0).toLocaleString("tr-TR")}</span>
                                             </div>
                                             <div className="h-1.5 w-full bg-muted/30 rounded-full overflow-hidden">
                                                 <div
@@ -251,7 +251,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                         <div className="h-12 w-12 rounded-2xl bg-muted/20 flex items-center justify-center mb-3 text-muted-foreground/40">
                             <Plus className="h-6 w-6" />
                         </div>
-                        <p className="text-xs  text-muted-foreground">Henüz tanımlı bir hesap yok.</p>
+                        <p className="text-xs text-muted-foreground">Henüz tanımlı bir hesap yok.</p>
                         <p className="text-[10px] font-medium text-muted-foreground/60 mt-1">Nakit veya banka hesabınızı ekleyerek başlayın.</p>
                     </div>
                 )}
@@ -259,8 +259,3 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
         </div>
     );
 }
-
-
-
-
-

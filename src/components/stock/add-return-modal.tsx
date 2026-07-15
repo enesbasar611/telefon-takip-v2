@@ -41,11 +41,13 @@ import { createMultipleReturnTickets } from "@/lib/actions/return-actions";
 import { getCustomerStatement } from "@/lib/actions/debt-actions";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { ReturnProcessingAction } from "@/lib/returns/return-processing";
 
 interface InitialReturnItem {
     productId?: string;
     name: string;
     quantity: number;
+    maxQuantity?: number;
     refundAmount: number;
     refundCurrency?: string;
     unitPrice?: number;
@@ -53,16 +55,19 @@ interface InitialReturnItem {
     soldAt?: string;
     debtId?: string;
     saleId?: string;
+    processImmediately?: boolean;
+    returnAction?: ReturnProcessingAction;
 }
 
 interface AddReturnModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSuccess?: () => void;
+    onSuccess?: (tickets?: any[]) => void;
     initialData?: {
         sourceType?: "CUSTOMER" | "SUPPLIER";
         sourceId?: string;
         sourceName?: string;
+        sourcePhone?: string;
         items?: InitialReturnItem[];
     };
 }
@@ -72,17 +77,27 @@ interface ReturnItem {
     productId?: string;
     name: string;
     quantity: number;
+    maxQuantity: number;
     reason: string;
     refundAmount: number;
     refundCurrency: string;
     restockProduct: boolean;
     immediateRestock: boolean;
+    processImmediately: boolean;
+    returnAction: ReturnProcessingAction;
     newBuyPrice?: number;
     newSellPrice?: number;
     notes?: string;
 }
 
 const currencySymbol = (currency?: string) => currency === "USD" ? "$" : "₺";
+
+const returnActionDescriptions: Record<ReturnProcessingAction, string> = {
+    DEBT_DEDUCT: "Urun iade alinir, musteriden borc dusulur, stok hareketi yapilmaz.",
+    SEND_SUPPLIER: "Urun iade alinir, musteriden borc dusulur, stoktan cikarilip tedarikciye gonderildi olarak isaretlenir.",
+    DISCARD: "Urun iade alinir, musteriden borc dusulur, stoga eklenmez ve stoklu urunse stoktan dusulur.",
+    WAIT: "Iade kaydi beklemeye alinir; borc, kasa ve stok simdilik degismez.",
+};
 
 export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: AddReturnModalProps) {
     const [loading, setLoading] = useState(false);
@@ -122,13 +137,17 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                     productId: i.productId || undefined,
                     name: i.name,
                     quantity: i.quantity,
+                    maxQuantity: i.maxQuantity || i.quantity,
                     reason: "GENERAL_RETURN",
                     refundAmount: i.refundAmount,
                     refundCurrency: i.refundCurrency || "TRY",
                     restockProduct: !!i.productId,
                     immediateRestock: !!i.productId,
+                    processImmediately: i.processImmediately ?? !i.productId,
+                    returnAction: i.returnAction || (i.processImmediately === false ? "WAIT" : "DEBT_DEDUCT"),
                     newBuyPrice: undefined,
                     newSellPrice: undefined,
+                    unitPrice: i.unitPrice ?? (i.refundAmount / Math.max(i.quantity, 1)),
                     ...(i.unitPrice ? { unitPrice: i.unitPrice } : {}),
                     ...(i.saleNumber ? { saleNumber: i.saleNumber } : {}),
                     ...(i.soldAt ? { soldAt: i.soldAt } : {}),
@@ -244,11 +263,14 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             productId: product.id,
             name: product.name,
             quantity: 1,
+            maxQuantity: 1,
             reason: "GENERAL_RETURN",
             refundAmount: 0,
             refundCurrency: "TRY",
             restockProduct: true,
             immediateRestock: true,
+            processImmediately: false,
+            returnAction: "WAIT",
             newBuyPrice: undefined,
             newSellPrice: undefined,
         }]);
@@ -262,6 +284,15 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
 
     const updateItem = (id: string, updates: Partial<ReturnItem>) => {
         setItems(items.map(i => i.id === id ? { ...i, ...updates } : i));
+    };
+
+    const updateReturnQuantity = (item: ReturnItem, quantityValue: number) => {
+        const quantity = Math.max(1, Math.min(Number(item.maxQuantity || item.quantity || 1), Math.floor(quantityValue || 1)));
+        const unitPrice = Number((item as any).unitPrice || item.refundAmount / Math.max(item.quantity, 1));
+        updateItem(item.id, {
+            quantity,
+            refundAmount: unitPrice * quantity,
+        });
     };
 
     const handleSubmit = async () => {
@@ -283,6 +314,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             const tickets = items.map(item => ({
                 sourceType: (item as any).debtId ? "DEBT" : sourceType,
                 productId: item.productId || undefined,
+                productName: item.name,
                 quantity: item.quantity,
                 refundAmount: item.refundAmount,
                 refundCurrency: item.refundCurrency,
@@ -290,6 +322,8 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                 notes: item.notes,
                 restockProduct: item.restockProduct,
                 immediateRestock: item.immediateRestock,
+                processImmediately: item.processImmediately,
+                returnAction: item.returnAction,
                 newBuyPrice: item.newBuyPrice,
                 newSellPrice: item.newSellPrice,
                 // Assign to properly linked debt or sale if passed
@@ -302,10 +336,26 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             const res = await createMultipleReturnTickets(tickets, selectedAccountId);
             if (res.success) {
                 toast.success("İade kayıtları başarıyla oluşturuldu.");
+                const selectedSource = sources.find((source) => source.id === selectedSourceId) || {
+                    id: selectedSourceId,
+                    name: sourceSearch || initialData?.sourceName,
+                    phone: initialData?.sourcePhone,
+                };
+                const enrichedTickets = (res.tickets || []).map((ticket: any, index: number) => {
+                    const item = items[index];
+                    return {
+                        ...ticket,
+                        returnReason: ticket.returnReason || item?.reason,
+                        product: ticket.product || (item?.name ? { id: item.productId, name: item.name } : undefined),
+                        productName: ticket.product?.name || item?.name,
+                        customer: ticket.customer || (sourceType === "CUSTOMER" || ticket.sourceType === "DEBT" ? selectedSource : undefined),
+                        supplier: ticket.supplier || (sourceType === "SUPPLIER" ? selectedSource : undefined),
+                    };
+                });
                 onOpenChange(false);
                 setItems([]);
                 setSelectedSourceId("");
-                onSuccess?.();
+                onSuccess?.(enrichedTickets);
             } else {
                 toast.error(res.error || "İadeler oluşturulamadı.");
             }
@@ -316,6 +366,8 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             setLoading(false);
         }
     };
+
+    const requiresFinanceAccount = items.some((item) => item.refundAmount > 0);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -621,13 +673,16 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                             </div>
 
                                             <div className="flex flex-col gap-4">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[90px_150px_minmax(260px,1fr)_140px] gap-4 items-start">
                                                     <div className="space-y-1.5">
                                                         <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">Adet</Label>
                                                         <Input
                                                             type="number"
+                                                            min={1}
+                                                            max={item.maxQuantity}
                                                             value={item.quantity}
-                                                            onChange={(e) => updateItem(item.id, { quantity: parseInt(e.target.value) || 1 })}
+                                                            disabled={item.maxQuantity <= 1}
+                                                            onChange={(e) => updateReturnQuantity(item, parseInt(e.target.value) || 1)}
                                                             className="h-10 rounded-xl border-border/40 bg-muted/20"
                                                         />
                                                     </div>
@@ -645,33 +700,42 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                 <SelectItem value="CUSTOMER_CANCEL">Vazgeçme</SelectItem>
                                                             </SelectContent>
                                                         </Select>
+                                                        <p className="text-[10px] leading-snug text-muted-foreground/80 px-1">
+                                                            {returnActionDescriptions[item.returnAction]}
+                                                        </p>
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">İade Tutarı</Label>
-                                                        <div className="flex gap-2">
-                                                            <div className="relative flex-1">
-                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
-                                                                    {currencySymbol(item.refundCurrency)}
-                                                                </span>
-                                                                <Input
-                                                                    type="number"
-                                                                    value={item.refundAmount}
-                                                                    onChange={(e) => updateItem(item.id, { refundAmount: parseFloat(e.target.value) || 0 })}
-                                                                    className="h-10 rounded-xl border-border/40 bg-muted/20 pl-7"
-                                                                />
-                                                            </div>
-                                                            <Select value={item.refundCurrency} onValueChange={(v) => updateItem(item.id, { refundCurrency: v })}>
-                                                                <SelectTrigger className="h-10 w-20 rounded-xl border-border/40 bg-muted/20">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="rounded-xl border-border/40">
-                                                                    <SelectItem value="TRY">TRY</SelectItem>
-                                                                    <SelectItem value="USD">USD</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">ISLEM</Label>
+                                                        <Select
+                                                            value={item.returnAction}
+                                                            onValueChange={(v) => {
+                                                                const action = v as ReturnProcessingAction;
+                                                                updateItem(item.id, {
+                                                                    returnAction: action,
+                                                                    processImmediately: action !== "WAIT",
+                                                                    restockProduct: action === "DEBT_DEDUCT" ? false : item.restockProduct,
+                                                                    immediateRestock: false,
+                                                                });
+                                                            }}
+                                                        >
+                                                            <SelectTrigger className="h-10 rounded-xl border-border/40 bg-muted/20">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="rounded-xl border-border/40">
+                                                                <SelectItem value="DEBT_DEDUCT">Iade al, borctan dus</SelectItem>
+                                                                <SelectItem value="SEND_SUPPLIER">Iade al, tedarikciye gonder</SelectItem>
+                                                                <SelectItem value="DISCARD">Iade al, cope at</SelectItem>
+                                                                <SelectItem value="WAIT">Iadeyi beklet</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="space-y-1.5 text-right">
+                                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground pr-1">IADE TUTARI</Label>
+                                                        <div className="h-10 rounded-xl border border-border/40 bg-muted/20 px-3 flex items-center justify-end text-sm font-black tabular-nums">
+                                                            {currencySymbol(item.refundCurrency)}{Number(item.refundAmount || 0).toLocaleString("tr-TR", { maximumFractionDigits: 2 })} {item.refundCurrency}
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col gap-2 bg-muted/30 p-2 rounded-xl border border-border/40">
+                                                    <div className="hidden flex-col gap-2 bg-muted/30 p-2 rounded-xl border border-border/40">
                                                         <div className="flex items-center justify-between w-full h-10 px-1">
                                                             <Label className="text-[10px] font-bold uppercase cursor-pointer" htmlFor={`restock-${item.id}`}>Stokla</Label>
                                                             <Checkbox
@@ -692,6 +756,17 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                     id={`quick-${item.id}`}
                                                                     checked={item.immediateRestock}
                                                                     onCheckedChange={(v) => updateItem(item.id, { immediateRestock: !!v })}
+                                                                    className="rounded-md border-border/40 h-5 w-5 data-[state=checked]:bg-indigo-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        {!item.productId && (
+                                                            <div className="flex items-center justify-between w-full h-10 px-1 border-t border-border/20 pt-1 mt-1">
+                                                                <Label className="text-[10px] font-bold uppercase cursor-pointer" htmlFor={`process-${item.id}`}>Isle</Label>
+                                                                <Checkbox
+                                                                    id={`process-${item.id}`}
+                                                                    checked={item.processImmediately}
+                                                                    onCheckedChange={(v) => updateItem(item.id, { processImmediately: !!v })}
                                                                     className="rounded-md border-border/40 h-5 w-5 data-[state=checked]:bg-indigo-500"
                                                                 />
                                                             </div>
@@ -745,7 +820,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
 
                     <DialogFooter className="p-6 pt-4 border-t border-border/40 bg-muted/30 gap-4 flex-col sm:flex-row items-center">
                         <div className="flex-1 w-full max-w-sm">
-                            {(items.some(i => i.refundAmount > 0)) && (
+                            {requiresFinanceAccount && (
                                 <div className="space-y-1.5">
                                     <Label className="text-[10px] uppercase font-bold text-rose-500 pl-1">Ödemenin Çıkacağı Kasa / Hesap</Label>
                                     <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
@@ -774,7 +849,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                             </Button>
                             <Button
                                 onClick={handleSubmit}
-                                disabled={loading || items.length === 0 || (items.some(i => i.refundAmount > 0) && !selectedAccountId)}
+                                disabled={loading || items.length === 0 || (requiresFinanceAccount && !selectedAccountId)}
                                 className="rounded-xl h-11 px-10 bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 flex-1 sm:flex-none"
                             >
                                 {loading ? (

@@ -32,6 +32,9 @@ interface CheckoutSummaryProps {
     formattedEquivalentTotal: string;
     showDetails?: boolean;
     setShowDetails?: (v: boolean) => void;
+    accounts?: any[];
+    selectedAccountId?: string;
+    setSelectedAccountId?: (id: string) => void;
 }
 
 export const CheckoutSummary = ({
@@ -54,7 +57,10 @@ export const CheckoutSummary = ({
     formattedTax,
     formattedEquivalentTotal,
     showDetails: externalShowDetails,
-    setShowDetails: externalSetShowDetails
+    setShowDetails: externalSetShowDetails,
+    accounts = [],
+    selectedAccountId = "",
+    setSelectedAccountId
 }: CheckoutSummaryProps) => {
     const [internalShowDetails, setInternalShowDetails] = React.useState(false);
     const showDetails = externalShowDetails ?? internalShowDetails;
@@ -68,6 +74,59 @@ export const CheckoutSummary = ({
         { id: "BANK_TRANSFER", label: "HAVALE", icon: Landmark, color: "text-indigo-500", bg: "bg-indigo-500/10" },
         { id: "DEBT", label: "VERESİYE", icon: History, color: "text-rose-500", bg: "bg-rose-500/10" }
     ];
+    const showAccountSelection = paymentMethod !== "DEBT";
+    const selectedAccount = accounts.find((account) => account.id === selectedAccountId);
+    const accountSelectionTitle =
+        paymentMethod === "CASH" ? "NAKİT KASA SEÇİMİ" :
+            paymentMethod === "CREDIT_CARD" ? "KART HESABI SEÇİMİ" :
+                paymentMethod === "BANK_TRANSFER" || paymentMethod === "TRANSFER" ? "HAVALE HESABI SEÇİMİ" :
+                    "HESAP SEÇİMİ";
+
+    const renderAccountSelection = () => {
+        if (!showAccountSelection) return null;
+        return (
+            <div className="mb-5 rounded-2xl border border-border/40 bg-muted/10 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3 px-1">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.18em]">{accountSelectionTitle}</span>
+                    {selectedAccount && (
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">{selectedAccount.name}</span>
+                    )}
+                </div>
+                {accounts.length === 0 ? (
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                        Bu ödeme yöntemi için uygun hesap bulunamadı.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {accounts.map((account) => {
+                            const Icon = account.type === "CASH" ? Banknote : account.type === "BANK" ? Landmark : CreditCard;
+                            const checked = selectedAccountId === account.id;
+                            return (
+                                <button
+                                    key={account.id}
+                                    type="button"
+                                    onClick={() => setSelectedAccountId?.(account.id)}
+                                    className={cn(
+                                        "min-h-12 rounded-xl border px-3 py-2 flex items-center gap-3 text-left transition-all",
+                                        checked
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border/40 bg-background/60 text-muted-foreground hover:border-primary/30 hover:bg-muted/30"
+                                    )}
+                                >
+                                    <Icon className="h-4 w-4 shrink-0" />
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-xs font-bold truncate">{account.name}</span>
+                                        <span className="block text-[9px] uppercase tracking-widest opacity-70">{account.type} • {account.currency || "TRY"}</span>
+                                    </span>
+                                    {checked && <CheckCircle className="h-4 w-4 shrink-0" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     if (isCompact) {
         return (
@@ -157,6 +216,8 @@ export const CheckoutSummary = ({
                     ))}
                 </div>
 
+                {renderAccountSelection()}
+
                 <div className="flex gap-4 min-h-[72px]">
                     <Button
                         disabled={isProcessing}
@@ -197,6 +258,8 @@ export const CheckoutSummary = ({
                     </Button>
                 ))}
             </div>
+
+            {renderAccountSelection()}
 
             {loyaltyEnabled && totalPoints > 0 && (
                 <div className="mb-5 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">

@@ -1,35 +1,43 @@
-import { getUnifiedHistory } from "@/lib/actions/activity-actions";
+import { getSalesHistoryReport, getUnifiedHistory, type HistoryDateRange } from "@/lib/actions/activity-actions";
 import { SalesHistoryClient } from "@/components/satis/sales-history-client";
-import { History } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { endOfDay, startOfMonth } from "date-fns";
 
 export const dynamic = 'force-dynamic';
 
 export default async function SalesHistoryPage({
     searchParams
 }: {
-    searchParams: { page?: string, search?: string, type?: string, dateRange?: string }
+    searchParams: { page?: string, search?: string, type?: string, startDate?: string, endDate?: string }
 }) {
     const page = Number(searchParams.page) || 1;
     const searchTerm = searchParams.search || "";
     const typeFilter = searchParams.type || "ALL";
-    const dateRange = (searchParams.dateRange as "TODAY" | "ALL") || "ALL";
+    const now = new Date();
+    const startDate = searchParams.startDate || startOfMonth(now).toISOString();
+    const endDate = searchParams.endDate || endOfDay(now).toISOString();
 
-    const historyData = await getUnifiedHistory({
-        page,
-        pageSize: 30,
-        searchTerm,
-        typeFilter,
-        dateRange
-    });
+    const [historyData, reportData] = await Promise.all([
+        getUnifiedHistory({
+            page,
+            pageSize: 30,
+            searchTerm,
+            typeFilter,
+            startDate,
+            endDate
+        }),
+        getSalesHistoryReport({ startDate, endDate })
+    ]);
 
     return (
         <div className="flex flex-col gap-6 pb-12 animate-in fade-in duration-500 pt-6">
             <SalesHistoryClient
                 initialData={historyData}
+                reportData={reportData}
                 currentPage={page}
                 searchTerm={searchTerm}
                 typeFilter={typeFilter}
+                startDate={startDate}
+                endDate={endDate}
             />
         </div>
     );

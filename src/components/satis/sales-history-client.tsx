@@ -1,40 +1,38 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
-import { SalesHistoryRow } from "./parts/sales-history-row";
-import { OperationDetails } from "./parts/operation-details";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { Fragment, useState } from "react";
+import { useRouter } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
+import {
+    ArrowLeftRight,
+    Banknote,
+    Calendar as CalendarIcon,
+    ChevronLeft,
+    ChevronRight,
+    CreditCard,
+    History,
+    Landmark,
+    Package,
+    Search,
+} from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-    ShoppingCart,
-    Search,
-    ChevronLeft,
-    ChevronRight,
-    User,
-    Package,
-    Banknote,
-    CreditCard,
-    Landmark,
-    Filter,
-    History,
-    Calendar,
-    ArrowRight,
-    Printer,
-    Loader2,
-    MessageCircle,
-    ArrowLeftRight,
-    ChevronDown,
-    ChevronUp
-} from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import { SalesHistoryRow } from "./parts/sales-history-row";
+import { OperationDetails } from "./parts/operation-details";
+import { SalesHistoryReportPanel } from "./sales-history-report-panel";
 import {
-    UnifiedOperation,
-    OperationType
+    getSalesHistoryReport,
+    getUnifiedHistory,
+    type OperationType,
+    type SalesHistoryReport,
+    type UnifiedOperation,
 } from "@/lib/actions/activity-actions";
 import { getSaleById } from "@/lib/actions/sale-actions";
 import { UnifiedSaleModal } from "@/components/pos/unified-sale-modal";
@@ -49,67 +47,110 @@ interface SalesHistoryClientProps {
         totalPages: number;
         currentPage: number;
     };
+    reportData: SalesHistoryReport;
     currentPage: number;
     searchTerm: string;
     typeFilter: string;
+    startDate: string;
+    endDate: string;
 }
+
+const typeFilters = [
+    { key: "ALL", label: "Hepsi" },
+    { key: "SALE", label: "Satışlar" },
+    { key: "DEBT", label: "Veresiyeler" },
+    { key: "PAYMENT", label: "Tahsilatlar" },
+] as const;
 
 export function SalesHistoryClient({
     initialData,
+    reportData,
     currentPage,
     searchTerm: propSearch,
-    typeFilter: propType
+    typeFilter: propType,
+    startDate,
+    endDate,
 }: SalesHistoryClientProps) {
     const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
-
+    const [page, setPage] = useState(currentPage || 1);
     const [searchTerm, setSearchTerm] = useState(propSearch);
-    const [typeFilter, setTypeFilter] = useState(propType);
-    const [isPending, setIsPending] = useState(false);
+    const [appliedSearch, setAppliedSearch] = useState(propSearch);
+    const [typeFilter, setTypeFilter] = useState(propType || "ALL");
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(startDate),
+        to: new Date(endDate),
+    });
+    const [appliedRange, setAppliedRange] = useState<DateRange | undefined>({
+        from: new Date(startDate),
+        to: new Date(endDate),
+    });
     const [expandedOpId, setExpandedOpId] = useState<string | null>(null);
-
-    // Receipt modal state
     const [receiptSale, setReceiptSale] = useState<any>(null);
     const [receiptLoading, setReceiptLoading] = useState<string | null>(null);
-
-    // Return modal state
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [returnInitialData, setReturnInitialData] = useState<any>(null);
 
     const { rates, defaultCurrency } = useDashboardData();
+    const rangeStart = appliedRange?.from?.toISOString();
+    const rangeEnd = (appliedRange?.to || appliedRange?.from)?.toISOString();
 
-    const updateParams = (newParams: Record<string, string | number>) => {
-        const params = new URLSearchParams(searchParams.toString());
+    const { data: historyData = initialData, isFetching: historyFetching } = useQuery({
+        queryKey: ["sales-history", page, appliedSearch, typeFilter, rangeStart, rangeEnd],
+        queryFn: () => getUnifiedHistory({
+            page,
+            pageSize: 30,
+            searchTerm: appliedSearch,
+            typeFilter,
+            startDate: rangeStart,
+            endDate: rangeEnd,
+        }),
+        initialData,
+        placeholderData: keepPreviousData,
+    });
 
-        Object.entries(newParams).forEach(([key, value]) => {
-            if (value === "ALL" || value === "" || value === undefined) params.delete(key);
-            else params.set(key, String(value));
-        });
+    const { data: activeReport = reportData, isFetching: reportFetching } = useQuery({
+        queryKey: ["sales-history-report", rangeStart, rangeEnd],
+        queryFn: () => getSalesHistoryReport({ startDate: rangeStart, endDate: rangeEnd }),
+        initialData: reportData,
+        placeholderData: keepPreviousData,
+    });
 
-        router.push(`${pathname}?${params.toString()}`);
+    const applySearch = () => {
+        setPage(1);
+        setAppliedSearch(searchTerm.trim());
     };
 
-    const handleSearch = () => {
-        updateParams({ search: searchTerm, page: 1 });
-    };
-
-    const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= initialData.totalPages) {
-            updateParams({ page: newPage });
+    const applyDateRange = () => {
+        if (!dateRange?.from) {
+            toast.error("Başlangıç tarihi seçin.");
+            return;
         }
+        setPage(1);
+        setAppliedRange({ from: dateRange.from, to: dateRange.to || dateRange.from });
+    };
+
+    const clearFilters = () => {
+        setSearchTerm("");
+        setAppliedSearch("");
+        setTypeFilter("ALL");
+        setPage(1);
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const resetRange = { from: monthStart, to: now };
+        setDateRange(resetRange);
+        setAppliedRange(resetRange);
     };
 
     const handlePrintReceipt = async (op: UnifiedOperation) => {
-        if (op.type !== 'SALE' && !op.saleId) return;
+        if (op.type !== "SALE" && !op.saleId) return;
         setReceiptLoading(op.id);
         try {
             const targetId = op.saleId || op.id;
             const sale = await getSaleById(targetId);
             if (sale) setReceiptSale(sale);
             else toast.error("Satış bulunamadı.");
-        } catch (e) {
-            console.error("Failed to load sale for receipt", e);
+        } catch (error) {
+            console.error("Failed to load sale for receipt", error);
             toast.error("Hata: Fiş yüklenemedi.");
         } finally {
             setReceiptLoading(null);
@@ -117,7 +158,7 @@ export function SalesHistoryClient({
     };
 
     const getPaymentIcon = (method: string) => {
-        switch (method) {
+        switch ((method || "").toUpperCase()) {
             case "CASH": return <Banknote className="h-3.5 w-3.5" />;
             case "CARD": return <CreditCard className="h-3.5 w-3.5" />;
             case "TRANSFER": return <Landmark className="h-3.5 w-3.5" />;
@@ -127,8 +168,7 @@ export function SalesHistoryClient({
     };
 
     const getPaymentLabel = (method: string) => {
-        const m = (method || "").toUpperCase();
-        switch (m) {
+        switch ((method || "").toUpperCase()) {
             case "CASH": return "Nakit";
             case "CARD": return "Kart";
             case "TRANSFER": return "Havale";
@@ -140,30 +180,30 @@ export function SalesHistoryClient({
     const translateLabel = (text: string | null | undefined) => {
         if (!text) return "";
         const lower = text.toLowerCase().trim();
-        if (lower === 'cash') return 'Nakit';
-        if (lower === 'bank') return 'Banka';
-        if (lower === 'card') return 'Kart';
-        if (lower === 'credit card') return 'Kredi Kartı';
-        if (lower === 'pos') return 'POS Hesabı';
-        if (lower === 'main cash') return 'Ana Kasa';
-        if (lower === 'transfer') return 'Havale';
+        if (lower === "cash") return "Nakit";
+        if (lower === "bank") return "Banka";
+        if (lower === "card") return "Kart";
+        if (lower === "credit card") return "Kredi Kartı";
+        if (lower === "pos") return "POS Hesabı";
+        if (lower === "main cash") return "Ana Kasa";
+        if (lower === "transfer") return "Havale";
         return text;
     };
 
     const getTypeLabel = (type: OperationType) => {
         switch (type) {
-            case 'SALE': return "Peşin Satış";
-            case 'DEBT_DIRECT': return "Veresiye";
-            case 'PAYMENT': return "Tahsilat";
-            default: return "İŞLEM";
+            case "SALE": return "Peşin Satış";
+            case "DEBT_DIRECT": return "Veresiye";
+            case "PAYMENT": return "Tahsilat";
+            default: return "İşlem";
         }
     };
 
     const getTypeColor = (type: OperationType) => {
         switch (type) {
-            case 'SALE': return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
-            case 'DEBT_DIRECT': return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
-            case 'PAYMENT': return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+            case "SALE": return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
+            case "DEBT_DIRECT": return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
+            case "PAYMENT": return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
             default: return "bg-slate-500/10 text-slate-600";
         }
     };
@@ -174,21 +214,18 @@ export function SalesHistoryClient({
             return;
         }
 
-        let cleanPhone = op.customerPhone.replace(/\D/g, '');
-        if (cleanPhone.startsWith('0')) cleanPhone = '90' + cleanPhone.substring(1);
-        if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) cleanPhone = '90' + cleanPhone;
+        let cleanPhone = op.customerPhone.replace(/\D/g, "");
+        if (cleanPhone.startsWith("0")) cleanPhone = `90${cleanPhone.substring(1)}`;
+        if (!cleanPhone.startsWith("90") && cleanPhone.length === 10) cleanPhone = `90${cleanPhone}`;
 
         let message = `Merhaba ${op.customerName},\n\n`;
-        if (item) {
-            message += `*${item.name}* (${item.quantity} adet) işleminiz hakkında bilgilendirme.\n`;
-        } else {
-            message += `*#${op.number}* numaralı işleminiz hakkında bilgilendirme.\n`;
-        }
-        message += `Tutar: ${op.currency === 'USD' ? '$' : '₺'}${op.amount.toLocaleString('tr-TR')}\n`;
+        message += item
+            ? `*${item.name}* (${item.quantity} adet) işleminiz hakkında bilgilendirme.\n`
+            : `*#${op.number}* numaralı işleminiz hakkında bilgilendirme.\n`;
+        message += `Tutar: ${op.currency === "USD" ? "$" : "₺"}${op.amount.toLocaleString("tr-TR")}\n`;
         message += `Tarih: ${format(new Date(op.date), "dd MMMM yyyy HH:mm", { locale: tr })}\n\nİyi günler dileriz.`;
 
-        const encodedMessage = encodeURIComponent(message);
-        window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
+        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
     };
 
     const handleReturn = (op: UnifiedOperation, item?: any) => {
@@ -206,77 +243,120 @@ export function SalesHistoryClient({
                 saleNumber: op.number,
                 soldAt: op.date,
                 saleId: op.saleId,
-                debtId: op.debtId
-            }] : op.items.map(i => ({
-                productId: i.productId,
-                name: i.name,
-                quantity: i.quantity || 1,
-                refundAmount: (i.price || 0) * (i.quantity || 1),
+                debtId: op.debtId,
+            }] : op.items.map((saleItem) => ({
+                productId: saleItem.productId,
+                name: saleItem.name,
+                quantity: saleItem.quantity || 1,
+                refundAmount: (saleItem.price || 0) * (saleItem.quantity || 1),
                 refundCurrency: op.currency || "TRY",
-                unitPrice: i.price || 0,
+                unitPrice: saleItem.price || 0,
                 saleNumber: op.number,
                 soldAt: op.date,
                 saleId: op.saleId,
-                debtId: op.debtId
-            }))
+                debtId: op.debtId,
+            })),
         });
         setIsReturnModalOpen(true);
     };
 
+    const formattedRange = appliedRange?.from
+        ? appliedRange.to
+            ? `${format(appliedRange.from, "d MMM yyyy", { locale: tr })} - ${format(appliedRange.to, "d MMM yyyy", { locale: tr })}`
+            : format(appliedRange.from, "d MMM yyyy", { locale: tr })
+        : "Tarih seçin";
+
     return (
         <div className="space-y-6">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-slate-200/40 dark:shadow-black/60 overflow-hidden bg-card/50 backdrop-blur-xl">
-                <CardHeader className="p-8 border-b border-border/40 bg-muted/5">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex flex-col gap-1">
-                            <h2 className="text-xl font-semibold tracking-tight">İşlem Arşivi</h2>
-                            <p className="text-xs text-muted-foreground">Tüm satış, veresiye ve ödeme hareketlerini buradan takip edebilirsiniz.</p>
+            <SalesHistoryReportPanel report={activeReport} isLoading={reportFetching} />
+
+            <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card/70 backdrop-blur-xl">
+                <CardHeader className="p-5 md:p-6 border-b border-border/40 bg-muted/5">
+                    <div className="flex flex-col gap-5">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-semibold tracking-tight">İşlem Arşivi</h2>
+                                <p className="text-sm text-muted-foreground">Satış, veresiye ve tahsilat hareketlerini seçtiğiniz tarih aralığında inceleyin.</p>
+                            </div>
+                            <div className="text-xs text-muted-foreground rounded-xl border border-border/60 bg-background/50 px-3 py-2">
+                                Aktif aralık: <span className="font-semibold text-foreground">{formattedRange}</span>
+                            </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="relative flex-1 min-w-[240px]">
+
+                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(260px,1fr)_auto] gap-3">
+                            <div className="relative">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Her türlü işlemde ara..."
-                                    className="pl-12 h-12 rounded-2xl bg-background border-border/40 text-[11px]"
+                                    placeholder="Müşteri, fiş, ürün veya telefon ara..."
+                                    className="pl-12 h-12 rounded-xl bg-background border-border/60 text-sm"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                                    onKeyDown={(e) => e.key === "Enter" && applySearch()}
                                 />
                             </div>
-                            <div className="flex gap-2">
+
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="h-12 rounded-xl border-border/60 justify-start gap-2 min-w-[240px]">
+                                            <CalendarIcon className="h-4 w-4 text-emerald-600" />
+                                            {dateRange?.from
+                                                ? dateRange.to
+                                                    ? `${format(dateRange.from, "d MMM yyyy", { locale: tr })} - ${format(dateRange.to, "d MMM yyyy", { locale: tr })}`
+                                                    : format(dateRange.from, "d MMM yyyy", { locale: tr })
+                                                : "Tarih aralığı seç"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 rounded-2xl border-border shadow-2xl" align="end">
+                                        <Calendar
+                                            mode="range"
+                                            selected={dateRange}
+                                            onSelect={setDateRange}
+                                            numberOfMonths={2}
+                                            defaultMonth={dateRange?.from}
+                                            locale={tr}
+                                            weekStartsOn={1}
+                                        />
+                                        <div className="flex items-center justify-end gap-2 border-t border-border p-3">
+                                            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setDateRange(appliedRange)}>
+                                                Vazgeç
+                                            </Button>
+                                            <Button size="sm" className="rounded-xl" onClick={applyDateRange}>
+                                                Uygula
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <Button type="button" className="h-12 rounded-xl px-5 text-sm font-semibold" onClick={applySearch}>
+                                    Ara
+                                </Button>
+                                <Button type="button" variant="ghost" className="h-12 rounded-xl px-4 text-sm font-semibold" onClick={clearFilters}>
+                                    Temizle
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            {typeFilters.map((filter) => (
                                 <Button
-                                    variant={searchParams.get("dateRange") === "TODAY" ? "default" : "outline"}
+                                    key={filter.key}
+                                    variant={(typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "default" : "outline"}
                                     size="sm"
                                     className={cn(
-                                        "h-10 rounded-xl px-4 text-[10px] tracking-widest uppercase transition-all",
-                                        searchParams.get("dateRange") === "TODAY" ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20" : "border-border/40"
+                                        "h-10 rounded-xl px-4 text-xs font-semibold",
+                                        (typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" : "border-border/60"
                                     )}
                                     onClick={() => {
-                                        updateParams({ dateRange: searchParams.get("dateRange") === "TODAY" ? "ALL" : "TODAY", page: 1 });
+                                        setPage(1);
+                                        setTypeFilter(filter.key);
                                     }}
                                 >
-                                    <Calendar className="mr-2 h-3.5 w-3.5" />
-                                    BUGÜN
+                                    {filter.label}
                                 </Button>
-                                <div className="w-[1px] h-8 bg-border/40 mx-1 self-center" />
-                                {(["ALL", "SALE", "DEBT", "PAYMENT"] as const).map((type) => (
-                                    <Button
-                                        key={type}
-                                        variant={(typeFilter === type || (type === "ALL" && !typeFilter)) ? "default" : "outline"}
-                                        size="sm"
-                                        className={cn(
-                                            "h-10 rounded-xl px-4 text-[10px] tracking-widest uppercase transition-all",
-                                            (typeFilter === type || (type === "ALL" && !typeFilter)) ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" : "border-border/40"
-                                        )}
-                                        onClick={() => {
-                                            setTypeFilter(type);
-                                            updateParams({ type, page: 1 });
-                                        }}
-                                    >
-                                        {type === "ALL" ? "HEPSİ" : type === "SALE" ? "SATIŞLAR" : type === "DEBT" ? "VERESİYELER" : "TAHSİLATLAR"}
-                                    </Button>
-                                ))}
-                            </div>
+                            ))}
+                            {historyFetching && (
+                                <span className="text-xs text-muted-foreground ml-1">Liste güncelleniyor...</span>
+                            )}
                         </div>
                     </div>
                 </CardHeader>
@@ -286,16 +366,16 @@ export function SalesHistoryClient({
                         <table className="w-full border-collapse">
                             <thead>
                                 <tr className="border-b border-border/40 bg-muted/5">
-                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60 w-16">Tür</th>
-                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Tarih</th>
-                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Müşteri</th>
-                                    <th className="px-6 py-3 text-left text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Açıklama / Ürünler</th>
-                                    <th className="px-6 py-3 text-right text-[14px] font-black uppercase tracking-widest text-muted-foreground/60">Tutar</th>
-                                    <th className="px-6 py-3 text-right text-[14px] font-black uppercase tracking-widest text-muted-foreground/60 w-28">İşlem</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground w-16">Tür</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tarih</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Müşteri</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Açıklama / Ürünler</th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tutar</th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground w-28">İşlem</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
-                                {initialData.items.length === 0 ? (
+                                {historyData.items.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-8 py-20 text-center">
                                             <div className="flex flex-col items-center gap-3">
@@ -307,7 +387,7 @@ export function SalesHistoryClient({
                                         </td>
                                     </tr>
                                 ) : (
-                                    initialData.items.map((op) => (
+                                    historyData.items.map((op: UnifiedOperation) => (
                                         <Fragment key={op.id}>
                                             <SalesHistoryRow
                                                 op={op}
@@ -319,12 +399,12 @@ export function SalesHistoryClient({
                                                 getPaymentLabel={getPaymentLabel}
                                                 translateLabel={translateLabel}
                                                 handlePrintReceipt={handlePrintReceipt}
-                                                handleReturn={(op, item) => {
-                                                    if (op.items.length > 1 && expandedOpId !== op.id) {
-                                                        setExpandedOpId(op.id);
+                                                handleReturn={(selectedOp, item) => {
+                                                    if (selectedOp.items.length > 1 && expandedOpId !== selectedOp.id) {
+                                                        setExpandedOpId(selectedOp.id);
                                                         toast.info("Lütfen iade etmek istediğiniz ürünü seçin.");
                                                     } else {
-                                                        handleReturn(op, item);
+                                                        handleReturn(selectedOp, item);
                                                     }
                                                 }}
                                                 receiptLoading={receiptLoading}
@@ -357,39 +437,39 @@ export function SalesHistoryClient({
                     </div>
                 </CardContent>
 
-                {initialData.totalPages > 1 && (
-                    <div className="px-8 py-6 border-t border-border/40 bg-muted/5 flex items-center justify-between">
-                        <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
-                            TOPLAM {initialData.total} İŞLEM // SAYFA {initialData.currentPage}/{initialData.totalPages}
+                {historyData.totalPages > 1 && (
+                    <div className="px-8 py-6 border-t border-border/40 bg-muted/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="text-xs text-muted-foreground font-medium">
+                            Toplam {historyData.total} işlem, sayfa {historyData.currentPage}/{historyData.totalPages}
                         </div>
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="outline"
                                 size="icon"
                                 className="h-10 w-10 rounded-xl border-border/40"
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage <= 1}
+                                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                                disabled={page <= 1}
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-1 px-2">
-                                {[...Array(Math.min(5, initialData.totalPages))].map((_, i) => {
+                                {[...Array(Math.min(5, historyData.totalPages))].map((_, i) => {
                                     let pageNum = i + 1;
-                                    if (initialData.totalPages > 5) {
-                                        if (currentPage > 3) pageNum = currentPage - 2 + i;
-                                        if (pageNum > initialData.totalPages) pageNum = initialData.totalPages - (4 - i);
+                                    if (historyData.totalPages > 5) {
+                                        if (page > 3) pageNum = page - 2 + i;
+                                        if (pageNum > historyData.totalPages) pageNum = historyData.totalPages - (4 - i);
                                     }
                                     if (pageNum <= 0) return null;
 
                                     return (
                                         <Button
-                                            key={i}
-                                            variant={currentPage === pageNum ? "default" : "ghost"}
+                                            key={pageNum}
+                                            variant={page === pageNum ? "default" : "ghost"}
                                             className={cn(
-                                                "h-10 w-10 rounded-xl text-[11px] font-bold transition-all",
-                                                currentPage === pageNum ? "bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/30" : ""
+                                                "h-10 w-10 rounded-xl text-xs font-bold transition-all",
+                                                page === pageNum ? "bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/30" : ""
                                             )}
-                                            onClick={() => handlePageChange(pageNum)}
+                                            onClick={() => setPage(pageNum)}
                                         >
                                             {pageNum}
                                         </Button>
@@ -400,8 +480,8 @@ export function SalesHistoryClient({
                                 variant="outline"
                                 size="icon"
                                 className="h-10 w-10 rounded-xl border-border/40"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage >= initialData.totalPages}
+                                onClick={() => setPage((prev) => Math.min(historyData.totalPages, prev + 1))}
+                                disabled={page >= historyData.totalPages}
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -410,7 +490,6 @@ export function SalesHistoryClient({
                 )}
             </Card>
 
-            {/* Receipt Modal */}
             <UnifiedSaleModal
                 isOpen={!!receiptSale}
                 onClose={() => setReceiptSale(null)}
@@ -418,14 +497,11 @@ export function SalesHistoryClient({
                 rates={rates as any}
             />
 
-            {/* Return Modal */}
             <AddReturnModal
                 open={isReturnModalOpen}
                 onOpenChange={setIsReturnModalOpen}
                 initialData={returnInitialData}
-                onSuccess={() => {
-                    router.refresh();
-                }}
+                onSuccess={() => router.refresh()}
             />
         </div>
     );

@@ -6,6 +6,7 @@ import { getShopId, getUserId } from "@/lib/auth";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { recordAuditLog } from "./audit-actions";
+import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
 
 const normalizeMoney = (value: unknown) => {
   const amount = Number(value);
@@ -218,10 +219,7 @@ export async function createDebt(data: {
       if (data.items) {
         for (const item of data.items) {
           if (item.productId && item.quantity) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stock: { decrement: item.quantity } }
-            });
+            await decrementProductStockSafely(tx, item.productId, shopId, item.quantity);
 
             await tx.inventoryMovement.create({
               data: {

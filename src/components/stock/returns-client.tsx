@@ -22,10 +22,13 @@ import {
     ShieldAlert,
     Undo2,
     Plus,
-    Navigation
+    Navigation,
+    MessageCircle
 } from "lucide-react";
 import { processReturn, rejectReturn } from "@/lib/actions/return-actions";
 import { AddReturnModal } from "@/components/stock/add-return-modal";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { buildReturnWhatsAppMessage, buildReturnWhatsAppSummaryMessage } from "@/lib/returns/return-whatsapp-message";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -91,6 +94,8 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
     const [rejectNotes, setRejectNotes] = useState("");
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
     const [addReturnInitialData, setAddReturnInitialData] = useState<any>(undefined);
+    const [whatsappTicket, setWhatsappTicket] = useState<any>(null);
+    const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
     // Auto-open modal from URL params (e.g. from veresiye page)
     useEffect(() => {
@@ -171,6 +176,10 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
             if (res.success) {
                 toast.success("İade onaylandı. İşlem başarıyla uygulandı.");
                 setIsApproveModalOpen(false);
+                if (selectedTicket.customer?.phone) {
+                    setWhatsappTicket({ ...selectedTicket, returnStatus: returnAction });
+                    setIsWhatsAppOpen(true);
+                }
                 setSelectedTicket(null);
                 setSelectedSupplierId("");
                 router.refresh();
@@ -178,6 +187,16 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
                 toast.error(res.error || "Onaylanırken hata oluştu.");
             }
         });
+    };
+
+    const openReturnWhatsApp = (ticket: any) => {
+        if (!ticket.customer?.phone) {
+            toast.error("Musteri telefon numarasi bulunamadi.");
+            return;
+        }
+
+        setWhatsappTicket(ticket);
+        setIsWhatsAppOpen(true);
     };
 
     const handleReject = async () => {
@@ -449,9 +468,22 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
                                                             </Button>
                                                         </>
                                                     ) : (
-                                                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest px-3 italic">
+                                                        <>
+                                                            {ticket.customer?.phone && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-8 px-3 rounded-lg gap-1.5 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 active:scale-95 transition-all"
+                                                                    onClick={() => openReturnWhatsApp(ticket)}
+                                                                >
+                                                                    <MessageCircle className="w-3.5 h-3.5" />
+                                                                    WHATSAPP
+                                                                </Button>
+                                                            )}
+                                                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest px-3 italic">
                                                             İŞLEM TAMAMLANDI
-                                                        </span>
+                                                            </span>
+                                                        </>
                                                     )}
                                                 </div>
                                             </TableCell>
@@ -563,10 +595,49 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
                     if (!v) setAddReturnInitialData(undefined);
                 }}
                 initialData={addReturnInitialData}
-                onSuccess={() => {
+                onSuccess={(tickets) => {
+                    const completedTickets = (tickets || []).filter((ticket: any) => ticket.returnStatus !== "PENDING");
+                    const customerTicket = completedTickets.find((ticket: any) => ticket.customer?.phone);
+                    if (customerTicket) {
+                        setWhatsappTicket({
+                            ...customerTicket,
+                            _whatsappMessage: buildReturnWhatsAppSummaryMessage(completedTickets
+                                .filter((ticket: any) => ticket.customer?.phone === customerTicket.customer?.phone)
+                                .map((ticket: any) => ({
+                                    customerName: ticket.customer?.name,
+                                    ticketNumber: ticket.ticketNumber,
+                                    productName: ticket.product?.name || ticket.productName,
+                                    quantity: ticket.quantity,
+                                    refundAmount: ticket.refundAmount,
+                                    refundCurrency: ticket.refundCurrency,
+                                    returnReason: ticket.returnReason,
+                                }))),
+                        });
+                        setIsWhatsAppOpen(true);
+                    }
                     router.refresh();
                 }}
             />
+            {whatsappTicket && (
+                <WhatsAppConfirmModal
+                    isOpen={isWhatsAppOpen}
+                    onClose={() => {
+                        setIsWhatsAppOpen(false);
+                        setWhatsappTicket(null);
+                    }}
+                    phone={whatsappTicket.customer?.phone || ""}
+                    customerName={whatsappTicket.customer?.name}
+                    initialMessage={whatsappTicket._whatsappMessage || buildReturnWhatsAppMessage({
+                        customerName: whatsappTicket.customer?.name,
+                        ticketNumber: whatsappTicket.ticketNumber,
+                        productName: whatsappTicket.product?.name || whatsappTicket.productName || whatsappTicket.serviceTicket?.deviceModel,
+                        quantity: whatsappTicket.quantity,
+                        refundAmount: whatsappTicket.refundAmount,
+                        refundCurrency: whatsappTicket.refundCurrency,
+                        returnReason: whatsappTicket.returnReason,
+                    })}
+                />
+            )}
         </div>
     );
 }

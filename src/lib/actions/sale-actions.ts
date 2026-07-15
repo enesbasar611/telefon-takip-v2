@@ -13,6 +13,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { recordAuditLog } from "./audit-actions";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
+import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
+import { convertTransactionAmount, type TransactionCurrency } from "@/lib/finance/transaction-currency";
 
 // getOrCreateDevUser removed.
 
@@ -25,6 +28,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
     await checkRateLimit(`createSale:${userId}`, 30);
 
     const data = saleSchema.parse(rawData);
+    const exchangeRates = await getExchangeRates(shopId);
 
     const sale = await prisma.$transaction(async (tx) => {
       // 1. Generate sale number and create sale record
@@ -37,8 +41,8 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
           customerId: data.customerId,
           userId,
           shopId,
-          totalAmount: data.totalAmount,
-          finalAmount: Math.max(0, data.totalAmount - (data.discountAmount || 0)),
+          totalAmount: data.totalAmount + (data.discountAmount || 0),
+          finalAmount: Math.max(0, data.totalAmount),
           paymentMethod: (
             data.paymentMethod === "CASH" ? PaymentMethod.CASH :
               data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
@@ -101,10 +105,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
 
       // 3. Update stock and create movements
       for (const item of data.items) {
-        const updatedProduct = await tx.product.update({
-          where: { id: item.productId, shopId },
-          data: { stock: { decrement: item.quantity } },
-        });
+        const updatedProduct = await decrementProductStockSafely(tx, item.productId, shopId, item.quantity);
 
         await tx.inventoryMovement.create({
           data: {
@@ -133,7 +134,12 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
       let targetAccount = null;
       let isDebt = data.paymentMethod === "DEBT";
 
-      if (data.paymentMethod === "CASH") {
+      if (!isDebt && data.accountId) {
+        targetAccount = await tx.financeAccount.findFirst({
+          where: { id: data.accountId, shopId, isActive: true }
+        });
+        if (!targetAccount) throw new Error("Seçilen kasa hesabı bulunamadı.");
+      } else if (data.paymentMethod === "CASH") {
         targetAccount = await tx.financeAccount.findFirst({ where: { type: "CASH", shopId, isActive: true } });
       } else if (data.paymentMethod === "CREDIT_CARD") {
         targetAccount = await tx.financeAccount.findFirst({ where: { type: "POS", shopId, isActive: true } });
@@ -142,7 +148,13 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
       }
 
       const activeSession = await tx.dailySession.findFirst({ where: { status: "OPEN", shopId } });
+      const saleCurrency = data.currency === "USD" || data.currency === "EUR" ? data.currency : "TRY";
       const finalAmount = Number(data.totalAmount);
+      const finalAmountTry = convertTransactionAmount(
+        finalAmount,
+        saleCurrency as TransactionCurrency,
+        exchangeRates
+      ).TRY;
       const soldProductNames = newSale.items.map(item => item.product?.name).filter(Boolean);
       const saleDescription = soldProductNames.length > 0
         ? `${soldProductNames[0]}${soldProductNames.length > 1 ? ` + ${soldProductNames.length - 1} ürün` : ""}`
@@ -152,7 +164,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
       await tx.transaction.create({
         data: {
           amount: finalAmount,
-          currency: data.currency || "TRY",
+          currency: saleCurrency,
           type: TransactionType.INCOME,
           description: `${saleDescription}${data.discountAmount ? ` (₺${data.discountAmount} İndirim)` : ''}${isDebt ? ' (VERESİYE)' : ''}`,
           paymentMethod: isDebt ? PaymentMethod.DEBT : newSale.paymentMethod,
@@ -169,7 +181,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
       if (targetAccount) {
         await tx.financeAccount.update({
           where: { id: targetAccount.id },
-          data: { balance: { increment: finalAmount } },
+          data: { balance: { increment: finalAmountTry } },
         });
       }
 
@@ -180,7 +192,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
             customerId: data.customerId,
             amount: finalAmount,
             remainingAmount: finalAmount,
-            currency: data.currency || "TRY",
+            currency: saleCurrency,
             shopId,
             notes: saleDescription,
             saleId: newSale.id, // Verified in schema.prisma

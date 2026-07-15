@@ -14,8 +14,10 @@ import { getSettings } from "./setting-actions";
 import { calculateLoyaltyPoints } from "@/lib/loyalty-engine";
 import { serviceTicketSchema } from "@/lib/validations/schemas";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
+import { calculateServiceProfitAnalytics } from "@/lib/service/service-profit-analytics";
 import { recordAuditLog } from "./audit-actions";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
 
 // Local schema moved to centralized lib/validations/schemas.ts
 
@@ -630,10 +632,11 @@ export async function addPartToService(ticketId: string, productId: string, quan
         } as any
       });
 
-      const updatedProduct = await tx.product.update({
+      const updatedProduct = await decrementProductStockSafely(tx, productId, shopId, quantity);
+      await tx.product.update({
         where: { id: productId, shopId },
         data: {
-          stock: { decrement: quantity },
+          stock: { increment: 0 },
           movements: {
             create: {
               quantity: -quantity,
@@ -958,6 +961,53 @@ export async function getServiceCounts() {
   } catch (error) {
     console.error("Error fetching service counts:", error);
     return { active: 0, ready: 0, done: 0, all: 0, readyValue: 0, monthlyRevenue: 0 };
+  }
+}
+
+export async function getServiceProfitAnalytics(input: { startDate: string; endDate: string }) {
+  try {
+    const shopId = await getShopId();
+    const startDate = new Date(input.startDate);
+    const endDate = new Date(input.endDate);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new Error("Geçersiz tarih aralığı.");
+    }
+
+    const deliveredTickets = await prisma.serviceTicket.findMany({
+      where: {
+        shopId,
+        status: ServiceStatus.DELIVERED,
+        deliveredAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        estimatedCost: true,
+        actualCost: true,
+        overhead: true,
+        usedParts: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+            costPrice: true,
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      data: calculateServiceProfitAnalytics(deliveredTickets),
+    };
+  } catch (error: any) {
+    console.error("Error fetching service profit analytics:", error);
+    return {
+      success: false,
+      error: error?.message || "Servis kazanç bilgileri alınamadı.",
+      data: calculateServiceProfitAnalytics([]),
+    };
   }
 }
 

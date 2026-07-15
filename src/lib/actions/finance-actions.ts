@@ -11,7 +11,16 @@ import { buildTransactionSearchWhere } from "@/lib/finance/transaction-search";
 import { z } from "zod";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { recordAuditLog } from "./audit-actions";
-import { convertTransactionAmount } from "@/lib/finance/transaction-currency";
+import { convertTransactionAmount, type TransactionCurrency } from "@/lib/finance/transaction-currency";
+
+function toSupportedCurrency(value?: string | null): TransactionCurrency {
+  return value === "USD" || value === "EUR" ? value : "TRY";
+}
+
+async function convertToTry(amount: number, currency: string | undefined | null, shopId: string) {
+  const rates = await getExchangeRates(shopId);
+  return convertTransactionAmount(Number(amount) || 0, toSupportedCurrency(currency), rates).TRY;
+}
 
 export async function getTransactions(options: {
   accountId?: string;
@@ -113,6 +122,7 @@ export async function getAccounts() {
 export async function createAccount(data: {
   name: string;
   type: "CASH" | "BANK" | "POS" | "CREDIT_CARD";
+  currency?: "TRY" | "USD" | "EUR";
   initialBalance?: number;
   limit?: number;
   billingDay?: number;
@@ -120,15 +130,20 @@ export async function createAccount(data: {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+    const currency = toSupportedCurrency(data.currency);
+    const initialBalanceTry = await convertToTry(data.initialBalance || 0, currency, shopId);
+    const limitTry = data.limit !== undefined ? await convertToTry(data.limit, currency, shopId) : undefined;
 
     const account = await prisma.financeAccount.create({
       data: {
         name: data.name,
         type: data.type,
-        balance: data.initialBalance || 0,
-        initialBalance: data.initialBalance || 0,
-        availableBalance: data.type === "CREDIT_CARD" ? (data.limit || 0) - (data.initialBalance || 0) : (data.initialBalance || 0),
-        limit: data.limit,
+        currency,
+        balance: initialBalanceTry,
+        initialBalance: initialBalanceTry,
+        availableBalance: data.type === "CREDIT_CARD" ? (limitTry || 0) - initialBalanceTry : initialBalanceTry,
+        limit: limitTry,
         billingDay: data.billingDay,
         isDefault: false,
         shopId
@@ -140,13 +155,14 @@ export async function createAccount(data: {
         data: {
           type: "INCOME",
           amount: data.initialBalance,
+          currency,
           description: "Açılış Bakiyesi",
           paymentMethod: data.type === 'CASH' ? 'CASH' : 'TRANSFER',
           financeAccountId: account.id,
           userId,
           shopId,
           category: "AÇILIŞ",
-          runningBalance: data.initialBalance
+          runningBalance: initialBalanceTry
         }
       });
     }
@@ -560,12 +576,14 @@ export async function getOrCreateAccountByType(type: "CASH" | "BANK" | "POS" | "
 export async function updateAccount(id: string, data: {
   name: string;
   type: "CASH" | "BANK" | "POS" | "CREDIT_CARD";
+  currency?: "TRY" | "USD" | "EUR";
   balance?: number;
   limit?: number;
   billingDay?: number;
 }) {
   try {
     const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
 
     // Get current account to calculate available balance if needed
     const current = await prisma.financeAccount.findUnique({
@@ -573,8 +591,9 @@ export async function updateAccount(id: string, data: {
     });
     if (!current) throw new Error("Hesap bulunamadı.");
 
-    const newLimit = data.limit ?? Number(current.limit || 0);
-    const newBalance = data.balance ?? Number(current.balance);
+    const currency = toSupportedCurrency(data.currency || (current as any).currency || "TRY");
+    const newLimit = data.limit !== undefined ? await convertToTry(data.limit, currency, shopId) : Number(current.limit || 0);
+    const newBalance = data.balance !== undefined ? await convertToTry(data.balance, currency, shopId) : Number(current.balance);
     const newType = data.type ?? current.type;
 
     const account = await prisma.financeAccount.update({
@@ -582,6 +601,7 @@ export async function updateAccount(id: string, data: {
       data: {
         name: data.name,
         type: newType,
+        currency,
         balance: newBalance,
         limit: newLimit,
         billingDay: data.billingDay ?? current.billingDay,
@@ -598,7 +618,276 @@ export async function updateAccount(id: string, data: {
   }
 }
 
+export async function resetCashRegisters(data: {
+  title?: string;
+  notes?: string;
+  periodType?: "DAY" | "WEEK" | "MONTH" | "MANUAL";
+  accountIds?: string[];
+} = {}) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+
+    const rates = await getExchangeRates(shopId);
+    const accounts = await prisma.financeAccount.findMany({
+      where: {
+        shopId,
+        isActive: true,
+        ...(data.accountIds?.length ? { id: { in: data.accountIds } } : {})
+      },
+      orderBy: { createdAt: "asc" }
+    });
+
+    if (accounts.length === 0) {
+      return { success: false, error: "Sıfırlanacak aktif hesap bulunamadı." };
+    }
+
+    const totalBalance = accounts.reduce((sum, account) => sum + Number(account.balance || 0), 0);
+    const totalBalanceUsd = convertTransactionAmount(totalBalance, "TRY", rates).USD;
+    const title = data.title?.trim() || `${format(new Date(), "dd MMM yyyy", { locale: tr })} Kasa Sıfırlama`;
+
+    const reset = await prisma.$transaction(async (tx) => {
+      const created = await tx.cashRegisterReset.create({
+        data: {
+          title,
+          notes: data.notes,
+          periodType: data.periodType || "MANUAL",
+          totalBalance,
+          totalBalanceUsd,
+          shopId,
+          userId,
+          accounts: {
+            create: accounts.map((account) => ({
+              accountId: account.id,
+              accountName: account.name,
+              accountType: account.type,
+              accountCurrency: account.currency || "TRY",
+              closingBalance: account.balance,
+              closingBalanceUsd: convertTransactionAmount(Number(account.balance || 0), "TRY", rates).USD,
+              shopId,
+            }))
+          }
+        },
+        include: { accounts: true }
+      });
+
+      await tx.financeAccount.updateMany({
+        where: { shopId, isActive: true, id: { in: accounts.map((account) => account.id) } },
+        data: { balance: 0, availableBalance: 0 }
+      });
+
+      return created;
+    });
+
+    revalidatePath("/satis/kasa");
+    revalidateTag(`dashboard-${shopId}`);
+
+    await recordAuditLog({
+      action: "UPDATE",
+      entityType: "FINANCE",
+      entityId: reset.id,
+      entityName: title,
+      message: `${accounts.length} finans hesabı sıfırlandı ve dönem bakiyesi arşivlendi.`,
+      details: { accountCount: accounts.length, totalBalance, totalBalanceUsd }
+    });
+
+    return { success: true, reset: serializePrisma(reset) };
+  } catch (error) {
+    console.error("resetCashRegisters error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Kasalar sıfırlanamadı." };
+  }
+}
+
+export async function getCashRegisterResetReport(options: {
+  period?: "DAY" | "WEEK" | "MONTH" | "ALL";
+  accountId?: string;
+} = {}) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { resets: [], accounts: [] };
+
+    const now = new Date();
+    const startDate = new Date(now);
+    if (options.period === "DAY") startDate.setHours(0, 0, 0, 0);
+    else if (options.period === "WEEK") startDate.setDate(now.getDate() - 7);
+    else if (options.period === "MONTH") startDate.setMonth(now.getMonth() - 1);
+
+    const createdAt = options.period && options.period !== "ALL" ? { gte: startDate } : undefined;
+
+    const [resets, accounts] = await Promise.all([
+      prisma.cashRegisterReset.findMany({
+        where: {
+          shopId,
+          ...(createdAt ? { createdAt } : {}),
+          ...(options.accountId ? { accounts: { some: { accountId: options.accountId } } } : {})
+        },
+        orderBy: { createdAt: "desc" },
+        include: {
+          accounts: {
+            where: options.accountId ? { accountId: options.accountId } : undefined,
+            orderBy: { accountName: "asc" }
+          },
+          user: { select: { name: true } }
+        },
+        take: 60
+      }),
+      prisma.financeAccount.findMany({
+        where: { shopId, isActive: true },
+        select: { id: true, name: true, type: true, currency: true },
+        orderBy: { createdAt: "asc" }
+      })
+    ]);
+
+    return { resets: serializePrisma(resets), accounts: serializePrisma(accounts) };
+  } catch (error) {
+    console.error("getCashRegisterResetReport error:", error);
+    return { resets: [], accounts: [] };
+  }
+}
+
 export async function getDailySummary() {
+  try {
+    const shopId = await getShopId();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [accounts, accountTransactions, resetAccounts, todaySales, todayExpenseTransactions, totalReceivablesAgg, totalPayablesAgg, rates] = await Promise.all([
+      prisma.financeAccount.findMany({ where: { shopId } }),
+      prisma.transaction.findMany({
+        where: { shopId, financeAccountId: { not: null } },
+        select: {
+          amount: true,
+          currency: true,
+          type: true,
+          createdAt: true,
+          financeAccountId: true,
+        },
+        orderBy: { createdAt: "asc" }
+      }),
+      prisma.cashRegisterResetAccount.findMany({
+        where: { shopId },
+        select: { accountId: true, createdAt: true },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.sale.findMany({
+        where: {
+          shopId,
+          createdAt: { gte: today },
+          paymentMethod: { not: "DEBT" }
+        },
+        select: {
+          finalAmount: true,
+          transaction: {
+            select: {
+              amount: true,
+              currency: true,
+              financeAccountId: true,
+            }
+          },
+          items: {
+            select: {
+              quantity: true,
+              unitPrice: true,
+              product: {
+                select: {
+                  buyPrice: true,
+                }
+              }
+            }
+          }
+        }
+      }),
+      prisma.transaction.findMany({
+        where: {
+          shopId,
+          type: 'EXPENSE',
+          createdAt: { gte: today },
+          paymentMethod: { not: "DEBT" }
+        },
+        select: { amount: true, currency: true }
+      }),
+      prisma.debt.aggregate({
+        where: { shopId, isPaid: false },
+        _sum: { remainingAmount: true }
+      }),
+      prisma.supplier.aggregate({
+        where: { shopId },
+        _sum: { balance: true }
+      }),
+      getExchangeRates(shopId)
+    ]);
+
+    const latestResetByAccount = new Map<string, Date>();
+    for (const resetAccount of resetAccounts) {
+      if (!latestResetByAccount.has(resetAccount.accountId)) {
+        latestResetByAccount.set(resetAccount.accountId, resetAccount.createdAt);
+      }
+    }
+
+    const computedBalanceByAccount = new Map<string, number>();
+    const transactionCountByAccount = new Map<string, number>();
+    for (const tx of accountTransactions) {
+      if (!tx.financeAccountId) continue;
+      const resetAt = latestResetByAccount.get(tx.financeAccountId);
+      if (resetAt && tx.createdAt <= resetAt) continue;
+      const account = accounts.find((a) => a.id === tx.financeAccountId);
+      if (!account) continue;
+      const amountTry = convertTransactionAmount(Number(tx.amount || 0), toSupportedCurrency(tx.currency), rates).TRY;
+      const impact = account.type === "CREDIT_CARD"
+        ? (tx.type === "INCOME" ? -amountTry : amountTry)
+        : (tx.type === "INCOME" ? amountTry : -amountTry);
+      computedBalanceByAccount.set(tx.financeAccountId, (computedBalanceByAccount.get(tx.financeAccountId) || 0) + impact);
+      transactionCountByAccount.set(tx.financeAccountId, (transactionCountByAccount.get(tx.financeAccountId) || 0) + 1);
+    }
+
+    const computedAccounts = accounts.map((account) => {
+      const hasComputedBalance = transactionCountByAccount.has(account.id) || latestResetByAccount.has(account.id);
+      const balance = hasComputedBalance ? (computedBalanceByAccount.get(account.id) || 0) : Number(account.balance || 0);
+      const limit = Number(account.limit || 0);
+      return {
+        ...account,
+        balance,
+        availableBalance: account.type === "CREDIT_CARD" ? limit - balance : balance,
+      };
+    });
+
+    const cashBalance = computedAccounts.filter(a => a.type === 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
+    const bankBalance = computedAccounts.filter(a => a.type !== 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
+    const todayIncome = todaySales.reduce((sum, sale) => {
+      const currency = toSupportedCurrency(sale.transaction?.currency);
+      const amount = Number(sale.transaction?.amount ?? sale.finalAmount ?? 0);
+      return sum + convertTransactionAmount(amount, currency, rates).TRY;
+    }, 0);
+    const todayProfit = todaySales.reduce((sum, sale) => {
+      const currency = toSupportedCurrency(sale.transaction?.currency);
+      const saleProfit = sale.items.reduce((itemSum, item) => {
+        const unitPriceTry = convertTransactionAmount(Number(item.unitPrice || 0), currency, rates).TRY;
+        const unitCostTry = Number(item.product?.buyPrice || 0);
+        return itemSum + ((unitPriceTry - unitCostTry) * Number(item.quantity || 0));
+      }, 0);
+      return sum + saleProfit;
+    }, 0);
+    const todayExpense = todayExpenseTransactions.reduce((sum, tx) => {
+      return sum + convertTransactionAmount(Number(tx.amount || 0), toSupportedCurrency(tx.currency), rates).TRY;
+    }, 0);
+
+    return {
+      todayIncome,
+      todayProfit,
+      todayExpense,
+      cashBalance,
+      bankBalance,
+      totalReceivables: Number(totalReceivablesAgg._sum.remainingAmount) || 0,
+      totalPayables: Number(totalPayablesAgg._sum.balance) || 0,
+      accounts: serializePrisma(computedAccounts)
+    };
+  } catch (error) {
+    return { todayIncome: 0, todayProfit: 0, todayExpense: 0, cashBalance: 0, bankBalance: 0, totalReceivables: 0, totalPayables: 0, accounts: [] };
+  }
+}
+
+async function getDailySummaryLegacy() {
   try {
     const shopId = await getShopId();
     const today = new Date();
@@ -856,6 +1145,58 @@ export async function transferFunds(data: {
 }
 
 export async function getAccountAnalytics(accountId: string, period: "DAY" | "WEEK" | "MONTH" = "WEEK") {
+  try {
+    const now = new Date();
+    let startDate = new Date();
+
+    if (period === "DAY") startDate.setHours(0, 0, 0, 0);
+    else if (period === "WEEK") startDate.setDate(now.getDate() - 7);
+    else if (period === "MONTH") startDate.setMonth(now.getMonth() - 1);
+
+    const shopId = await getShopId();
+    const [transactions, rates] = await Promise.all([
+      prisma.transaction.findMany({
+        where: {
+          financeAccountId: accountId,
+          shopId,
+          createdAt: { gte: startDate }
+        },
+        orderBy: { createdAt: "asc" }
+      }),
+      getExchangeRates(shopId)
+    ]);
+    const transactionsWithBaseAmount = transactions.map((t) => ({
+      ...t,
+      amountTry: convertTransactionAmount(Number(t.amount || 0), toSupportedCurrency(t.currency), rates).TRY,
+    }));
+
+    const grouped = transactionsWithBaseAmount.reduce((acc: any, t) => {
+      const date = format(new Date(t.createdAt), period === "DAY" ? "HH:00" : "dd MMM", { locale: tr });
+      if (!acc[date]) acc[date] = { date, income: 0, expense: 0, balance: 0 };
+      if (t.type === "INCOME") acc[date].income += Number(t.amountTry);
+      else acc[date].expense += Number(t.amountTry);
+      return acc;
+    }, {});
+
+    const categories = transactionsWithBaseAmount.reduce((acc: any, t) => {
+      const cat = t.category || "DİĞER";
+      if (!acc[cat]) acc[cat] = 0;
+      acc[cat] += Number(t.amountTry);
+      return acc;
+    }, {});
+
+    return {
+      chartData: Object.values(grouped),
+      distributionData: Object.entries(categories).map(([name, value]) => ({ name, value })),
+      transactions: serializePrisma(transactionsWithBaseAmount.slice(-10))
+    };
+  } catch (error) {
+    console.error("Analytics error:", error);
+    return { chartData: [], distributionData: [], transactions: [] };
+  }
+}
+
+async function getAccountAnalyticsLegacy(accountId: string, period: "DAY" | "WEEK" | "MONTH" = "WEEK") {
   try {
     const now = new Date();
     let startDate = new Date();

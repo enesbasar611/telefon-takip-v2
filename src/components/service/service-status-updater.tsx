@@ -83,6 +83,7 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
           queryClient.invalidateQueries({ queryKey: ["dashboard-service-metrics"] }),
           queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
           queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] }),
+          queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] }),
         ]);
       } else {
         toast.error(res.error);
@@ -110,6 +111,7 @@ export function ServiceStatusUpdater({ ticket }: { ticket: any }) {
           queryClient.invalidateQueries({ queryKey: ["dashboard-recent-transactions"] }),
           queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
           queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] }),
+          queryClient.invalidateQueries({ queryKey: ["service-profit-analytics"] }),
           queryClient.invalidateQueries({ queryKey: ["transactions"] }),
           queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
           queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),

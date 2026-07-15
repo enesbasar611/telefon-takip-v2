@@ -9,6 +9,7 @@ import { generateProductBarcode } from "@/lib/barcode-utils";
 import { formatTitleCase } from "@/lib/formatters";
 import { Role } from "@prisma/client";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
+import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
 
 type ShortagePriority = {
   courierPriorityScore: number;
@@ -926,10 +927,7 @@ export async function approveShortageItem(
         });
 
         // Satış yapıldığı için stoğu tekrar düş (Giriş yapıldı, hemen bayi için çıkış yapılıyor)
-        await tx.product.update({
-          where: { id: activeProductId, shopId },
-          data: { stock: { decrement: safeQuantity } }
-        });
+        await decrementProductStockSafely(tx, activeProductId, shopId, safeQuantity);
 
         await tx.inventoryMovement.create({
           data: {

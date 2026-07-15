@@ -31,18 +31,17 @@ function Calendar({
                 ),
                 nav_button_previous: "absolute left-1",
                 nav_button_next: "absolute right-1",
-                table: "w-full border-collapse space-y-1",
-                head_row: "flex",
-                head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
-                row: "flex w-full mt-2",
+                table: "w-full border-collapse",
+                head_row: "grid grid-cols-7 gap-0",
+                head_cell: "text-muted-foreground rounded-md h-9 w-9 font-normal text-[0.8rem] text-center flex items-center justify-center",
+                row: "grid grid-cols-7 gap-0 mt-1",
                 cell: cn(
-                    "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
+                    "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 h-9 w-9 flex items-center justify-center",
                     "[&:has([aria-selected])]:bg-emerald-500/10",
                     "[&:has([aria-selected].day-range-start)]:rounded-l-[50%]",
                     "[&:has([aria-selected].day-range-end)]:rounded-r-[50%]",
                     "[&:has([aria-selected].day-outside)]:bg-transparent",
-                    "[&:has([aria-selected].day-outside)]:opacity-50",
-                    "w-9 h-9"
+                    "[&:has([aria-selected].day-outside)]:opacity-50"
                 ),
                 day: cn(
                     buttonVariants({ variant: "ghost" }),

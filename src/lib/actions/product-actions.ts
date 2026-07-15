@@ -11,6 +11,7 @@ import { generateProductBarcode } from "@/lib/barcode-utils";
 import { z } from "zod";
 import { recordAuditLog } from "./audit-actions";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
+import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
 
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
@@ -35,7 +36,7 @@ export const getAllProductsForCategoriesUI = cache(async function getAllProducts
     const shopId = await getShopId();
     if (!shopId) return [];
     const products = await prisma.product.findMany({
-      where: { shopId },
+      where: { shopId, isDeleted: false },
       select: {
         id: true,
         name: true,
@@ -76,7 +77,7 @@ export const getProducts = cache(async function getProducts(options: {
   try {
     const shopId = await getShopId();
     if (!shopId) return { products: [], totalCount: 0 };
-    const where: any = { shopId };
+    const where: any = { shopId, isDeleted: false };
 
     if (id) {
       where.id = id;
@@ -163,6 +164,7 @@ export const searchProducts = cache(async function searchProducts(query: string)
     const products = await prisma.product.findMany({
       where: {
         shopId,
+        isDeleted: false,
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { sku: { contains: query, mode: 'insensitive' } },
@@ -215,7 +217,7 @@ export const getProductsForCategorySummary = cache(async function getProductsFor
     const shopId = await getShopId();
     if (!shopId) return [];
     const products = await prisma.product.findMany({
-      where: { shopId, stock: { gt: 0 } },
+      where: { shopId, isDeleted: false, stock: { gt: 0 } },
       select: {
         categoryId: true,
         buyPrice: true,
@@ -273,10 +275,12 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
     }
 
     // Check for duplicate product WITHIN the shop
+    const initialStock = Math.max(0, Number(data.stock) || 0);
     const formattedName = formatTitleCase(data.name);
     const existingProduct = await prisma.product.findFirst({
       where: {
         shopId,
+        isDeleted: false,
         OR: [
           { name: { equals: formattedName, mode: 'insensitive' } },
           ...(data.barcode ? [{ barcode: formatUppercase(data.barcode) }] : []),
@@ -302,7 +306,7 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
         buyPriceUsd: data.buyPriceUsd ?? null,
         sellPrice: data.sellPrice,
         sellPriceUsd: data.sellPriceUsd ?? null,
-        stock: data.stock,
+        stock: initialStock,
         criticalStock: data.criticalStock,
         barcode: data.barcode ? formatUppercase(data.barcode) : undefined,
         sku: data.sku ? formatUppercase(data.sku) : undefined,
@@ -322,19 +326,19 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
           }
         } : undefined,
         // Log the initial stock as a movement
-        movements: data.stock > 0 ? {
+        movements: initialStock > 0 ? {
           create: {
-            quantity: data.stock,
+            quantity: initialStock,
             type: "PURCHASE",
             notes: "İlk stok kaydı.",
             shopId,
             supplierId: data.supplierId
           }
         } : undefined,
-        inventoryLogs: data.stock > 0 ? {
+        inventoryLogs: initialStock > 0 ? {
           create: {
             userId,
-            quantity: data.stock,
+            quantity: initialStock,
             type: "PURCHASE",
             notes: "İlk stok kaydı.",
             shopId
@@ -385,9 +389,9 @@ export async function createProduct(rawData: z.input<typeof productSchema>) {
 export async function ensureProductBarcode(productId: string) {
   try {
     const shopId = await getShopId();
-    const product = await prisma.product.findUnique({ where: { id: productId, shopId } });
+    const product = await prisma.product.findFirst({ where: { id: productId, shopId, isDeleted: false } });
 
-    if (!product) {
+    if (!product || product.isDeleted) {
       return { success: false, error: "Ürün bulunamadı." };
     }
 
@@ -501,7 +505,7 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
 
     const oldProduct = await prisma.product.findUnique({ where: { id, shopId } });
     const buyPrice = data.buyPrice ? Number(data.buyPrice) : undefined;
-    const newStock = data.stock !== undefined ? Number(data.stock) : undefined;
+    const newStock = data.stock !== undefined ? Math.max(0, Number(data.stock)) : undefined;
 
     const { imei, color, capacity, batteryHealth, condition, categoryPath, ...productFields } = data;
 
@@ -656,33 +660,43 @@ export async function addInventoryStock(productId: string, quantity: number, not
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+    if (!Number.isInteger(quantity) || quantity === 0) {
+      return { success: false, error: "Stok miktarı geçersiz." };
+    }
 
-    await prisma.$transaction([
-      prisma.product.update({
-        where: { id: productId, shopId },
-        data: { stock: { increment: quantity } }
-      }),
-      prisma.inventoryMovement.create({
+    await prisma.$transaction(async (tx) => {
+      if (quantity < 0) {
+        await decrementProductStockSafely(tx, productId, shopId, Math.abs(quantity));
+      } else {
+        const updated = await tx.product.updateMany({
+          where: { id: productId, shopId, isDeleted: false },
+          data: { stock: { increment: quantity } }
+        });
+        if (updated.count !== 1) throw new Error("Ürün bulunamadı.");
+      }
+
+      await tx.inventoryMovement.create({
         data: {
           productId,
           quantity,
-          type: "PURCHASE",
+          type: quantity > 0 ? "PURCHASE" : "ADJUSTMENT",
           notes: notes || "Hızlı stok girişi",
           shopId,
           supplierId
         }
-      }),
-      prisma.inventoryLog.create({
+      });
+      await tx.inventoryLog.create({
         data: {
           productId,
           userId,
           quantity,
-          type: "PURCHASE",
+          type: quantity > 0 ? "PURCHASE" : "ADJUSTMENT",
           notes: notes || "Hızlı stok girişi",
           shopId
         }
-      })
-    ]);
+      });
+    });
 
     revalidatePath("/stok");
     revalidateTag(`dashboard-${shopId}`);
@@ -691,7 +705,7 @@ export async function addInventoryStock(productId: string, quantity: number, not
     return { success: true };
   } catch (error) {
     console.error("Add inventory stock error:", error);
-    return { success: false, error: "Stok eklenemedi." };
+    return { success: false, error: error instanceof Error ? error.message : "Stok eklenemedi." };
   }
 }
 
@@ -745,10 +759,11 @@ export async function quickSellProduct(productId: string, quantity: number) {
         }
       });
 
+      await decrementProductStockSafely(tx, productId, shopId, quantity);
       await tx.product.update({
         where: { id: productId, shopId },
         data: {
-          stock: { decrement: quantity },
+          stock: { increment: 0 },
           inventoryLogs: {
             create: {
               userId,
@@ -807,6 +822,7 @@ export async function getDeadStockCount(providedShopId?: string) {
     const deadStockCount = await prisma.product.count({
       where: {
         shopId,
+        isDeleted: false,
         stock: { gt: 0 },
         id: { notIn: activeProductIds }
       }
@@ -840,8 +856,9 @@ export async function deleteProduct(id: string, force: boolean = false) {
     if (!usage) return { success: false, error: "Ürün bulunamadı." };
 
     const { saleItems, usedInServices, purchaseItems, returns } = usage._count;
+    const hasUsage = saleItems > 0 || usedInServices > 0 || purchaseItems > 0 || returns > 0;
 
-    if (!force && (saleItems > 0 || usedInServices > 0 || purchaseItems > 0 || returns > 0)) {
+    if (!force && hasUsage) {
       let reasons = [];
       if (saleItems > 0) reasons.push(`${saleItems} adet satış kaydı`);
       if (usedInServices > 0) reasons.push(`${usedInServices} adet servis kullanımı`);
@@ -851,12 +868,29 @@ export async function deleteProduct(id: string, force: boolean = false) {
       return {
         success: false,
         requiresConfirmation: true,
+        message: `Bu ürün sistemde ${reasons.join(", ")} ile kullanılmış. Ürünü stok ekranından kaldırabiliriz; servis, satış, iade ve alım geçmişi silinmez.`,
         error: `Bu ürün silinemez. Çünkü sistemde ${reasons.join(", ")} bulunmaktadır. Silmek bu kayıtları da etkileyecektir. Devam edip tüm geçmişiyle birlikte silmek istiyor musunuz?`
       };
     }
 
     // 2. Güvenli Temizlik (Stok logları, Hareketler, AI Uyarılar, Cihaz Bilgileri + Bağımlılıklar)
     await prisma.$transaction(async (tx) => {
+      if (force && hasUsage) {
+        await tx.product.update({
+          where: { id, shopId },
+          data: {
+            isDeleted: true,
+            deletedAt: new Date(),
+            stock: 0,
+            sku: usage.sku ? `${usage.sku}__DELETED__${id}` : null,
+            barcode: usage.barcode ? `${usage.barcode}__DELETED__${id}` : null,
+          }
+        });
+        await tx.stockAIAlert.deleteMany({ where: { productId: id, shopId } });
+        await tx.shortageItem.updateMany({ where: { productId: id, shopId }, data: { productId: null } });
+        return;
+      }
+
       if (force) {
         // Bağımlı kayıtları temizle
         await tx.saleItem.deleteMany({ where: { productId: id, shopId } });
@@ -955,7 +989,7 @@ export async function getInventoryStats() {
     const shopId = await getShopId();
     const [products, allTrackedProducts, outOfStockCount] = await Promise.all([
       prisma.product.findMany({
-        where: { shopId },
+        where: { shopId, isDeleted: false },
         select: {
           buyPrice: true,
           sellPrice: true,
@@ -963,12 +997,13 @@ export async function getInventoryStats() {
         }
       }),
       prisma.product.findMany({
-        where: { shopId, criticalStock: { gt: 0 } },
+        where: { shopId, isDeleted: false, criticalStock: { gt: 0 } },
         select: { stock: true, criticalStock: true }
       }),
       prisma.product.count({
         where: {
           shopId,
+          isDeleted: false,
           stock: { lte: 0 }
         }
       })
@@ -1009,6 +1044,7 @@ export async function getCriticalProducts() {
     const allProducts = await prisma.product.findMany({
       where: {
         shopId,
+        isDeleted: false,
         criticalStock: { gt: 0 }
       },
       include: { category: true },
@@ -1110,9 +1146,9 @@ export async function getAllInventoryMovements(options: {
 export async function getPOSInitialData() {
   try {
     const shopId = await getShopId();
-    const [products, customers, categories] = await Promise.all([
+    const [products, customers, categories, accounts] = await Promise.all([
       prisma.product.findMany({
-        where: { shopId },
+        where: { shopId, isDeleted: false },
         include: { category: { include: { parent: true } } },
         orderBy: { updatedAt: "desc" },
       }),
@@ -1124,12 +1160,16 @@ export async function getPOSInitialData() {
       prisma.category.findMany({
         where: { shopId },
         orderBy: { name: "asc" }
+      }),
+      prisma.financeAccount.findMany({
+        where: { shopId, isActive: true },
+        orderBy: { createdAt: "asc" }
       })
     ]);
-    return serializePrisma({ products, customers, categories });
+    return serializePrisma({ products, customers, categories, accounts });
   } catch (error) {
     console.error("Error fetching POS initial data:", error);
-    return { products: [], customers: [], categories: [] };
+    return { products: [], customers: [], categories: [], accounts: [] };
   }
 }
 export async function bulkCreateProducts(products: z.input<typeof productSchema>[]) {
@@ -1256,7 +1296,7 @@ export async function quickUpdateStock(barcode: string, quantity: number, notes?
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
       // 1. Update stock
-      const updated = await tx.product.update({
+      const updated = quantity < 0 ? await decrementProductStockSafely(tx, product.id, shopId, Math.abs(quantity)) : await tx.product.update({
         where: { id: product.id, shopId },
         data: { stock: { increment: quantity } }
       });
@@ -1508,7 +1548,7 @@ export async function adjustStockById(id: string, quantity: number, notes?: stri
     }
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
-      const updated = await tx.product.update({
+      const updated = quantity < 0 ? await decrementProductStockSafely(tx, product.id, shopId, Math.abs(quantity)) : await tx.product.update({
         where: { id: product.id, shopId },
         data: { stock: { increment: quantity } }
       });

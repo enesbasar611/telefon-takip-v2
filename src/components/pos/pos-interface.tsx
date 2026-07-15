@@ -85,6 +85,7 @@ export function POSInterface({ initialSaleId }: {
   const customers = (posData?.customers || []) as { id: string; name: string; phone: string; loyaltyPoints?: number }[];
   const products = (posData?.products || []) as { id: string; name: string; barcode?: string | null; sku?: string | null; category?: { name?: string; parent?: { name?: string } | null } | null; categoryId?: string | null; buyPrice?: number; sellPrice?: number; buyPriceUsd?: number; sellPriceUsd?: number; priceCurrency?: string; stock?: number | null }[];
   const categories = (posData?.categories || []) as { id: string; name: string }[];
+  const accounts = (posData?.accounts || []) as { id: string; name: string; type: "CASH" | "BANK" | "POS" | "CREDIT_CARD"; balance?: number; currency?: string }[];
 
   const [scannerRoomId, setScannerRoomId] = useState<string>("");
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
@@ -109,6 +110,7 @@ export function POSInterface({ initialSaleId }: {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [cart, setCart] = useState<any[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>(undefined);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -491,6 +493,29 @@ export function POSInterface({ initialSaleId }: {
 
   const finalTotal = subtotal - loyaltyDiscountAmount;
 
+  const eligibleAccounts = useMemo(() => {
+    if (paymentMethod === "DEBT") return [];
+    if (accounts.length === 1) return accounts;
+    if (paymentMethod === "CASH") return accounts.filter((account) => account.type === "CASH");
+    if (paymentMethod === "CREDIT_CARD") return accounts.filter((account) => account.type === "CREDIT_CARD" || account.type === "POS");
+    if (paymentMethod === "BANK_TRANSFER" || paymentMethod === "TRANSFER") return accounts.filter((account) => account.type === "CASH" || account.type === "BANK");
+    return accounts;
+  }, [accounts, paymentMethod]);
+
+  useEffect(() => {
+    if (paymentMethod === "DEBT") {
+      setSelectedAccountId("");
+      return;
+    }
+    if (eligibleAccounts.length === 0) {
+      setSelectedAccountId("");
+      return;
+    }
+    if (!eligibleAccounts.some((account) => account.id === selectedAccountId)) {
+      setSelectedAccountId(eligibleAccounts[0].id);
+    }
+  }, [eligibleAccounts, paymentMethod, selectedAccountId]);
+
 
   const displayTotal = useMemo(() => {
     const discount = defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
@@ -529,6 +554,10 @@ export function POSInterface({ initialSaleId }: {
     if (paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")) {
       return;
     }
+    if (paymentMethod !== "DEBT" && !selectedAccountId) {
+      toast({ title: "Kasa Seçimi Gerekli", description: "Satışı tamamlamak için bir ödeme hesabı seçin.", variant: "destructive" });
+      return;
+    }
     setIsProcessing(true);
 
     startTransition(async () => {
@@ -558,6 +587,7 @@ export function POSInterface({ initialSaleId }: {
           totalAmount: displayTotal,
           currency: defaultCurrency || 'TRY',
           paymentMethod,
+          accountId: paymentMethod === "DEBT" ? undefined : selectedAccountId,
           discountAmount: defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
             defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
               loyaltyDiscountAmount,
@@ -588,12 +618,15 @@ export function POSInterface({ initialSaleId }: {
           setCart([]);
           setDisplaySearchTerm("");
           setSelectedCustomerId(undefined);
+          setSelectedAccountId("");
           // 4. Invalidate to seamlessly update server state without reload
           queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-recent-transactions"] });
+          queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+          queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
 
           toast({ title: "Satış Başarılı", description: "İşlem kaydedildi ve fiş hazırlandı." });
 
@@ -814,6 +847,9 @@ export function POSInterface({ initialSaleId }: {
             formattedSubtotal={formattedSubtotal}
             formattedTax={formattedTax}
             formattedEquivalentTotal={formattedEquivalentTotal}
+            accounts={eligibleAccounts}
+            selectedAccountId={selectedAccountId}
+            setSelectedAccountId={setSelectedAccountId}
           />
         </div>
       </div>
