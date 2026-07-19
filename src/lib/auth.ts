@@ -22,6 +22,40 @@ function generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+async function sendApprovalCodeIfNeeded(email: string, name?: string | null, userState?: {
+    verificationCode?: string | null;
+    lastVerificationSent?: Date | string | null;
+    isApproved?: boolean | null;
+} | null) {
+    if (userState?.isApproved) return;
+
+    const lastSent = userState?.lastVerificationSent
+        ? new Date(userState.lastVerificationSent).getTime()
+        : 0;
+    const shouldSendCode = !userState?.verificationCode || Date.now() - lastSent >= 60_000;
+
+    if (!shouldSendCode) return;
+
+    const code = generateVerificationCode();
+    await prisma.user.upsert({
+        where: { email },
+        update: {
+            verificationCode: code,
+            isApproved: false,
+            lastVerificationSent: new Date()
+        },
+        create: {
+            email,
+            name: name || undefined,
+            verificationCode: code,
+            isApproved: false,
+            lastVerificationSent: new Date(),
+            role: Role.SHOP_MANAGER,
+        }
+    });
+    await sendApprovalCodeToAdmin(email, code);
+}
+
 function getSuperAdminPermissions() {
     return {
         role: "SUPER_ADMIN" as Role,
@@ -242,7 +276,9 @@ export const authOptions: NextAuthOptions = {
                             id: true,
                             role: true,
                             shopId: true,
-                            isApproved: true
+                            isApproved: true,
+                            verificationCode: true,
+                            lastVerificationSent: true
                         }
                     })
                     : null;
@@ -251,24 +287,30 @@ export const authOptions: NextAuthOptions = {
                     // Check if shop exists for onboarding redirect
                     const shopExists = dbUser.shopId ? await prisma.shop.findUnique({ where: { id: dbUser.shopId } }) : null;
 
-                    if (!dbUser.shopId || !shopExists) {
-                        return "/onboarding";
+                    if (!dbUser.isApproved && dbUser.role !== "COURIER") {
+                        await sendApprovalCodeIfNeeded(email!, user.name, dbUser);
+                        return true;
                     }
 
-                    if (!dbUser.isApproved && dbUser.role !== "COURIER") {
-                        return "/verify";
+                    if (!dbUser.shopId || !shopExists) {
+                        return "/onboarding";
                     }
                     return true;
                 }
             }
 
             if (user.role !== "COURIER" && !user.isApproved) {
-                return "/verify";
+                if (user.email) {
+                    await sendApprovalCodeIfNeeded(user.email.toLowerCase(), user.name, {
+                        isApproved: user.isApproved
+                    });
+                }
+                return true;
             }
 
             return true;
         },
-        async jwt({ token, user, account }: any) {
+        async jwt({ token, user, account, trigger }: any) {
             // Initial sign in — populate token from credentials/OAuth
             if (user) {
                 token.id = user.id;
@@ -303,12 +345,16 @@ export const authOptions: NextAuthOptions = {
                 }
             }
 
+            if (trigger === "update") {
+                token.lastSync = 0;
+            }
+
             // Real-time DB sync on every request - OPTIMIZED WITH TTL (5s for Super Admin, 30s for others)
             const now = Math.floor(Date.now() / 1000);
             const isSuperAdmin = (token.role === "SUPER_ADMIN") || isSuperAdminEmail(token.email as string);
-            const syncInterval = isSuperAdmin ? 5 : 30;
+            const syncInterval = isSuperAdmin ? 5 : token.isApproved ? 30 : 0;
 
-            if (token.id && (!token.lastSync || now - (token.lastSync as number) > syncInterval)) {
+            if (token.id && (!token.lastSync || now - (token.lastSync as number) >= syncInterval)) {
                 try {
                     let dbUser = await (prisma.user as any).findUnique({
                         where: { id: token.id },
@@ -495,32 +541,19 @@ export const authOptions: NextAuthOptions = {
             const email = user.email?.toLowerCase();
             const isSuperAdmin = isSuperAdminEmail(email);
 
-            if (!isSuperAdmin) {
+            if (!isSuperAdmin && email) {
                 const dbUser = await prisma.user.findUnique({
                     where: { id: user.id },
-                    select: { id: true, isApproved: true, verificationCode: true, role: true }
+                    select: {
+                        id: true,
+                        isApproved: true,
+                        verificationCode: true,
+                        role: true,
+                        lastVerificationSent: true
+                    }
                 });
 
-                // If not approved and no code exists, generate and send one
-                if (dbUser && !dbUser.isApproved && !dbUser.verificationCode) {
-                    const code = generateVerificationCode();
-                    const normalizedEmail = user.email!.toLowerCase();
-                    await prisma.user.upsert({
-                        where: { email: normalizedEmail },
-                        update: {
-                            verificationCode: code,
-                            isApproved: false
-                        },
-                        create: {
-                            email: normalizedEmail,
-                            name: user.name || undefined,
-                            verificationCode: code,
-                            isApproved: false,
-                            role: Role.SHOP_MANAGER,
-                        }
-                    });
-                    await sendApprovalCodeToAdmin(normalizedEmail, code);
-                }
+                await sendApprovalCodeIfNeeded(email, user.name, dbUser);
             }
         },
         async createUser({ user }) {

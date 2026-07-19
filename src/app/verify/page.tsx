@@ -9,7 +9,7 @@ import { Shield, CheckCircle2, Loader2, RefreshCw, LogOut } from "lucide-react";
 
 export default function VerifyPage() {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { data: session, update: updateSession } = useSession();
     const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState("");
@@ -72,6 +72,7 @@ export default function VerifyPage() {
 
         if (result.success) {
             setSuccess(true);
+            await updateSession();
             setTimeout(() => {
                 window.location.href = "/";
             }, 1500);

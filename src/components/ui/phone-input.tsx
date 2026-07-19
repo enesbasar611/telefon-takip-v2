@@ -73,11 +73,13 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                         : "border-border/50 hover:border-border focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10",
                     className
                 )}>
-                    <div className="flex items-center border-r border-border/50 bg-muted/20 h-full">
+                    <div className="flex h-full shrink-0 items-center border-r border-border/50 bg-muted/20">
                         <input
                             type="text"
                             value={currentPrefix}
                             onChange={handlePrefixChange}
+                            inputMode="tel"
+                            aria-label="Ülke kodu"
                             className="w-16 bg-transparent border-none outline-none px-3 text-sm font-black text-blue-500 text-center h-full focus:bg-blue-500/10 transition-colors"
                             placeholder="+90"
                         />
@@ -85,10 +87,11 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                     <input
                         {...props}
                         type="tel"
-                        inputMode="numeric"
+                        inputMode="tel"
+                        autoComplete="tel"
                         maxLength={16}
                         placeholder="(5xx) xxx xxxx"
-                        className="flex-1 bg-transparent border-none outline-none px-4 text-sm font-black text-foreground placeholder:text-muted-foreground/30 h-full w-full tracking-wider"
+                        className="min-w-0 flex-1 bg-transparent border-none outline-none px-3 sm:px-4 text-base font-semibold text-foreground placeholder:text-muted-foreground/40 h-full w-full tracking-normal"
                         value={currentBody}
                         onChange={handleBodyChange}
                         ref={ref}

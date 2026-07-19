@@ -6,6 +6,32 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
+async function resolveOnboardingShopId(session: any, overrideShopId?: string) {
+    if (!session?.user?.id) {
+        throw new Error("Yetkisiz işlem.");
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { shopId: true, role: true }
+    });
+
+    const targetShopId = overrideShopId || session.user.shopId || user?.shopId;
+    if (!targetShopId) {
+        throw new Error("Dükkan bilgisi bulunamadı.");
+    }
+
+    if (session.user.role === "SUPER_ADMIN" || user?.role === "SUPER_ADMIN") {
+        return targetShopId;
+    }
+
+    if (user?.shopId !== targetShopId) {
+        throw new Error("Bu dükkan üzerinde yetkiniz yok.");
+    }
+
+    return targetShopId;
+}
+
 export async function createShopOnboarding(data: { name: string; industry: string; address?: string; phone?: string; taxOffice?: string; taxNumber?: string; defaultCurrency?: string; }) {
     try {
         const session = await getServerSession(authOptions);
@@ -13,16 +39,19 @@ export async function createShopOnboarding(data: { name: string; industry: strin
             return { success: false, error: "Yetkisiz işlem." };
         }
 
-        // Approval Check
-        if (!session.user.isApproved && session.user.role !== "SUPER_ADMIN") {
-            return { success: false, error: "Erişim onayı alınmadan dükkan oluşturulamaz." };
-        }
-
         // Check if user already has a shop
         const existingUser = await prisma.user.findUnique({
             where: { id: session.user.id },
             include: { shop: true }
         });
+
+        if (existingUser && !existingUser.isApproved && existingUser.role !== "SUPER_ADMIN") {
+            return { success: false, error: "Önce yönetici onay kodunu girerek hesabınızı doğrulayın." };
+        }
+
+        if (existingUser?.shopId && !existingUser.shop) {
+            return { success: false, error: "Bağlı dükkan bulunamadı. Lütfen tekrar giriş yapın." };
+        }
 
         const shopData: any = {
             name: data.name,
@@ -51,6 +80,11 @@ export async function createShopOnboarding(data: { name: string; industry: strin
                 }
             });
         }
+
+        await prisma.user.update({
+            where: { id: session.user.id },
+            data: { shopId: shop.id }
+        });
 
         // SAVE DEFAULT CURRENCY SETTING IF SUPPLIED
         if (data.defaultCurrency) {
@@ -295,9 +329,10 @@ export async function saveOnboardingModules(modules: string[], sector?: string, 
     }
 }
 
-export async function saveOnboardingIntegrations(data: { geminiApiKey?: string; whatsappConnected?: boolean }) {
+export async function saveOnboardingIntegrations(data: { geminiApiKey?: string; whatsappConnected?: boolean }, overrideShopId?: string) {
     try {
-        const shopId = await getShopId();
+        const session = await getServerSession(authOptions);
+        const shopId = await resolveOnboardingShopId(session, overrideShopId);
 
         if (data.geminiApiKey) {
             await prisma.setting.upsert({
@@ -321,10 +356,10 @@ export async function reinitWhatsAppOnboarding() {
     return { success: true, message: "WhatsApp yeniden başlatılıyor..." };
 }
 
-export async function saveOnboardingFinance(accounts: any[]) {
+export async function saveOnboardingFinance(accounts: any[], overrideShopId?: string) {
     try {
-        const shopId = await getShopId();
         const session = await getServerSession(authOptions);
+        const shopId = await resolveOnboardingShopId(session, overrideShopId);
 
         const creations = accounts.map(async acc => {
             const account = await prisma.financeAccount.create({
@@ -394,9 +429,10 @@ export async function saveOnboardingFinance(accounts: any[]) {
     }
 }
 
-export async function finishOnboarding() {
+export async function finishOnboarding(overrideShopId?: string) {
     try {
-        const shopId = await getShopId();
+        const session = await getServerSession(authOptions);
+        const shopId = await resolveOnboardingShopId(session, overrideShopId);
         await prisma.shop.update({
             where: { id: shopId },
             data: { isFirstLogin: false } as any

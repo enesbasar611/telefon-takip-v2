@@ -1,18 +1,35 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 import { sendApprovalCodeToAdmin } from "@/lib/mail";
+import { getServerSession } from "next-auth/next";
+import { getToken } from "next-auth/jwt";
+import { headers } from "next/headers";
+
+async function getVerificationUserId() {
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+        return session.user.id;
+    }
+
+    const token = await getToken({
+        req: { headers: headers() } as any,
+        secret: process.env.NEXTAUTH_SECRET
+    });
+
+    return token?.id as string | undefined;
+}
 
 export async function verifyApprovalCode(code: string) {
     try {
-        const session = await getSession();
-        if (!session?.user?.id) {
-            return { success: false, error: "Oturum bulunamadı." };
+        const userId = await getVerificationUserId();
+        if (!userId) {
+            return { success: false, error: "Oturum bulunamadı. Lütfen tekrar Gmail ile giriş yapın." };
         }
 
-        const user = await (prisma.user as any).findUnique({
-            where: { id: session.user.id },
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
         });
 
         if (!user) {
@@ -31,13 +48,12 @@ export async function verifyApprovalCode(code: string) {
             return { success: false, error: "Geçersiz kod. Lütfen tekrar deneyin." };
         }
 
-        // Code matches - approve the user
         await prisma.user.update({
             where: { id: user.id },
             data: {
                 isApproved: true,
                 verificationCode: null,
-                verificationAttempts: 0, // Reset on success
+                verificationAttempts: 0,
             } as any,
         });
 
@@ -50,13 +66,13 @@ export async function verifyApprovalCode(code: string) {
 
 export async function resendApprovalCode() {
     try {
-        const session = await getSession();
-        if (!session?.user?.id) {
-            return { success: false, error: "Oturum bulunamadı." };
+        const userId = await getVerificationUserId();
+        if (!userId) {
+            return { success: false, error: "Oturum bulunamadı. Lütfen tekrar Gmail ile giriş yapın." };
         }
 
-        const user = await (prisma.user as any).findUnique({
-            where: { id: session.user.id },
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
             select: {
                 id: true,
                 email: true,
@@ -74,7 +90,6 @@ export async function resendApprovalCode() {
             return { success: true, message: "Zaten onaylanmış." };
         }
 
-        // LIMIT CHECK: Max 3 attempts
         if (user.verificationAttempts >= 3) {
             return {
                 success: false,
@@ -82,7 +97,6 @@ export async function resendApprovalCode() {
             };
         }
 
-        // TIME CHECK: 60 seconds cooldown
         if (user.lastVerificationSent) {
             const lastSent = new Date(user.lastVerificationSent).getTime();
             const now = new Date().getTime();
@@ -96,7 +110,6 @@ export async function resendApprovalCode() {
             }
         }
 
-        // Generate a new code
         const newCode = Math.floor(100000 + Math.random() * 900000).toString();
         await prisma.user.update({
             where: { id: user.id },
@@ -107,7 +120,6 @@ export async function resendApprovalCode() {
             } as any,
         });
 
-        // Send to admin
         await sendApprovalCodeToAdmin(user.email, newCode);
 
         return {

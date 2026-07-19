@@ -14,6 +14,10 @@ import {
     Wallet,
     Building2,
     MessageSquare,
+    Heart,
+    Calendar,
+    Truck,
+    FileText,
     Cpu,
     Plus,
     Trash2,
@@ -64,12 +68,16 @@ const MODULES = [
     { id: "SALE", name: "POS & Satış", icon: CreditCard, desc: "Hızlı satış ve ödeme takibi" },
     { id: "SERVICE", name: "Teknik Servis", icon: Smartphone, desc: "Arıza kaydı ve onarım yönetimi" },
     { id: "STOCK", name: "Stok & Envanter", icon: Package, desc: "Ürün ve parça satış takibi" },
+    { id: "FINANCE", name: "Finans & Gider", icon: Wallet, desc: "Kasa, banka ve cari hesaplar" },
     { id: "CRM", name: "Müşteri Yönetimi", icon: Users, desc: "Müşteri portföyü ve CRM" },
     { id: "DEBT", name: "Cari & Veresiye", icon: CreditCard, desc: "Borç/alacak ve taksit takibi" },
-    { id: "FINANCE", name: "Finans & Gider", icon: Wallet, desc: "Kasa, banka ve cari hesaplar" },
     { id: "SUPPLIER", name: "Tedarikçiler", icon: Building2, desc: "Toptancı ve parça tedariği" },
     { id: "STAFF", name: "Ekip Yönetimi", icon: Users, desc: "Personel ve yetkilendirme" },
-    { id: "APPOINTMENT", name: "Randevu Sistemi", icon: Zap, desc: "Zaman planlaması" },
+    { id: "COURIER", name: "Kurye Yönetimi", icon: Truck, desc: "Eksik listesi, teslimat ve kurye görev takibi" },
+    { id: "NOTIFICATION", name: "WhatsApp Bildirimleri", icon: MessageSquare, desc: "Müşteri bilgilendirme ve otomatik durum mesajları" },
+    { id: "LOYALTY", name: "Sadakat Programı", icon: Heart, desc: "Puan, indirim ve müşteri sadakati" },
+    { id: "APPOINTMENT", name: "Randevu & Ajanda", icon: Calendar, desc: "Randevu takvimi ve iş planlama" },
+    { id: "EFATURA", name: "e-Fatura", icon: FileText, desc: "e-Fatura/e-Arşiv entegrasyonu" },
 ];
 
 const INDUSTRIES = [
@@ -155,7 +163,7 @@ export default function OnboardingPage() {
 
     // Step 1: AI Analysis
     const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-    const [selectedModules, setSelectedModules] = useState<string[]>(["SERVICE", "STOCK", "SALE", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION"]);
+    const [selectedModules, setSelectedModules] = useState<string[]>(["SERVICE", "STOCK", "SALE", "FINANCE", "CRM", "DEBT", "SUPPLIER", "STAFF", "NOTIFICATION", "EFATURA"]);
 
     // Step 2: Integrations
     const [wsStatus, setWsStatus] = useState<any>({ status: "DISCONNECTED" });
@@ -252,7 +260,7 @@ export default function OnboardingPage() {
             const res = await saveOnboardingIntegrations({
                 whatsappConnected: wsStatus.status === "CONNECTED",
                 geminiApiKey: geminiStatus ? geminiApiKey : undefined
-            });
+            }, shopId || undefined);
             if (res.success) {
                 setStep("finance");
             } else {
@@ -261,9 +269,9 @@ export default function OnboardingPage() {
             setLoading(false);
         } else if (step === "finance") {
             setLoading(true);
-            const resFin = await saveOnboardingFinance(accounts);
+            const resFin = await saveOnboardingFinance(accounts, shopId || undefined);
             if (resFin.success) {
-                const res = await finishOnboarding();
+                const res = await finishOnboarding(shopId || undefined);
                 if (res.success) {
                     sessionStorage.setItem("just_finished_onboarding", "true");
                     setStep("success");
@@ -290,7 +298,7 @@ export default function OnboardingPage() {
     };
 
     return (
-        <div className="onboarding-page min-h-screen bg-[#050505] text-white flex flex-col items-center lg:justify-center p-4 sm:p-6 relative overflow-x-hidden overflow-y-auto font-sans custom-scrollbar pt-10 pb-20 lg:py-10">
+        <div className="onboarding-page min-h-dvh bg-[#080b12] text-white flex flex-col items-center p-3 sm:p-6 relative overflow-x-hidden overflow-y-auto font-sans custom-scrollbar pt-6 sm:pt-8 pb-10 lg:py-10">
             {showApiGuide && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-[#111] border border-white/10 p-6 sm:p-8 rounded-[2rem] max-w-sm sm:max-w-md w-full space-y-4 shadow-2xl">
@@ -304,24 +312,18 @@ export default function OnboardingPage() {
                 </div>
             )}
 
-            {/* Animated Background */}
-            <div className="fixed inset-0 z-0 pointer-events-none">
-                <div className="absolute top-[-10%] right-[-10%] w-[80%] md:w-[50%] h-[50%] bg-indigo-500/10 blur-[150px] rounded-full animate-pulse" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[80%] md:w-[50%] h-[50%] bg-emerald-500/10 blur-[150px] rounded-full animate-pulse delay-700" />
-            </div>
-
             <div className="w-full max-w-[900px] relative z-10 flex flex-col">
                 {/* Progress Indicators */}
                 {step !== "success" && (
-                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-8 md:mb-12 sticky top-0 py-4 bg-[#050505]/80 backdrop-blur-md z-30">
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-6 md:mb-10 sticky top-0 py-3 z-30">
                         {["setup", "analysis", "integrations", "finance"].map((s, i) => (
                             <div
                                 key={s}
                                 className={cn(
                                     "h-1 sm:h-1.5 rounded-full transition-all duration-700",
                                     ["setup", "analysis", "integrations", "finance"].indexOf(step) >= i
-                                        ? "w-10 sm:w-16 bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
-                                        : "w-4 sm:w-8 bg-white/10"
+                                        ? "w-10 sm:w-16 bg-white shadow-[0_0_14px_rgba(255,255,255,0.35)]"
+                                        : "w-4 sm:w-8 bg-white/15"
                                 )}
                             />
                         ))}
@@ -336,35 +338,35 @@ export default function OnboardingPage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="space-y-8"
+                            className="space-y-6 sm:space-y-8"
                         >
-                            <div className="text-center space-y-4">
-                                <div className="h-16 w-16 md:h-20 md:w-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-4 md:mb-6">
-                                    <Store className="h-8 w-8 md:h-10 md:w-10 text-white" />
+                            <div className="text-center space-y-3 sm:space-y-4 px-1">
+                                <div className="h-14 w-14 md:h-20 md:w-20 bg-white/10 border border-white/15 rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-5">
+                                    <Store className="h-7 w-7 md:h-9 md:w-9 text-white" />
                                 </div>
-                                <h1 className="text-3xl md:text-5xl font-black tracking-tighter italic">Dükkanınızı Tanıyalım</h1>
-                                <p className="text-gray-400 text-base md:text-xl max-w-lg mx-auto leading-relaxed px-4">Başar Bulut ERP ile işletmenizi dijital dünyaya entegre edin. Saniyeler içinde başlayın.</p>
+                                <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-normal leading-tight">Dükkanınızı Tanıyalım</h1>
+                                <p className="text-gray-300 text-sm sm:text-base md:text-lg max-w-lg mx-auto leading-relaxed">Başar Bulut ERP ile işletmenizi dijital dünyaya entegre edin. Saniyeler içinde başlayın.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem]">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 bg-[#111827]/90 border border-white/10 p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl shadow-black/20">
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                        <Label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide pl-1 flex items-center gap-2">
                                             <Building2 className="h-3 w-3" /> İşletme Adı
                                         </Label>
                                         <Input
                                             placeholder="Örn: Başar Teknik"
                                             value={shopData.name}
                                             onChange={e => setShopData({ ...shopData, name: e.target.value })}
-                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner"
+                                            className="h-14 sm:h-16 bg-[#0b1220] border-white/10 rounded-xl sm:rounded-2xl text-base sm:text-lg px-4 sm:px-5 focus:border-sky-300 transition-all shadow-inner"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                        <Label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide pl-1 flex items-center gap-2">
                                             <Globe className="h-3 w-3" /> İşletme Sektörü
                                         </Label>
                                         <Select value={shopData.industry} onValueChange={v => setShopData({ ...shopData, industry: v })}>
-                                            <SelectTrigger className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6">
+                                            <SelectTrigger className="h-14 sm:h-16 bg-[#0b1220] border-white/10 rounded-xl sm:rounded-2xl text-base sm:text-lg px-4 sm:px-5">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="bg-black border-white/10 text-white rounded-2xl p-2">
@@ -377,11 +379,11 @@ export default function OnboardingPage() {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                        <Label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide pl-1 flex items-center gap-2">
                                             <Wallet className="h-3 w-3 text-indigo-400" /> Varsayılan Para Birimi
                                         </Label>
                                         <Select value={shopData.defaultCurrency} onValueChange={v => setShopData({ ...shopData, defaultCurrency: v })}>
-                                            <SelectTrigger className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6">
+                                            <SelectTrigger className="h-14 sm:h-16 bg-[#0b1220] border-white/10 rounded-xl sm:rounded-2xl text-base sm:text-lg px-4 sm:px-5">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="bg-black border-white/10 text-white rounded-2xl p-2">
@@ -396,50 +398,51 @@ export default function OnboardingPage() {
                                                 placeholder="Sektörü el ile yazın..."
                                                 value={shopData.customIndustry}
                                                 onChange={e => setShopData({ ...shopData, customIndustry: e.target.value })}
-                                                className="h-14 bg-white/5 border-indigo-500/30 rounded-2xl focus:border-indigo-400"
+                                                className="h-14 bg-[#0b1220] border-indigo-500/30 rounded-xl sm:rounded-2xl focus:border-indigo-400"
                                             />
                                         </motion.div>
                                     )}
                                 </div>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                        <Label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide pl-1 flex items-center gap-2">
                                             <MapPin className="h-3 w-3" /> Adres (Opsiyonel)
                                         </Label>
                                         <Input
                                             placeholder="Açık adresiniz..."
                                             value={shopData.address}
                                             onChange={e => setShopData({ ...shopData, address: e.target.value })}
-                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner"
+                                            className="h-14 sm:h-16 bg-[#0b1220] border-white/10 rounded-xl sm:rounded-2xl text-base sm:text-lg px-4 sm:px-5 focus:border-sky-300 transition-all shadow-inner"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                        <Label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide pl-1 flex items-center gap-2">
                                             <Phone className="h-3 w-3" /> Telefon (Müşteri için)
                                         </Label>
                                         <PhoneInput
                                             value={shopData.phone}
                                             onChange={val => setShopData({ ...shopData, phone: val })}
-                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner border-0"
+                                            aria-label="Telefon numarası"
+                                            className="h-14 sm:h-16 bg-[#0b1220] border border-white/10 rounded-xl sm:rounded-2xl focus-within:border-sky-300 transition-all shadow-inner"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                        <Label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide pl-1 flex items-center gap-2">
                                             <Building className="h-3 w-3" /> Vergi Dairesi
                                         </Label>
                                         <Input
                                             placeholder="Örn: Beyoğlu V.D."
                                             value={shopData.taxOffice}
                                             onChange={e => setShopData({ ...shopData, taxOffice: e.target.value })}
-                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner"
+                                            className="h-14 sm:h-16 bg-[#0b1220] border-white/10 rounded-xl sm:rounded-2xl text-base sm:text-lg px-4 sm:px-5 focus:border-sky-300 transition-all shadow-inner"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-2">
+                                        <Label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide pl-1 flex items-center gap-2">
                                             <QrCode className="h-3 w-3" /> Vergi / T.C. No (10-11 Hane)
                                         </Label>
                                         <Input
@@ -447,7 +450,8 @@ export default function OnboardingPage() {
                                             value={shopData.taxNumber}
                                             onChange={e => setShopData({ ...shopData, taxNumber: e.target.value })}
                                             maxLength={11}
-                                            className="h-16 bg-black/40 border-white/10 rounded-2xl text-lg px-6 focus:border-white transition-all shadow-inner"
+                                            inputMode="numeric"
+                                            className="h-14 sm:h-16 bg-[#0b1220] border-white/10 rounded-xl sm:rounded-2xl text-base sm:text-lg px-4 sm:px-5 focus:border-sky-300 transition-all shadow-inner"
                                         />
                                     </div>
                                 </div>
@@ -456,7 +460,7 @@ export default function OnboardingPage() {
                             <Button
                                 onClick={handleNext}
                                 disabled={loading || !shopData.name}
-                                className="w-full h-16 md:h-20 bg-white text-black text-xl md:text-2xl font-black rounded-[1.5rem] md:rounded-[2.5rem] hover:bg-gray-200 transition-all hover:scale-[1.01] active:scale-[0.99] group shadow-2xl shadow-white/10"
+                                className="w-full h-14 sm:h-16 md:h-20 bg-white text-black text-lg sm:text-xl md:text-2xl font-black rounded-2xl md:rounded-[2rem] hover:bg-gray-200 transition-all active:scale-[0.99] group shadow-2xl shadow-white/10"
                             >
                                 {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : (
                                     <div className="flex items-center gap-4">
@@ -477,7 +481,7 @@ export default function OnboardingPage() {
                             className="space-y-8"
                         >
                             <div className="text-center space-y-2">
-                                <h2 className="text-2xl md:text-4xl font-black italic tracking-tighter">Sektörel Yapılandırma</h2>
+                                <h2 className="text-2xl md:text-4xl font-black tracking-normal leading-tight">Sektörel Yapılandırma</h2>
                                 <p className="text-gray-400 text-sm md:text-base">Yapay zeka dükkanınız için en iyi modülleri ve terimleri belirledi.</p>
                             </div>
 
@@ -530,9 +534,9 @@ export default function OnboardingPage() {
 
                             {/* Modules Section - 4 Columns */}
                             <div className="space-y-4">
-                                <div className="flex items-center justify-between px-2">
+                                <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-2">
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Mevcut Modüller</h3>
-                                    <span className="text-[10px] text-indigo-400 font-bold italic">* Seçilmeyen modülleri daha sonra Ayarlar &gt; Modüller kısmından aktif edebilirsiniz.</span>
+                                    <span className="text-[10px] text-indigo-400 font-bold leading-relaxed">* Seçilmeyen modülleri daha sonra Ayarlar &gt; Modüller kısmından aktif edebilirsiniz.</span>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {MODULES.map(mod => (
@@ -570,17 +574,17 @@ export default function OnboardingPage() {
                                 </div>
                             </div>
 
-                            <div className="flex gap-4">
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-4">
                                 <Button
                                     onClick={handleBack}
-                                    className="h-20 w-1/4 bg-white/5 text-gray-400 text-xl font-black rounded-[2.5rem] border border-white/5 hover:bg-white/10"
+                                    className="h-14 sm:h-20 w-full sm:w-1/4 bg-white/5 text-gray-300 text-base sm:text-xl font-black rounded-2xl sm:rounded-[2.5rem] border border-white/5 hover:bg-white/10"
                                 >
                                     GERİ
                                 </Button>
                                 <Button
                                     onClick={handleNext}
                                     disabled={loading}
-                                    className="flex-1 h-20 bg-white text-black text-2xl font-black rounded-[2.5rem] shadow-2xl"
+                                    className="flex-1 h-14 sm:h-20 bg-white text-black text-lg sm:text-2xl font-black rounded-2xl sm:rounded-[2.5rem] shadow-2xl"
                                 >
                                     {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : "DEVAM ET"}
                                 </Button>
@@ -598,7 +602,7 @@ export default function OnboardingPage() {
                             className="space-y-8"
                         >
                             <div className="text-center space-y-2">
-                                <h2 className="text-2xl md:text-4xl font-black italic tracking-tighter">Akıllı Entegrasyon</h2>
+                                <h2 className="text-2xl md:text-4xl font-black tracking-normal leading-tight">Akıllı Entegrasyon</h2>
                                 <p className="text-gray-400 text-sm md:text-base">WhatsApp ve AI özelliklerini burada etkinleştirin.</p>
                             </div>
 
@@ -747,17 +751,17 @@ export default function OnboardingPage() {
                                 </div>
                             </div>
 
-                            <div className="flex gap-4">
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-4">
                                 <Button
                                     onClick={handleBack}
-                                    className="h-20 w-1/4 bg-white/5 text-gray-400 text-xl font-black rounded-[2.5rem] border border-white/5 hover:bg-white/10"
+                                    className="h-14 sm:h-20 w-full sm:w-1/4 bg-white/5 text-gray-300 text-base sm:text-xl font-black rounded-2xl sm:rounded-[2.5rem] border border-white/5 hover:bg-white/10"
                                 >
                                     GERİ
                                 </Button>
                                 <Button
                                     onClick={handleNext}
                                     disabled={loading}
-                                    className="flex-1 h-20 bg-white text-black text-2xl font-black rounded-[2.5rem] hover:scale-[1.01] active:scale-[0.99] transition-all shadow-2xl"
+                                    className="flex-1 h-14 sm:h-20 bg-white text-black text-lg sm:text-2xl font-black rounded-2xl sm:rounded-[2.5rem] active:scale-[0.99] transition-all shadow-2xl"
                                 >
                                     {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : "FİNANSAL ADIMA GEÇ"}
                                 </Button>
@@ -775,7 +779,7 @@ export default function OnboardingPage() {
                             className="space-y-8"
                         >
                             <div className="text-center space-y-2">
-                                <h2 className="text-2xl md:text-4xl font-black italic tracking-tighter">Finansal Yapılandırma</h2>
+                                <h2 className="text-2xl md:text-4xl font-black tracking-normal leading-tight">Finansal Yapılandırma</h2>
                                 <p className="text-gray-400 text-sm md:text-base">Kasa ve banka hesaplarınızı oluşturun.</p>
                             </div>
 
@@ -837,7 +841,7 @@ export default function OnboardingPage() {
                                             <motion.div
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                className="grid grid-cols-2 gap-4 pl-12"
+                                                className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:pl-12"
                                             >
                                                 <div className="space-y-2">
                                                     <Label className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest pl-1">Toplam Kart Limiti</Label>
@@ -879,17 +883,17 @@ export default function OnboardingPage() {
                                 </Button>
                             </div>
 
-                            <div className="flex gap-4">
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-4">
                                 <Button
                                     onClick={handleBack}
-                                    className="h-20 w-1/4 bg-white/5 text-gray-400 text-xl font-black rounded-[2.5rem] border border-white/5 hover:bg-white/10"
+                                    className="h-14 sm:h-20 w-full sm:w-1/4 bg-white/5 text-gray-300 text-base sm:text-xl font-black rounded-2xl sm:rounded-[2.5rem] border border-white/5 hover:bg-white/10"
                                 >
                                     GERİ
                                 </Button>
                                 <Button
                                     onClick={handleNext}
                                     disabled={loading}
-                                    className="flex-1 h-20 bg-white text-black text-2xl font-black rounded-[2.5rem] shadow-2xl"
+                                    className="flex-1 h-14 sm:h-20 bg-white text-black text-lg sm:text-2xl font-black rounded-2xl sm:rounded-[2.5rem] shadow-2xl"
                                 >
                                     {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : "KURULUMU TAMAMLA"}
                                 </Button>
@@ -903,7 +907,7 @@ export default function OnboardingPage() {
                             key="success"
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="space-y-12 text-center"
+                            className="space-y-8 sm:space-y-12 text-center"
                         >
                             <div className="relative inline-block">
                                 <div className="h-40 w-40 bg-white rounded-[4rem] flex items-center justify-center shadow-[0_0_100px_rgba(255,255,255,0.3)] animate-bounce-slow">
@@ -915,8 +919,8 @@ export default function OnboardingPage() {
                             </div>
 
                             <div className="space-y-4">
-                                <h1 className="text-7xl font-black tracking-tighter italic">Hazırsınız!</h1>
-                                <p className="text-gray-400 text-2xl max-w-lg mx-auto leading-relaxed uppercase tracking-widest font-bold">
+                                <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-normal leading-tight">Hazırsınız!</h1>
+                                <p className="text-gray-300 text-base sm:text-xl md:text-2xl max-w-lg mx-auto leading-relaxed uppercase tracking-wide font-bold">
                                     {shopData.name} dijital zirveye yükseliyor.
                                 </p>
                             </div>
@@ -924,7 +928,7 @@ export default function OnboardingPage() {
                             <Button
                                 onClick={handleFinish}
                                 disabled={loading}
-                                className="w-full h-24 bg-white text-black text-4xl font-black rounded-[3rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-indigo-500/20"
+                                className="w-full h-16 sm:h-24 bg-white text-black text-xl sm:text-3xl md:text-4xl font-black rounded-2xl sm:rounded-[3rem] active:scale-[0.98] transition-all shadow-2xl shadow-indigo-500/20"
                             >
                                 {loading ? <Loader2 className="h-10 w-10 animate-spin" /> : (
                                     <>SİSTEMİ AÇ <ChevronRight className="h-10 w-10 ml-4" /></>
@@ -937,7 +941,7 @@ export default function OnboardingPage() {
 
             {/* Sector Animation Overlay */}
             {step === "setup" && (
-                <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-20 opacity-10 pointer-events-none">
+                <div className="absolute bottom-20 left-0 right-0 hidden justify-center gap-20 opacity-10 pointer-events-none md:flex">
                     <Smartphone className="h-32 w-32 animate-pulse" />
                     <Cpu className="h-32 w-32 animate-pulse delay-300" />
                     <Package className="h-32 w-32 animate-pulse delay-700" />

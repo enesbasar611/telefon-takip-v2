@@ -16,14 +16,8 @@ const authMiddleware = withAuth(
             const hasShop = !!token.shopId;
 
             // 1. ACCESS VERIFICATION & ONBOARDING (CRITICAL FIRST STEP)
-            // If not approved and not super admin, check if they need onboarding first
+            // Approval is required before onboarding for shop owners.
             if (!isApproved && !isSuperAdmin && role !== "COURIER") {
-                if (!hasShop) {
-                    if (!isOnboardingPage) {
-                        return NextResponse.redirect(new URL("/onboarding", req.url));
-                    }
-                    return NextResponse.next();
-                }
                 if (!isVerifyPage) {
                     return NextResponse.redirect(new URL("/verify", req.url));
                 }
