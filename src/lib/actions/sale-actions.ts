@@ -19,6 +19,50 @@ import { convertTransactionAmount, type TransactionCurrency } from "@/lib/financ
 
 // getOrCreateDevUser removed.
 
+export async function generateSaleNumber(
+  tx: any,
+  shopId: string,
+  prefix: string = "SALE-"
+): Promise<string> {
+  const lastSale = await tx.sale.findFirst({
+    where: {
+      shopId,
+      saleNumber: { startsWith: prefix },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { saleNumber: true },
+  });
+
+  const saleCount = await tx.sale.count({ where: { shopId } });
+  let nextNum = 1000 + saleCount + 1;
+
+  if (lastSale?.saleNumber) {
+    const numPart = lastSale.saleNumber.replace(prefix, "");
+    const parsed = parseInt(numPart, 10);
+    if (!isNaN(parsed) && parsed >= 1000) {
+      nextNum = Math.max(nextNum, parsed + 1);
+    }
+  }
+
+  let candidate = `${prefix}${nextNum}`;
+
+  let exists = await tx.sale.findFirst({
+    where: { shopId, saleNumber: candidate },
+    select: { id: true },
+  });
+
+  while (exists) {
+    nextNum++;
+    candidate = `${prefix}${nextNum}`;
+    exists = await tx.sale.findFirst({
+      where: { shopId, saleNumber: candidate },
+      select: { id: true },
+    });
+  }
+
+  return candidate;
+}
+
 export async function createSale(rawData: z.infer<typeof saleSchema>) {
   try {
     const shopId = await getShopId();
@@ -32,8 +76,7 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
 
     const sale = await prisma.$transaction(async (tx) => {
       // 1. Generate sale number and create sale record
-      const saleCount = await tx.sale.count({ where: { shopId } });
-      const saleNumber = `SALE-${1000 + saleCount + 1}`;
+      const saleNumber = await generateSaleNumber(tx, shopId, "SALE-");
 
       const newSale = await tx.sale.create({
         data: {

@@ -12,6 +12,7 @@ import { z } from "zod";
 import { recordAuditLog } from "./audit-actions";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
+import { generateSaleNumber } from "./sale-actions";
 
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
@@ -719,9 +720,9 @@ export async function quickSellProduct(productId: string, quantity: number) {
     if (product.stock < quantity) throw new Error("Yetersiz stok.");
 
     const totalAmount = Number(product.sellPrice) * quantity;
-    const saleNumber = `FAST-${Date.now()}`;
 
     await prisma.$transaction(async (tx) => {
+      const saleNumber = await generateSaleNumber(tx, shopId, "FAST-");
       const sale = await tx.sale.create({
         data: {
           saleNumber,

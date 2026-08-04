@@ -10,6 +10,7 @@ import { formatTitleCase } from "@/lib/formatters";
 import { Role } from "@prisma/client";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
+import { generateSaleNumber } from "./sale-actions";
 
 type ShortagePriority = {
   courierPriorityScore: number;
@@ -901,8 +902,7 @@ export async function approveShortageItem(
         }
 
         const totalAmount = unitPriceTL * safeQuantity;
-        const saleCount = await tx.sale.count({ where: { shopId } });
-        const saleNumber = `SALE-KURYE-${1000 + saleCount + 1}`;
+        const saleNumber = await generateSaleNumber(tx, shopId, "SALE-KURYE-");
 
         // Satış kaydı oluştur
         const sale = await tx.sale.create({
