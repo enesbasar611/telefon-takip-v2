@@ -42,6 +42,7 @@ import { getCustomerStatement } from "@/lib/actions/debt-actions";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ReturnProcessingAction } from "@/lib/returns/return-processing";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 interface InitialReturnItem {
     productId?: string;
@@ -93,10 +94,11 @@ interface ReturnItem {
 const currencySymbol = (currency?: string) => currency === "USD" ? "$" : "₺";
 
 const returnActionDescriptions: Record<ReturnProcessingAction, string> = {
-    DEBT_DEDUCT: "Urun iade alinir, musteriden borc dusulur, stok hareketi yapilmaz.",
-    SEND_SUPPLIER: "Urun iade alinir, musteriden borc dusulur, stoktan cikarilip tedarikciye gonderildi olarak isaretlenir.",
-    DISCARD: "Urun iade alinir, musteriden borc dusulur, stoga eklenmez ve stoklu urunse stoktan dusulur.",
-    WAIT: "Iade kaydi beklemeye alinir; borc, kasa ve stok simdilik degismez.",
+    RESTOCK: "Ürün tamamen iade alınır, tutar kasadan/hesaptan düşülür ve ürün stoğa eklenir.",
+    DEBT_DEDUCT: "Ürün iade alınır, müşteriden borç düşülür (stok hareketi yapılmaz).",
+    SEND_SUPPLIER: "Ürün iade alınır, müşteriden borç düşülür, stoktan çıkarılıp tedarikçiye gönderildi olarak işaretlenir.",
+    DISCARD: "Ürün iade alınır, müşteriden borç düşülür, stoğa eklenmez (çöpe atılır).",
+    WAIT: "İade kaydı beklemeye alınır; borç, kasa ve stok şimdilik değişmez.",
 };
 
 export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: AddReturnModalProps) {
@@ -122,6 +124,15 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
     const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
 
+    const { rates, defaultCurrency } = useDashboardData();
+    const usdRate = rates?.usd || 35.0;
+    const eurRate = rates?.eur || 38.0;
+
+    const formatDisplayMoney = (value: number) => {
+        const amount = defaultCurrency === "USD" ? value / usdRate : defaultCurrency === "EUR" ? value / eurRate : value;
+        return new Intl.NumberFormat("tr-TR", { style: "currency", currency: defaultCurrency || "TRY" }).format(amount);
+    };
+
     // Sync initialData when modal opens
     useEffect(() => {
         if (open) {
@@ -141,10 +152,10 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                     reason: "GENERAL_RETURN",
                     refundAmount: i.refundAmount,
                     refundCurrency: i.refundCurrency || "TRY",
-                    restockProduct: !!i.productId,
-                    immediateRestock: !!i.productId,
-                    processImmediately: i.processImmediately ?? !i.productId,
-                    returnAction: i.returnAction || (i.processImmediately === false ? "WAIT" : "DEBT_DEDUCT"),
+                    restockProduct: true,
+                    immediateRestock: true,
+                    processImmediately: i.processImmediately ?? true,
+                    returnAction: i.returnAction || (i.processImmediately === false ? "WAIT" : "RESTOCK"),
                     newBuyPrice: undefined,
                     newSellPrice: undefined,
                     unitPrice: i.unitPrice ?? (i.refundAmount / Math.max(i.quantity, 1)),
@@ -269,8 +280,8 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
             refundCurrency: "TRY",
             restockProduct: true,
             immediateRestock: true,
-            processImmediately: false,
-            returnAction: "WAIT",
+            processImmediately: true,
+            returnAction: "RESTOCK",
             newBuyPrice: undefined,
             newSellPrice: undefined,
         }]);
@@ -545,6 +556,8 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                         refundCurrency: saleCurrency,
                                                                         restockProduct: true,
                                                                         immediateRestock: true,
+                                                                        processImmediately: true,
+                                                                        returnAction: "RESTOCK",
                                                                         newBuyPrice: undefined,
                                                                         newSellPrice: undefined,
                                                                         saleId: sale.id,
@@ -707,14 +720,14 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                     <div className="space-y-1.5">
                                                         <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">ISLEM</Label>
                                                         <Select
-                                                            value={item.returnAction}
+                                                            value={item.returnAction || "RESTOCK"}
                                                             onValueChange={(v) => {
                                                                 const action = v as ReturnProcessingAction;
                                                                 updateItem(item.id, {
                                                                     returnAction: action,
                                                                     processImmediately: action !== "WAIT",
-                                                                    restockProduct: action === "DEBT_DEDUCT" ? false : item.restockProduct,
-                                                                    immediateRestock: false,
+                                                                    restockProduct: action === "RESTOCK" ? true : action === "DEBT_DEDUCT" ? false : item.restockProduct,
+                                                                    immediateRestock: action === "RESTOCK",
                                                                 });
                                                             }}
                                                         >
@@ -722,10 +735,11 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent className="rounded-xl border-border/40">
-                                                                <SelectItem value="DEBT_DEDUCT">Iade al, borctan dus</SelectItem>
-                                                                <SelectItem value="SEND_SUPPLIER">Iade al, tedarikciye gonder</SelectItem>
-                                                                <SelectItem value="DISCARD">Iade al, cope at</SelectItem>
-                                                                <SelectItem value="WAIT">Iadeyi beklet</SelectItem>
+                                                                <SelectItem value="RESTOCK">İade al, stoğa ekle</SelectItem>
+                                                                <SelectItem value="DEBT_DEDUCT">İade al, borçtan düş</SelectItem>
+                                                                <SelectItem value="SEND_SUPPLIER">İade al, tedarikçiye gönder</SelectItem>
+                                                                <SelectItem value="DISCARD">İade al, çöpe at</SelectItem>
+                                                                <SelectItem value="WAIT">İadeyi beklet</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
@@ -830,7 +844,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                         <SelectContent className="rounded-xl border-border/40">
                                             {accounts.map(acc => (
                                                 <SelectItem key={acc.id} value={acc.id}>
-                                                    {acc.name} ({Number(acc.balance).toLocaleString('tr-TR')} {acc.currency})
+                                                    {acc.name} ({formatDisplayMoney(Number(acc.balance))})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

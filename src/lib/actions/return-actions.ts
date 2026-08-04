@@ -64,6 +64,85 @@ async function normalizeReturnProduct(
   };
 }
 
+async function normalizeReturnRelations(
+  tx: any,
+  shopId: string,
+  data: {
+    customerId?: string | null;
+    supplierId?: string | null;
+    saleId?: string | null;
+    debtId?: string | null;
+    serviceTicketId?: string | null;
+  }
+) {
+  let validCustomerId: string | undefined = undefined;
+  let validSupplierId: string | undefined = undefined;
+  let validSaleId: string | undefined = undefined;
+  let validDebtId: string | undefined = undefined;
+  let validServiceTicketId: string | undefined = undefined;
+
+  if (data.saleId && data.saleId.trim()) {
+    const sale = await tx.sale.findFirst({
+      where: { id: data.saleId.trim(), shopId },
+      select: { id: true, customerId: true },
+    });
+    if (sale) {
+      validSaleId = sale.id;
+      if (sale.customerId) {
+        validCustomerId = sale.customerId;
+      }
+    }
+  }
+
+  if (!validCustomerId && data.customerId && data.customerId.trim()) {
+    const customer = await tx.customer.findFirst({
+      where: { id: data.customerId.trim(), shopId },
+      select: { id: true },
+    });
+    if (customer) {
+      validCustomerId = customer.id;
+    }
+  }
+
+  if (data.supplierId && data.supplierId.trim()) {
+    const supplier = await tx.supplier.findFirst({
+      where: { id: data.supplierId.trim(), shopId },
+      select: { id: true },
+    });
+    if (supplier) {
+      validSupplierId = supplier.id;
+    }
+  }
+
+  if (data.debtId && data.debtId.trim()) {
+    const debt = await tx.debt.findFirst({
+      where: { id: data.debtId.trim(), shopId },
+      select: { id: true },
+    });
+    if (debt) {
+      validDebtId = debt.id;
+    }
+  }
+
+  if (data.serviceTicketId && data.serviceTicketId.trim()) {
+    const serviceTicket = await tx.serviceTicket.findFirst({
+      where: { id: data.serviceTicketId.trim(), shopId },
+      select: { id: true },
+    });
+    if (serviceTicket) {
+      validServiceTicketId = serviceTicket.id;
+    }
+  }
+
+  return {
+    customerId: validCustomerId,
+    supplierId: validSupplierId,
+    saleId: validSaleId,
+    debtId: validDebtId,
+    serviceTicketId: validServiceTicketId,
+  };
+}
+
 async function reduceDebtForReturn(
   tx: any,
   shopId: string,
@@ -95,7 +174,6 @@ async function recordReturnExpense(
     ticketNumber: string;
     userId: string;
     shopId: string;
-    saleId?: string;
   }
 ) {
   if (data.financeAccountId) {
@@ -121,7 +199,6 @@ async function recordReturnExpense(
         userId: data.userId,
         shopId: data.shopId,
         financeAccountId: data.financeAccountId,
-        saleId: data.saleId,
         runningBalance: newBalance,
       },
     });
@@ -137,7 +214,6 @@ async function recordReturnExpense(
       category: "Iade",
       userId: data.userId,
       shopId: data.shopId,
-      saleId: data.saleId,
     },
   });
 }
@@ -260,7 +336,8 @@ export async function createReturnTicket(data: {
     const count = await prisma.returnTicket.count({ where: { shopId } });
     const ticketNumber = `RET-${new Date().getFullYear()}${(count + 1).toString().padStart(4, "0")}`;
     const normalizedProduct = await normalizeReturnProduct(prisma, shopId, data);
-    const normalizedData = { ...data, ...normalizedProduct };
+    const normalizedRelations = await normalizeReturnRelations(prisma, shopId, data);
+    const normalizedData = { ...data, ...normalizedProduct, ...normalizedRelations };
 
     const existingActiveReturn = await prisma.returnTicket.findFirst({
       where: {
@@ -285,11 +362,11 @@ export async function createReturnTicket(data: {
         quantity: data.quantity,
         refundAmount: data.refundAmount,
         refundCurrency: data.refundCurrency || "TRY",
-        customerId: data.customerId,
-        supplierId: data.supplierId,
-        debtId: data.debtId,
-        saleId: data.saleId,
-        serviceTicketId: data.serviceTicketId,
+        customerId: normalizedRelations.customerId,
+        supplierId: normalizedRelations.supplierId,
+        debtId: normalizedRelations.debtId,
+        saleId: normalizedRelations.saleId,
+        serviceTicketId: normalizedRelations.serviceTicketId,
         returnReason: data.reason as any,
         notes: data.notes,
         restockProduct: normalizedData.restockProduct,
@@ -488,7 +565,8 @@ export async function createMultipleReturnTickets(tickets: {
       for (let i = 0; i < tickets.length; i++) {
         const data = tickets[i];
         const normalizedProduct = await normalizeReturnProduct(tx, shopId, data);
-        const normalizedData = { ...data, ...normalizedProduct };
+        const normalizedRelations = await normalizeReturnRelations(tx, shopId, data);
+        const normalizedData = { ...data, ...normalizedProduct, ...normalizedRelations };
         const ticketNumber = `RET-${new Date().getFullYear()}${(baseCount + i + 1).toString().padStart(4, "0")}`;
 
         const existingActiveReturn = await tx.returnTicket.findFirst({
@@ -520,11 +598,11 @@ export async function createMultipleReturnTickets(tickets: {
             quantity: data.quantity,
             refundAmount: data.refundAmount,
             refundCurrency: data.refundCurrency || "TRY",
-            customerId: data.customerId,
-            supplierId: data.supplierId,
-            debtId: data.debtId,
-            saleId: data.saleId,
-            serviceTicketId: data.serviceTicketId,
+            customerId: normalizedRelations.customerId,
+            supplierId: normalizedRelations.supplierId,
+            debtId: normalizedRelations.debtId,
+            saleId: normalizedRelations.saleId,
+            serviceTicketId: normalizedRelations.serviceTicketId,
             returnReason: data.reason as any,
             notes: data.notes,
             restockProduct: normalizedData.restockProduct,
@@ -575,6 +653,42 @@ export async function createMultipleReturnTickets(tickets: {
           });
         }
 
+        // Handle Sale Modification for Returns
+        if (data.saleId && normalizedData.productId) {
+          const saleItem = await tx.saleItem.findFirst({
+            where: { saleId: data.saleId, productId: normalizedData.productId, shopId }
+          });
+          
+          if (!saleItem) {
+            throw new Error(`İade edilmek istenen ürün satış fişinde bulunamadı veya daha önceden tamamen iade edilmiş.`);
+          }
+          if (saleItem.quantity < data.quantity) {
+            throw new Error(`İade edilmek istenen adet (${data.quantity}), satış fişindeki kalan adetten (${saleItem.quantity}) fazla olamaz.`);
+          }
+
+          const priceDeduction = Number(saleItem.unitPrice) * data.quantity;
+            
+            if (saleItem.quantity <= data.quantity) {
+              await tx.saleItem.delete({ where: { id: saleItem.id } });
+            } else {
+              await tx.saleItem.update({
+                where: { id: saleItem.id },
+                data: {
+                  quantity: { decrement: data.quantity },
+                  totalPrice: { decrement: priceDeduction }
+                }
+              });
+            }
+
+            await tx.sale.update({
+              where: { id: data.saleId },
+              data: {
+                totalAmount: { decrement: priceDeduction },
+                finalAmount: { decrement: priceDeduction }
+              }
+            });
+        }
+
         // Handle Finance / Debt impact
         const refundVal = Number(data.refundAmount || 0);
         if (refundVal > 0) {
@@ -587,7 +701,6 @@ export async function createMultipleReturnTickets(tickets: {
               ticketNumber,
               userId,
               shopId,
-              saleId: data.saleId,
             });
           } else if (data.saleId || data.sourceType === "SALE" || data.sourceType === "CUSTOMER") {
             // For completed sales or general customer returns, create an Expense transaction
@@ -614,7 +727,6 @@ export async function createMultipleReturnTickets(tickets: {
                     userId,
                     shopId,
                     financeAccountId,
-                    saleId: data.saleId,
                     runningBalance: newBalance
                   },
                 });
@@ -629,8 +741,7 @@ export async function createMultipleReturnTickets(tickets: {
                   description: `${ticketNumber} - İade Geri Ödemesi`,
                   category: "İade",
                   userId,
-                  shopId,
-                  saleId: data.saleId
+                  shopId
                 },
               });
             }

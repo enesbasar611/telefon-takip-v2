@@ -99,6 +99,60 @@ export async function getTransactions(options: {
   }
 }
 
+export async function getComputedAccounts(shopId: string, options?: { includeInactive?: boolean }) {
+  const [accounts, accountTransactions, resetAccounts, rates] = await Promise.all([
+    prisma.financeAccount.findMany({
+      where: { shopId, ...(options?.includeInactive ? {} : { isActive: true }) },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.transaction.findMany({
+      where: { shopId, financeAccountId: { not: null } },
+      select: { amount: true, currency: true, type: true, createdAt: true, financeAccountId: true },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.cashRegisterResetAccount.findMany({
+      where: { shopId },
+      select: { accountId: true, createdAt: true },
+      orderBy: { createdAt: "desc" }
+    }),
+    getExchangeRates(shopId)
+  ]);
+
+  const latestResetByAccount = new Map<string, Date>();
+  for (const resetAccount of resetAccounts) {
+    if (!latestResetByAccount.has(resetAccount.accountId)) {
+      latestResetByAccount.set(resetAccount.accountId, resetAccount.createdAt);
+    }
+  }
+
+  const computedBalanceByAccount = new Map<string, number>();
+  const transactionCountByAccount = new Map<string, number>();
+  for (const tx of accountTransactions) {
+    if (!tx.financeAccountId) continue;
+    const resetAt = latestResetByAccount.get(tx.financeAccountId);
+    if (resetAt && tx.createdAt <= resetAt) continue;
+    const account = accounts.find((a) => a.id === tx.financeAccountId);
+    if (!account) continue;
+    const amountTry = convertTransactionAmount(Number(tx.amount || 0), toSupportedCurrency(tx.currency), rates).TRY;
+    const impact = account.type === "CREDIT_CARD"
+      ? (tx.type === "INCOME" ? -amountTry : amountTry)
+      : (tx.type === "INCOME" ? amountTry : -amountTry);
+    computedBalanceByAccount.set(tx.financeAccountId, (computedBalanceByAccount.get(tx.financeAccountId) || 0) + impact);
+    transactionCountByAccount.set(tx.financeAccountId, (transactionCountByAccount.get(tx.financeAccountId) || 0) + 1);
+  }
+
+  return accounts.map((account) => {
+    const hasComputedBalance = transactionCountByAccount.has(account.id) || latestResetByAccount.has(account.id);
+    const balance = hasComputedBalance ? (computedBalanceByAccount.get(account.id) || 0) : Number(account.balance || 0);
+    const limit = Number(account.limit || 0);
+    return {
+      ...account,
+      balance,
+      availableBalance: account.type === "CREDIT_CARD" ? limit - balance : balance,
+    };
+  });
+}
+
 export async function getAccounts() {
   try {
     const shopId = await getShopId();
@@ -107,12 +161,9 @@ export async function getAccounts() {
       return [];
     }
 
-    const accounts = await prisma.financeAccount.findMany({
-      where: { shopId, isActive: true },
-      orderBy: { createdAt: "asc" }
-    });
+    const computedAccounts = await getComputedAccounts(shopId, { includeInactive: false });
 
-    return serializePrisma(accounts);
+    return serializePrisma(computedAccounts);
   } catch (error) {
     console.error("[getAccounts] Error:", error);
     return [];
@@ -752,24 +803,8 @@ export async function getDailySummary() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [accounts, accountTransactions, resetAccounts, todaySales, todayExpenseTransactions, totalReceivablesAgg, totalPayablesAgg, rates] = await Promise.all([
-      prisma.financeAccount.findMany({ where: { shopId } }),
-      prisma.transaction.findMany({
-        where: { shopId, financeAccountId: { not: null } },
-        select: {
-          amount: true,
-          currency: true,
-          type: true,
-          createdAt: true,
-          financeAccountId: true,
-        },
-        orderBy: { createdAt: "asc" }
-      }),
-      prisma.cashRegisterResetAccount.findMany({
-        where: { shopId },
-        select: { accountId: true, createdAt: true },
-        orderBy: { createdAt: "desc" }
-      }),
+    const [computedAccounts, todaySales, todayExpenseTransactions, totalReceivablesAgg, totalPayablesAgg, rates, todayReturns] = await Promise.all([
+      getComputedAccounts(shopId, { includeInactive: true }),
       prisma.sale.findMany({
         where: {
           shopId,
@@ -803,7 +838,11 @@ export async function getDailySummary() {
           shopId,
           type: 'EXPENSE',
           createdAt: { gte: today },
-          paymentMethod: { not: "DEBT" }
+          paymentMethod: { not: "DEBT" },
+          OR: [
+            { category: { not: "Iade" } },
+            { category: null }
+          ]
         },
         select: { amount: true, currency: true }
       }),
@@ -815,51 +854,42 @@ export async function getDailySummary() {
         where: { shopId },
         _sum: { balance: true }
       }),
-      getExchangeRates(shopId)
+      getExchangeRates(shopId),
+      prisma.returnTicket.findMany({
+        where: {
+          shopId,
+          createdAt: { gte: today },
+          saleId: { not: null },
+          returnStatus: { not: "REJECTED" }
+        },
+        select: {
+          refundAmount: true,
+          refundCurrency: true,
+          quantity: true,
+          product: {
+            select: { buyPrice: true }
+          }
+        }
+      })
     ]);
-
-    const latestResetByAccount = new Map<string, Date>();
-    for (const resetAccount of resetAccounts) {
-      if (!latestResetByAccount.has(resetAccount.accountId)) {
-        latestResetByAccount.set(resetAccount.accountId, resetAccount.createdAt);
-      }
-    }
-
-    const computedBalanceByAccount = new Map<string, number>();
-    const transactionCountByAccount = new Map<string, number>();
-    for (const tx of accountTransactions) {
-      if (!tx.financeAccountId) continue;
-      const resetAt = latestResetByAccount.get(tx.financeAccountId);
-      if (resetAt && tx.createdAt <= resetAt) continue;
-      const account = accounts.find((a) => a.id === tx.financeAccountId);
-      if (!account) continue;
-      const amountTry = convertTransactionAmount(Number(tx.amount || 0), toSupportedCurrency(tx.currency), rates).TRY;
-      const impact = account.type === "CREDIT_CARD"
-        ? (tx.type === "INCOME" ? -amountTry : amountTry)
-        : (tx.type === "INCOME" ? amountTry : -amountTry);
-      computedBalanceByAccount.set(tx.financeAccountId, (computedBalanceByAccount.get(tx.financeAccountId) || 0) + impact);
-      transactionCountByAccount.set(tx.financeAccountId, (transactionCountByAccount.get(tx.financeAccountId) || 0) + 1);
-    }
-
-    const computedAccounts = accounts.map((account) => {
-      const hasComputedBalance = transactionCountByAccount.has(account.id) || latestResetByAccount.has(account.id);
-      const balance = hasComputedBalance ? (computedBalanceByAccount.get(account.id) || 0) : Number(account.balance || 0);
-      const limit = Number(account.limit || 0);
-      return {
-        ...account,
-        balance,
-        availableBalance: account.type === "CREDIT_CARD" ? limit - balance : balance,
-      };
-    });
 
     const cashBalance = computedAccounts.filter(a => a.type === 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
     const bankBalance = computedAccounts.filter(a => a.type !== 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
-    const todayIncome = todaySales.reduce((sum, sale) => {
+    
+    const grossIncome = todaySales.reduce((sum, sale) => {
       const currency = toSupportedCurrency(sale.transaction?.currency);
       const amount = Number(sale.transaction?.amount ?? sale.finalAmount ?? 0);
       return sum + convertTransactionAmount(amount, currency, rates).TRY;
     }, 0);
-    const todayProfit = todaySales.reduce((sum, sale) => {
+    
+    const returnsIncomeReduction = todayReturns.reduce((sum, ret) => {
+      const amount = Number(ret.refundAmount || 0);
+      return sum + convertTransactionAmount(amount, toSupportedCurrency(ret.refundCurrency || "TRY"), rates).TRY;
+    }, 0);
+    
+    const todayIncome = grossIncome - returnsIncomeReduction;
+
+    const grossProfit = todaySales.reduce((sum, sale) => {
       const currency = toSupportedCurrency(sale.transaction?.currency);
       const saleProfit = sale.items.reduce((itemSum, item) => {
         const unitPriceTry = convertTransactionAmount(Number(item.unitPrice || 0), currency, rates).TRY;
@@ -868,6 +898,17 @@ export async function getDailySummary() {
       }, 0);
       return sum + saleProfit;
     }, 0);
+    
+    const returnsProfitReduction = todayReturns.reduce((sum, ret) => {
+      const amount = Number(ret.refundAmount || 0);
+      const unitCost = Number(ret.product?.buyPrice || 0);
+      const unitPrice = ret.quantity > 0 ? (amount / ret.quantity) : 0;
+      const unitPriceTry = convertTransactionAmount(unitPrice, toSupportedCurrency(ret.refundCurrency || "TRY"), rates).TRY;
+      return sum + ((unitPriceTry - unitCost) * ret.quantity);
+    }, 0);
+    
+    const todayProfit = grossProfit - returnsProfitReduction;
+
     const todayExpense = todayExpenseTransactions.reduce((sum, tx) => {
       return sum + convertTransactionAmount(Number(tx.amount || 0), toSupportedCurrency(tx.currency), rates).TRY;
     }, 0);

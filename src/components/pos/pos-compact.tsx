@@ -28,6 +28,7 @@ import { ScannerModal } from "../scanner/scanner-modal";
 import { CartItem } from "./parts/cart-item";
 import { CustomerSelector } from "./parts/customer-selector";
 import { CheckoutSummary } from "./parts/checkout-summary";
+import { getAccounts } from "@/lib/actions/finance-actions";
 import { useRouter } from "next/navigation";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { useQuery } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     const [cart, setCart] = useState<any[]>([]);
     const [paymentMethod, setPaymentMethod] = useState("CASH");
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>(undefined);
+    const [selectedAccountId, setSelectedAccountId] = useState<string>("");
     const [localProducts, setLocalProducts] = useState(initialProducts);
     const [isLoaded, setIsLoaded] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
@@ -49,6 +51,31 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     const [lastSale, setLastSale] = useState<any>(null);
     const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
     const lastAddRef = useRef<{ id: string; time: number } | null>(null);
+
+    const { data: accountsData = [] } = useQuery({
+        queryKey: ["finance-accounts"],
+        queryFn: () => getAccounts(),
+        staleTime: 60 * 1000,
+    });
+    const accounts = useMemo(() => accountsData || [], [accountsData]);
+
+    useEffect(() => {
+        if (accounts.length > 0) {
+            let eligibleAccs = accounts;
+            if (paymentMethod === "CASH") eligibleAccs = accounts.filter((a: any) => a.type === "CASH");
+            else if (paymentMethod === "CREDIT_CARD") eligibleAccs = accounts.filter((a: any) => a.type === "POS" || a.type === "CREDIT_CARD");
+            else if (paymentMethod === "BANK_TRANSFER" || paymentMethod === "TRANSFER") eligibleAccs = accounts.filter((a: any) => a.type === "BANK");
+
+            if (eligibleAccs.length === 0) eligibleAccs = accounts;
+
+            const savedId = typeof window !== "undefined" ? localStorage.getItem(`pos_last_account_${paymentMethod}`) : null;
+            if (savedId && eligibleAccs.some((a: any) => a.id === savedId)) {
+                setSelectedAccountId(savedId);
+            } else if (!selectedAccountId || !eligibleAccs.some((a: any) => a.id === selectedAccountId)) {
+                setSelectedAccountId(eligibleAccs[0]?.id || "");
+            }
+        }
+    }, [accounts, paymentMethod]);
 
     const { rates: exchangeRates, defaultCurrency } = useDashboardData();
     const { data: settingsData } = useQuery({
@@ -370,6 +397,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 totalAmount: displayTotal,
                 currency: defaultCurrency || 'TRY',
                 paymentMethod,
+                accountId: selectedAccountId || undefined,
                 discountAmount: defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
                     defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
                         loyaltyDiscountAmount,
@@ -643,6 +671,9 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                     formattedEquivalentTotal={defaultCurrency === 'TRY' ? "" : `₺${(displayTotal * (defaultCurrency === 'USD' ? usdRate : eurRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`}
                     showDetails={showDetails}
                     setShowDetails={setShowDetails}
+                    accounts={accounts}
+                    selectedAccountId={selectedAccountId}
+                    setSelectedAccountId={setSelectedAccountId}
                 />
             </div>
 

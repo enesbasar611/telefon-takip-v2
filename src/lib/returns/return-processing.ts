@@ -6,7 +6,7 @@ export interface ReturnProcessingInput {
   action?: ReturnProcessingAction | null;
 }
 
-export type ReturnProcessingAction = "DEBT_DEDUCT" | "SEND_SUPPLIER" | "DISCARD" | "WAIT";
+export type ReturnProcessingAction = "RESTOCK" | "DEBT_DEDUCT" | "SEND_SUPPLIER" | "DISCARD" | "WAIT";
 export type ReturnStockMovement = "IN" | "OUT" | "NONE";
 
 export function shouldProcessReturnImmediately(input: ReturnProcessingInput) {
@@ -17,6 +17,8 @@ export function shouldProcessReturnImmediately(input: ReturnProcessingInput) {
 
 export function getReturnProcessingPlan(input: ReturnProcessingInput) {
   switch (input.action) {
+    case "RESTOCK":
+      return { status: "RESTOCKED" as const, reduceDebt: true, stockMovement: input.productId ? "IN" as ReturnStockMovement : "NONE" as ReturnStockMovement };
     case "WAIT":
       return { status: "PENDING" as const, reduceDebt: false, stockMovement: "NONE" as ReturnStockMovement };
     case "SEND_SUPPLIER":

@@ -416,9 +416,6 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                                 </div>
                             )}
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                            <X className="h-5 w-5 text-muted-foreground" />
-                        </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-12 flex justify-center items-start custom-scrollbar relative">

@@ -102,7 +102,14 @@ export async function getUnifiedHistory(options: {
             }),
         ]);
 
-        const items: UnifiedOperation[] = transactions.map((tx: any) => {
+        const items: UnifiedOperation[] = transactions
+            .filter((tx: any) => {
+                if (tx.saleId && tx.sale && (!tx.sale.items || tx.sale.items.length === 0)) {
+                    return false;
+                }
+                return true;
+            })
+            .map((tx: any) => {
             const isSale = !!tx.saleId;
             const isDebt = !!tx.debtId;
             const isPayment = tx.category === "Tahsilat";
@@ -290,6 +297,7 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
         };
 
         for (const sale of sales) {
+            if (!sale.items || sale.items.length === 0) continue;
             const periodKey = resolvePeriod(sale.createdAt);
             if (!periodKey) continue;
 

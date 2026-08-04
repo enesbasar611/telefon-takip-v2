@@ -24,26 +24,31 @@ export async function generateSaleNumber(
   shopId: string,
   prefix: string = "SALE-"
 ): Promise<string> {
-  const lastSale = await tx.sale.findFirst({
-    where: {
-      shopId,
-      saleNumber: { startsWith: prefix },
-    },
+  // Query recent sales for this shop to find the absolute max numeric suffix
+  const recentSales = await tx.sale.findMany({
+    where: { shopId },
     orderBy: { createdAt: "desc" },
+    take: 200,
     select: { saleNumber: true },
   });
 
   const saleCount = await tx.sale.count({ where: { shopId } });
-  let nextNum = 1000 + saleCount + 1;
+  let maxNum = 1000 + saleCount;
 
-  if (lastSale?.saleNumber) {
-    const numPart = lastSale.saleNumber.replace(prefix, "");
-    const parsed = parseInt(numPart, 10);
-    if (!isNaN(parsed) && parsed >= 1000) {
-      nextNum = Math.max(nextNum, parsed + 1);
+  for (const s of recentSales) {
+    if (s.saleNumber) {
+      const match = s.saleNumber.match(/(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        // Exclude timestamp values (> 1,000,000)
+        if (!isNaN(num) && num > maxNum && num < 1000000) {
+          maxNum = num;
+        }
+      }
     }
   }
 
+  let nextNum = maxNum + 1;
   let candidate = `${prefix}${nextNum}`;
 
   let exists = await tx.sale.findFirst({
@@ -76,46 +81,64 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
 
     const sale = await prisma.$transaction(async (tx) => {
       // 1. Generate sale number and create sale record
-      const saleNumber = await generateSaleNumber(tx, shopId, "SALE-");
+      let saleNumber = await generateSaleNumber(tx, shopId, "SALE-");
 
-      const newSale = await tx.sale.create({
-        data: {
-          saleNumber,
-          customerId: data.customerId,
-          userId,
-          shopId,
-          totalAmount: data.totalAmount + (data.discountAmount || 0),
-          finalAmount: Math.max(0, data.totalAmount),
-          paymentMethod: (
-            data.paymentMethod === "CASH" ? PaymentMethod.CASH :
-              data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
-                data.paymentMethod === "TRANSFER" ? PaymentMethod.TRANSFER :
-                  data.paymentMethod === "DEBT" ? PaymentMethod.DEBT :
-                    PaymentMethod.CASH
-          ) as PaymentMethod,
-          items: {
-            create: data.items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.unitPrice * item.quantity,
-              shopId
-            })),
-          },
+      const saleData = {
+        saleNumber,
+        customerId: data.customerId,
+        userId,
+        shopId,
+        totalAmount: data.totalAmount + (data.discountAmount || 0),
+        finalAmount: Math.max(0, data.totalAmount),
+        paymentMethod: (
+          data.paymentMethod === "CASH" ? PaymentMethod.CASH :
+            data.paymentMethod === "CREDIT_CARD" ? PaymentMethod.CARD :
+              data.paymentMethod === "TRANSFER" ? PaymentMethod.TRANSFER :
+                data.paymentMethod === "DEBT" ? PaymentMethod.DEBT :
+                  PaymentMethod.CASH
+        ) as PaymentMethod,
+        items: {
+          create: data.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.unitPrice * item.quantity,
+            shopId
+          })),
         },
-        include: {
-          items: {
-            include: {
-              product: {
-                include: {
-                  deviceInfo: true
-                }
+      };
+
+      const includeConfig = {
+        items: {
+          include: {
+            product: {
+              include: {
+                deviceInfo: true
               }
             }
-          },
-          customer: true
+          }
+        },
+        customer: true
+      };
+
+      let newSale;
+      try {
+        newSale = await tx.sale.create({
+          data: saleData,
+          include: includeConfig
+        });
+      } catch (err: any) {
+        if (err?.code === "P2002" || err?.message?.includes("P2002") || err?.message?.includes("saleNumber")) {
+          const timestampPart = Date.now().toString().slice(-4);
+          saleData.saleNumber = `${saleNumber}-${timestampPart}`;
+          newSale = await tx.sale.create({
+            data: saleData,
+            include: includeConfig
+          });
+        } else {
+          throw err;
         }
-      });
+      }
 
       // 2. Increment Loyalty Points if customer exists and points earned
       let earnedPoints = 0;

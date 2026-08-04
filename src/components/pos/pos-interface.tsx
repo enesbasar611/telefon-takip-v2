@@ -495,11 +495,13 @@ export function POSInterface({ initialSaleId }: {
 
   const eligibleAccounts = useMemo(() => {
     if (paymentMethod === "DEBT") return [];
-    if (accounts.length === 1) return accounts;
-    if (paymentMethod === "CASH") return accounts.filter((account) => account.type === "CASH");
-    if (paymentMethod === "CREDIT_CARD") return accounts.filter((account) => account.type === "CREDIT_CARD" || account.type === "POS");
-    if (paymentMethod === "BANK_TRANSFER" || paymentMethod === "TRANSFER") return accounts.filter((account) => account.type === "CASH" || account.type === "BANK");
-    return accounts;
+    
+    let eligibleAccs = accounts;
+    if (paymentMethod === "CASH") eligibleAccs = accounts.filter((a) => a.type === "CASH");
+    else if (paymentMethod === "CREDIT_CARD") eligibleAccs = accounts.filter((a) => a.type === "POS" || a.type === "CREDIT_CARD");
+    else if (paymentMethod === "BANK_TRANSFER" || paymentMethod === "TRANSFER") eligibleAccs = accounts.filter((a) => a.type === "BANK");
+
+    return eligibleAccs.length > 0 ? eligibleAccs : accounts;
   }, [accounts, paymentMethod]);
 
   useEffect(() => {
@@ -511,10 +513,13 @@ export function POSInterface({ initialSaleId }: {
       setSelectedAccountId("");
       return;
     }
-    if (!eligibleAccounts.some((account) => account.id === selectedAccountId)) {
+    const savedId = typeof window !== "undefined" ? localStorage.getItem(`pos_last_account_${paymentMethod}`) : null;
+    if (savedId && eligibleAccounts.some((a) => a.id === savedId)) {
+      setSelectedAccountId(savedId);
+    } else if (!selectedAccountId || !eligibleAccounts.some((a) => a.id === selectedAccountId)) {
       setSelectedAccountId(eligibleAccounts[0].id);
     }
-  }, [eligibleAccounts, paymentMethod, selectedAccountId]);
+  }, [eligibleAccounts, paymentMethod]);
 
 
   const displayTotal = useMemo(() => {

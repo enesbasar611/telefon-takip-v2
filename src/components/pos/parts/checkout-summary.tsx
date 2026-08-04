@@ -68,6 +68,22 @@ export const CheckoutSummary = ({
 
     const currentUsdRate = Number(rates?.usd || rates?.USD) || 34.5;
     const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
+    
+    const convertBalance = React.useCallback((balance: number, fromCurrency: string) => {
+        if (!rates) return balance;
+        const target = defaultCurrency || 'TRY';
+        if (fromCurrency === target) return balance;
+        
+        let tryValue = balance;
+        if (fromCurrency === "USD") tryValue = balance * (Number(rates.usd || rates.USD) || 1);
+        else if (fromCurrency === "EUR") tryValue = balance * (Number(rates.eur || rates.EUR) || 1);
+
+        if (target === "TRY") return tryValue;
+        if (target === "USD") return tryValue / (Number(rates.usd || rates.USD) || 1);
+        if (target === "EUR") return tryValue / (Number(rates.eur || rates.EUR) || 1);
+        
+        return balance;
+    }, [rates, defaultCurrency]);
     const paymentMethods = [
         { id: "CASH", label: "NAKİT", icon: Banknote, color: "text-emerald-500", bg: "bg-emerald-500/10" },
         { id: "CREDIT_CARD", label: "KART", icon: CreditCard, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -75,7 +91,25 @@ export const CheckoutSummary = ({
         { id: "DEBT", label: "VERESİYE", icon: History, color: "text-rose-500", bg: "bg-rose-500/10" }
     ];
     const showAccountSelection = paymentMethod !== "DEBT";
-    const selectedAccount = accounts.find((account) => account.id === selectedAccountId);
+
+    const eligibleAccounts = React.useMemo(() => {
+        if (paymentMethod === "DEBT") return [];
+        if (paymentMethod === "CASH") {
+            const cashAccs = accounts.filter(a => a.type === "CASH");
+            return cashAccs.length > 0 ? cashAccs : accounts;
+        }
+        if (paymentMethod === "CREDIT_CARD") {
+            const cardAccs = accounts.filter(a => a.type === "POS" || a.type === "CREDIT_CARD");
+            return cardAccs.length > 0 ? cardAccs : accounts;
+        }
+        if (paymentMethod === "BANK_TRANSFER" || paymentMethod === "TRANSFER") {
+            const bankAccs = accounts.filter(a => a.type === "BANK");
+            return bankAccs.length > 0 ? bankAccs : accounts;
+        }
+        return accounts;
+    }, [accounts, paymentMethod]);
+
+    const selectedAccount = eligibleAccounts.find((account) => account.id === selectedAccountId);
     const accountSelectionTitle =
         paymentMethod === "CASH" ? "NAKİT KASA SEÇİMİ" :
             paymentMethod === "CREDIT_CARD" ? "KART HESABI SEÇİMİ" :
@@ -85,40 +119,48 @@ export const CheckoutSummary = ({
     const renderAccountSelection = () => {
         if (!showAccountSelection) return null;
         return (
-            <div className="mb-5 rounded-2xl border border-border/40 bg-muted/10 p-3 space-y-3">
-                <div className="flex items-center justify-between gap-3 px-1">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.18em]">{accountSelectionTitle}</span>
+            <div className="mb-2 rounded-xl border border-border/40 bg-muted/10 p-2 space-y-2">
+                <div className="flex items-center justify-between gap-2 px-1">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">{accountSelectionTitle}</span>
                     {selectedAccount && (
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">{selectedAccount.name}</span>
+                        <span className="text-[9px] text-muted-foreground truncate max-w-[140px]">{selectedAccount.name}</span>
                     )}
                 </div>
-                {accounts.length === 0 ? (
-                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                {eligibleAccounts.length === 0 ? (
+                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                         Bu ödeme yöntemi için uygun hesap bulunamadı.
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {accounts.map((account) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {eligibleAccounts.map((account) => {
                             const Icon = account.type === "CASH" ? Banknote : account.type === "BANK" ? Landmark : CreditCard;
                             const checked = selectedAccountId === account.id;
                             return (
                                 <button
                                     key={account.id}
                                     type="button"
-                                    onClick={() => setSelectedAccountId?.(account.id)}
+                                    onClick={() => {
+                                        setSelectedAccountId?.(account.id);
+                                        if (typeof window !== "undefined" && paymentMethod) {
+                                            localStorage.setItem(`pos_last_account_${paymentMethod}`, account.id);
+                                        }
+                                    }}
                                     className={cn(
-                                        "min-h-12 rounded-xl border px-3 py-2 flex items-center gap-3 text-left transition-all",
+                                        "min-h-9 rounded-lg border px-2.5 py-1.5 flex items-center gap-2 text-left transition-all",
                                         checked
-                                            ? "border-primary bg-primary/10 text-primary"
+                                            ? "border-primary bg-primary/10 text-primary font-bold"
                                             : "border-border/40 bg-background/60 text-muted-foreground hover:border-primary/30 hover:bg-muted/30"
                                     )}
                                 >
-                                    <Icon className="h-4 w-4 shrink-0" />
+                                    <Icon className="h-3.5 w-3.5 shrink-0" />
                                     <span className="min-w-0 flex-1">
-                                        <span className="block text-xs font-bold truncate">{account.name}</span>
-                                        <span className="block text-[9px] uppercase tracking-widest opacity-70">{account.type} • {account.currency || "TRY"}</span>
+                                        <span className="block text-[11px] font-bold truncate leading-tight">{account.name}</span>
+                                        <span className="block text-[8px] uppercase tracking-wider opacity-70 leading-none mt-0.5">
+                                            {account.type === "CASH" ? "NAKİT" : account.type === "BANK" ? "BANKA" : "KART"} 
+                                            {account.balance !== undefined ? ` • ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: defaultCurrency || 'TRY', maximumFractionDigits: 2 }).format(convertBalance(Number(account.balance), 'TRY'))}` : ` • ${defaultCurrency || "TRY"}`}
+                                        </span>
                                     </span>
-                                    {checked && <CheckCircle className="h-4 w-4 shrink-0" />}
+                                    {checked && <CheckCircle className="h-3.5 w-3.5 shrink-0 text-primary" />}
                                 </button>
                             );
                         })}
@@ -130,106 +172,107 @@ export const CheckoutSummary = ({
 
     if (isCompact) {
         return (
-            <div className="space-y-4 border-t border-border/40 bg-card p-4 shadow-[0_-20px_50px_rgba(0,0,0,0.03)] backdrop-blur-xl">
-                <div className="bg-muted/30 border-2 border-border/40 p-3 sm:p-5 rounded-[1.75rem] space-y-3">
+            <div className="space-y-2 border-t border-border/40 bg-card p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] backdrop-blur-xl">
+                <div className="bg-muted/30 border border-border/40 p-2.5 rounded-2xl space-y-2">
                     <button
                         onClick={() => setShowDetails(!showDetails)}
                         className="w-full flex items-center justify-between p-1 hover:bg-muted/50 rounded-xl transition-all duration-300 group"
                     >
-                        <div className="flex flex-col items-start gap-1">
-                            <span className="text-[10px] font-black text-foreground tracking-[0.1em] uppercase leading-none flex items-center gap-2">
+                        <div className="flex flex-col items-start gap-0.5">
+                            <span className="text-[9px] font-black text-foreground tracking-wider uppercase leading-none flex items-center gap-1.5">
                                 TOPLAM TUTAR
                                 <ChevronDown className={cn("h-3 w-3 transition-transform duration-300 text-primary", showDetails && "rotate-180")} />
                             </span>
-                            <span className="text-[9px] text-muted-foreground font-bold group-hover:text-primary transition-colors">
+                            <span className="text-[8px] text-muted-foreground font-bold group-hover:text-primary transition-colors">
                                 {showDetails ? "Detayları Gizle" : "Detayları Gör"}
                             </span>
                         </div>
                         <div className="flex flex-col items-end">
                             {loyaltyDiscountAmount > 0 && (
-                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black mb-1.5 px-3 py-1 rounded-lg">
+                                <Badge variant="destructive" className="bg-rose-500/10 text-rose-600 border-none text-[8px] font-black mb-1 px-2 py-0.5 rounded-md">
                                     - {currencySymbol}{formatCurrency(defaultCurrency === 'TRY' ? loyaltyDiscountAmount : loyaltyDiscountAmount / currentUsdRate)}
                                 </Badge>
                             )}
-                            <span className="text-4xl font-black text-blue-700 dark:text-blue-400 tabular-nums tracking-tighter leading-none transition-transform group-active:scale-95">
+                            <span className="text-2xl font-black text-blue-700 dark:text-blue-400 tabular-nums tracking-tighter leading-none transition-transform group-active:scale-95">
                                 {formattedTotal}
                             </span>
-                            <span className="text-[12px] font-bold text-muted-foreground italic mt-0.5">
-                                {formattedEquivalentTotal}
-                            </span>
+                            {formattedEquivalentTotal && (
+                                <span className="text-[10px] font-bold text-muted-foreground italic mt-0.5 leading-none">
+                                    {formattedEquivalentTotal}
+                                </span>
+                            )}
                         </div>
                     </button>
 
                     {/* Collapsible Details */}
                     <div className={cn(
-                        "space-y-3 overflow-hidden transition-all duration-300 ease-in-out border-t border-border/20 pt-3 mt-3",
+                        "space-y-2 overflow-hidden transition-all duration-300 ease-in-out border-t border-border/20 pt-2 mt-2",
                         showDetails ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
                     )}>
                         <div className="flex justify-between items-center px-1">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ARA TOPLAM</span>
-                            <span className="text-xs font-black text-foreground/70 tabular-nums">{formattedSubtotal}</span>
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">ARA TOPLAM</span>
+                            <span className="text-[11px] font-black text-foreground/70 tabular-nums">{formattedSubtotal}</span>
                         </div>
                         <div className="flex justify-between items-center px-1">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">KDV (%20)</span>
-                            <span className="text-xs font-black text-foreground/70 tabular-nums">{formattedTax}</span>
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">KDV (%20)</span>
+                            <span className="text-[11px] font-black text-foreground/70 tabular-nums">{formattedTax}</span>
                         </div>
                     </div>
                 </div>
 
                 {loyaltyEnabled && totalPoints > 0 && (
-                    <div className="p-4 rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/20 flex items-center justify-between group overflow-hidden relative">
-                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                        <div className="flex items-center gap-4 relative z-10">
-                            <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center text-white">
-                                <Sparkles className="h-6 w-6" />
+                    <div className="p-2.5 rounded-xl bg-blue-600 shadow-md flex items-center justify-between group overflow-hidden relative">
+                        <div className="flex items-center gap-3 relative z-10">
+                            <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center text-white">
+                                <Sparkles className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">SADAKAT PUANLARI</span>
-                                <span className="text-xs font-bold text-white tabular-nums">{totalPoints} Puan • ₺{formatCurrency(totalPoints * pointValueTl)}</span>
+                                <span className="text-[8px] font-black text-white/70 uppercase tracking-widest">SADAKAT PUANLARI</span>
+                                <span className="text-[11px] font-bold text-white tabular-nums">{totalPoints} Puan • ₺{formatCurrency(totalPoints * pointValueTl)}</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4 relative z-10">
+                        <div className="flex items-center gap-3 relative z-10">
                             <Checkbox
                                 checked={applyLoyaltyDiscount}
                                 onCheckedChange={(checked) => setApplyLoyaltyDiscount(!!checked)}
-                                className="h-7 w-7 rounded-lg border-2 border-white/50 data-[state=checked]:bg-white data-[state=checked]:text-blue-600"
+                                className="h-5 w-5 rounded-md border-2 border-white/50 data-[state=checked]:bg-white data-[state=checked]:text-blue-600"
                             />
                         </div>
                     </div>
                 )}
 
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 gap-2">
                     {paymentMethods.map((method) => (
                         <button
                             key={method.id}
                             onClick={() => setPaymentMethod(method.id)}
                             className={cn(
-                                "flex flex-col items-center justify-center gap-2 px-2 py-4 rounded-[1.25rem] border-2 transition-all duration-300 relative group overflow-hidden",
+                                "flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 rounded-xl border transition-all duration-300 relative group overflow-hidden",
                                 paymentMethod === method.id
-                                    ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20 -translate-y-1"
+                                    ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
                                     : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50 hover:border-border"
                             )}
                         >
-                            <method.icon className={cn("h-5 w-5", paymentMethod === method.id ? "text-white" : method.color)} />
-                            <span className="text-[8px] font-black tracking-widest uppercase">{method.label}</span>
+                            <method.icon className={cn("h-4 w-4", paymentMethod === method.id ? "text-white" : method.color)} />
+                            <span className="text-[8px] font-black tracking-wider uppercase">{method.label}</span>
                         </button>
                     ))}
                 </div>
 
                 {renderAccountSelection()}
 
-                <div className="flex gap-4 min-h-[72px]">
+                <div className="flex gap-2 min-h-[44px]">
                     <Button
                         disabled={isProcessing}
                         onClick={onCheckout}
                         className={cn(
-                            "flex-1 h-auto text-[13px] font-black tracking-widest rounded-[1.5rem] shadow-2xl transition-all gap-4 uppercase py-6",
+                            "flex-1 h-11 text-xs font-black tracking-wider rounded-xl shadow-lg transition-all gap-2 uppercase py-2",
                             isDebtBlocked
                                 ? "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20"
                                 : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/30 text-white"
                         )}
                     >
-                        {isDebtBlocked ? <AlertCircle className="h-6 w-6" /> : (isProcessing ? <Loader2 className="h-6 w-6 animate-spin" /> : <CheckCircle className="h-6 w-6" />)}
+                        {isDebtBlocked ? <AlertCircle className="h-4 w-4" /> : (isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />)}
                         {isDebtBlocked ? "Müşteri Seçilmelidir" : (isProcessing ? "İşleniyor..." : "Tamamla & Fiş Yazdır")}
                     </Button>
                 </div>
