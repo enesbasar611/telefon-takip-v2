@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getSession, getShopId } from "@/lib/auth";
 import { Role } from "@prisma/client";
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard";
@@ -10,6 +10,7 @@ import { getCategories } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { DashboardProvider } from "@/components/dashboard/dashboard-context";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +25,15 @@ export default async function DashboardPage() {
     const shopId = await getShopId(false);
 
     // Fetch essential data for hydration and initial render
-    const [initialStats, shop, categories, suppliers, staffData, staffOverview, settings] = await Promise.all([
+    const [initialStats, shop, categories, suppliers, staffData, staffOverview, settings, dbUser] = await Promise.all([
       getDashboardInit(shopId ?? undefined),
       getShop(),
       getCategories(),
       getSuppliers(),
       getEmployeeDashboardData(session.user.id),
       getDashboardStaffOverview(),
-      getSettings()
+      getSettings(),
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { dashboardLayout: true, role: true, id: true, name: true, email: true } })
     ]);
 
     // Hydrate query client for streaming widgets
@@ -46,7 +48,7 @@ export default async function DashboardPage() {
             <AdminDashboard
               stats={initialStats.stats}
               rates={initialStats.rates}
-              user={session.user}
+              user={{ ...session.user, ...dbUser }}
               shop={shop}
               categories={categories}
               suppliers={suppliers}

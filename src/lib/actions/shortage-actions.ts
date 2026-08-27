@@ -218,6 +218,21 @@ export async function getGlobalShortageList(dateStr?: string) {
       ]
     });
 
+    const unlinkedManualItems = manualItemsRaw.filter(i => !i.product && !i.returnTicket?.product && i.name);
+    if (unlinkedManualItems.length > 0) {
+      const names = Array.from(new Set(unlinkedManualItems.map(i => i.name.trim())));
+      const matchedProducts = await prisma.product.findMany({
+        where: { shopId, name: { in: names, mode: 'insensitive' } }
+      });
+      const productMap = new Map(matchedProducts.map(p => [p.name.toLowerCase().trim(), p]));
+      for (const item of manualItemsRaw) {
+        if (!item.product && !item.returnTicket?.product && item.name) {
+          const matched = productMap.get(item.name.toLowerCase().trim());
+          if (matched) (item as any).product = matched;
+        }
+      }
+    }
+
     const manualItems = manualItemsRaw.map((item: any) => ({
       ...item,
       isDeadStock: !!item.product?.hideFromShortage
@@ -581,6 +596,27 @@ export async function getCourierTasks(dateStr?: string) {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    const unlinkedItems = items.filter(i => !i.product && !i.returnTicket?.product && i.name);
+    if (unlinkedItems.length > 0) {
+      const names = Array.from(new Set(unlinkedItems.map(i => i.name.trim())));
+      const matchedProducts = await prisma.product.findMany({
+        where: {
+          shopId,
+          name: { in: names, mode: 'insensitive' }
+        }
+      });
+      const productMap = new Map(matchedProducts.map(p => [p.name.toLowerCase().trim(), p]));
+      for (const item of items) {
+        if (!item.product && !item.returnTicket?.product && item.name) {
+          const matched = productMap.get(item.name.toLowerCase().trim());
+          if (matched) {
+            (item as any).product = matched;
+          }
+        }
+      }
+    }
+
     return { success: true, items: serializePrisma(withCourierPriority(items)) };
   } catch (error) {
     console.error("getCourierTasks error:", error);
@@ -606,13 +642,22 @@ export async function addShortageItems(items: Array<{
     const results = [];
     let duplicateCount = 0;
     for (const data of items) {
+      let productId = data.productId;
+      if (!productId && data.name) {
+        const matched = await prisma.product.findFirst({
+          where: { shopId, name: { equals: data.name.trim(), mode: 'insensitive' } },
+          select: { id: true }
+        });
+        if (matched) productId = matched.id;
+      }
+
       // Check if an unresolved item with same productId or name AND same requester already exists
       const existing = await prisma.shortageItem.findFirst({
         where: {
           shopId,
           isResolved: false,
           name: { equals: data.name, mode: 'insensitive' as const },
-          productId: data.productId || undefined,
+          productId: productId || undefined,
           customerId: data.customerId || null,
           requesterName: data.requesterName || null,
           requesterPhone: data.requesterPhone || null,
@@ -631,7 +676,7 @@ export async function addShortageItems(items: Array<{
       } else {
         await prisma.shortageItem.create({
           data: {
-            productId: data.productId,
+            productId: productId,
             name: data.name,
             quantity: data.quantity,
             notes: data.notes,

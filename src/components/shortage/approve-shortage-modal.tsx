@@ -290,24 +290,50 @@ export function ApproveShortageModal({
         setSelectedMode(null);
     };
 
+    const currentStock = useMemo(() => {
+        const stock = product?.stock ?? product?.returnTicket?.product?.stock ?? product?.stock;
+        if (typeof stock === "number") return stock;
+        return null;
+    }, [product]);
+
     return (
         <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if (!val) reset(); }}>
-            <DialogContent className="sm:max-w-[620px] bg-background border-none rounded-[2rem] shadow-2xl p-0 overflow-hidden">
-                <DialogHeader className="p-8 pb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                            <ArrowUpCircle className="h-6 w-6 text-emerald-500" />
+            <DialogContent className="w-[95vw] sm:max-w-[620px] max-h-[88vh] bg-background border border-zinc-200 dark:border-white/10 rounded-[2.5rem] shadow-2xl p-0 flex flex-col overflow-hidden">
+                <DialogHeader className="p-6 sm:p-8 pb-4 shrink-0 border-b border-zinc-100 dark:border-white/5">
+                    <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
+                                <ArrowUpCircle className="h-6 w-6 text-emerald-500" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-xl font-black uppercase tracking-tight">Stok Onayı</DialogTitle>
+                                <DialogDescription className="text-xs font-bold uppercase text-muted-foreground mt-0.5">
+                                    {itemName} • {stockQuantity} ADET
+                                </DialogDescription>
+                            </div>
                         </div>
-                        <div>
-                            <DialogTitle className="text-xl font-black uppercase tracking-tight">Stok Onayi</DialogTitle>
-                            <DialogDescription className="text-[10px] font-bold uppercase text-muted-foreground mt-0.5">
-                                {itemName} - {stockQuantity} adet
-                            </DialogDescription>
-                        </div>
+                        {currentStock !== null ? (
+                            <span className={cn(
+                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border shadow-sm shrink-0",
+                                currentStock <= 0
+                                    ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                                    : currentStock <= (product?.criticalStock ?? 0)
+                                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                            )}>
+                                <Package className="w-4 h-4 opacity-80" />
+                                Mevcut Stok: {currentStock}
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border border-zinc-500/20 bg-zinc-500/10 text-zinc-400 shrink-0">
+                                <Package className="w-4 h-4 opacity-60" />
+                                Mevcut Stok: -
+                            </span>
+                        )}
                     </div>
                 </DialogHeader>
 
-                <div className="px-8 pb-8 space-y-6">
+                <div className="p-6 sm:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
                     <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-start gap-3">
                         <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
                             <Info className="h-4 w-4 text-blue-500" />

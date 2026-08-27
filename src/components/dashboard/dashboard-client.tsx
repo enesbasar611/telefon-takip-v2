@@ -166,9 +166,9 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, sho
     const gridStyle: React.CSSProperties = {
         display: "grid",
         gridTemplateColumns: isMobile ? "repeat(1, minmax(0, 1fr))" : "repeat(24, minmax(0, 1fr))",
-        gridAutoRows: isMobile ? "auto" : "minmax(140px, auto)", // Slightly smaller base row, allow expansion
-        gridAutoFlow: "dense",
-        gap: isMobile ? "1rem" : "1.25rem", // Reduced gap
+        gridAutoRows: isMobile ? "auto" : "minmax(120px, auto)", // Tighter base row height
+        gridAutoFlow: "row dense", // Use row dense to fill empty spaces aggressively
+        gap: isMobile ? "0.5rem" : "0.75rem", // Extremely reduced gap to fix visual empty spaces
     };
 
     return (

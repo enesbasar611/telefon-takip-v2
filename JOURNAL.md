@@ -2,14 +2,12 @@
 
 ## Genel Proje Durumu
 
-- Tarih: 2026-06-09
-- Mimari durum: Proje V2 mimarisinde ilerliyor. EDM BiliÅŸim e-Fatura REST API tam entegrasyonu (Faz 1-6) tamamlandi ve commitlendi.
-- Graphify durumu: `graphify-out/GRAPH_REPORT.md` guncel kabul ediliyor. Rapor `84c324a2` commitinden uretilmis; mevcut HEAD `83ff6703`.
-- Graphify ozeti: 453 dosya, 2056 node, 7225 edge, 156 community. En kritik ortak baglanti noktalarindan bazilari `getShopId()`, `cn()`, `Button`. EDM ile ilgili onemli topluluklar: Community 11 (fatura XML builder, EDM tipleri), Community 13 (ayarlar/settings), Community 46 (cron, server), Community 55 (fatura HTML/PDF uretimi), Community 69 (middleware/auth), Community 75 (Prisma), Community 93 (UI context), Community 94 (JWT/Session/User).
-- Rapor sonrasi temizlik: 13 dead-code dosyasi temizlendi; buna ek olarak daha once 3 temp/debug dosyasi silindi.
-- Tip durumu: `npx tsc --noEmit` son kontrolde basarili calisti. `npm run build` basarili.
-- Calisma agaci notu: EDM entegrasyonu, POS tip guvenligi ve customer-debt-panel imza guncellemesi commitlendi (`83ff6703`).
-- POS Compact Senkronizasyonu: POS Compact (mobil) terminali, ana POSInterface ile finansal mantık, para birimi çevrimi ve sadakat puanı hesaplamaları açısından %100 senkronize edildi. Toplam tutar gösterimi dinamik ve detaylı (KDV/Ara Toplam) hale getirildi.
+- Tarih: 2026-08-27
+- Mimari durum: Proje V2 mimarisinde ilerliyor. EDM Bilişim e-Fatura REST API tam entegrasyonu, POS senkronizasyonu, personel finansı ve veresiye alacak hızlı aksiyonları aktif.
+- Graphify durumu: `graphify-out/GRAPH_REPORT.md` güncellendi. Rapor `48e1a99b` commitinden üretildi.
+- Graphify ozeti: 519 dosya, 2918 node, 9790 edge, 205 community. En kritik ortak bağlantı noktaları `getShopId()`, `cn()`, `Button`, `prisma`.
+- Tip durumu: `npx tsc --noEmit` son kontrolde basarili calisti.
+- Calisma agaci notu: Graphify raporu ve veresiye alacak hızlı ekleme modal buton entegrasyonları senkronize edildi (`48e1a99b`).
 
 ## To-Do List (Backlog)
 
@@ -501,3 +499,30 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
         - `npx prisma migrate status`: `Database schema is up to date!`.
         - `npx tsc --noEmit`: Basarili.
         - `npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' tests/staff-finance-calculations.test.ts`: Basarili.
+
+- [x] 2026-08-27: Graphify rapor güncellemesi ve Alacak Ekleme Hızlı Aksiyon Entegrasyonu:
+    - **Dosyalar**: `graphify-out/GRAPH_REPORT.md`, `graphify-out/graph.json`, `graphify-out/graph.html`, `graphify-out/manifest.json`, `JOURNAL.md`, `src/components/dashboard/receivables-client.tsx`, `src/components/finance/add-debt-modal.tsx`, `src/lib/actions/staff-actions.ts`.
+    - **Neden**: `graphify update .` çalıştırılarak kod haritası güncel commit (`48e1a99b`) ile senkronize edildi (519 dosya, 2918 node, 9790 edge, 205 topluluk). Dashboard üzerindeki "Alacaklarım" kartında hızlı veresiye borç ekleme modal aksiyonu entegre edildi ve yetkilendirme layout aksiyonu güncellendi.
+    - **Dogrulama**:
+        - `graphify update .`: Başarıyla tamamlandı, graphify-out raporları güncellendi.
+        - `npx tsc --noEmit`: Tip kontrolü sorunsuz ve 0 hatayla tamamlandı.
+
+- [x] 2026-08-27: Kurye Sipariş Kartlarında Ürün Yanında Mevcut Stok Gösterimi:
+    - **Dosyalar**: `src/components/courier/courier-dashboard-client.tsx`, `src/lib/actions/shortage-actions.ts`.
+    - **Neden**: Kurye ekranındaki sipariş listesinde ürün isimlerinin yanında dükkandaki anlık stok miktarının ("Mevcut Stok: X") görünmesi istendi.
+    - **Yapılanlar**:
+        - `shortage-actions.ts` içerisinde `getCourierTasks`, `getGlobalShortageList` ve `addShortageItems` fonksiyonlarına serbest metinli veya eşleşmemiş eksik ürün kaydı oluşturulsa dahi ürün isminden mağaza stoğunu otomatik bağlayan akıl entegre edildi.
+        - `courier-dashboard-client.tsx` içerisine `getItemCurrentStock` yardımcı fonksiyonu eklendi.
+        - Hem kurye görev kartlarında hem de Atanmamış Eksikler listesinde sipariş başlığının hemen yanında stok durumuna göre dinamik renkli (0 ise kırmızı, kritik stok altında ise turuncu, yeterli ise yeşil) **`Mevcut Stok: X`** rozetleri yerleştirildi.
+- [x] 2026-08-27: Stok Onayı Modalı Boyut Düzeltmesi ve Mevcut Stok Gösterimi:
+    - **Dosyalar**: `src/components/shortage/approve-shortage-modal.tsx`, `src/components/courier/courier-dashboard-client.tsx`.
+    - **Neden**: "Stok Onayı" modalının dikeyde dikey dikey ekranı kaplaması/dışarı taşması hatası düzeltildi ve başlık alanına ürünün dükkan stok miktarının ("Mevcut Stok: X") eklenmesi sağlandı.
+    - **Yapılanlar**:
+        - `approve-shortage-modal.tsx` içerisinde `DialogContent` yüksekliği `max-h-[88vh]` ile sınırlandırıldı, form gövdesine `flex-1 overflow-y-auto custom-scrollbar` verilerek içeriğin modal içerisinde şık bir şekilde kayması sağlandı.
+        - Header alanına ürünün anlık stok miktarını gösteren dinamik renkli **`Mevcut Stok: X`** rozeti eklendi.
+    - **Dogrulama**:
+        - `npx tsc --noEmit`: Tip kontrolü 0 hata ile tamamlandı.
+        - `graphify update .`: Kod haritası güncellendi.
+
+
+

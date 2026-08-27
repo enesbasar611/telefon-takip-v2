@@ -367,10 +367,16 @@ export async function updatePassword(data: any) {
 export async function updateDashboardLayout(l: any) {
     try {
         const uid = await getUserId();
-        await prisma.$executeRaw`UPDATE "User" SET "dashboardLayout" = ${JSON.stringify(l)}::jsonb WHERE "id" = ${uid}`;
-        revalidatePath("/");
+        await prisma.user.update({
+            where: { id: uid },
+            data: { dashboardLayout: l }
+        });
+        revalidatePath("/", "layout");
         return { success: true };
-    } catch (error) { return { success: false }; }
+    } catch (error) { 
+        console.error("Layout update error:", error);
+        return { success: false }; 
+    }
 }
 
 export async function assignLeave(d: any) {

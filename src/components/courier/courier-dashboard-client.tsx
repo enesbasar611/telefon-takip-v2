@@ -140,6 +140,12 @@ const cleanCourierNote = (notes?: string | null) =>
 const getCourierItemDisplayName = (item: any) =>
     String(item?.name || item?.product?.name || item?.returnTicket?.product?.name || "Isimsiz urun").trim();
 
+const getItemCurrentStock = (item: any): number | null => {
+    const stock = item?.product?.stock ?? item?.returnTicket?.product?.stock ?? item?.stock;
+    if (typeof stock === "number") return stock;
+    return null;
+};
+
 export function CourierDashboardClient({
     initialItems = EMPTY_ARRAY,
     initialAllShortages = EMPTY_ARRAY,
@@ -1231,12 +1237,32 @@ export function CourierDashboardClient({
                                                                         </Badge>
                                                                     </div>
                                                                 )}
-                                                                <h4 className={cn(
-                                                                    "font-black text-sm tracking-tight leading-snug mb-2 uppercase line-clamp-2 break-words",
-                                                                    item.isTaken ? "text-muted-foreground line-through opacity-40" : "text-zinc-900 dark:text-zinc-100"
-                                                                )}>
-                                                                    {getCourierItemDisplayName(item)}
-                                                                </h4>
+                                                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                                                    <h4 className={cn(
+                                                                        "font-black text-sm tracking-tight leading-snug uppercase break-words",
+                                                                        item.isTaken ? "text-muted-foreground line-through opacity-40" : "text-zinc-900 dark:text-zinc-100"
+                                                                    )}>
+                                                                        {getCourierItemDisplayName(item)}
+                                                                    </h4>
+                                                                    {getItemCurrentStock(item) !== null ? (
+                                                                        <span className={cn(
+                                                                            "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border shrink-0",
+                                                                            (getItemCurrentStock(item) ?? 0) <= 0
+                                                                                ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                                                                                : (getItemCurrentStock(item) ?? 0) <= (item.product?.criticalStock ?? 0)
+                                                                                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                                                                    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                                                        )}>
+                                                                            <Package className="w-3 h-3 opacity-80" />
+                                                                            Mevcut Stok: {getItemCurrentStock(item)}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-zinc-500/20 bg-zinc-500/10 text-zinc-400 shrink-0">
+                                                                            <Package className="w-3 h-3 opacity-60" />
+                                                                            Mevcut Stok: -
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                                 <div className="flex flex-wrap items-center gap-2">
                                                                     {item.isNotFound && (
                                                                         <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-[8px] px-2 py-0.5 font-black">
@@ -1568,15 +1594,33 @@ export function CourierDashboardClient({
                                                 </div>
                                             )}
                                             <div className="flex-1 min-w-0 pr-4">
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className={cn(
-                                                        "text-sm font-black uppercase truncate",
-                                                        s.isDeadStock ? "text-zinc-500" : s.isAlert ? "text-red-500" : "text-foreground group-hover/item:text-orange-600"
-                                                    )}>
-                                                        {s.name}
-                                                    </h4>
-                                                    {s.isDeadStock ? <AlertCircle className="w-3 h-3 text-zinc-500" /> : s.isAlert && <AlertTriangle className="w-3 h-3 text-red-500" />}
-                                                </div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                     <h4 className={cn(
+                                                         "text-sm font-black uppercase truncate",
+                                                         s.isDeadStock ? "text-zinc-500" : s.isAlert ? "text-red-500" : "text-foreground group-hover/item:text-orange-600"
+                                                     )}>
+                                                         {s.name}
+                                                     </h4>
+                                                     {getItemCurrentStock(s) !== null ? (
+                                                         <span className={cn(
+                                                             "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border shrink-0",
+                                                             (getItemCurrentStock(s) ?? 0) <= 0
+                                                                 ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                                                                 : (getItemCurrentStock(s) ?? 0) <= (s.product?.criticalStock ?? 0)
+                                                                     ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                                                     : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                                         )}>
+                                                             <Package className="w-3 h-3 opacity-80" />
+                                                             Mevcut Stok: {getItemCurrentStock(s)}
+                                                         </span>
+                                                     ) : (
+                                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-zinc-500/20 bg-zinc-500/10 text-zinc-400 shrink-0">
+                                                             <Package className="w-3 h-3 opacity-60" />
+                                                             Mevcut Stok: -
+                                                         </span>
+                                                     )}
+                                                     {s.isDeadStock ? <AlertCircle className="w-3 h-3 text-zinc-500" /> : s.isAlert && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                                                 </div>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <Badge className={cn(
                                                         "px-2 py-0.5 text-[8px] font-black",
@@ -1864,7 +1908,7 @@ export function CourierDashboardClient({
                 requesterName={approvingItem?.customer?.name || approvingItem?.requesterName || ""}
                 isCustomer={!!approvingItem?.customerId}
                 productId={approvingItem?.productId}
-                product={approvingItem?.product}
+                product={approvingItem?.product || approvingItem?.returnTicket?.product || approvingItem}
                 categories={categories}
                 suppliers={suppliers}
                 initialSupplierId={approvingItem?.supplierId || ""}

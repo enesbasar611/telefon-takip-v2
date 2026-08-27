@@ -44,6 +44,7 @@ import { ServiceQueueStream } from "@/components/dashboard/streamed/service-queu
 import { TopProductsStream } from "@/components/dashboard/streamed/top-products-stream";
 import { ShortageStatusCard } from "@/components/dashboard/widgets/shortage-status-card";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { ReceivablesStream } from "@/components/dashboard/streamed/receivables-stream";
 
 interface AdminDashboardProps {
     stats: any;
@@ -187,6 +188,7 @@ export function AdminDashboard({
         service_queue: <ServiceQueueStream title="Servis Kuyruğu" />,
         inventory: <TopProductsStream shopId={shopId || ""} />,
         shortage_status: <ShortageStatusCard />,
+        receivables: <ReceivablesStream shopId={shopId || ""} />,
     };
 
     const initialLayout = user?.dashboardLayout || [];

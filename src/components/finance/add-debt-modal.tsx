@@ -44,6 +44,8 @@ interface AddDebtModalProps {
         phone: string;
     } | null;
     onSuccess?: () => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
 interface DebtDraftItem {
@@ -56,8 +58,11 @@ interface DebtDraftItem {
     quantity?: number;
 }
 
-export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDebtModalProps) {
-    const [open, setOpen] = useState(false);
+export function AddDebtModal({ children, rates, initialData, onSuccess, open: externalOpen, onOpenChange }: AddDebtModalProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = externalOpen !== undefined ? externalOpen : internalOpen;
+    const setOpen = onOpenChange || setInternalOpen;
+
     const [isPending, startTransition] = useTransition();
     const [phoneValue, setPhoneValue] = useState("");
     const [nameValue, setNameValue] = useState("");
@@ -415,14 +420,16 @@ export function AddDebtModal({ children, rates, initialData, onSuccess }: AddDeb
                     reset();
                 }
             }}>
-                <DialogTrigger asChild>
-                    {children || (
-                        <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-6 h-12 shadow-xl border border-white/10 transition-all active:scale-95 group">
-                            <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                            <span className="font-inter font-light tracking-wide">Alacak Kaydet</span>
-                        </Button>
-                    )}
-                </DialogTrigger>
+                {externalOpen === undefined && (
+                    <DialogTrigger asChild>
+                        {children || (
+                            <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-6 h-12 shadow-xl border border-white/10 transition-all active:scale-95 group">
+                                <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                                <span className="font-inter font-light tracking-wide">Alacak Kaydet</span>
+                            </Button>
+                        )}
+                    </DialogTrigger>
+                )}
 
                 <DialogContent className="fixed w-full max-w-[95vw] md:max-w-[800px] h-[96vh] md:h-auto md:max-h-[90vh] bg-background border-none p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 md:rounded-[2.5rem] rounded-t-[2.5rem] rounded-b-none sm:rounded-b-[2.5rem] shadow-2xl flex flex-col transition-all duration-300">
                     <div className="absolute inset-0 p-[2px] rounded-[inherit] overflow-hidden pointer-events-none z-0">

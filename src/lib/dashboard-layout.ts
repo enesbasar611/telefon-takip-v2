@@ -19,20 +19,20 @@ export const SYSTEM_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
   { id: "stat_debts", cols: 6, rows: 1 },
 
   // ROW 3: Main Analytics & Overview
-  { id: "revenue", cols: 16, rows: 4 },
-  { id: "service_status", cols: 8, rows: 4 },
+  { id: "revenue", cols: 16, rows: 3 },
+  { id: "service_status", cols: 8, rows: 2 },
 
   // ROW 4: Insights & Activity
-  { id: "ai_insights", cols: 10, rows: 4 },
-  { id: "activity", cols: 14, rows: 4 },
+  { id: "ai_insights", cols: 10, rows: 2 },
+  { id: "activity", cols: 14, rows: 3 },
 
   // ROW 5: Detailed Lists
-  { id: "service_queue", cols: 12, rows: 5 },
-  { id: "transactions", cols: 12, rows: 5 },
+  { id: "service_queue", cols: 12, rows: 3 },
+  { id: "transactions", cols: 12, rows: 3 },
 
   // ROW 6: Inventory & Receivables
-  { id: "inventory", cols: 10, rows: 5 },
-  { id: "receivables", cols: 14, rows: 5 },
+  { id: "inventory", cols: 10, rows: 3 },
+  { id: "receivables", cols: 14, rows: 3 },
 
   // Extra Widgets (Courier Status)
   { id: "shortage_status", cols: 24, rows: 2 },

@@ -6,7 +6,7 @@ import {
     Banknote, Users, Settings, LucideIcon, ExternalLink,
     Archive, Database, ChevronDown, Zap, LayoutGrid,
     Sparkles, GripVertical, Trash2, Edit3, Save, CheckCircle2,
-    TrendingUp, TrendingDown, Wallet, UserPlus, Receipt
+    TrendingUp, TrendingDown, Wallet, UserPlus, Receipt, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -20,6 +20,7 @@ import { CreateProductModal } from "@/components/product/create-product-modal";
 import { CreateServiceModal } from "@/components/service/create-service-modal";
 import { CreateCustomerModal } from "@/components/customer/create-customer-modal";
 import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
+import { AddDebtModal } from "@/components/finance/add-debt-modal";
 
 interface Shortcut {
     id: string;
@@ -67,7 +68,7 @@ const ACTION_POOL: Record<string, ActionItem[]> = {
 const iconMap: Record<string, LucideIcon> = {
     ShoppingCart, Package, Wrench, Smartphone, Banknote, Users,
     Settings, Plus, Archive, Database, LayoutGrid, Sparkles,
-    TrendingUp, TrendingDown, Wallet, UserPlus, Receipt
+    TrendingUp, TrendingDown, Wallet, UserPlus, Receipt, FileText
 };
 
 interface QuickShortcutsProps {

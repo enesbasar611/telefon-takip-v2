@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { useUI } from "@/lib/context/ui-context";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Plus } from "lucide-react";
 import { DebtReceiptModal } from "@/components/finance/debt-receipt-modal";
+import { AddDebtModal } from "@/components/finance/add-debt-modal";
 
 interface Debt {
     id: string;
@@ -50,6 +51,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
     const [searchTerm, setSearchTerm] = useState("");
     const [showSearch, setShowSearch] = useState(false);
     const [receiptOpen, setReceiptOpen] = useState(false);
+    const [addDebtOpen, setAddDebtOpen] = useState(false);
     const [visibleCustomerLimit, setVisibleCustomerLimit] = useState(5);
 
     // WhatsApp Modal States
@@ -193,6 +195,15 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                                 title="WhatsApp'tan Hatırlat"
                             >
                                 <MessageCircle className="h-5 w-5" />
+                            </button>
+                        )}
+                        {!selectedCustomerId && (
+                            <button
+                                onClick={() => setAddDebtOpen(true)}
+                                className="h-10 w-10 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all shadow-sm"
+                                title="Yeni Veresiye Ekle"
+                            >
+                                <Plus className="h-5 w-5" />
                             </button>
                         )}
                         {!selectedCustomerId && (
@@ -375,6 +386,12 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                     shopPhone={shopPhone}
                 />
             )}
+
+            <AddDebtModal
+                open={addDebtOpen}
+                onOpenChange={setAddDebtOpen}
+                onSuccess={() => setAddDebtOpen(false)}
+            />
         </>
     );
 }
