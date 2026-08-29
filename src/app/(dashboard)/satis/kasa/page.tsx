@@ -8,6 +8,7 @@ import { CreateTransactionModal } from "@/components/finance/create-transaction-
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import { getDailySummary, getTransactions, getDailySession } from "@/lib/actions/finance-actions";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
