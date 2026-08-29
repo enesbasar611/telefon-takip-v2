@@ -11,6 +11,7 @@ import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { DashboardProvider } from "@/components/dashboard/dashboard-context";
 import { Metadata } from "next";
 import prisma from "@/lib/prisma";
+import { QueryClient, dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 export const metadata: Metadata = {
   title: "Kontrol Paneli | Başar Teknik",
