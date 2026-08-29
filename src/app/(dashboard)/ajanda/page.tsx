@@ -2,11 +2,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AjandaPageClient } from "@/components/agenda/ajanda-page-client";
 import { Suspense } from "react";
 import { Calendar } from "lucide-react";
+import { Metadata } from "next";
 
-export const metadata = {
-    title: 'Randevu Merkezi | Başar Teknik',
+export const metadata: Metadata = {
+    title: 'Ajanda & Randevular | Başar Teknik',
     description: 'Merkezi Operasyonel Takvim',
-}
+};
 
 export const dynamic = "force-dynamic";
 

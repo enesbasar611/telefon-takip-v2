@@ -1,6 +1,12 @@
 import { Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Cihaz Listesi | Başar Teknik",
+  description: "Kayıtlı cihazlar, garanti takibi ve satış yönetimi.",
+};
 import { getDeviceList, getExpiringDevices } from "@/lib/actions/device-hub-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { Skeleton } from "@/components/ui/skeleton";

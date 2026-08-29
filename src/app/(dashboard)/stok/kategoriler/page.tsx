@@ -8,7 +8,7 @@ import { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
-    title: "Kategori Yönetimi | Stok Takip",
+    title: "Kategori Yönetimi | Başar Teknik",
     description: "Ürün ağacınızı ve kategorilerinizi yönetin.",
 };
 

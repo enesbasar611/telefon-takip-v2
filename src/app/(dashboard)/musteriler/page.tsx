@@ -1,6 +1,13 @@
 import { getCustomersPaginated } from "@/lib/actions/customer-actions";
 import { CustomerListClient } from "@/components/customer/customer-list-client";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+   title: "Müşteriler | Başar Teknik",
+   description: "Müşteri listesi, iletişim ve cari hesap yönetimi.",
+};
+
 export const dynamic = 'force-dynamic';
 
 interface Props {

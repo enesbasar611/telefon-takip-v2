@@ -2,6 +2,13 @@ import { POSInterface } from "@/components/pos/pos-interface";
 import { ShoppingCart, WifiOff, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Hızlı Satış / POS | Başar Teknik",
+  description: "Anlık perakende satış, barkodlu okutma ve kassa yönetimi.",
+};
+
 export const dynamic = 'force-dynamic';
 
 function POSData({ searchParams }: { searchParams: { saleId?: string } }) {

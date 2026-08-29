@@ -1,6 +1,12 @@
 import { ShoppingBasket } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { SupplierOrderListsPanel } from "@/components/supplier/supplier-order-lists-panel";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Tedarikçi Siparişleri | Başar Teknik",
+    description: "Tedarikçi sipariş listeleri ve eksik stok takibi.",
+};
 
 export default function SupplierOrdersPage() {
     return (

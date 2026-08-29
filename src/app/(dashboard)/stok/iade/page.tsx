@@ -5,8 +5,10 @@ import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { ReturnsClient } from "@/components/stock/returns-client";
 import { Loader2, PackageX } from "lucide-react";
 
-export const metadata = {
-    title: "İade & Hasarlı Ürün Takibi | Başar AI",
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "İade Yönetimi | Başar Teknik",
     description: "Müşteri ve tedarikçi iadelerini, hasarlı ürünleri takip edin.",
 };
 

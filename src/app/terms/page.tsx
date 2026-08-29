@@ -1,6 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Gavel, Users, AlertCircle, CheckCircle } from 'lucide-react';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: "Kullanım Koşulları | Başar Teknik",
+    description: "Başar Teknik kullanım koşulları ve hizmet sözleşmesi.",
+};
 
 export default function TermsOfServicePage() {
     const lastUpdated = "8 Mayıs 2026";

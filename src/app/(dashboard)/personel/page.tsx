@@ -3,6 +3,13 @@ import { getSession, getShopId } from "@/lib/auth";
 import { getSettings } from "@/lib/actions/setting-actions";
 import { getDashboardInit } from "@/lib/actions/dashboard-actions";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Personel Yönetimi | Başar Teknik",
+  description: "Personel maaş, prim, avans ve performans takibi.",
+};
+
 export const dynamic = 'force-dynamic';
 
 export default async function PersonelPage() {

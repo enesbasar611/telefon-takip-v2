@@ -41,7 +41,22 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency } from "@/lib/utils";
 
+import { Metadata } from "next";
+
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+    const customer = await getCustomerById(params.id);
+    if (!customer) {
+        return {
+            title: "Müşteri Detay | Başar Teknik",
+        };
+    }
+    return {
+        title: `Müşteri: ${customer.name} | Başar Teknik`,
+        description: `${customer.name} müşteri detayları, servis ve satış geçmişi.`,
+    };
+}
 
 const statusLabels: Record<string, string> = {
     PENDING: "Beklemede",

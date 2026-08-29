@@ -2,6 +2,13 @@ import { Suspense } from "react";
 import { TedarikcilerPageClient } from "@/components/supplier/tedarikciler-page-client";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Tedarikçiler | Başar Teknik",
+  description: "Tedarikçi listesi, toptancı borçları ve malzeme alımları.",
+};
+
 export const dynamic = 'force-dynamic';
 
 function TedarikcilerSkeleton() {

@@ -1,6 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Shield, Lock, Eye, Server, RefreshCw } from 'lucide-react';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: "Gizlilik Politikası | Başar Teknik",
+    description: "Başar Teknik gizlilik politikası ve kişisel verilerin korunması bilgilendirmesi.",
+};
 
 export default function PrivacyPolicyPage() {
     const lastUpdated = "8 Mayıs 2026";

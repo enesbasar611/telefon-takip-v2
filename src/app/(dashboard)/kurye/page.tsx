@@ -11,6 +11,13 @@ import { getCategories } from "@/lib/actions/product-actions";
 import { getCouriers } from "@/lib/actions/shortage-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Kurye Operasyonları | Başar Teknik",
+  description: "Eksik parçalar, kurye görevleri ve teslimat yönetimi.",
+};
+
 export const dynamic = 'force-dynamic';
 
 interface CourierPageProps {

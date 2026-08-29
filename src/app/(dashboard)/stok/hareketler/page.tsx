@@ -2,6 +2,13 @@ import { getInventoryStats, getCriticalProducts, getAllInventoryMovements } from
 import { StockMovementsClient } from "@/components/stok/stock-movements-client";
 import { QueryClient, HydrationBoundary, dehydrate } from "@tanstack/react-query";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Stok Hareketleri | Başar Teknik",
+    description: "Giriş-çıkış logları, kritik stok seviyeleri ve hareket geçmişi.",
+};
+
 export const dynamic = 'force-dynamic';
 
 export default async function StokHareketleriPage({ searchParams }: { searchParams: { page?: string, search?: string } }) {

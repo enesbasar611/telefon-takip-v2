@@ -11,7 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/page-header";
 import { getShop } from "@/lib/actions/setting-actions";
 import { SmartReplenishmentPanel } from "@/components/supplier/smart-replenishment-panel";
-import { SupplierOrderListsPanel } from "@/components/supplier/supplier-order-lists-panel";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Stok & Ürün Yönetimi | Başar Teknik",
+  description: "Stok takibi, ürün envanteri ve fiyat yönetimi.",
+};
 
 function TableSkeleton() {
   return (

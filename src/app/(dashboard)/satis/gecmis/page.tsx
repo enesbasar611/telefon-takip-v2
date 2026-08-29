@@ -2,6 +2,13 @@ import { getSalesHistoryReport, getUnifiedHistory, type HistoryDateRange } from 
 import { SalesHistoryClient } from "@/components/satis/sales-history-client";
 import { endOfDay, startOfMonth } from "date-fns";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Satış Geçmişi | Başar Teknik",
+  description: "Geçmiş satış kayıtları, faturalar ve işlem detayları.",
+};
+
 export const dynamic = 'force-dynamic';
 
 export default async function SalesHistoryPage({

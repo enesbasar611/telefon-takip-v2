@@ -9,8 +9,13 @@ import { getShop, getSettings } from "@/lib/actions/setting-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { DashboardProvider } from "@/components/dashboard/dashboard-context";
-import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
+import { Metadata } from "next";
 import prisma from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: "Kontrol Paneli | Başar Teknik",
+  description: "Dükkan özet göstergeleri, finans, servis ve stok durumu.",
+};
 
 export const dynamic = "force-dynamic";
 

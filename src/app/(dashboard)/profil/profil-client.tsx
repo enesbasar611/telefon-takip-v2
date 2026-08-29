@@ -1,0 +1,696 @@
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { getProfile, getStaffPerformance, updateProfile, updatePassword } from "@/lib/actions/staff-actions";
+import { updateShop } from "@/lib/actions/setting-actions";
+import { User, Mail, Phone, Calendar, Briefcase, MapPin, Building2, TrendingUp, CheckCircle2, History, Loader2, ExternalLink, Settings, ShieldCheck, Camera, Save, X, Lock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
+export function ProfileClient() {
+    const router = useRouter();
+    const { data: session, update } = useSession();
+    const [profile, setProfile] = useState<any>(null);
+    const [performance, setPerformance] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const shopLogoInputRef = useRef<HTMLInputElement>(null);
+
+
+    // Edit Form State
+    const [editData, setEditData] = useState({
+        name: "",
+        surname: "",
+        phone: "",
+        image: "",
+        // Shop data
+        companyName: "",
+        taxNumber: "",
+        taxOffice: "",
+        address: "",
+        website: "",
+        logoUrl: "",
+        companyCity: "",
+        companyDistrict: "",
+        shopPhone: "",
+        shopEmail: "",
+    });
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Password State
+    const [pwdData, setPwdData] = useState({ old: "", new: "", confirm: "" });
+    const [isPwdModalOpen, setIsPwdModalOpen] = useState(false);
+
+    const loadData = async () => {
+        try {
+            const p = await getProfile();
+            setProfile(p);
+            if (p) {
+                setEditData({
+                    name: p.name || "",
+                    surname: p.surname || "",
+                    phone: p.phone || "",
+                    image: p.image || "",
+                    companyName: p.shop?.companyName || "",
+                    taxNumber: p.shop?.taxNumber || "",
+                    taxOffice: p.shop?.taxOffice || "",
+                    address: p.shop?.address || "",
+                    website: p.shop?.website || "",
+                    logoUrl: p.shop?.logoUrl || "",
+                    companyCity: p.shop?.companyCity || "",
+                    companyDistrict: p.shop?.companyDistrict || "",
+                    shopPhone: p.shop?.phone || "",
+                    shopEmail: p.shop?.email || "",
+                });
+                const perf = await getStaffPerformance(p.id);
+                setPerformance(perf);
+            }
+        } catch (error) {
+            toast.error("Bilgiler güncellenemedi.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    // İl/ilçe değiştiğinde adres alanını otomatik güncelle
+    const handleCityDistrictChange = (field: "companyCity" | "companyDistrict", value: string) => {
+        const newData = { ...editData, [field]: value };
+        // Mevcut adresten il/ilçe kısmını temizle ve yenisini ekle
+        const baseAddress = editData.address
+            .replace(/\s*\/\s*[^/]*\s*\/\s*[^/]*\s*$/, "") // sondaki "/ İlçe / Şehir" kısmını temizle
+            .trim();
+        const city = field === "companyCity" ? value : editData.companyCity;
+        const district = field === "companyDistrict" ? value : editData.companyDistrict;
+        if (city || district) {
+            const locationSuffix = [district, city].filter(Boolean).join(" / ");
+            newData.address = baseAddress ? `${baseAddress} / ${locationSuffix}` : locationSuffix;
+        }
+        setEditData(newData);
+    };
+
+    const handleUpdateProfile = async () => {
+        if (!editData.name) return toast.error("İsim alanı boş bırakılamaz.");
+        setIsSaving(true);
+        try {
+            // Kullanıcı profilini güncelle
+            const res = await updateProfile({
+                name: editData.name,
+                surname: editData.surname,
+                phone: editData.phone,
+                image: editData.image
+            }) as { success: boolean; error?: string };
+
+            // Mağaza bilgilerini güncelle (Yönetici ve Admin rolü için)
+            if (profile.role === "SHOP_MANAGER" || profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") {
+                await updateShop({
+                    ...profile.shop,
+                    companyName: editData.companyName,
+                    taxNumber: editData.taxNumber,
+                    taxOffice: editData.taxOffice,
+                    address: editData.address,
+                    website: editData.website,
+                    logoUrl: editData.logoUrl,
+                    companyCity: editData.companyCity,
+                    companyDistrict: editData.companyDistrict,
+                    phone: editData.shopPhone,
+                    email: editData.shopEmail,
+                });
+            }
+
+            if (res.success) {
+                toast.success("Profil başarıyla güncellendi.");
+                setIsEditModalOpen(false);
+                // Tüm verileri yeniden yükle (Shop bilgileri dahil)
+                await loadData();
+            } else {
+                toast.error(res.error);
+            }
+        } catch (err) {
+            toast.error("Bir hata oluştu.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleUpdatePassword = async () => {
+        if (pwdData.new !== pwdData.confirm) return toast.error("Şifreler eşleşmiyor.");
+        if (pwdData.new.length < 6) return toast.error("Şifre en az 6 karakter olmalıdır.");
+
+        setIsSaving(true);
+        try {
+            const res = await updatePassword({ old: pwdData.old, new: pwdData.new });
+            if (res.success) {
+                toast.success("Şifre başarıyla güncellendi.");
+                setPwdData({ old: "", new: "", confirm: "" });
+                setIsPwdModalOpen(false);
+            } else {
+                toast.error(res.error);
+            }
+        } catch (err) {
+            toast.error("Şifre güncellenemedi.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handlePhotoClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleShopLogoClick = () => {
+        shopLogoInputRef.current?.click();
+    };
+
+
+    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error("Dosya boyutu 2MB'den küçük olmalıdır.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const base64 = event.target?.result as string;
+            setIsSaving(true);
+            try {
+                const res = await updateProfile({ name: editData.name || profile.name, surname: editData.surname || profile.surname, phone: editData.phone || profile.phone, image: base64 }) as any;
+                if (res.success) {
+                    setProfile({ ...profile, image: base64 });
+                    setEditData(prev => ({ ...prev, image: base64 }));
+                    await update({ image: base64 });
+                    toast.success("Profil fotoğrafı başarıyla güncellendi.");
+                } else {
+                    toast.error(res.error || "Fotoğraf güncellenirken hata oluştu.");
+                }
+            } catch (error) {
+                toast.error("Bilinmeyen bir hata oluştu.");
+            } finally {
+                setIsSaving(false);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleShopLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 1 * 1024 * 1024) {
+            toast.error("Logo boyutu 1MB'den küçük olmalıdır.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            setEditData({ ...editData, logoUrl: base64 });
+            toast.success("Mağaza logosu seçildi. Kaydetmeyi unutmayın.");
+        };
+        reader.readAsDataURL(file);
+    };
+
+
+    if (loading) {
+        return (
+            <div className="h-[80vh] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+
+    if (!profile) return null;
+
+    const stats = [
+        { label: "Tamamlanan Servis", value: performance?.serviceCount || 0, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+        { label: "Toplam Satış", value: performance?.saleCount || 0, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10" },
+        { label: "Toplam Ciro", value: new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(performance?.totalRevenue || 0), icon: Briefcase, color: "text-orange-500", bg: "bg-orange-500/10" },
+        { label: "Tahakkuk Eden Prim", value: new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(performance?.commission || 0), icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
+    ];
+
+    return (
+        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Header / Cover */}
+            <div className="relative h-56 rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 shadow-2xl">
+                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_30%,rgba(59,130,246,0.4),transparent_60%)]" />
+                <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+
+                <div className="absolute top-6 right-6 flex gap-3">
+                    <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 h-9 rounded-xl gap-2 font-semibold">
+                                <Settings className="w-4 h-4" /> Profili Düzenle
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-white dark:bg-[#0f0f0f] border-slate-200 dark:border-white/10 rounded-3xl max-w-lg w-[95vw] p-0 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                            <DialogHeader className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                                <DialogTitle className="flex items-center gap-3 text-xl font-black">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                        <Settings className="w-5 h-5 text-blue-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-base">Profili Düzenle</span>
+                                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Kişisel ve Mağaza Bilgileri</span>
+                                    </div>
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            <div className="flex-1 min-h-0 overflow-y-auto px-6">
+                                <div className="space-y-8 py-6">
+                                    {/* Kişisel Bilgiler Bölümü */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="h-4 w-1 bg-blue-500 rounded-full" />
+                                            <h4 className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Kişisel Bilgiler</h4>
+                                        </div>
+
+                                        <div className="flex flex-col items-center gap-6 p-4 rounded-3xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
+                                            <div className="relative group cursor-pointer" onClick={handlePhotoClick}>
+                                                <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center bg-slate-50 dark:bg-black/20 text-muted-foreground overflow-hidden">
+                                                    {editData.image ? (
+                                                        <img src={editData.image} alt="Profil" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Camera className="w-8 h-8" />
+                                                    )}
+                                                </div>
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-2xl transition-opacity">
+                                                    <Camera className="w-6 h-6 text-white" />
+                                                </div>
+                                            </div>
+                                            <div className="w-full space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Profil Fotoğrafı URL</Label>
+                                                <Input
+                                                    placeholder="https://gorsel-linki.com/foto.jpg"
+                                                    value={editData.image}
+                                                    onChange={(e) => setEditData({ ...editData, image: e.target.value })}
+                                                    className="bg-white dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">İsim</Label>
+                                                <Input value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Soyisim</Label>
+                                                <Input value={editData.surname} onChange={(e) => setEditData({ ...editData, surname: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold uppercase opacity-60">Kişisel Telefon</Label>
+                                            <Input value={editData.phone} onChange={(e) => setEditData({ ...editData, phone: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                        </div>
+                                    </div>
+
+                                    {/* Mağaza Bilgileri Bölümü */}
+                                    {(profile.role === "SHOP_MANAGER" || profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") && (
+                                        <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-white/5">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="h-4 w-1 bg-orange-500 rounded-full" />
+                                                <h4 className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Mağaza Bilgileri</h4>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Resmi Unvan</Label>
+                                                <Input value={editData.companyName} onChange={(e) => setEditData({ ...editData, companyName: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">VKN / TCKN</Label>
+                                                    <Input value={editData.taxNumber} onChange={(e) => setEditData({ ...editData, taxNumber: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Vergi Dairesi</Label>
+                                                    <Input value={editData.taxOffice} onChange={(e) => setEditData({ ...editData, taxOffice: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Şehir</Label>
+                                                    <Input value={editData.companyCity} onChange={(e) => handleCityDistrictChange("companyCity", e.target.value)} placeholder="İstanbul" className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">İlçe</Label>
+                                                    <Input value={editData.companyDistrict} onChange={(e) => handleCityDistrictChange("companyDistrict", e.target.value)} placeholder="Kadıköy" className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza Telefon</Label>
+                                                    <Input value={editData.shopPhone} onChange={(e) => setEditData({ ...editData, shopPhone: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza E-posta</Label>
+                                                    <Input value={editData.shopEmail} onChange={(e) => setEditData({ ...editData, shopEmail: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Web Sitesi</Label>
+                                                <Input value={editData.website} onChange={(e) => setEditData({ ...editData, website: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" placeholder="www.websiteniz.com" />
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza Logosu</Label>
+                                                <div className="p-4 rounded-3xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 flex items-center gap-6">
+                                                    <div
+                                                        className="w-20 h-20 shrink-0 rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/10 flex items-center justify-center bg-white dark:bg-black/20 overflow-hidden cursor-pointer group relative shadow-inner"
+                                                        onClick={handleShopLogoClick}
+                                                    >
+                                                        {editData.logoUrl ? (
+                                                            <img src={editData.logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                                                        ) : (
+                                                            <Camera className="w-6 h-6 text-muted-foreground" />
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <Camera className="w-4 h-4 text-white" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 space-y-3">
+                                                        <input
+                                                            type="file"
+                                                            ref={shopLogoInputRef}
+                                                            className="hidden"
+                                                            accept="image/png, image/jpeg, image/webp"
+                                                            onChange={handleShopLogoChange}
+                                                        />
+                                                        <div className="flex flex-col sm:flex-row gap-2">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="flex-1 rounded-xl text-[11px] h-9 border-slate-200 dark:border-white/10"
+                                                                onClick={handleShopLogoClick}
+                                                            >
+                                                                Görsel Seç
+                                                            </Button>
+                                                            {editData.image && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="secondary"
+                                                                    size="sm"
+                                                                    className="flex-1 rounded-xl text-[11px] h-9 bg-blue-500/10 text-blue-500 border-none hover:bg-blue-500/20"
+                                                                    onClick={() => setEditData({ ...editData, logoUrl: editData.image })}
+                                                                >
+                                                                    Gmail Logosunu Al
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        <Input
+                                                            value={editData.logoUrl}
+                                                            onChange={(e) => setEditData({ ...editData, logoUrl: e.target.value })}
+                                                            className="h-9 text-[10px] bg-white dark:bg-black/40 rounded-xl border-slate-200 dark:border-white/5"
+                                                            placeholder="Veya Logo URL yapıştırın"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5 pb-6">
+                                                <Label className="text-[10px] font-bold uppercase opacity-60">Mağaza Adresi</Label>
+                                                <Input value={editData.address} onChange={(e) => setEditData({ ...editData, address: e.target.value })} className="bg-slate-50/50 dark:bg-black/40 rounded-xl h-10 border-slate-200 dark:border-white/5" placeholder="Cadde/Sokak No (İl/İlçe otomatik eklenir)" />
+                                                <p className="text-[9px] text-muted-foreground/50 mt-1">💡 Şehir ve İlçe alanları otomatik olarak adrese eklenir</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <DialogFooter className="p-6 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-end gap-3 sticky bottom-0">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="rounded-xl h-11 px-6 font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                >
+                                    Vazgeç
+                                </Button>
+                                <Button
+                                    onClick={handleUpdateProfile}
+                                    disabled={isSaving}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xl shadow-blue-500/20 h-11 px-10 transition-all active:scale-95"
+                                >
+                                    {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Değişiklikleri Kaydet</>}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isPwdModalOpen} onOpenChange={setIsPwdModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 h-9 rounded-xl gap-2 font-semibold">
+                                <ShieldCheck className="w-4 h-4" /> Şifre Değiştir
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-white dark:bg-[#0f0f0f] border-slate-200 dark:border-white/10 rounded-2xl max-w-sm">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Lock className="w-5 h-5 text-orange-500" />
+                                    {profile.hasPassword ? "Güvenlik Ayarları" : "Şifre Belirle"}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                {!profile.hasPassword && (
+                                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400 font-medium leading-relaxed">
+                                        Google ile giriş yaptığınız için henüz bir şifreniz bulunmuyor. Burada bir şifre belirleyerek e-posta/şifre ile de giriş yapabilirsiniz.
+                                    </div>
+                                )}
+                                {profile.hasPassword && (
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-bold uppercase opacity-60">Mevcut Şifre</Label>
+                                        <Input type="password" value={pwdData.old} onChange={(e) => setPwdData({ ...pwdData, old: e.target.value })} className="rounded-xl" />
+                                    </div>
+                                )}
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-bold uppercase opacity-60">Yeni Şifre</Label>
+                                    <Input type="password" value={pwdData.new} onChange={(e) => setPwdData({ ...pwdData, new: e.target.value })} className="rounded-xl" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-bold uppercase opacity-60">Yeni Şifre (Tekrar)</Label>
+                                    <Input type="password" value={pwdData.confirm} onChange={(e) => setPwdData({ ...pwdData, confirm: e.target.value })} className="rounded-xl" />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={handleUpdatePassword} disabled={isSaving} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-500/20">
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (profile.hasPassword ? "Şifreyi Güncelle" : "Şifre Belirle")}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-8 flex items-end gap-6 bg-gradient-to-t from-black/80 to-transparent">
+                    <div
+                        className="w-28 h-28 rounded-2xl relative group overflow-hidden border-2 border-white/20 shadow-2xl cursor-pointer"
+                        onClick={handlePhotoClick}
+                    >
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                        />
+                        {profile.image ? (
+                            <img src={profile.image} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-4xl font-bold text-white uppercase">
+                                {profile.name?.charAt(0)}{profile.surname?.charAt(0)}
+                            </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
+                            <Camera className="w-8 h-8 text-white" />
+                        </div>
+                    </div>
+                    <div className="flex-1 pb-2">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-3xl font-black text-white tracking-tight">
+                                {profile.name} {profile.surname}
+                            </h1>
+                            <Badge variant="secondary" className="bg-blue-500 text-white border-0 font-bold px-3 py-1">
+                                {profile.role}
+                            </Badge>
+                            {!profile.hasPassword && (
+                                <Badge variant="outline" className="bg-slate-500/10 text-slate-400 border-slate-500/20 font-bold px-3 py-1 flex gap-1.5 items-center">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                                    GOOGLE İLE BAĞLANDI
+                                </Badge>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-2">
+                            <p className="text-blue-50/70 text-sm flex items-center gap-1.5 font-medium">
+                                <Mail className="w-4 h-4 opacity-70" /> {profile.email}
+                            </p>
+                            {profile.phone && (
+                                <p className="text-blue-50/70 text-sm flex items-center gap-1.5 font-medium border-l border-white/10 pl-4">
+                                    <Phone className="w-4 h-4 opacity-70" /> {profile.phone}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Details */}
+                <div className="lg:col-span-1 space-y-8">
+                    <Card className="p-6 bg-white dark:bg-[#0a0a0a] border-slate-200 dark:border-white/5 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-blue-500/10 transition-colors" />
+                        <h2 className="text-sm font-black text-slate-800 dark:text-white/40 mb-6 uppercase tracking-[0.2em]">Profil Özeti</h2>
+                        <div className="space-y-6 relative">
+                            <InfoRow icon={User} label="Tam İsim" value={`${profile.name} ${profile.surname}`} />
+                            <InfoRow icon={Mail} label="Hesap" value={profile.email} />
+                            <InfoRow icon={Calendar} label="Kayıt" value={new Date(profile.createdAt).toLocaleDateString('tr-TR')} />
+                            <InfoRow icon={ShieldCheck} label="Yetki Seviyesi" value={profile.role} />
+                            <InfoRow icon={TrendingUp} label="Performans Katsayısı" value={`%${profile.commissionRate || 0}`} />
+                        </div>
+                    </Card>
+
+                    <Card className="p-6 bg-white dark:bg-[#0a0a0a] border-slate-200 dark:border-white/5 shadow-sm overflow-hidden group">
+                        <h2 className="text-sm font-black text-slate-800 dark:text-white/40 mb-6 uppercase tracking-[0.2em]">Mağaza Bilgileri</h2>
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 font-black border border-orange-500/20">
+                                    <Building2 className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900 dark:text-white">{profile.shop?.name}</p>
+                                    <p className="text-[11px] text-muted-foreground font-bold">{profile.shop?.email}</p>
+                                </div>
+                            </div>
+                            <div className="space-y-4 pt-2">
+                                <InfoRow icon={MapPin} label="Konum" value={profile.shop?.address || "Belirtilmemiş"} />
+                                <InfoRow icon={Building2} label="Resmi Unvan" value={profile.shop?.companyName || "Belirtilmemiş"} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InfoRow icon={ShieldCheck} label="VKN/TC" value={profile.shop?.taxNumber || "Girilmemiş"} />
+                                    <InfoRow icon={Building2} label="Vergi Dairesi" value={profile.shop?.taxOffice || "Girilmemiş"} />
+                                </div>
+                                <InfoRow icon={Phone} label="Mağaza Telefon" value={profile.shop?.phone || "Belirtilmemiş"} />
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Right Column: Performance & Activity */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {stats.map((stat) => (
+                            <Card key={stat.label} className="p-5 bg-white dark:bg-[#0a0a0a] border-slate-200 dark:border-white/5 shadow-sm group hover:border-blue-500/30 transition-all transition-gpu duration-300">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("p-3 rounded-2xl transition-all duration-500 group-hover:rotate-12", stat.bg)}>
+                                            <stat.icon className={cn("w-6 h-6", stat.color)} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] text-muted-foreground/60 uppercase font-black tracking-widest">{stat.label}</p>
+                                            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stat.value}</h3>
+                                        </div>
+                                    </div>
+                                    <div className="hidden group-hover:block animate-in fade-in slide-in-from-right-2">
+                                        <div className={cn("w-2 h-12 rounded-full", stat.bg.replace('/10', '/30'))} />
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Recent Activity */}
+                    <Card className="bg-white dark:bg-[#0a0a0a] border-slate-200 dark:border-white/5 shadow-sm overflow-hidden group">
+                        <div className="p-6 border-b border-slate-200 dark:border-white/5 flex items-center justify-between bg-white dark:bg-[#0f0f0f]">
+                            <div className="flex items-center gap-3">
+                                <History className="w-5 h-5 text-blue-500" />
+                                <h2 className="text-sm font-black text-slate-800 dark:text-white/40 uppercase tracking-[0.2em]">Son Servis İşlemleri</h2>
+                            </div>
+                            <Link href="/servis/liste" className="text-[10px] text-blue-500 hover:text-blue-600 font-black tracking-widest flex items-center gap-1.5 transition-colors group/link">
+                                TÜMÜNÜ GÖR <ExternalLink className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-0.5" />
+                            </Link>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 dark:bg-black/40 text-[10px] text-muted-foreground/60 uppercase font-black tracking-widest">
+                                    <tr>
+                                        <th className="px-6 py-4">FİŞ</th>
+                                        <th className="px-6 py-4">MÜŞTERİ / CİHAZ</th>
+                                        <th className="px-6 py-4">DURUM</th>
+                                        <th className="px-6 py-4">TUTAR</th>
+                                        <th className="px-6 py-4">TARİH</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                    {profile.assignedTickets?.map((ticket: any) => (
+                                        <tr key={ticket.id} className="group/row hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                                            <td className="px-6 py-5">
+                                                <span className="text-xs font-mono font-black text-blue-500 bg-blue-500/5 px-2 py-1 rounded-lg">#{ticket.ticketNumber}</span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-black text-slate-800 dark:text-white/90 group-hover/row:text-blue-500 transition-colors uppercase">{ticket.customer?.name}</p>
+                                                    <p className="text-[11px] text-muted-foreground font-bold opacity-70 tracking-tight">{ticket.deviceBrand} {ticket.deviceModel}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={cn(
+                                                        "w-1.5 h-1.5 rounded-full",
+                                                        ticket.status === 'DELIVERED' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                                                    )} />
+                                                    <span className={cn(
+                                                        "text-[10px] font-black uppercase tracking-wider",
+                                                        ticket.status === 'DELIVERED' ? "text-emerald-500" : "text-blue-500"
+                                                    )}>
+                                                        {ticket.status}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className="text-sm font-black text-slate-900 dark:text-white">₺{ticket.actualCost}</span>
+                                            </td>
+                                            <td className="px-6 py-5 text-[11px] text-muted-foreground font-bold italic opacity-60">
+                                                {new Date(ticket.createdAt).toLocaleDateString('tr-TR')}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function InfoRow({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
+    return (
+        <div className="flex items-start gap-4 group/row">
+            <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 flex items-center justify-center text-muted-foreground flex-shrink-0 group-hover/row:border-blue-500/30 transition-all group-hover/row:scale-105">
+                <Icon className="w-5 h-5 group-hover/row:text-blue-500 transition-colors" />
+            </div>
+            <div className="space-y-0.5 overflow-hidden">
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.15em] opacity-40">{label}</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white/80 group-hover/row:text-white transition-colors truncate">{value}</p>
+            </div>
+        </div>
+    );
+}

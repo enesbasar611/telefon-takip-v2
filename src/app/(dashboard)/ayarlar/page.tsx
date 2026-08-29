@@ -1,4 +1,10 @@
 import { SettingsInterface } from "@/components/settings/settings-interface";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sistem Ayarları | Başar Teknik",
+  description: "Dükkan, fiş, SMS ve genel sistem ayarları.",
+};
 import { getSession } from "@/lib/auth";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -6,7 +6,24 @@ import { Smartphone, Mail, Globe, MapPin, Phone, ShieldCheck } from "lucide-reac
 import { PrintButton } from "@/components/printing/print-button";
 import { Barcode } from "@/components/barcode/barcode";
 
+import { Metadata } from "next";
+
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ searchParams }: { searchParams: { id: string } }): Promise<Metadata> {
+  if (searchParams?.id) {
+    const ticket = await getServiceTicketById(searchParams.id);
+    if (ticket) {
+      const ticketNo = ticket.ticketNumber || ticket.id?.slice(-6);
+      return {
+        title: `Servis #${ticketNo} Fişi | Başar Teknik`,
+      };
+    }
+  }
+  return {
+    title: "Servis Fişi Yazdır | Başar Teknik",
+  };
+}
 
 export default async function YazdirPage({ searchParams }: { searchParams: { id: string } }) {
   const ticket = await getServiceTicketById(searchParams.id);
