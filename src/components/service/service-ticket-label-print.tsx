@@ -65,7 +65,7 @@ export function ServiceTicketLabelPrintArea({ label, onPrinted }: ServiceTicketL
       };
 
       printStyle.setAttribute("data-service-ticket-label-page", "true");
-      printStyle.textContent = "@media print { @page { size: 60mm 30mm; margin: 0; } }";
+      printStyle.textContent = "@media print { @page { size: 57mm 32mm; margin: 0; } }";
       document.head.appendChild(printStyle);
 
       if (printRoot) {
@@ -92,8 +92,8 @@ export function ServiceTicketLabelPrintArea({ label, onPrinted }: ServiceTicketL
         ref={printAreaRef}
         className="service-ticket-label-print-area barcode-print-area"
         style={{
-          "--barcode-label-width": "60mm",
-          "--barcode-label-height": "30mm",
+          "--barcode-label-width": "57mm",
+          "--barcode-label-height": "32mm",
           "--barcode-a4-columns": 1,
           "--barcode-a4-padding": "0mm",
           "--barcode-label-gap": "0mm",
