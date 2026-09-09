@@ -427,3 +427,32 @@ export async function resolveCustomerForDebt(data: { name: string; phone?: strin
     return { success: false, error: "Müşteri çözümlenemedi." };
   }
 }
+
+export async function getTopCustomersByActivity(limit: number = 5) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, data: [] };
+
+    const topCustomers = await prisma.customer.findMany({
+      where: { shopId },
+      include: {
+        _count: {
+          select: { sales: true, debts: true, transactions: true, returns: true }
+        }
+      }
+    });
+
+    const sorted = topCustomers
+      .map(c => ({
+        ...c,
+        activityScore: c._count.sales + c._count.debts + c._count.transactions + c._count.returns
+      }))
+      .sort((a, b) => b.activityScore - a.activityScore)
+      .slice(0, limit);
+
+    return { success: true, data: sorted };
+  } catch (error) {
+    console.error("getTopCustomersByActivity error:", error);
+    return { success: false, data: [] };
+  }
+}

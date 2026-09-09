@@ -145,12 +145,43 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
   const handlePrint = () => {
     const printArea = document.querySelector(".barcode-print-area");
     const printRoot = printArea?.cloneNode(true) as HTMLElement | null;
+    const printStyle = document.createElement("style");
 
     const cleanup = () => {
       document.body.classList.remove("barcode-label-printing");
       printRoot?.remove();
+      printStyle.remove();
       window.removeEventListener("afterprint", cleanup);
     };
+
+    // If printing a single label format (like 57x32 or 50x30), adjust the page size
+    // Otherwise if it's A4 it will fall back to the A4 defaults in globals.css if we don't override,
+    // but overriding specifically for the selected dimensions ensures label printers work correctly.
+    const isLabelPrinter = a4Columns === 1 && a4Rows === 1;
+    if (isLabelPrinter || normalizedSettings.labelSize === "57x32") {
+      printStyle.textContent = `@media print { 
+        @page { size: ${dimensions.width}mm ${dimensions.height}mm; margin: 0; } 
+        body.barcode-label-printing .barcode-print-page {
+          width: ${dimensions.width}mm !important;
+          min-height: ${dimensions.height}mm !important;
+          padding: 0 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        body.barcode-label-printing .barcode-print-root {
+          width: ${dimensions.width}mm !important;
+        }
+        body.barcode-label-printing .barcode-label {
+          width: ${dimensions.width}mm !important;
+          height: ${dimensions.height}mm !important;
+          border: none !important;
+        }
+      }`;
+    } else {
+      printStyle.textContent = `@media print { @page { size: A4; margin: 0; } }`;
+    }
+    document.head.appendChild(printStyle);
 
     if (printRoot) {
       printRoot.classList.add("barcode-print-root");
@@ -193,6 +224,7 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
                   <SelectContent>
                     <SelectItem value="40x30">40 x 30 mm</SelectItem>
                     <SelectItem value="50x30">50 x 30 mm</SelectItem>
+                    <SelectItem value="57x32">32 x 57 mm (Teknik Servis)</SelectItem>
                     <SelectItem value="58x40">58 x 40 mm</SelectItem>
                     <SelectItem value="70x40">70 x 40 mm</SelectItem>
                     <SelectItem value="custom">Özel ölçü</SelectItem>

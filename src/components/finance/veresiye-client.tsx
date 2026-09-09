@@ -2192,7 +2192,7 @@ export function VeresiyeClient({
                                                             <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">
                                                                 {(() => {
                                                                     const d = new Date(item.createdAt);
-                                                                    return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }) : "-";
+                                                                    return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy, HH:mm", { locale: tr }) : "-";
                                                                 })()}
                                                             </span>
                                                             {item.sale && (
@@ -2369,7 +2369,7 @@ export function VeresiyeClient({
                                                         <span className="text-[9px] text-emerald-600/60 dark:text-emerald-400/60 font-medium">
                                                             {(() => {
                                                                 const d = new Date(item.createdAt);
-                                                                return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }) : "-";
+                                                                return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy, HH:mm", { locale: tr }) : "-";
                                                             })()}
                                                         </span>
                                                     </div>

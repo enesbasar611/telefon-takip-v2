@@ -1,5 +1,5 @@
 export type BarcodeCopiesMode = "single" | "stock" | "custom";
-export type BarcodeLabelSize = "40x30" | "50x30" | "58x40" | "70x40" | "custom";
+export type BarcodeLabelSize = "40x30" | "50x30" | "57x32" | "58x40" | "70x40" | "custom";
 
 export interface BarcodeLabelSettings {
   labelSize: BarcodeLabelSize;
@@ -32,11 +32,11 @@ export interface BarcodePrintItem {
 }
 
 export const defaultBarcodeLabelSettings: BarcodeLabelSettings = {
-  labelSize: "50x30",
+  labelSize: "57x32",
   copiesMode: "stock",
   customCopies: 1,
-  customWidthMm: 50,
-  customHeightMm: 30,
+  customWidthMm: 57,
+  customHeightMm: 32,
   showPrice: true,
   showSku: false,
   showBarcodeText: true,
@@ -45,6 +45,7 @@ export const defaultBarcodeLabelSettings: BarcodeLabelSettings = {
 const labelSizes: Record<Exclude<BarcodeLabelSize, "custom">, { width: number; height: number }> = {
   "40x30": { width: 40, height: 30 },
   "50x30": { width: 50, height: 30 },
+  "57x32": { width: 57, height: 32 },
   "58x40": { width: 58, height: 40 },
   "70x40": { width: 70, height: 40 },
 };
@@ -181,7 +182,7 @@ function clampInteger(value: unknown, min: number, max: number, fallback: number
 }
 
 function isLabelSize(value: unknown): value is BarcodeLabelSize {
-  return value === "40x30" || value === "50x30" || value === "58x40" || value === "70x40" || value === "custom";
+  return value === "40x30" || value === "50x30" || value === "57x32" || value === "58x40" || value === "70x40" || value === "custom";
 }
 
 function isCopiesMode(value: unknown): value is BarcodeCopiesMode {

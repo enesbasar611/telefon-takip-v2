@@ -25,6 +25,7 @@ import {
     getActivityLogs,
     clearAllActivityLogs
 } from "@/lib/actions/audit-actions";
+import { getTopCustomersByActivity } from "@/lib/actions/customer-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,8 @@ export default function ActivityLogsClient({ userRole }: { userRole: string }) {
     const [loading, setLoading] = useState(true);
     const [logs, setLogs] = useState<any[]>([]);
     const [pagination, setPagination] = useState<any>(null);
+    const [topCustomers, setTopCustomers] = useState<any[]>([]);
+    const [loadingTopCustomers, setLoadingTopCustomers] = useState(false);
     const [filters, setFilters] = useState({
         page: 1,
         search: "",
@@ -67,6 +70,18 @@ export default function ActivityLogsClient({ userRole }: { userRole: string }) {
     useEffect(() => {
         fetchLogs();
     }, [filters.page, filters.action, filters.entityType]);
+
+    useEffect(() => {
+        const fetchTopCustomers = async () => {
+            setLoadingTopCustomers(true);
+            const res = await getTopCustomersByActivity(5);
+            if (res.success) {
+                setTopCustomers(res.data || []);
+            }
+            setLoadingTopCustomers(false);
+        };
+        fetchTopCustomers();
+    }, []);
 
     const fetchLogs = async () => {
         setLoading(true);
@@ -140,6 +155,35 @@ export default function ActivityLogsClient({ userRole }: { userRole: string }) {
                     </Button>
                 )}
             </div>
+
+            {!loadingTopCustomers && topCustomers.length > 0 && (
+                <div className="space-y-3">
+                    <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest px-2">EN ÇOK İŞLEM YAPAN MÜŞTERİLER</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {topCustomers.map(customer => (
+                            <Card 
+                                key={customer.id} 
+                                className="p-4 rounded-3xl border-none shadow-xl shadow-slate-200/50 dark:shadow-none bg-white dark:bg-slate-900 cursor-pointer hover:-translate-y-1 transition-all duration-300"
+                                onClick={() => {
+                                    setFilters(f => ({ ...f, search: customer.name, page: 1 }));
+                                    // setTimeout prevents race condition with state update
+                                    setTimeout(() => fetchLogs(), 50);
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="w-10 h-10 border-2 border-slate-100 dark:border-slate-800">
+                                        <AvatarFallback className="bg-primary/10 text-primary font-bold">{customer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 overflow-hidden">
+                                        <h3 className="text-sm font-bold truncate" title={customer.name}>{customer.name}</h3>
+                                        <p className="text-[10px] text-slate-400 font-medium uppercase mt-0.5">{customer.activityScore || 0} İŞLEM</p>
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <Card className="p-6 rounded-[2.5rem] border-none shadow-2xl shadow-slate-200/50 dark:shadow-none bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl">
                 <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">

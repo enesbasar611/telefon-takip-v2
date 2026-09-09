@@ -241,6 +241,21 @@ export async function createDebt(data: {
     // 2. Capture Balance AFTER
     const afterSummary = await getCustomerDebtSummary(data.customerId);
 
+    const itemDetails = data.items?.map(i => `${i.quantity}x ${i.title || 'Ürün'}`).join(", ");
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "FINANCE",
+      entityId: debt.id,
+      entityName: afterSummary?.name,
+      message: `${afterSummary?.name || 'Müşteri'} için ${data.amount}${data.currency || 'TRY'} veresiye eklendi. ${itemDetails ? `(${itemDetails})` : ''}`,
+      details: {
+        amount: data.amount,
+        currency: data.currency,
+        items: data.items,
+        notes: data.notes
+      }
+    });
+
     revalidatePath("/veresiye");
     revalidatePath("/stok");
     revalidatePath("/servis");

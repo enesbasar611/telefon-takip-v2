@@ -152,7 +152,7 @@ export function ServiceProfitCards() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-white/[0.02] p-4 shadow-2xl lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-emerald-500/40 bg-white/[0.02] p-4 shadow-[0_0_30px_-10px_rgba(16,185,129,0.15)] lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-sm font-black uppercase tracking-[0.18em] text-foreground">
             Servis Kazanc Ozeti
