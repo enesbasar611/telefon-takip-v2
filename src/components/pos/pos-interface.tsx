@@ -162,8 +162,10 @@ export function POSInterface({ initialSaleId }: {
       const searchLower = debouncedSearchTerm.toLowerCase().trim();
       const isSearching = searchLower.length > 0;
 
-      // Always filter out items with no stock
-      if (p.stock != null && p.stock <= 0) return false;
+      const isService = p.category?.name?.toLowerCase() === "hizmet";
+
+      // Always filter out items with no stock, unless it's a service
+      if (!isService && p.stock != null && p.stock <= 0) return false;
 
       const matchesSearch =
         p.name.toLowerCase().includes(searchLower) ||
@@ -320,14 +322,16 @@ export function POSInterface({ initialSaleId }: {
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.id === product.id);
 
+      const isService = product.category?.name?.toLowerCase() === "hizmet";
+
       // Stock check for first-time addition
-      if (!existing && product.stock <= 0) {
+      if (!existing && !isService && product.stock <= 0) {
         toast({ title: "Stokta Yok", description: "Bu ürünün stoğu tükenmiş.", variant: "destructive" });
         return currentCart;
       }
 
       if (existing) {
-        if (existing.quantity >= product.stock) {
+        if (!isService && existing.quantity >= product.stock) {
           toast({ title: "Stok Yetersiz", description: "Daha fazla ekleyemezsiniz.", variant: "destructive" });
           return currentCart;
         }
@@ -374,7 +378,8 @@ export function POSInterface({ initialSaleId }: {
       if (item.id === id) {
         const newQty = Math.max(1, item.quantity + delta);
         const originalProduct = products.find((p: any) => p.id === id);
-        if (delta > 0 && newQty > (originalProduct?.stock || 0)) {
+        const isService = originalProduct?.category?.name?.toLowerCase() === "hizmet";
+        if (delta > 0 && !isService && newQty > (originalProduct?.stock || 0)) {
           toast({ title: "Stok Yetersiz", variant: "destructive" });
           return item;
         }

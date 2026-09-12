@@ -10,7 +10,7 @@ interface PriceInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
 }
 
 const isEmptyPrice = (value: number | string | null | undefined) => {
-    return value === "" || value === null || value === undefined || Number(value) === 0;
+    return value === "" || value === null || value === undefined;
 };
 
 const getDisplayValue = (value: number | string) => {

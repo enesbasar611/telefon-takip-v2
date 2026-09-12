@@ -41,7 +41,7 @@ export const productSchema = z.object({
     barcode: z.string().optional(),
     sku: z.string().optional(),
     location: z.string().optional(),
-    supplierId: z.string().optional(),
+    supplierId: z.string().optional().nullable(),
     isSecondHand: z.boolean().optional().default(false),
     imei: z.string().optional(),
     color: z.string().optional(),

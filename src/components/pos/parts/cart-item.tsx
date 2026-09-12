@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,28 @@ export const CartItem = React.memo(({
     displayPrice,
     isCompact = false
 }: CartItemProps) => {
+    const initialPrice = displayPrice ?? item.sellPrice;
+    const [localPrice, setLocalPrice] = useState(Number(initialPrice).toFixed(2));
+
+    useEffect(() => {
+        setLocalPrice(Number(displayPrice ?? item.sellPrice).toFixed(2));
+    }, [displayPrice, item.sellPrice]);
+
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalPrice(e.target.value);
+    };
+
+    const handlePriceBlur = () => {
+        const parsed = parseFloat(localPrice.replace(',', '.')) || 0;
+        updatePrice(item.id, parsed);
+        setLocalPrice(parsed.toFixed(2));
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        }
+    };
     if (isCompact) {
         return (
             <div className="bg-card border-2 border-border/40 p-4 rounded-[1.5rem] space-y-4 shadow-sm hover:border-blue-500/20 transition-all">
@@ -36,9 +58,12 @@ export const CartItem = React.memo(({
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl transition-all hover:bg-blue-500/10">
                                 <span className="text-[10px] text-blue-600 font-black">{getCartCurrencySymbol()}</span>
                                 <input
-                                    type="number"
-                                    value={Number(displayPrice ?? item.sellPrice).toFixed(2)}
-                                    onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={localPrice}
+                                    onChange={handlePriceChange}
+                                    onBlur={handlePriceBlur}
+                                    onKeyDown={handleKeyDown}
                                     className="bg-transparent border-none text-[11px] text-blue-700 font-extrabold focus:ring-0 w-20 p-0 h-auto outline-none tabular-nums"
                                 />
                             </div>
@@ -89,9 +114,12 @@ export const CartItem = React.memo(({
                     <div className="relative flex items-center rounded-xl border border-primary/35 bg-primary/10 px-2 py-1.5 shadow-sm transition-all group-hover:border-primary/60 group-hover:bg-primary/15">
                         <span className="text-[12px] text-primary font-black absolute left-3">{getCartCurrencySymbol()}</span>
                         <input
-                            type="number"
-                            value={Number(displayPrice ?? item.sellPrice).toFixed(2)}
-                            onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            value={localPrice}
+                            onChange={handlePriceChange}
+                            onBlur={handlePriceBlur}
+                            onKeyDown={handleKeyDown}
                             className="bg-transparent border-none text-[14px] text-primary font-black focus:ring-0 w-24 pl-5 py-0 h-auto"
                             title="Sepet fiyatı değiştirilebilir"
                         />
