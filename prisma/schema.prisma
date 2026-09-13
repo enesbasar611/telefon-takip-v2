@@ -1250,3 +1250,13 @@ enum CommissionStatus {
   APPROVED
   REJECTED
 }
+
+model SystemAnnouncement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  type        String   @default("INFO")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

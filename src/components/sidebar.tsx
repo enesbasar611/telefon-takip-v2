@@ -132,6 +132,7 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
           { label: "Sektör Yönetimi", href: "/ayarlar/sektorler" },
           { label: "Tüm Dükkanlar (Admin)", href: "/admin/shops" },
           { label: "EDM Yönetimi", href: "/admin/edm" },
+          { label: "Duyuru Yönetimi", href: "/admin/duyurular" },
         ] : []),
       ]
     },

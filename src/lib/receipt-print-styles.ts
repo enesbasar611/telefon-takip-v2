@@ -482,7 +482,20 @@ export async function generateProfessionalPDFBlob(element: HTMLElement): Promise
             scale: 4,
             useCORS: true,
             logging: false,
-            backgroundColor: "#ffffff"
+            backgroundColor: "#ffffff",
+            windowWidth: 1200,
+            windowHeight: element.scrollHeight + 200,
+            onclone: (clonedDoc) => {
+                const clonedElement = clonedDoc.getElementById(element.id);
+                if (clonedElement) {
+                    clonedElement.style.position = 'relative';
+                    clonedElement.style.left = '0px';
+                    clonedElement.style.top = '0px';
+                    clonedElement.style.opacity = '1';
+                    clonedElement.classList.remove('opacity-0');
+                    clonedElement.classList.remove('pointer-events-none');
+                }
+            }
         });
 
         const imgData = canvas.toDataURL("image/jpeg", 1.0);

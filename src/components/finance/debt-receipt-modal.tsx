@@ -21,6 +21,8 @@ import {
 import { DebtStatementModern } from "./debt-statement-modern";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { startOfMonth, subDays, subMonths } from "date-fns";
 
 interface DebtReceiptModalProps {
     open: boolean;
@@ -261,6 +263,18 @@ export function DebtReceiptModal({
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
     const [whatsappMessage, setWhatsappMessage] = useState("");
     const [whatsappPdf, setWhatsappPdf] = useState<{ filename: string; url: string } | null>(null);
+    const [dateRange, setDateRange] = useState<string>("ALL");
+
+    const filteredDebts = debts.filter(d => {
+        if (dateRange === "ALL") return true;
+        const date = new Date(d.createdAt);
+        if (isNaN(date.getTime())) return true;
+        const now = new Date();
+        if (dateRange === "LAST_30") return date >= subDays(now, 30);
+        if (dateRange === "THIS_MONTH") return date >= startOfMonth(now);
+        if (dateRange === "LAST_6_MONTHS") return date >= subMonths(now, 6);
+        return true;
+    });
 
     const { data: liveRates } = useQuery({
         queryKey: ["rates"],
@@ -384,27 +398,40 @@ export function DebtReceiptModal({
                 onPDF={handlePDF}
                 icon={<Receipt className="h-4 w-4 text-foreground" />}
                 headerActions={
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowPaid(!showPaid)}
-                        className={cn(
-                            "rounded-xl gap-2 text-[9px] font-black uppercase tracking-widest h-9 px-3 border",
-                            showPaid
-                                ? "bg-muted text-foreground hover:bg-muted/80 border-border/50"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted border-border/30"
-                        )}
-                    >
-                        {showPaid ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        {showPaid ? "Gizle" : "Tümü"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Select value={dateRange} onValueChange={setDateRange}>
+                            <SelectTrigger className="h-9 text-[10px] font-bold h-9 w-[120px] rounded-xl border-border/50">
+                                <SelectValue placeholder="Tarih" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ALL" className="text-[10px] font-bold">Tüm Zamanlar</SelectItem>
+                                <SelectItem value="LAST_30" className="text-[10px] font-bold">Son 30 Gün</SelectItem>
+                                <SelectItem value="THIS_MONTH" className="text-[10px] font-bold">Bu Ay</SelectItem>
+                                <SelectItem value="LAST_6_MONTHS" className="text-[10px] font-bold">Son 6 Ay</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPaid(!showPaid)}
+                            className={cn(
+                                "rounded-xl gap-2 text-[9px] font-black uppercase tracking-widest h-9 px-3 border",
+                                showPaid
+                                    ? "bg-muted text-foreground hover:bg-muted/80 border-border/50"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted border-border/30"
+                            )}
+                        >
+                            {showPaid ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                            {showPaid ? "Gizle" : "Tümü"}
+                        </Button>
+                    </div>
                 }
             >
                 {(receiptRef) => (
                     <div ref={receiptRef} id={`debt-receipt-${customer.id}`}>
                         <ReceiptContent
                             customer={customer}
-                            debts={debts}
+                            debts={filteredDebts}
                             shopName={shopName}
                             shopPhone={shopPhone}
                             shopAddress={shopAddress}
@@ -422,24 +449,13 @@ export function DebtReceiptModal({
             {/* Hidden modern statement for PDF export - Moved outside to prevent clipping */}
             <div
                 id={`debt-statement-modern-${customer.id}`}
-                style={{
-                    position: 'fixed',
-                    left: '-9999px',
-                    top: '0',
-                    width: '210mm',
-                    height: 'auto',
-                    opacity: 1,
-                    visibility: 'visible',
-                    zIndex: -9999,
-                    pointerEvents: 'none',
-                    background: 'white'
-                }}
+                className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none"
             >
-                {open && (
+                {customer && (
                     <DebtStatementModern
                         customer={customer}
-                        debts={debts}
-                        shopName={shopName!}
+                        debts={filteredDebts}
+                        shopName={shopName}
                         shopPhone={shopPhone}
                         shopAddress={shopAddress}
                         shopWebsite={shopWebsite}

@@ -3,7 +3,7 @@
 import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import {
@@ -17,12 +17,16 @@ import {
     Landmark,
     Package,
     Search,
+    Download,
+    Printer
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { SalesHistoryRow } from "./parts/sales-history-row";
 import { OperationDetails } from "./parts/operation-details";
@@ -53,6 +57,7 @@ interface SalesHistoryClientProps {
     typeFilter: string;
     startDate: string;
     endDate: string;
+    staffList: any[];
 }
 
 const typeFilters = [
@@ -70,12 +75,15 @@ export function SalesHistoryClient({
     typeFilter: propType,
     startDate,
     endDate,
+    staffList = [],
 }: SalesHistoryClientProps) {
     const router = useRouter();
     const [page, setPage] = useState(currentPage || 1);
     const [searchTerm, setSearchTerm] = useState(propSearch);
     const [appliedSearch, setAppliedSearch] = useState(propSearch);
     const [typeFilter, setTypeFilter] = useState(propType || "ALL");
+    const [paymentMethodFilter, setPaymentMethodFilter] = useState("ALL");
+    const [staffFilter, setStaffFilter] = useState("ALL");
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: new Date(startDate),
         to: new Date(endDate),
@@ -89,13 +97,14 @@ export function SalesHistoryClient({
     const [receiptLoading, setReceiptLoading] = useState<string | null>(null);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [returnInitialData, setReturnInitialData] = useState<any>(null);
+    const [calendarOpen, setCalendarOpen] = useState(false);
 
     const { rates, defaultCurrency } = useDashboardData();
     const rangeStart = appliedRange?.from?.toISOString();
     const rangeEnd = (appliedRange?.to || appliedRange?.from)?.toISOString();
 
     const { data: historyData = initialData, isFetching: historyFetching } = useQuery({
-        queryKey: ["sales-history", page, appliedSearch, typeFilter, rangeStart, rangeEnd],
+        queryKey: ["sales-history", page, appliedSearch, typeFilter, rangeStart, rangeEnd, paymentMethodFilter, staffFilter],
         queryFn: () => getUnifiedHistory({
             page,
             pageSize: 30,
@@ -103,6 +112,8 @@ export function SalesHistoryClient({
             typeFilter,
             startDate: rangeStart,
             endDate: rangeEnd,
+            paymentMethod: paymentMethodFilter,
+            staffId: staffFilter,
         }),
         initialData,
         placeholderData: keepPreviousData,
@@ -127,18 +138,50 @@ export function SalesHistoryClient({
         }
         setPage(1);
         setAppliedRange({ from: dateRange.from, to: dateRange.to || dateRange.from });
+        setCalendarOpen(false);
     };
 
     const clearFilters = () => {
         setSearchTerm("");
         setAppliedSearch("");
         setTypeFilter("ALL");
+        setPaymentMethodFilter("ALL");
+        setStaffFilter("ALL");
         setPage(1);
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const resetRange = { from: monthStart, to: now };
         setDateRange(resetRange);
         setAppliedRange(resetRange);
+    };
+
+    const setQuickRange = (type: "today" | "yesterday" | "thisWeek" | "thisMonth" | "lastMonth") => {
+        const now = new Date();
+        let range = { from: now, to: now };
+        switch (type) {
+            case "today":
+                range = { from: startOfDay(now), to: endOfDay(now) };
+                break;
+            case "yesterday":
+                const yesterday = subDays(now, 1);
+                range = { from: startOfDay(yesterday), to: endOfDay(yesterday) };
+                break;
+            case "thisWeek":
+                const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+                range = { from: weekStart, to: endOfDay(now) };
+                break;
+            case "thisMonth":
+                range = { from: startOfMonth(now), to: endOfMonth(now) };
+                break;
+            case "lastMonth":
+                const prevMonth = subMonths(now, 1);
+                range = { from: startOfMonth(prevMonth), to: endOfMonth(prevMonth) };
+                break;
+        }
+        setDateRange(range);
+        setAppliedRange(range);
+        setPage(1);
+        setCalendarOpen(false);
     };
 
     const handlePrintReceipt = async (op: UnifiedOperation) => {
@@ -228,6 +271,57 @@ export function SalesHistoryClient({
         window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
     };
 
+    const exportToExcel = async () => {
+        try {
+            toast.info("Excel dosyası hazırlanıyor...");
+            const data = await getUnifiedHistory({
+                page: 1,
+                pageSize: 10000,
+                searchTerm: appliedSearch,
+                typeFilter,
+                startDate: rangeStart,
+                endDate: rangeEnd,
+                paymentMethod: paymentMethodFilter,
+                staffId: staffFilter,
+            });
+            
+            if (!data.items || data.items.length === 0) {
+                toast.warning("Dışa aktarılacak veri bulunamadı.");
+                return;
+            }
+
+            const exportData = data.items.map(op => ({
+                "İşlem No": op.number || (op.id ? op.id.substring(0, 8) : ""),
+                "Tarih": format(new Date(op.date), "dd.MM.yyyy HH:mm"),
+                "İşlem Tipi": getTypeLabel(op.type as any),
+                "Müşteri": op.customerName || "-",
+                "Kategori/Ürün": op.title || op.type,
+                "Ödeme Yöntemi": getPaymentLabel(op.paymentMethod || ""),
+                "Personel": op.staffName || "-",
+                "Tutar": op.amount,
+                "Para Birimi": op.currency || "TRY"
+            }));
+
+            const XLSX = await import("xlsx");
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Satis_Gecmisi");
+            XLSX.writeFile(workbook, `Satis_Gecmisi_${format(new Date(), "dd_MM_yyyy_HHmm")}.xlsx`);
+            toast.success("Excel dosyası başarıyla indirildi.");
+        } catch (error) {
+            console.error("Excel export error:", error);
+            toast.error("Dışa aktarma başarısız oldu.");
+        }
+    };
+
+    const handlePrintEndOfDay = () => {
+        // Open print view in new window with current dates
+        const qs = new URLSearchParams();
+        if (rangeStart) qs.set("startDate", rangeStart);
+        if (rangeEnd) qs.set("endDate", rangeEnd);
+        window.open(`/satis/gun-sonu?${qs.toString()}`, "_blank");
+    };
+
     const handleReturn = (op: UnifiedOperation, item?: any) => {
         setReturnInitialData({
             sourceType: "CUSTOMER",
@@ -268,15 +362,39 @@ export function SalesHistoryClient({
 
     return (
         <div className="space-y-6">
-            <SalesHistoryReportPanel report={activeReport} isLoading={reportFetching} />
+            <Tabs defaultValue="list" className="w-full">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h2 className="text-2xl font-bold tracking-tight">Satış Geçmişi</h2>
+                        <p className="text-sm text-muted-foreground">İşlem arşivini ve finansal istatistikleri inceleyin.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <TabsList className="bg-muted/50 rounded-xl p-1 h-12 border border-border/40 shadow-sm">
+                            <TabsTrigger value="list" className="rounded-lg px-4 md:px-6 text-sm font-semibold h-full data-[state=active]:bg-background data-[state=active]:shadow-sm">İşlem Listesi</TabsTrigger>
+                            <TabsTrigger value="charts" className="rounded-lg px-4 md:px-6 text-sm font-semibold h-full data-[state=active]:bg-background data-[state=active]:shadow-sm">Grafikler ve Raporlar</TabsTrigger>
+                        </TabsList>
+                        <Button variant="outline" className="h-12 rounded-xl border-border/60 bg-background/50 shadow-sm font-semibold gap-2" onClick={exportToExcel}>
+                            <Download className="h-4 w-4 text-green-600" />
+                            <span className="hidden md:inline">Excel'e Aktar</span>
+                        </Button>
+                        <Button variant="outline" className="h-12 rounded-xl border-border/60 bg-background/50 shadow-sm font-semibold gap-2" onClick={handlePrintEndOfDay}>
+                            <Printer className="h-4 w-4 text-blue-600" />
+                            <span className="hidden md:inline">Gün Sonu</span>
+                        </Button>
+                    </div>
+                </div>
 
-            <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card/70 backdrop-blur-xl">
+                <TabsContent value="charts" className="mt-0 outline-none">
+                    <SalesHistoryReportPanel report={activeReport} isLoading={reportFetching} />
+                </TabsContent>
+
+                <TabsContent value="list" className="mt-0 outline-none space-y-6">
+                    <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card/70 backdrop-blur-xl">
                 <CardHeader className="p-5 md:p-6 border-b border-border/40 bg-muted/5">
                     <div className="flex flex-col gap-5">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-xl font-semibold tracking-tight">İşlem Arşivi</h2>
-                                <p className="text-sm text-muted-foreground">Satış, veresiye ve tahsilat hareketlerini seçtiğiniz tarih aralığında inceleyin.</p>
+                            <div className="text-sm text-muted-foreground">
+                                Seçili aralıktaki işlemleri filtreleyin ve yönetin.
                             </div>
                             <div className="text-xs text-muted-foreground rounded-xl border border-border/60 bg-background/50 px-3 py-2">
                                 Aktif aralık: <span className="font-semibold text-foreground">{formattedRange}</span>
@@ -296,7 +414,7 @@ export function SalesHistoryClient({
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
-                                <Popover>
+                                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" className="h-12 rounded-xl border-border/60 justify-start gap-2 min-w-[240px]">
                                             <CalendarIcon className="h-4 w-4 text-emerald-600" />
@@ -307,26 +425,64 @@ export function SalesHistoryClient({
                                                 : "Tarih aralığı seç"}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 rounded-2xl border-border shadow-2xl" align="end">
-                                        <Calendar
-                                            mode="range"
-                                            selected={dateRange}
-                                            onSelect={setDateRange}
-                                            numberOfMonths={2}
-                                            defaultMonth={dateRange?.from}
-                                            locale={tr}
-                                            weekStartsOn={1}
-                                        />
-                                        <div className="flex items-center justify-end gap-2 border-t border-border p-3">
-                                            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setDateRange(appliedRange)}>
-                                                Vazgeç
-                                            </Button>
-                                            <Button size="sm" className="rounded-xl" onClick={applyDateRange}>
-                                                Uygula
-                                            </Button>
+                                    <PopoverContent className="w-auto p-0 rounded-2xl border-border shadow-2xl flex flex-col md:flex-row" align="end">
+                                        <div className="flex flex-row md:flex-col p-2 gap-1 border-b md:border-b-0 md:border-r border-border bg-muted/20 overflow-x-auto md:w-32 justify-start items-stretch">
+                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("today")}>Bugün</Button>
+                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("yesterday")}>Dün</Button>
+                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("thisWeek")}>Bu Hafta</Button>
+                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("thisMonth")}>Bu Ay</Button>
+                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("lastMonth")}>Geçen Ay</Button>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <Calendar
+                                                mode="range"
+                                                selected={dateRange}
+                                                onSelect={(range) => {
+                                                    setDateRange(range);
+                                                    if (range?.from && range?.to) {
+                                                        setAppliedRange(range);
+                                                        setPage(1);
+                                                    }
+                                                }}
+                                                numberOfMonths={2}
+                                                defaultMonth={dateRange?.from}
+                                                locale={tr}
+                                                weekStartsOn={1}
+                                            />
+                                            <div className="flex items-center justify-end gap-2 border-t border-border p-3">
+                                                <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setDateRange(appliedRange); setCalendarOpen(false); }}>
+                                                    Vazgeç
+                                                </Button>
+                                                <Button size="sm" className="rounded-xl" onClick={applyDateRange}>
+                                                    Uygula
+                                                </Button>
+                                            </div>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
+                                <Select value={paymentMethodFilter} onValueChange={(val) => { setPage(1); setPaymentMethodFilter(val); }}>
+                                    <SelectTrigger className="w-[160px] h-12 rounded-xl border-border/60">
+                                        <SelectValue placeholder="Ödeme Tipi" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Tüm Ödemeler</SelectItem>
+                                        <SelectItem value="CASH">Nakit</SelectItem>
+                                        <SelectItem value="CARD">Kredi Kartı</SelectItem>
+                                        <SelectItem value="TRANSFER">Havale/EFT</SelectItem>
+                                        <SelectItem value="DEBT">Veresiye</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={staffFilter} onValueChange={(val) => { setPage(1); setStaffFilter(val); }}>
+                                    <SelectTrigger className="w-[160px] h-12 rounded-xl border-border/60">
+                                        <SelectValue placeholder="Personel" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Tüm Personeller</SelectItem>
+                                        {staffList.map((staff) => (
+                                            <SelectItem key={staff.id} value={staff.id}>{staff.name} {staff.surname || ""}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <Button type="button" className="h-12 rounded-xl px-5 text-sm font-semibold" onClick={applySearch}>
                                     Ara
                                 </Button>
@@ -489,6 +645,8 @@ export function SalesHistoryClient({
                     </div>
                 )}
             </Card>
+            </TabsContent>
+            </Tabs>
 
             <UnifiedSaleModal
                 isOpen={!!receiptSale}

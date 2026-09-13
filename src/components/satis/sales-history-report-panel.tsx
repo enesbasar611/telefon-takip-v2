@@ -1,7 +1,7 @@
 "use client";
 
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowDownRight, ArrowUpRight, Banknote, Boxes, Package, ReceiptText, TrendingUp } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Banknote, Boxes, Package, Percent, TrendingUp, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -77,11 +77,11 @@ export function SalesHistoryReportPanel({ report, isLoading = false }: { report:
             icon: Boxes,
         },
         {
-            label: "Önceki Aralığa Göre",
-            value: changeLabel(report.comparisons.revenueVsPrevious),
-            change: report.comparisons.revenueVsTwoAgo,
-            detail: `Bir önceki benzer aralığa göre ${changeLabel(report.comparisons.revenueVsTwoAgo)}`,
-            icon: ReceiptText,
+            label: "Kâr Marjı",
+            value: `%${current.profitMargin.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`,
+            change: current.profitMargin - previous.profitMargin,
+            detail: `Önceki dönem: %${previous.profitMargin.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`,
+            icon: Percent,
         },
     ];
 
@@ -236,6 +236,70 @@ export function SalesHistoryReportPanel({ report, isLoading = false }: { report:
                             ))}
                             {report.topProducts.length === 0 && (
                                 <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Bu aralıkta ürün satışı bulunmuyor.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                <Card className="rounded-2xl border-border/50 bg-card/70 shadow-sm">
+                    <CardContent className="p-5">
+                        <h3 className="font-semibold text-base">Kategori Dağılımı</h3>
+                        <p className="text-xs text-muted-foreground mb-4">Hangi kategoriden ne kadar gelir elde edildi.</p>
+                        <ResponsiveContainer width="100%" height={210}>
+                            <PieChart>
+                                <Pie data={report.topCategories} dataKey="revenue" nameKey="name" innerRadius={60} outerRadius={80} paddingAngle={2}>
+                                    {report.topCategories?.map((entry, index) => (
+                                        <Cell key={entry.name} fill={paymentColors[index % paymentColors.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value: any) => formatMoney(Number(value || 0))} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="space-y-2 mt-2 max-h-32 overflow-y-auto">
+                            {report.topCategories?.map((item, index) => (
+                                <div key={item.name} className="flex items-center justify-between text-sm">
+                                    <span className="flex items-center gap-2 text-muted-foreground">
+                                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: paymentColors[index % paymentColors.length] }} />
+                                        <span className="truncate max-w-[120px]">{item.name}</span>
+                                    </span>
+                                    <span className="font-semibold">{formatMoney(item.revenue)}</span>
+                                </div>
+                            ))}
+                            {(!report.topCategories || report.topCategories.length === 0) && (
+                                <p className="text-sm text-muted-foreground">Kategori verisi bulunmuyor.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-border/50 bg-card/70 shadow-sm">
+                    <CardContent className="p-5">
+                        <div className="flex items-center justify-between gap-4 mb-4">
+                            <div>
+                                <h3 className="font-semibold text-base">Personel Satış Performansı</h3>
+                                <p className="text-xs text-muted-foreground">Personellerin yaptığı satış tutarları.</p>
+                            </div>
+                            <Users className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="space-y-3">
+                            {report.staffPerformance?.map((staff, index) => (
+                                <div key={staff.id} className="grid grid-cols-[32px_1fr_auto] items-center gap-3 rounded-xl border border-border/50 bg-background/50 px-3 py-2">
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xs font-bold">
+                                        {index + 1}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold truncate">{staff.name}</p>
+                                        <p className="text-xs text-muted-foreground">Kâr: {formatMoney(staff.profit)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-emerald-600">{formatMoney(staff.revenue)}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {(!report.staffPerformance || report.staffPerformance.length === 0) && (
+                                <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">Personel satış verisi bulunmuyor.</p>
                             )}
                         </div>
                     </CardContent>

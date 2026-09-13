@@ -105,12 +105,15 @@ import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal
 import { AddDebtModal } from "./add-debt-modal";
 import { AddReturnModal } from "@/components/stock/add-return-modal";
 import { DebtReceiptModal } from "./debt-receipt-modal";
+import { RefundBalanceModal } from "./veresiye/refund-balance-modal";
+import { ReconciliationModal } from "./veresiye/reconciliation-modal";
 import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
 import { buildReturnWhatsAppSummaryMessage } from "@/lib/returns/return-whatsapp-message";
 import {
     buildDebtStatementEntries,
     getStatementItemTitle
 } from "@/lib/debt-statement-calculator";
+import { calculatePaymentAllocations, PaymentAllocation } from "@/lib/finance/payment-allocator";
 import { VERESIYE_LIVE_QUERY_OPTIONS } from "@/lib/finance/veresiye-query-options";
 import {
     Select,
@@ -129,6 +132,13 @@ import {
     AlertDialogAction,
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 
 type Debt = {
     id: string;
@@ -358,10 +368,18 @@ export function VeresiyeClient({
     const [editingDebt, setEditingDebt] = useState<any>(null);
     const [editAmount, setEditAmount] = useState<string>("");
 
+    const [refundCustomer, setRefundCustomer] = useState<any>(null);
+
     const [receiptCustomer, setReceiptCustomer] = useState<any>(null);
     const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
     const [receiptShowPaid, setReceiptShowPaid] = useState(false);
     const [receiptAutoPDF, setReceiptAutoPDF] = useState(false);
+    
+    // Payment Allocation Modal State
+    const [allocationModalTx, setAllocationModalTx] = useState<any>(null);
+    const [allocations, setAllocations] = useState<PaymentAllocation[]>([]);
+    const [reconciliationCustomer, setReconciliationCustomer] = useState<any>(null);
+
     const outputPromptResolverRef = useRef<((includePaidItems: boolean) => void) | null>(null);
     const [outputPromptOpen, setOutputPromptOpen] = useState(false);
 
@@ -1765,6 +1783,7 @@ export function VeresiyeClient({
                                                         }
                                                     }}
                                                     onDetail={openCustomerStatement}
+                                                    onRefund={setRefundCustomer}
                                                     onPayment={(item) => {
                                                         setPaymentCustomer(item);
                                                         setPaymentCurrency("TRY");
@@ -1860,7 +1879,17 @@ export function VeresiyeClient({
                             </div>
                             <div className="min-w-0 flex-1 ml-3">
                                 <h3 className="text-sm font-black text-foreground uppercase tracking-tight truncate">{historyCustomer?.name}</h3>
-                                <p className="text-[10px] text-muted-foreground font-bold">{historyCustomer?.phone || "Telefon Yok"}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-[10px] text-muted-foreground font-bold">{historyCustomer?.phone || "Telefon Yok"}</p>
+                                    {(Number(historyCustomer?.balance) > 0 || Number(historyCustomer?.balanceUsd) > 0) && (
+                                        <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                                            Emanet: {defaultCurrency === "USD"
+                                                ? `$${(Number(historyCustomer?.balanceUsd || 0) + (Number(historyCustomer?.balance || 0) / (rates?.usd || 1))).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                : `₺${Math.round(Number(historyCustomer?.balance || 0) + (Number(historyCustomer?.balanceUsd || 0) * (rates?.usd || 1))).toLocaleString('tr-TR')}`
+                                            }
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             <div className="mx-4 flex-1 max-w-xs relative group hidden sm:block">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
@@ -2044,12 +2073,21 @@ export function VeresiyeClient({
                                     setReceiptCustomer({ id: historyCustomer.customerId, customerId: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
                                     setReceiptDebts(combined);
                                     setReceiptShowPaid(includePaidItems);
-                                    setReceiptAutoPDF(true);
+                                    setReceiptAutoPDF(false);
                                 }}
                                 className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all"
                             >
                                 <FileText className="w-4 h-4" />
                                 <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">PDF Ekstre</span>
+                            </button>
+                            {/* Mutabakat Ekle */}
+                            <button
+                                title="Mutabakat Ekle"
+                                onClick={() => setReconciliationCustomer(historyCustomer)}
+                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white border border-orange-500/10 transition-all"
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Mutabakat Ekle</span>
                             </button>
                             {/* Fiş Yazdır */}
                             <button
@@ -2308,13 +2346,13 @@ export function VeresiyeClient({
                                                             <div className="flex flex-col items-end">
                                                                 <span className={cn("text-2xl font-black tabular-nums leading-none tracking-tight", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
                                                                     {defaultCurrency === "USD"
-                                                                        ? `$${(item.currency === 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                                                        : `₺${Math.round(item.currency !== 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) * usdRate)).toLocaleString('tr-TR')}`}
+                                                                        ? `$${(item.currency === 'USD' ? (item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) : ((item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                                        : `₺${Math.round(item.currency !== 'USD' ? (item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) : ((item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) * usdRate)).toLocaleString('tr-TR')}`}
                                                                 </span>
                                                                 <span className="text-xs font-bold text-muted-foreground/50 mt-1.5 leading-none">
                                                                     ({defaultCurrency === "USD"
-                                                                        ? `₺${Math.round(item.currency !== 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) * usdRate)).toLocaleString('tr-TR')}`
-                                                                        : `$${(item.currency === 'USD' ? getSafeDebtRemaining(item) : (getSafeDebtRemaining(item) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`})
+                                                                        ? `₺${Math.round(item.currency !== 'USD' ? (item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) : ((item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) * usdRate)).toLocaleString('tr-TR')}`
+                                                                        : `$${(item.currency === 'USD' ? (item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) : ((item.isPaid ? Number(item.amount) : getSafeDebtRemaining(item)) / usdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`})
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -2379,6 +2417,17 @@ export function VeresiyeClient({
                                                         + {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                     </span>
                                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button variant="ghost" size="sm" onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const allDebts = statementData?.debts || [];
+                                                            const allTxs = statementData?.transactions || [];
+                                                            const mapped = calculatePaymentAllocations(item.id, allDebts, allTxs, usdRate);
+                                                            setAllocations(mapped);
+                                                            setAllocationModalTx(item);
+                                                        }} className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-700 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg" title="Hangi borçları kapattı?">
+                                                            <Eye className="w-3 h-3" />
+                                                        </Button>
+
                                                         <Button variant="ghost" size="sm" onClick={(e) => {
                                                             e.stopPropagation();
                                                             setEditingTransaction(item);
@@ -3218,9 +3267,55 @@ export function VeresiyeClient({
                     handleReturnWhatsAppMessage(tickets || []);
                 }}
             />
+            <RefundBalanceModal
+                open={!!refundCustomer}
+                onClose={() => setRefundCustomer(null)}
+                customer={refundCustomer}
+            />
+
+            <ReconciliationModal
+                open={!!reconciliationCustomer}
+                onClose={() => setReconciliationCustomer(null)}
+                customer={reconciliationCustomer}
+            />
+
+            <Dialog open={!!allocationModalTx} onOpenChange={(o) => { if (!o) setAllocationModalTx(null); }}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle>Tahsilat Detayı (FIFO)</DialogTitle>
+                        <DialogDescription>
+                            Sistem ödemeleri her zaman en eski borçtan başlayarak kapatır. Bu tahsilatın kapattığı borçlar aşağıdadır:
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-4 max-h-[60vh] overflow-y-auto">
+                        {allocations.length === 0 ? (
+                            <div className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
+                                Bu tahsilat henüz bir borçla eşleşmedi veya fazla ödeme (emanet).
+                            </div>
+                        ) : (
+                            allocations.map((alloc, idx) => (
+                                <div key={idx} className="flex justify-between items-center p-3 rounded-xl border bg-muted/30">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[11px] font-bold text-foreground">{alloc.debtDescription}</span>
+                                        <span className="text-[9px] text-muted-foreground">
+                                            {format(alloc.debtCreatedAt, "dd MMM yyyy", { locale: tr })} tarihli borç
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xs font-black text-emerald-600">
+                                            {allocationModalTx?.currency === 'USD'
+                                                ? `$${alloc.allocatedAmountUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                : `₺${alloc.allocatedAmountTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 }
-
-
-

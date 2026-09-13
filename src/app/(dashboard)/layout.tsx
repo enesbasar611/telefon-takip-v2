@@ -28,6 +28,7 @@ import {
     settingsArrayToRecord,
 } from "@/lib/appearance-settings";
 import { AnnouncementsModal } from "@/components/dashboard/announcements-modal";
+import { SystemAnnouncementsModal } from "@/components/dashboard/system-announcements-modal";
 
 export default async function DashboardLayout({
     children,
@@ -126,7 +127,7 @@ export default async function DashboardLayout({
                                 />
 
                                 <AnnouncementsModal />
-
+                                <SystemAnnouncementsModal />
                                 {leaveData.isLeave && !isSuperAdmin && role !== "ADMIN" && (
                                     <LeaveLockModal leave={leaveData.leave} userName={session.user.name || ""} />
                                 )}

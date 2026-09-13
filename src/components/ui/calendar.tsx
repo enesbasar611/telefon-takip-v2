@@ -31,12 +31,14 @@ function Calendar({
                 ),
                 nav_button_previous: "absolute left-1",
                 nav_button_next: "absolute right-1",
-                table: "w-full border-collapse",
-                head_row: "grid grid-cols-7 gap-0",
-                head_cell: "text-muted-foreground rounded-md h-9 w-9 font-normal text-[0.8rem] text-center flex items-center justify-center",
-                row: "grid grid-cols-7 gap-0 mt-1",
+                table: "w-full border-collapse space-y-1",
+                head_row: "hidden",
+                weekdays: "hidden",
+                head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
+                weekday: "hidden",
+                row: "mt-2",
                 cell: cn(
-                    "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 h-9 w-9 flex items-center justify-center",
+                    "text-center text-sm p-0 relative focus-within:relative focus-within:z-20 h-9",
                     "[&:has([aria-selected])]:bg-emerald-500/10",
                     "[&:has([aria-selected].day-range-start)]:rounded-l-[50%]",
                     "[&:has([aria-selected].day-range-end)]:rounded-r-[50%]",
@@ -45,22 +47,32 @@ function Calendar({
                 ),
                 day: cn(
                     buttonVariants({ variant: "ghost" }),
-                    "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-full transition-all"
+                    "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-full transition-all mx-auto"
                 ),
+                day_range_start: "day-range-start !bg-emerald-600 !text-white !rounded-full shadow-lg shadow-emerald-500/20",
+                day_range_end: "day-range-end !bg-emerald-600 !text-white !rounded-full shadow-lg shadow-emerald-500/20",
+                day_selected: "!bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white focus:!bg-emerald-600 focus:!text-white",
+                day_today: "text-emerald-600 font-extrabold bg-emerald-50/50 dark:bg-emerald-950/50",
+                day_outside: "day-outside text-muted-foreground opacity-30 aria-selected:bg-transparent aria-selected:text-muted-foreground aria-selected:opacity-30",
+                day_disabled: "text-muted-foreground opacity-50",
+                day_range_middle: "aria-selected:bg-transparent aria-selected:text-emerald-900 dark:aria-selected:text-emerald-100 !rounded-none",
+                day_hidden: "invisible",
+                
+                // Fallbacks for v8 just in case
                 range_start: "day-range-start !bg-emerald-600 !text-white !rounded-full shadow-lg shadow-emerald-500/20",
                 range_end: "day-range-end !bg-emerald-600 !text-white !rounded-full shadow-lg shadow-emerald-500/20",
-                selected:
-                    "!bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white focus:!bg-emerald-600 focus:!text-white",
+                selected: "!bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white focus:!bg-emerald-600 focus:!text-white",
                 today: "text-emerald-600 font-extrabold bg-emerald-50/50 dark:bg-emerald-950/50",
-                outside:
-                    "day-outside text-muted-foreground opacity-30 aria-selected:bg-transparent aria-selected:text-muted-foreground aria-selected:opacity-30",
+                outside: "day-outside text-muted-foreground opacity-30 aria-selected:bg-transparent aria-selected:text-muted-foreground aria-selected:opacity-30",
                 disabled: "text-muted-foreground opacity-50",
-                range_middle:
-                    "aria-selected:bg-transparent aria-selected:text-emerald-900 dark:aria-selected:text-emerald-100 !rounded-none",
+                range_middle: "aria-selected:bg-transparent aria-selected:text-emerald-900 dark:aria-selected:text-emerald-100 !rounded-none",
                 hidden: "invisible",
                 ...classNames,
             }}
             components={{
+                IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+                IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+                // fallback for v8
                 Chevron: ({ ...props }) => {
                     if (props.orientation === "left") {
                         return <ChevronLeft className="h-4 w-4" />;

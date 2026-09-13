@@ -40,10 +40,12 @@ export async function getUnifiedHistory(options: {
     dateRange?: HistoryDateRange;
     startDate?: string | Date;
     endDate?: string | Date;
+    paymentMethod?: string;
+    staffId?: string;
 } = {}) {
     try {
         const shopId = await getShopId();
-        const { page = 1, pageSize = 20, searchTerm = "", typeFilter = "ALL", dateRange = "ALL", startDate, endDate } = options;
+        const { page = 1, pageSize = 20, searchTerm = "", typeFilter = "ALL", dateRange = "ALL", startDate, endDate, paymentMethod, staffId } = options;
         const skip = (page - 1) * pageSize;
 
         const where: Prisma.TransactionWhereInput = {
@@ -75,11 +77,36 @@ export async function getUnifiedHistory(options: {
         }
 
         if (typeFilter !== "ALL") {
-            if (typeFilter === "SALE") where.saleId = { not: null };
-            else if (typeFilter === "DEBT") {
-                where.debtId = { not: null };
-                where.NOT = { category: "Tahsilat" };
-            } else if (typeFilter === "PAYMENT") where.category = "Tahsilat";
+            if (typeFilter === "SALE") {
+                where.saleId = { not: null };
+                where.paymentMethod = { not: "DEBT" };
+            } else if (typeFilter === "DEBT") {
+                const debtConditions = [
+                    { paymentMethod: "DEBT" as any },
+                    { debtId: { not: null }, category: { not: "Tahsilat" } }
+                ];
+                
+                if (where.OR) {
+                    const existingOr = where.OR;
+                    delete where.OR;
+                    where.AND = [
+                        { OR: existingOr },
+                        { OR: debtConditions }
+                    ];
+                } else {
+                    where.OR = debtConditions;
+                }
+            } else if (typeFilter === "PAYMENT") {
+                where.category = "Tahsilat";
+            }
+        }
+
+        if (paymentMethod && paymentMethod !== "ALL") {
+            where.paymentMethod = paymentMethod as any;
+        }
+
+        if (staffId && staffId !== "ALL") {
+            where.userId = staffId;
         }
 
         const [total, transactions] = await Promise.all([
@@ -110,9 +137,9 @@ export async function getUnifiedHistory(options: {
                 return true;
             })
             .map((tx: any) => {
-            const isSale = !!tx.saleId;
-            const isDebt = !!tx.debtId;
             const isPayment = tx.category === "Tahsilat";
+            const isDebt = tx.paymentMethod === "DEBT" || (!!tx.debtId && !isPayment);
+            const isSale = !!tx.saleId && !isDebt;
 
             let type: OperationType = "SALE";
             if (isDebt) type = "DEBT_DIRECT";
@@ -184,6 +211,7 @@ export interface SalesHistoryReport {
         saleCount: number;
         itemCount: number;
         averageSale: number;
+        profitMargin: number;
         debtSales: number;
         cashRevenue: number;
         cardRevenue: number;
@@ -199,6 +227,8 @@ export interface SalesHistoryReport {
     dailyTrend: { date: string; revenue: number; profit: number; count: number }[];
     paymentBreakdown: { method: string; label: string; total: number; count: number }[];
     topProducts: { name: string; quantity: number; revenue: number; profit: number }[];
+    topCategories: { name: string; revenue: number; profit: number }[];
+    staffPerformance: { id: string; name: string; revenue: number; profit: number }[];
     insights: string[];
 }
 
@@ -221,6 +251,7 @@ const createEmptyPeriod = (key: PeriodKey, date: Date) => ({
     saleCount: 0,
     itemCount: 0,
     averageSale: 0,
+    profitMargin: 0,
     debtSales: 0,
     cashRevenue: 0,
     cardRevenue: 0,
@@ -269,6 +300,7 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
                 },
                 transaction: true,
                 customer: true,
+                user: true,
             },
             orderBy: { createdAt: "asc" },
             }),
@@ -288,6 +320,8 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
         const dailyMap = new Map(currentDays.map((day) => [day.key, day]));
         const paymentMap = new Map<string, { method: string; label: string; total: number; count: number }>();
         const productMap = new Map<string, { name: string; quantity: number; revenue: number; profit: number }>();
+        const categoryMap = new Map<string, { name: string; revenue: number; profit: number }>();
+        const staffMap = new Map<string, { id: string; name: string; revenue: number; profit: number }>();
 
         const resolvePeriod = (date: Date): PeriodKey | null => {
             if (date >= periodRanges.current.start && date <= periodRanges.current.end) return "current";
@@ -354,22 +388,40 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
                 payment.count += 1;
                 paymentMap.set(paymentMethod, payment);
 
+                if (sale.user) {
+                    const staffId = sale.user.id;
+                    const staffName = `${sale.user.name} ${sale.user.surname || ""}`.trim();
+                    const staff = staffMap.get(staffId) || { id: staffId, name: staffName, revenue: 0, profit: 0 };
+                    staff.revenue += revenue;
+                    staff.profit += profit;
+                    staffMap.set(staffId, staff);
+                }
+
                 for (const item of sale.items) {
                     const productName = item.product?.name || "Bilinmeyen Ürün";
+                    const categoryName = item.product?.category?.name || "Kategorisiz";
                     const quantity = Number(item.quantity || 0);
                     const itemRevenue = convertTransactionAmount(Number(item.totalPrice || 0), saleCurrency, rates).TRY;
                     const itemProfit = (convertTransactionAmount(Number(item.unitPrice || 0), saleCurrency, rates).TRY - Number(item.product?.buyPrice || 0)) * quantity;
+                    
                     const product = productMap.get(productName) || { name: productName, quantity: 0, revenue: 0, profit: 0 };
                     product.quantity += quantity;
                     product.revenue += itemRevenue;
                     product.profit += itemProfit;
                     productMap.set(productName, product);
+
+                    const category = categoryMap.get(categoryName) || { name: categoryName, revenue: 0, profit: 0 };
+                    category.revenue += itemRevenue;
+                    category.profit += itemProfit;
+                    categoryMap.set(categoryName, category);
                 }
             }
         }
 
         for (const key of Object.keys(periods) as PeriodKey[]) {
-            periods[key].averageSale = periods[key].saleCount > 0 ? periods[key].revenue / periods[key].saleCount : 0;
+            const period = periods[key];
+            period.averageSale = period.saleCount > 0 ? period.revenue / period.saleCount : 0;
+            period.profitMargin = period.revenue > 0 ? (period.profit / period.revenue) * 100 : 0;
         }
 
         const comparisons = {
@@ -382,6 +434,9 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
         const topProducts = Array.from(productMap.values())
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 6);
+
+        const topCategories = Array.from(categoryMap.values()).sort((a, b) => b.revenue - a.revenue);
+        const staffPerformance = Array.from(staffMap.values()).sort((a, b) => b.revenue - a.revenue);
 
         const paymentBreakdown = Array.from(paymentMap.values()).sort((a, b) => b.total - a.total);
         const bestProduct = topProducts[0];
@@ -403,6 +458,8 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
             dailyTrend: currentDays.map(({ key, ...day }) => day),
             paymentBreakdown,
             topProducts,
+            topCategories,
+            staffPerformance,
             insights,
         });
     } catch (error) {
@@ -419,6 +476,8 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
             dailyTrend: [],
             paymentBreakdown: [],
             topProducts: [],
+            topCategories: [],
+            staffPerformance: [],
             insights: [],
         };
     }

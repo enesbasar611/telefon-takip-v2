@@ -1247,3 +1247,130 @@ export async function getCustomerDebtSummary(customerId: string) {
     return null;
   }
 }
+
+export async function addReconciliationNote(data: { customerId: string; note: string }) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    if (!shopId) return { success: false, error: "Yetkisiz işlem." };
+
+    await prisma.$transaction(async (tx) => {
+      // Create a zero-amount debt to act as a reconciliation marker in history
+      const newDebt = await tx.debt.create({
+        data: {
+          customerId: data.customerId,
+          amount: 0,
+          remainingAmount: 0,
+          currency: "TRY",
+          isPaid: true,
+          notes: `[MUTABAKAT] ${data.note}`,
+          description: "Hesap Mutabakatı",
+          shopId
+        }
+      });
+
+      await tx.transaction.create({
+        data: {
+          type: "INCOME",
+          amount: 0,
+          currency: "TRY",
+          description: `[MUTABAKAT] ${data.note}`,
+          paymentMethod: "DEBT",
+          userId,
+          shopId,
+          customerId: data.customerId,
+          debtId: newDebt.id,
+          category: "Mutabakat",
+        }
+      });
+    });
+
+    revalidatePath("/veresiye");
+    return { success: true };
+  } catch (error) {
+    console.error("addReconciliationNote error:", error);
+    return { success: false, error: "Mutabakat eklenemedi." };
+  }
+}
+
+/**
+ * Refunds a customer's excess balance (emanet iadesi).
+ */
+export async function refundCustomerBalance(data: {
+  customerId: string;
+  amount: number;
+  currency: string;
+  accountId?: string;
+  notes?: string;
+}) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    const { customerId, amount, currency, accountId, notes } = data;
+
+    if (amount <= 0) return { success: false, error: "Geçerli bir tutar giriniz." };
+
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId }
+    });
+
+    if (!customer) return { success: false, error: "Müşteri bulunamadı." };
+
+    const balanceField = currency === "USD" ? "balanceUsd" : "balance";
+    const currentBalance = Number(customer[balanceField] || 0);
+
+    if (currentBalance < amount) {
+      return { success: false, error: `Yetersiz bakiye. Maksimum iade edilebilir: ${currentBalance}` };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Decrease customer balance
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { [balanceField]: { decrement: amount } }
+      });
+
+      // 2. Determine target account
+      let targetAccountId = accountId;
+      if (!targetAccountId) {
+        const account = await tx.financeAccount.findFirst({
+          where: { type: "CASH", shopId, isActive: true },
+          orderBy: { isDefault: "desc" }
+        });
+        targetAccountId = account?.id;
+      }
+
+      // 3. Create expense transaction
+      await tx.transaction.create({
+        data: {
+          type: "EXPENSE",
+          amount: amount,
+          currency: currency,
+          description: notes || `Müşteri Emanet (Bakiye) İadesi`,
+          paymentMethod: "CASH",
+          financeAccountId: targetAccountId,
+          userId,
+          shopId,
+          customerId,
+          category: "Müşteri Ödemesi"
+        }
+      });
+
+      // 4. Update finance account balance
+      if (targetAccountId) {
+        await tx.financeAccount.update({
+          where: { id: targetAccountId },
+          data: { balance: { decrement: amount } }
+        });
+      }
+    });
+
+    revalidatePath("/veresiye");
+    revalidatePath(`/musteriler/${customerId}`);
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("refundCustomerBalance error:", error);
+    return { success: false, error: error?.message || "Emanet iadesi başarısız oldu." };
+  }
+}

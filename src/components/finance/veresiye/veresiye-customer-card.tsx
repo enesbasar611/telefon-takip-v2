@@ -29,6 +29,7 @@ interface VeresiyeCustomerCardProps {
     onReceipt: (item: any) => void;
     onDetail: (item: any) => void;
     onPayment: (item: any) => void;
+    onRefund?: (item: any) => void;
     isSelected: boolean;
     onSelect: (id: string) => void;
 }
@@ -44,6 +45,7 @@ export function VeresiyeCustomerCard({
     onReceipt,
     onDetail,
     onPayment,
+    onRefund,
     isSelected,
     onSelect
 }: VeresiyeCustomerCardProps) {
@@ -206,6 +208,19 @@ export function VeresiyeCustomerCard({
                         >
                             Ödeme
                         </Button>
+                        {(item.balance > 0 || item.balanceUsd > 0) && onRefund && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    onRefund(item);
+                                }}
+                                className={cn("rounded-lg border-amber-500/50 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 uppercase font-bold tracking-widest shrink-0 ml-1", viewMode === 'grid' ? "h-8 px-2 text-[8px]" : "h-9 px-3 text-[9px]")}
+                            >
+                                İade Et
+                            </Button>
+                        )}
                     </div>
                 </div>
 

@@ -138,6 +138,23 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                                 </Button>
                             </div>
                         </div>
+                        {Number(paymentAmount) > (
+                            paymentCurrency === 'TRY'
+                                ? (paymentCustomer?.totalRemainingTRY || 0) + ((paymentCustomer?.totalRemainingUSD || 0) * (rates?.usd || 1))
+                                : (paymentCustomer?.totalRemainingUSD || 0) + ((paymentCustomer?.totalRemainingTRY || 0) / (rates?.usd || 1))
+                        ) && (
+                            <div className="mt-3 flex items-start gap-2 bg-amber-500/10 text-amber-600 dark:text-amber-500 p-3 rounded-xl border border-amber-500/20">
+                                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                <div className="text-[11px] font-medium">
+                                    <strong className="font-bold block mb-0.5 uppercase tracking-wider text-[10px]">Emanet Bakiye Oluşacak</strong>
+                                    Tahsil edilen tutar toplam borçtan fazla olduğu için, aradaki fark ({
+                                        paymentCurrency === 'TRY' ? '₺' : '$'
+                                    }{(Number(paymentAmount) - (paymentCurrency === 'TRY'
+                                        ? (paymentCustomer?.totalRemainingTRY || 0) + ((paymentCustomer?.totalRemainingUSD || 0) * (rates?.usd || 1))
+                                        : (paymentCustomer?.totalRemainingUSD || 0) + ((paymentCustomer?.totalRemainingTRY || 0) / (rates?.usd || 1)))).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) müşterinin emanet bakiyesine eklenecektir.
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-3">
