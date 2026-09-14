@@ -15,6 +15,8 @@ export interface ServiceTicketLabelData {
   shopName: string;
   shopPhone?: string;
   shopAddress?: string;
+  problemDesc?: string;
+  showPrice?: boolean;
 }
 
 export function buildServiceTicketLabelData(ticket: any, shop?: any): ServiceTicketLabelData {
@@ -29,6 +31,8 @@ export function buildServiceTicketLabelData(ticket: any, shop?: any): ServiceTic
     shopName: shop?.name || shop?.companyName || "BAŞAR TEKNİK",
     shopPhone: shop?.phone || "",
     shopAddress: shop?.address || shop?.companyAddress || "",
+    problemDesc: ticket?.problemDesc || "",
+    showPrice: true,
   };
 }
 
@@ -110,18 +114,30 @@ export function ServiceTicketLabelPrintArea({ label, onPrinted }: ServiceTicketL
               <div className="service-ticket-label-ticket">{label.ticketNumber}</div>
             </div>
             <div className="service-ticket-label-grid">
-              <span>Fiş</span>
-              <strong>{label.ticketNumber}</strong>
               <span>Müşteri</span>
               <strong>{label.customerName}</strong>
               <span>Telefon</span>
               <strong>{label.customerPhone}</strong>
               <span>Cihaz</span>
               <strong>{label.deviceBrand} {label.deviceModel}</strong>
-              <span>Fiyat</span>
-              <strong>{formatCurrency(label.estimatedCost)} TL</strong>
+              {label.problemDesc && (
+                <>
+                  <span>Arıza</span>
+                  <strong className="text-[10px] whitespace-normal line-clamp-2 leading-tight">{label.problemDesc}</strong>
+                </>
+              )}
+              {label.showPrice !== false && (
+                <>
+                  <span>Fiyat</span>
+                  <strong>{formatCurrency(label.estimatedCost)} TL</strong>
+                </>
+              )}
               <span>Alış</span>
-              <strong>{new Date(label.createdAt).toLocaleString("tr-TR")}</strong>
+              <strong className="whitespace-normal leading-tight">
+                {new Date(label.createdAt).toLocaleDateString("tr-TR")}
+                <br />
+                {new Date(label.createdAt).toLocaleTimeString("tr-TR")}
+              </strong>
             </div>
           </div>
         </div>

@@ -160,6 +160,8 @@ export function CreateServiceModal({
             shopName: shop?.name || "BAŞAR TEKNİK",
             shopPhone: shop?.phone || shop?.gsm || "",
             shopAddress: shop?.address || "",
+            problemDesc: data.problemDesc || "",
+            showPrice: true,
           });
           setOpen(false);
           reset({

@@ -255,15 +255,33 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
             >
               <Printer className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 text-amber-500 hover:bg-amber-500/10 rounded-xl border border-amber-500/20"
-              title="Barkod etiketi yazdır"
-              onClick={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop))}
-            >
-              <BarcodeIcon className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 text-amber-500 hover:bg-amber-500/10 rounded-xl border border-amber-500/20"
+                  title="Barkod etiketi yazdır"
+                >
+                  <BarcodeIcon className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-[180px] bg-card border border-border/50 p-2 rounded-2xl backdrop-blur-3xl shadow-2xl">
+                <DropdownMenuLabel className="text-xs text-gray-500 p-2">Etiket Yazdır</DropdownMenuLabel>
+                <DropdownMenuItem
+                  className="text-sm gap-3 p-3 cursor-pointer focus:bg-accent rounded-xl"
+                  onSelect={() => setServiceLabel({ ...buildServiceTicketLabelData(ticket, shop), showPrice: true })}
+                >
+                  <BarcodeIcon className="h-4 w-4 text-amber-500" /> Fiyatlı Yazdır
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-sm gap-3 p-3 cursor-pointer focus:bg-accent rounded-xl"
+                  onSelect={() => setServiceLabel({ ...buildServiceTicketLabelData(ticket, shop), showPrice: false })}
+                >
+                  <BarcodeIcon className="h-4 w-4 text-amber-500" /> Fiyatsız Yazdır
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link href={`/musteriler/${ticket.customerId}`}>
               <Button variant="ghost" size="icon" className="h-10 w-10 text-blue-500 hover:bg-blue-500/10 rounded-xl border border-blue-500/10" title="Müşteri Profili">
                 <UserCircle className="h-4 w-4" />
