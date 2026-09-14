@@ -115,20 +115,21 @@ export function SalesHistoryClient({
             paymentMethod: paymentMethodFilter,
             staffId: staffFilter,
         }),
-        initialData,
         placeholderData: keepPreviousData,
     });
 
     const { data: activeReport = reportData, isFetching: reportFetching } = useQuery({
         queryKey: ["sales-history-report", rangeStart, rangeEnd],
         queryFn: () => getSalesHistoryReport({ startDate: rangeStart, endDate: rangeEnd }),
-        initialData: reportData,
         placeholderData: keepPreviousData,
     });
 
     const applySearch = () => {
         setPage(1);
         setAppliedSearch(searchTerm.trim());
+        if (dateRange?.from) {
+            setAppliedRange({ from: dateRange.from, to: dateRange.to || dateRange.from });
+        }
     };
 
     const applyDateRange = () => {
