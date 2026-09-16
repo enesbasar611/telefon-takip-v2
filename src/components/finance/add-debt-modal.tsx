@@ -522,20 +522,35 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                                                     exit={{ opacity: 0, y: -10 }}
                                                     className="absolute top-full left-0 w-full bg-popover border border-border mt-1 rounded-xl shadow-2xl z-[110] max-h-48 overflow-y-auto p-1"
                                                 >
-                                                    {productSuggestions.map((p) => (
-                                                        <button
-                                                            key={p.id}
-                                                            type="button"
-                                                            onClick={() => handleSelectProduct(p)}
-                                                            className="w-full text-left p-2 hover:bg-indigo-500 hover:text-white rounded-lg transition-all flex justify-between items-center text-xs"
-                                                        >
-                                                            <div className="flex flex-col">
-                                                                <span>{p.name}</span>
-                                                                <span className="text-[9px] opacity-60">Stok: {p.stock}</span>
-                                                            </div>
-                                                            <span className="font-bold">{formatProductPrice(p)}</span>
-                                                        </button>
-                                                    ))}
+                                                    {productSuggestions.map((p) => {
+                                                        const isOutOfStock = p.stock <= 0;
+                                                        return (
+                                                            <button
+                                                                key={p.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (!isOutOfStock) {
+                                                                        handleSelectProduct(p);
+                                                                    }
+                                                                }}
+                                                                disabled={isOutOfStock}
+                                                                className={cn(
+                                                                    "w-full text-left p-2 rounded-lg transition-all flex justify-between items-center text-xs disabled:cursor-not-allowed",
+                                                                    isOutOfStock 
+                                                                        ? "bg-rose-500/5 text-rose-500/70 border border-rose-500/10" 
+                                                                        : "hover:bg-indigo-500 hover:text-white"
+                                                                )}
+                                                            >
+                                                                <div className="flex flex-col">
+                                                                    <span className={cn(isOutOfStock && "line-through opacity-70")}>{p.name}</span>
+                                                                    <span className={cn("text-[9px]", isOutOfStock ? "text-rose-500 font-bold" : "opacity-60")}>
+                                                                        Stok: {p.stock} {isOutOfStock && "(Stok Yetersiz)"}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="font-bold">{formatProductPrice(p)}</span>
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>

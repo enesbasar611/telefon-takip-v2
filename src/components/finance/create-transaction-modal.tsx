@@ -164,15 +164,35 @@ export function CreateTransactionModal({
 
   const { data: accounts = initialAccounts || [] } = useQuery<any[]>({
     queryKey: ["finance-accounts"],
-    queryFn: getAccounts,
+    queryFn: async () => await getAccounts(),
     enabled: open,
     initialData: initialAccounts,
     placeholderData: keepPreviousData,
   });
 
+  const paymentMethod = watch("paymentMethod");
+
+  const filteredAccounts = useMemo(() => {
+    if (!accounts || accounts.length === 0) return [];
+    if (paymentMethod === "CASH") return accounts.filter(a => a.type === "CASH");
+    if (paymentMethod === "CARD") return accounts.filter(a => a.type === "POS" || a.type === "CREDIT_CARD");
+    if (paymentMethod === "TRANSFER") return accounts.filter(a => a.type === "BANK");
+    return accounts;
+  }, [accounts, paymentMethod]);
+
+  useEffect(() => {
+    const currentAccountId = watch("accountId");
+    if (currentAccountId && accounts.length > 0) {
+      const isValid = filteredAccounts.some(a => a.id === currentAccountId);
+      if (!isValid) {
+        setValue("accountId", "", { shouldValidate: true });
+      }
+    }
+  }, [paymentMethod, accounts, filteredAccounts, setValue, watch]);
+
   const { data: recentTransactions = [] } = useQuery<any[]>({
     queryKey: ["transactions", { pageSize: 4 }],
-    queryFn: () => getTransactions({ pageSize: 4 }),
+    queryFn: async () => await getTransactions({ pageSize: 4 }),
     enabled: open,
     placeholderData: keepPreviousData,
   });
@@ -554,11 +574,11 @@ export function CreateTransactionModal({
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-border bg-popover p-2 min-w-[320px]">
-                    {accounts.length === 0 ? (
+                    {filteredAccounts.length === 0 ? (
                       <SelectItem value="none" disabled className="text-xs py-3 text-center text-muted-foreground">
                         Kasa bulunamadı. Lütfen yeni kasa ekleyin.
                       </SelectItem>
-                    ) : accounts.map((acc) => (
+                    ) : filteredAccounts.map((acc) => (
                       <SelectItem key={acc.id} value={acc.id} className="text-xs rounded-xl py-3 pr-8 text-foreground font-medium cursor-pointer">
                         <div className="flex items-center justify-between w-full min-w-[260px] gap-4 pointer-events-none">
                           <div className="flex min-w-0 items-center gap-3">
