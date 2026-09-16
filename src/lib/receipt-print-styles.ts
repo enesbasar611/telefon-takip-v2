@@ -466,7 +466,10 @@ export async function generateProfessionalPDF(
         a.href = url;
         a.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
         a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        
+        // Timeout uzatıldı (1000 -> 60000). Eğer kullanıcı "Farklı Kaydet" diyaloğunda 1 saniyeden fazla beklerse
+        // URL iptal oluyor ve inen dosya boş/bozuk çıkıyordu.
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err) {
         console.error("PDF generation failed", err);
     }

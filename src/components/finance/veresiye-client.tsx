@@ -953,17 +953,25 @@ export function VeresiyeClient({
     const historyTotals = useMemo(() => {
         if (!historyCustomer) return { try: 0, usd: 0 };
         const custId = historyCustomer.customerId || historyCustomer.id;
-        const customerDebts = debts.filter((d: any) => d.customer.id === custId && !d.isPaid);
+        
+        // Get all debts for this customer from the main debts array
+        const rawCustomerDebts = debts.filter((d: any) => d.customer?.id === custId);
+        
+        // Use activeReturns from statementData to adjust debts for returns
+        const returns = statementData?.activeReturns || [];
+        
+        // Process through getPrintableDebts and filter out the ones that became fully paid/returned
+        const printableDebts = getPrintableDebts(rawCustomerDebts, returns).filter((d: any) => !d.isPaid);
 
         let tryDebt = 0;
         let usdDebt = 0;
-        customerDebts.forEach((d: any) => {
+        printableDebts.forEach((d: any) => {
             const remaining = getSafeDebtRemaining(d);
             if (d.currency === 'USD') usdDebt += remaining;
             else tryDebt += remaining;
         });
         return { try: tryDebt, usd: usdDebt };
-    }, [debts, historyCustomer]);
+    }, [debts, historyCustomer, statementData]);
 
     // --- Actions ---
     const handleCurrencySwitch = (newCurrency: "TRY" | "USD") => {
@@ -2070,7 +2078,7 @@ export function VeresiyeClient({
 	                                        ...filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                         ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
                                     ];
-                                    setReceiptCustomer({ id: historyCustomer.customerId, customerId: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
+                                    setReceiptCustomer({ id: historyCustomer.customerId || historyCustomer.id, customerId: historyCustomer.customerId || historyCustomer.id, name: historyCustomer.name, phone: historyCustomer.phone });
                                     setReceiptDebts(combined);
                                     setReceiptShowPaid(includePaidItems);
                                     setReceiptAutoPDF(false);
@@ -2099,7 +2107,7 @@ export function VeresiyeClient({
 	                                        ...filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                         ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
                                     ];
-                                    setReceiptCustomer({ id: historyCustomer.customerId, name: historyCustomer.name, phone: historyCustomer.phone });
+                                    setReceiptCustomer({ id: historyCustomer.customerId || historyCustomer.id, customerId: historyCustomer.customerId || historyCustomer.id, name: historyCustomer.name, phone: historyCustomer.phone });
                                     setReceiptDebts(combined);
                                     setReceiptShowPaid(includePaidItems);
                                     setReceiptAutoPDF(false);
