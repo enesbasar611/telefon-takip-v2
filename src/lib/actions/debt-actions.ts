@@ -578,6 +578,7 @@ export async function collectGlobalCustomerPayment(data: {
     const beforeSummary = await getCustomerDebtSummary(customerId);
 
     let remainingPayment = paymentAmount;
+    let fifoDetails = "";
 
     await prisma.$transaction(async (tx) => {
       for (const debt of sortDebtsForPayment(unpaidDebts, paymentCurrency)) {
@@ -605,6 +606,17 @@ export async function collectGlobalCustomerPayment(data: {
 
         if (amountToReduceFromDebt > 0.001) {
           const newRemaining = clampRemainingAmount(debtRemaining - amountToReduceFromDebt, debt.amount);
+          
+          // FIFO Breakdown
+          const itemName = debt.description || debt.notes || "Ürün";
+          const originalAmt = `${Number(debt.amount).toFixed(2)}${debt.currency === 'USD' ? '$' : '₺'}`;
+          const paidAmtStr = paymentCurrency === debt.currency 
+             ? `${amountToReduceFromDebt.toFixed(2)}${debt.currency === 'USD' ? '$' : '₺'}` 
+             : `${amountToApplyFromPayment.toFixed(2)}${paymentCurrency === 'USD' ? '$' : '₺'} (${amountToReduceFromDebt.toFixed(2)}${debt.currency === 'USD' ? '$' : '₺'})`;
+          const isFullyPaid = newRemaining <= 0.01;
+          
+          fifoDetails += `${itemName} (${originalAmt}): ${paidAmtStr} ${isFullyPaid ? 'Ödendi' : 'Kısmi Ödendi'}\n`;
+
           await tx.debt.update({
             where: { id: debt.id },
             data: {
@@ -618,6 +630,7 @@ export async function collectGlobalCustomerPayment(data: {
 
       if (remainingPayment > 0.01 && !ignoreExcess) {
         const balanceField = paymentCurrency === "USD" ? "balanceUsd" : "balance";
+        fifoDetails += `Kalan ${remainingPayment.toFixed(2)}${paymentCurrency === 'USD' ? '$' : '₺'} emanet bakiyeye eklendi.\n`;
         await tx.customer.update({
           where: { id: customerId },
           data: { [balanceField]: { increment: remainingPayment } }
@@ -633,13 +646,17 @@ export async function collectGlobalCustomerPayment(data: {
         });
         targetAccountId = account?.id;
       }
+      
+      const finalDescription = notes 
+        ? `${notes}\n\nTahsilat Detayı:\n${fifoDetails.trim()}`
+        : `${beforeSummary?.name || 'Müşteri'} Tahsilatı\n\nTahsilat Detayı:\n${fifoDetails.trim()}`;
 
       await tx.transaction.create({
         data: {
           type: "INCOME",
           amount: paymentAmount,
           currency: paymentCurrency,
-          description: notes || `${beforeSummary?.name || 'Müşteri'} Tahsilatı`,
+          description: finalDescription,
           paymentMethod,
           financeAccountId: targetAccountId,
           userId,

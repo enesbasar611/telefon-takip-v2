@@ -1,5 +1,6 @@
 "use client";
-
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Scale, PiggyBank, Receipt } from "lucide-react";
@@ -32,11 +33,35 @@ export function FinanceDashboard({ summary }: { summary: any }) {
         { label: "BANKA & POS", value: posBankBalance, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10", description: "Banka ve POS bakiyeleri" },
     ];
 
+    const [selectedCard, setSelectedCard] = useState<string | null>(null);
+    const [todaySales, setTodaySales] = useState<any[]>([]);
+    const [isLoadingSales, setIsLoadingSales] = useState(false);
+
+    const handleCardClick = async (label: string) => {
+        if (label === "BUGÜNKÜ GELİR") {
+            setSelectedCard(label);
+            setIsLoadingSales(true);
+            try {
+                const { getUnifiedHistory } = await import("@/lib/actions/activity-actions");
+                const res = await getUnifiedHistory({ typeFilter: "SALE", dateRange: "TODAY", pageSize: 50 });
+                setTodaySales(res.items);
+            } catch (error) {
+                console.error("Failed to load today's sales:", error);
+            } finally {
+                setIsLoadingSales(false);
+            }
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-5">
                 {cards.map((stat, i) => (
-                    <Card key={i} className="border-zinc-200 dark:border-zinc-800 shadow-sm group overflow-hidden relative bg-card/50 backdrop-blur-sm rounded-[2.5rem]">
+                    <Card 
+                        key={i} 
+                        onClick={() => handleCardClick(stat.label)}
+                        className={`border-zinc-200 dark:border-zinc-800 shadow-sm group overflow-hidden relative bg-card/50 backdrop-blur-sm rounded-[2.5rem] ${stat.label === "BUGÜNKÜ GELİR" ? "cursor-pointer hover:border-emerald-500/30 transition-all" : ""}`}
+                    >
                         <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-[0.03] rounded-full bg-foreground group-hover:opacity-[0.06] transition-opacity" />
                         <CardContent className="p-8">
                             <div className="flex items-center justify-between mb-4">
@@ -54,6 +79,46 @@ export function FinanceDashboard({ summary }: { summary: any }) {
                     </Card>
                 ))}
             </div>
+
+            <Dialog open={selectedCard === "BUGÜNKÜ GELİR"} onOpenChange={(open: boolean) => !open && setSelectedCard(null)}>
+                <DialogContent className="sm:max-w-[500px] bg-background/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden rounded-[2.5rem]">
+                    <div className="p-6 pb-0">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5 text-emerald-500" />
+                                Günlük Satışlar
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Bugün yapılan peşin satışların listesi.
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+                    <div className="p-6 pt-4 max-h-[60vh] overflow-y-auto">
+                        {isLoadingSales ? (
+                            <div className="flex justify-center p-8">
+                                <div className="h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : todaySales.length > 0 ? (
+                            <div className="space-y-3">
+                                {todaySales.map((sale: any) => (
+                                    <div key={sale.id} className="flex justify-between items-center p-3 rounded-2xl bg-muted/20 border border-border/40">
+                                        <div>
+                                            <p className="text-xs font-semibold">{sale.customerName || "Perakende Müşteri"}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">{sale.description || "Satış İşlemi"}</p>
+                                        </div>
+                                        <p className="text-sm font-bold text-emerald-500">
+                                            {sale.currency === "USD" ? "$" : sale.currency === "EUR" ? "€" : "₺"}
+                                            {Number(sale.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-center text-muted-foreground py-8">Bugün henüz satış yapılmamış.</p>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

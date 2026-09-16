@@ -109,4 +109,5 @@ export const saleSchema = z.object({
      accountId: z.string().optional(),
      discountAmount: z.coerce.number().optional().default(0),
     usedPoints: z.coerce.number().optional().default(0),
+    description: z.string().optional(),
 });

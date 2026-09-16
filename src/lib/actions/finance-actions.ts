@@ -1447,22 +1447,32 @@ export async function deleteTransaction(id: string) {
         select: {
           id: true,
           amount: true,
+          currency: true,
           type: true,
           description: true,
           financeAccountId: true,
           createdAt: true,
+          customerId: true,
+          category: true,
           financeAccount: { select: { name: true, type: true } },
           user: { select: { name: true } }
         }
       });
 
       if (!transaction) throw new Error("İşlem bulunamadı.");
+
+      if (transaction.category === "Tahsilat" || (transaction.description && transaction.description.includes("Tahsilat Detayı"))) {
+        throw new Error("Müşteri tahsilatları bu ekrandan silinemez. Bakiye bütünlüğünü korumak için lütfen müşteri kartından 'Eksi Tahsilat' veya 'Borçlandır' ekleyerek işlemi manuel olarak düzeltin.");
+      }
+
       deletedTxDetails = {
         amount: transaction.amount,
         type: transaction.type,
         description: transaction.description,
         accountName: transaction.financeAccount?.name,
-        userName: transaction.user?.name
+        userName: transaction.user?.name,
+        customerId: transaction.customerId,
+        category: transaction.category
       };
 
       // Reverse balance
@@ -1534,6 +1544,10 @@ export async function deleteTransactions(ids: string[]) {
         });
 
         if (!transaction) continue;
+
+        if (transaction.category === "Tahsilat" || (transaction.description && transaction.description.includes("Tahsilat Detayı"))) {
+          throw new Error("Müşteri tahsilatları bu ekrandan silinemez. Seçili işlemler arasında tahsilat bulunmaktadır. Bakiye bütünlüğünü korumak için tahsilatları atlayın ve ilgili müşteri kartından manuel düzeltin.");
+        }
 
         // Reverse balance
         if (transaction.financeAccountId) {

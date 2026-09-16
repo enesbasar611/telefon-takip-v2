@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
@@ -117,6 +118,7 @@ export function POSInterface({ initialSaleId }: {
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
+  const [saleDescription, setSaleDescription] = useState("");
 
   const pointValueTl = useMemo(() => {
     const loyaltyVal = settingsData?.find((s: any) => s.key === "loyalty_point_value_tl")?.value;
@@ -601,7 +603,8 @@ export function POSInterface({ initialSaleId }: {
           discountAmount: defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
             defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
               loyaltyDiscountAmount,
-          usedPoints
+          usedPoints,
+          description: saleDescription
         });
 
         if (result.success) {
@@ -629,6 +632,7 @@ export function POSInterface({ initialSaleId }: {
           setDisplaySearchTerm("");
           setSelectedCustomerId(undefined);
           setSelectedAccountId("");
+          setSaleDescription("");
           // 4. Invalidate to seamlessly update server state without reload
           queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
@@ -799,7 +803,7 @@ export function POSInterface({ initialSaleId }: {
             </Button>
           </div>
 
-          <div className="p-8 border-b border-border/40 bg-muted/5">
+          <div className="p-8 border-b border-border/40 bg-muted/5 flex flex-col gap-4">
             <CustomerSelector
               customers={customers}
               selectedCustomerId={selectedCustomerId}
@@ -808,6 +812,12 @@ export function POSInterface({ initialSaleId }: {
               setCustomerSearch={setCustomerSearch}
               onNewCustomer={handleQuickCreateCustomer}
               isProcessing={isCreatingCustomer}
+            />
+            <Textarea 
+              placeholder="Açıklama / Not (İsteğe Bağlı)" 
+              value={saleDescription} 
+              onChange={(e) => setSaleDescription(e.target.value)} 
+              className="text-xs min-h-[60px] bg-background border-border/40 resize-none rounded-xl"
             />
           </div>
 

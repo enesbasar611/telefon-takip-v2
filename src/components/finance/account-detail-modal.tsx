@@ -357,7 +357,7 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/40">
-                                        {analytics?.transactions.map((t: any) => (
+                                        {analytics?.transactions?.slice().reverse().map((t: any) => (
                                             <tr key={t.id} className="hover:bg-muted/10 transition-colors group">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     {(() => {

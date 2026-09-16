@@ -89,7 +89,10 @@ export function SalesHistoryRow({
             </td>
             <td className="px-6 py-2">
                 <div className="flex flex-col gap-1.5 max-w-md">
-                    {op.items.length > 0 ? (
+                    {op.description && (
+                        <span className="text-sm text-muted-foreground line-clamp-1 italic font-medium">"{op.description}"</span>
+                    )}
+                    {op.items.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
                             {op.items.slice(0, 3).map((item, idx) => (
                                 <Badge key={idx} variant="secondary" className="text-xs px-2 py-1 h-auto rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-muted-foreground border-none font-semibold tracking-tight">
@@ -100,8 +103,6 @@ export function SalesHistoryRow({
                                 <span className="text-xs text-muted-foreground font-semibold">+{op.items.length - 3} ürün daha</span>
                             )}
                         </div>
-                    ) : (
-                        <span className="text-sm text-muted-foreground line-clamp-1 italic font-medium">"{op.description}"</span>
                     )}
                 </div>
             </td>

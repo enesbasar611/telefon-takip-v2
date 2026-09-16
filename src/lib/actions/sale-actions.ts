@@ -222,9 +222,10 @@ export async function createSale(rawData: z.infer<typeof saleSchema>) {
         exchangeRates
       ).TRY;
       const soldProductNames = newSale.items.map(item => item.product?.name).filter(Boolean);
-      const saleDescription = soldProductNames.length > 0
+      const baseDesc = data.description?.trim() || (soldProductNames.length > 0
         ? `${soldProductNames[0]}${soldProductNames.length > 1 ? ` + ${soldProductNames.length - 1} ürün` : ""}`
-        : `Satış ${newSale.saleNumber}`;
+        : `Satış ${newSale.saleNumber}`);
+      const saleDescription = baseDesc;
 
       // 5. Create Financial Transaction
       await tx.transaction.create({

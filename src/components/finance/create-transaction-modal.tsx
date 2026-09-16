@@ -122,7 +122,7 @@ export function CreateTransactionModal({
       amount: initialData?.amount?.toString() || "",
       description: initialData?.description || "",
       paymentMethod: initialData?.paymentMethod || "CASH",
-      accountId: initialData?.accountId || "",
+      accountId: initialData?.financeAccountId || initialData?.accountId || "",
       category: initialCategory || initialData?.category || "GENEL",
       currency: initialData?.currency || "TRY",
       manualCategory: "",
@@ -387,12 +387,12 @@ export function CreateTransactionModal({
           )}
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-[1040px] border border-border/70 p-0 overflow-hidden bg-background text-foreground rounded-3xl shadow-2xl flex flex-col lg:flex-row h-[92vh] lg:h-auto max-h-[880px]">
+      <DialogContent className="max-w-[1040px] border border-border/70 p-0 overflow-hidden bg-background text-foreground rounded-3xl shadow-2xl flex flex-col lg:flex-row h-[95vh] lg:h-auto max-h-[95vh] lg:max-h-[880px]">
         {/* Header Gradient Stripe */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-rose-500 z-50 opacity-80" />
 
         {/* Left Side: Form */}
-        <div className="flex-[1.45] p-6 md:p-8 lg:p-10 overflow-y-auto custom-scrollbar bg-background">
+        <div className="flex-1 lg:flex-[1.45] p-6 md:p-8 lg:p-10 overflow-y-auto custom-scrollbar bg-background">
           <DialogHeader className="mb-8 text-left">
             <div className="flex items-center gap-5">
               <div className={cn(
@@ -549,18 +549,18 @@ export function CreateTransactionModal({
                     </button>
                   } />
                 </div>
-                <Select onValueChange={(val) => setValue("accountId", val, { shouldValidate: true })} value={watch("accountId")}>
+                <Select onValueChange={(val) => setValue("accountId", val, { shouldValidate: true })} value={watch("accountId") || undefined}>
                   <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs shadow-none">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-border bg-popover p-2 min-w-[320px]">
                     {accounts.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-                        Kasa bulunamadi. Hizli ekle ile yeni kasa olusturun.
-                      </div>
+                      <SelectItem value="none" disabled className="text-xs py-3 text-center text-muted-foreground">
+                        Kasa bulunamadı. Lütfen yeni kasa ekleyin.
+                      </SelectItem>
                     ) : accounts.map((acc) => (
                       <SelectItem key={acc.id} value={acc.id} className="text-xs rounded-xl py-3 pr-8 text-foreground font-medium cursor-pointer">
-                        <div className="flex items-center justify-between w-full min-w-[260px] gap-4">
+                        <div className="flex items-center justify-between w-full min-w-[260px] gap-4 pointer-events-none">
                           <div className="flex min-w-0 items-center gap-3">
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
                               {getAccountIcon(acc.type)}
@@ -678,10 +678,10 @@ export function CreateTransactionModal({
               )}
             </div>
 
-            <div className="sticky bottom-0 -mx-2 flex gap-3 border-t border-border/70 bg-background/90 px-2 pb-2 pt-4 backdrop-blur-xl">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending} className="h-12 flex-1 rounded-xl text-[11px] font-semibold uppercase tracking-widest">Iptal</Button>
+            <div className="sticky -bottom-6 md:-bottom-8 lg:-bottom-10 -mx-6 md:-mx-8 lg:-mx-10 mt-6 flex gap-3 border-t border-border/70 bg-background/95 px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10 pt-4 backdrop-blur-xl z-10">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending} className="h-14 flex-1 rounded-2xl text-xs font-semibold uppercase tracking-widest shadow-sm">İptal</Button>
               <Button type="submit" disabled={isPending || isInsufficient} className={cn(
-                "h-12 flex-[1.6] rounded-xl text-[11px] font-semibold uppercase tracking-widest text-white gap-2 shadow-lg",
+                "h-14 flex-[1.6] rounded-2xl text-xs font-semibold uppercase tracking-widest text-white gap-2 shadow-xl",
                 transactionType === "INCOME" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20",
                 isInsufficient && "opacity-50 cursor-not-allowed grayscale"
               )}>
@@ -690,7 +690,7 @@ export function CreateTransactionModal({
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    {initialData ? 'Guncelle' : transactionType === "INCOME" ? 'Gelir Kaydet' : 'Gider Kaydet'}
+                    {initialData ? 'Güncelle' : transactionType === "INCOME" ? 'Gelir Kaydet' : 'Gider Kaydet'}
                   </>
                 )}
               </Button>
@@ -699,7 +699,7 @@ export function CreateTransactionModal({
         </div>
 
         {/* Right Side: Sidebar */}
-        <div className="flex-[0.6] bg-zinc-50/50 dark:bg-zinc-900/30 border-l border-zinc-200 dark:border-zinc-800 p-8 md:p-10 flex flex-col h-full overflow-hidden">
+        <div className="hidden lg:flex flex-[0.6] bg-zinc-50/50 dark:bg-zinc-900/30 border-l border-zinc-200 dark:border-zinc-800 p-8 md:p-10 flex-col h-full overflow-hidden">
           <div className="space-y-10 h-full overflow-y-auto custom-scrollbar pr-2">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
