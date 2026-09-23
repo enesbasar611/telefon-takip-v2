@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -40,11 +41,114 @@ interface BarcodeLabelPrintDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function ResizableLogo({ src, width, height, onChange, minW = 20, maxW = 120, minH = 10, maxH = 60 }: any) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handlePointerDown = (e: React.PointerEvent, dir: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = width;
+    const startHeight = height;
+
+    const handlePointerMove = (moveEv: PointerEvent) => {
+      const dx = moveEv.clientX - startX;
+      const dy = moveEv.clientY - startY;
+      
+      let newW = startWidth;
+      let newH = startHeight;
+
+      if (dir.includes('e')) newW = startWidth + dx;
+      if (dir.includes('w')) newW = startWidth - dx;
+      if (dir.includes('s')) newH = startHeight + dy;
+      if (dir.includes('n')) newH = startHeight - dy;
+
+      onChange(
+        Math.max(minW, Math.min(maxW, newW)),
+        Math.max(minH, Math.min(maxH, newH))
+      );
+    };
+
+    const handlePointerUp = () => {
+      setIsDragging(false);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  };
+
+  const handleClass = `absolute w-2 h-2 bg-white border border-blue-500 no-print transition-opacity ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`;
+
+  return (
+    <div className="relative group inline-block" style={{ width: `${width}px`, height: `${height}px` }}>
+      <img src={src} alt="Logo" className="w-full h-full object-contain pointer-events-none" style={{ filter: 'grayscale(100%) contrast(200%) brightness(50%)', mixBlendMode: 'multiply' }} />
+      <div className={`absolute inset-0 border border-blue-500/50 pointer-events-none no-print transition-opacity ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+      
+      <div className={`${handleClass} -top-1 -left-1 cursor-nwse-resize`} onPointerDown={(e) => handlePointerDown(e, 'nw')} />
+      <div className={`${handleClass} -top-1 left-1/2 -translate-x-1/2 cursor-ns-resize`} onPointerDown={(e) => handlePointerDown(e, 'n')} />
+      <div className={`${handleClass} -top-1 -right-1 cursor-nesw-resize`} onPointerDown={(e) => handlePointerDown(e, 'ne')} />
+      <div className={`${handleClass} top-1/2 -right-1 -translate-y-1/2 cursor-ew-resize`} onPointerDown={(e) => handlePointerDown(e, 'e')} />
+      <div className={`${handleClass} -bottom-1 -right-1 cursor-nwse-resize`} onPointerDown={(e) => handlePointerDown(e, 'se')} />
+      <div className={`${handleClass} -bottom-1 left-1/2 -translate-x-1/2 cursor-ns-resize`} onPointerDown={(e) => handlePointerDown(e, 's')} />
+      <div className={`${handleClass} -bottom-1 -left-1 cursor-nesw-resize`} onPointerDown={(e) => handlePointerDown(e, 'sw')} />
+      <div className={`${handleClass} top-1/2 -left-1 -translate-y-1/2 cursor-ew-resize`} onPointerDown={(e) => handlePointerDown(e, 'w')} />
+    </div>
+  );
+}
+
 export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChange }: BarcodeLabelPrintDialogProps) {
   const [settings, setSettings] = useState(defaultBarcodeLabelSettings);
   const [manualZoom, setManualZoom] = useState<number | null>(null);
+  const [productNameFontSize, setProductNameFontSize] = useState<number>(10);
+  const [priceFontSize, setPriceFontSize] = useState<number>(10);
+  const [barcodeWidth, setBarcodeWidth] = useState<number>(1.2);
+  const [logoData, setLogoData] = useState<string | null>(null);
+  const [logoWidthPx, setLogoWidthPx] = useState<number>(60);
+  const [logoHeightPx, setLogoHeightPx] = useState<number>(24);
+  
   const previewFrameRef = useRef<HTMLDivElement>(null);
   const [previewBounds, setPreviewBounds] = useState({ width: 0, height: 0 });
+
+  // Load advanced settings
+  useEffect(() => {
+    const saved = localStorage.getItem("barcode_advanced_settings");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.productNameFontSize) setProductNameFontSize(parsed.productNameFontSize);
+        if (parsed.priceFontSize) setPriceFontSize(parsed.priceFontSize);
+        if (parsed.barcodeWidth) setBarcodeWidth(parsed.barcodeWidth);
+        if (parsed.logoData) setLogoData(parsed.logoData);
+        if (parsed.logoWidthPx) setLogoWidthPx(parsed.logoWidthPx);
+        if (parsed.logoHeightPx) setLogoHeightPx(parsed.logoHeightPx);
+      } catch (e) {}
+    }
+  }, []);
+
+  // Save advanced settings
+  useEffect(() => {
+    localStorage.setItem("barcode_advanced_settings", JSON.stringify({
+      productNameFontSize,
+      priceFontSize,
+      barcodeWidth,
+      logoData,
+      logoWidthPx,
+      logoHeightPx
+    }));
+  }, [productNameFontSize, priceFontSize, barcodeWidth, logoData, logoWidthPx, logoHeightPx]);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => setLogoData(event.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const printableProducts = useMemo(() => {
     if (products && products.length > 0) return products;
@@ -198,7 +302,7 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[1000px] bg-card border-border p-0 overflow-hidden shadow-2xl">
         <div className="grid md:grid-cols-[280px_1fr] h-[85vh] max-h-[800px]">
-          <div className="p-6 border-r border-border/60 bg-muted/20 space-y-6 no-print">
+          <div className="p-6 border-r border-border/60 bg-muted/20 space-y-6 no-print overflow-y-auto custom-scrollbar">
             <DialogHeader>
               <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                 <Tags className="h-5 w-5 text-primary" />
@@ -304,14 +408,93 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
                   onCheckedChange={(checked) => updateSetting("showSku", checked)}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-border bg-background p-3">
-                <Label className="text-xs">Barkod yazısını göster</Label>
-                <Switch
-                  checked={normalizedSettings.showBarcodeText}
-                  onCheckedChange={(checked) => updateSetting("showBarcodeText", checked)}
-                />
+                <div className="flex items-center justify-between rounded-xl border border-border bg-background p-3">
+                  <Label className="text-xs">Barkod yazısını göster</Label>
+                  <Switch
+                    checked={normalizedSettings.showBarcodeText}
+                    onCheckedChange={(checked) => updateSetting("showBarcodeText", checked)}
+                  />
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[11px]">Ürün Adı Büyüklüğü</Label>
+                      <span className="text-[10px] text-muted-foreground">{productNameFontSize}px</span>
+                    </div>
+                    <Slider
+                      value={[productNameFontSize]}
+                      min={6}
+                      max={24}
+                      step={1}
+                      onValueChange={([val]) => setProductNameFontSize(val)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[11px]">Fiyat Büyüklüğü</Label>
+                      <span className="text-[10px] text-muted-foreground">{priceFontSize}px</span>
+                    </div>
+                    <Slider
+                      value={[priceFontSize]}
+                      min={6}
+                      max={24}
+                      step={1}
+                      onValueChange={([val]) => setPriceFontSize(val)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[11px]">Barkod Büyüklüğü</Label>
+                      <span className="text-[10px] text-muted-foreground">{barcodeWidth}x</span>
+                    </div>
+                    <Slider
+                      value={[barcodeWidth]}
+                      min={0.5}
+                      max={3}
+                      step={0.1}
+                      onValueChange={([val]) => setBarcodeWidth(val)}
+                    />
+                  </div>
+                  <div className="space-y-3 pt-2">
+                    <Label className="text-[11px] font-bold text-slate-800 dark:text-slate-200 border-b border-border/50 pb-1 block">Firma Logosu (Sol Alt)</Label>
+                    <Input type="file" accept="image/*" onChange={handleLogoUpload} className="h-9 text-[10px]" />
+                    {logoData && (
+                      <>
+                        <div className="space-y-2 pt-1">
+                          <div className="flex justify-between items-center">
+                            <Label className="text-[10px]">Logo Genişliği</Label>
+                            <span className="text-[10px] text-muted-foreground">{logoWidthPx}px</span>
+                          </div>
+                          <Slider
+                            value={[logoWidthPx]}
+                            min={20}
+                            max={120}
+                            step={1}
+                            onValueChange={([val]) => setLogoWidthPx(val)}
+                          />
+                        </div>
+                        <div className="space-y-2 pt-1">
+                          <div className="flex justify-between items-center">
+                            <Label className="text-[10px]">Logo Yüksekliği</Label>
+                            <span className="text-[10px] text-muted-foreground">{logoHeightPx}px</span>
+                          </div>
+                          <Slider
+                            value={[logoHeightPx]}
+                            min={10}
+                            max={60}
+                            step={1}
+                            onValueChange={([val]) => setLogoHeightPx(val)}
+                          />
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => setLogoData(null)} className="h-7 px-2 text-[10px] w-full text-red-500 hover:text-red-600 hover:bg-red-500/10">
+                          Logoyu Kaldır
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
 
             <Button onClick={handlePrint} disabled={queue.length === 0} className="w-full h-11 rounded-xl gap-2">
               <Printer className="h-4 w-4" />
@@ -403,18 +586,30 @@ export function BarcodeLabelPrintDialog({ product, products, isOpen, onOpenChang
                       >
                         {page.map((item, index) => (
                           <div key={`${item.id}-${pageIndex}-${index}`} className="barcode-label">
-                            <div className="barcode-label-name">{item.name}</div>
-                            <Barcode value={item.barcode} width={1.2} height={42} fontSize={10} displayValue={normalizedSettings.showBarcodeText} />
+                            <div className="barcode-label-name" style={{ fontSize: `${productNameFontSize}px` }}>{item.name}</div>
+                            
+                            <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+                              <Barcode value={item.barcode} width={barcodeWidth} height={42} fontSize={10} displayValue={normalizedSettings.showBarcodeText} />
+                            </div>
+
                             <div className="barcode-label-footer">
-                              {normalizedSettings.showSku && item.sku ? (
-                                <span>{item.sku}</span>
-                              ) : normalizedSettings.showBarcodeText ? (
-                                <span>{item.barcode}</span>
+                              {logoData ? (
+                                <ResizableLogo 
+                                  src={logoData} 
+                                  width={logoWidthPx} 
+                                  height={logoHeightPx} 
+                                  onChange={(w: number, h: number) => {
+                                    setLogoWidthPx(w);
+                                    setLogoHeightPx(h);
+                                  }} 
+                                />
+                              ) : normalizedSettings.showSku && item.sku ? (
+                                <span style={{ fontSize: `${priceFontSize * 0.8}px` }}>{item.sku}</span>
                               ) : (
                                 <span />
                               )}
                               {normalizedSettings.showPrice && item.sellPrice != null && (
-                                <span className="barcode-label-price">{formatCurrency(Number(item.sellPrice))} TL</span>
+                                <span className="barcode-label-price" style={{ fontSize: `${priceFontSize}px` }}>{formatCurrency(Number(item.sellPrice))} TL</span>
                               )}
                             </div>
                           </div>
