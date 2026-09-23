@@ -275,6 +275,18 @@ export function YeniServisClient() {
     }
   }, [technicians, form]);
 
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    if (showSuccessModal) {
+      timeoutId = setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 1500);
+    }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [showSuccessModal]);
+
   const watchModel = form.watch("deviceModel");
   const { data: models = EMPTY_ARRAY } = useQuery({
     queryKey: ["model-search", watchModel],
@@ -423,17 +435,12 @@ export function YeniServisClient() {
     onSuccess: (result) => {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: ["services"] });
-        // Clear form, photos and customer state
-        form.reset();
-        setPhotos([]);
-        setFoundCustomer(null);
-        setIsCustomerCreated(false);
         localStorage.removeItem("service_draft");
 
         // Prepare WhatsApp data & receipt
         setCreatedTicketForWhatsApp(result.data);
         setReceiptTicket(result.data);
-        setShowSuccessModal(true);
+        setShowReceiptModal(true);
       } else {
         toast({
           title: "Hata",
@@ -879,55 +886,15 @@ export function YeniServisClient() {
                   </motion.div>
                 </div>
 
-                <div className="relative space-y-4 mb-10">
+                <div className="relative space-y-4 mb-4">
                   <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400">
                     <Sparkles className="h-3.5 w-3.5 fill-current" />
                     İşlem Başarılı
                   </div>
                   <h2 className="text-3xl font-black tracking-tight text-white">Servis Kaydı Oluşturuldu</h2>
                   <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                    Cihaz sisteme kaydedildi. Şimdi müşteri ile iletişime geçebilir veya servis fişini yazdırabilirsiniz.
+                    Cihaz sisteme kaydedildi.
                   </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 relative z-10">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        setShowSuccessModal(false);
-                        setShowReceiptModal(true);
-                      }}
-                      className="h-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold gap-3 transition-all"
-                    >
-                      <Printer className="h-5 w-5 text-blue-400" />
-                      Fiş Yazdır
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        setShowSuccessModal(false);
-                        setShowWhatsAppModal(true);
-                      }}
-                      className="h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-3 shadow-lg shadow-emerald-600/20 transition-all"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                      WhatsApp
-                    </Button>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setShowSuccessModal(false);
-                      handleReset();
-                      router.push("/servis");
-                    }}
-                    className="h-14 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 font-bold gap-2"
-                  >
-                    Servis Listesine Dön <ChevronRight className="h-4 w-4" />
-                  </Button>
                 </div>
               </motion.div>
             </div>
@@ -956,7 +923,16 @@ export function YeniServisClient() {
         {receiptTicket && (
           <ServiceReceiptModal
             isOpen={showReceiptModal}
-            onClose={() => setShowReceiptModal(false)}
+            onClose={() => {
+              setShowReceiptModal(false);
+              setShowSuccessModal(true);
+              // Reset form states in the background
+              form.reset();
+              setPhotos([]);
+              setFoundCustomer(null);
+              setIsCustomerCreated(false);
+              setCurrentStep(1);
+            }}
             ticket={receiptTicket}
           />
         )}

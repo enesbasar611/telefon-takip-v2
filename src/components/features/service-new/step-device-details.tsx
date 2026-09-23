@@ -10,6 +10,8 @@ import { AIDiagnosticPanel } from "./ai-diagnostic-panel";
 import { PhotoManager, type PhotoFile } from "./photo-manager";
 import { SectionBadge } from "./section-badge";
 import { cn } from "@/lib/utils";
+import { useState, useMemo } from "react";
+import { DEVICE_BRANDS, DEVICE_MODELS } from "@/lib/constants/devices";
 
 interface StepDeviceDetailsProps {
     isSimpleMode: boolean;
@@ -31,9 +33,9 @@ interface StepDeviceDetailsProps {
 export const StepDeviceDetails = ({
     isSimpleMode,
     setIsPatternModalOpen,
-    modelSuggestions,
-    showSuggestions,
-    setShowSuggestions,
+    modelSuggestions: externalModelSuggestions,
+    showSuggestions: showExternalSuggestions,
+    setShowSuggestions: setShowExternalSuggestions,
     industryFields,
     aiDiagnosisMutation,
     diagnosticResult,
@@ -44,7 +46,40 @@ export const StepDeviceDetails = ({
     getInputClass,
     onAddPartToStock
 }: StepDeviceDetailsProps) => {
-    const { register, setValue, formState: { errors }, control } = useFormContext();
+    const { register, setValue, watch, formState: { errors }, control } = useFormContext();
+
+    const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
+    const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+
+    const watchBrand = watch("deviceBrand") || "";
+    const watchModel = watch("deviceModel") || "";
+
+    const brandSuggestions = useMemo(() => {
+        if (!watchBrand || watchBrand.length < 1) return [];
+        const q = watchBrand.toLowerCase();
+        return DEVICE_BRANDS.filter(b => b.toLowerCase().includes(q) || b.toLowerCase().startsWith(q)).slice(0, 5);
+    }, [watchBrand]);
+
+    const localModelSuggestions = useMemo(() => {
+        if (!watchModel || watchModel.length < 1) return [];
+        const q = watchModel.toLowerCase();
+        
+        // Find matched brand to get its models
+        const exactBrand = DEVICE_BRANDS.find(b => b.toLowerCase() === watchBrand.toLowerCase());
+        let possibleModels: string[] = [];
+        
+        if (exactBrand && DEVICE_MODELS[exactBrand]) {
+             possibleModels = DEVICE_MODELS[exactBrand];
+        } else {
+             // Search all models if brand is unknown
+             possibleModels = Object.values(DEVICE_MODELS).flat();
+        }
+        
+        return possibleModels.filter(m => m.toLowerCase().includes(q)).slice(0, 10);
+    }, [watchModel, watchBrand]);
+
+    // Combine local and external
+    const combinedModels = Array.from(new Set([...localModelSuggestions, ...externalModelSuggestions]));
 
     const cardClass = "bg-card/40 dark:bg-[#0A0A0B]/40 backdrop-blur-md p-5 rounded-2xl border border-border/50 shadow-sm transition-all hover:border-primary/20 hover:shadow-md group/card relative overflow-hidden";
     const labelClass = "text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] mb-1.5 block ml-0.5 transition-colors group-hover/card:text-muted-foreground/70";
@@ -67,9 +102,33 @@ export const StepDeviceDetails = ({
 
                 {isSimpleMode ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div className="space-y-2">
+                        <div className="space-y-2 relative">
                             <Label className={labelClass}>Marka</Label>
-                            <Input {...register("deviceBrand")} placeholder="Apple, Samsung..." className={getInputClass("deviceBrand")} />
+                            <Input 
+                                {...register("deviceBrand")} 
+                                placeholder="Apple, Samsung..." 
+                                className={getInputClass("deviceBrand")} 
+                                onFocus={() => watchBrand.length > 0 && setShowBrandSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowBrandSuggestions(false), 200)}
+                            />
+                            {showBrandSuggestions && brandSuggestions.length > 0 && (
+                                <div className="absolute top-[calc(100%+0.5rem)] left-0 right-0 z-[100] bg-card/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl overflow-hidden py-1 animate-in fade-in duration-200">
+                                    {brandSuggestions.map((m) => (
+                                        <button
+                                            key={m}
+                                            type="button"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                setValue("deviceBrand", m);
+                                                setShowBrandSuggestions(false);
+                                            }}
+                                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors font-medium"
+                                        >
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-2 relative">
                             <Label className={labelClass}>Model</Label>
@@ -77,18 +136,19 @@ export const StepDeviceDetails = ({
                                 {...register("deviceModel")}
                                 placeholder="iPhone 15, S24..."
                                 className={getInputClass("deviceModel")}
-                                onFocus={() => modelSuggestions.length > 0 && setShowSuggestions(true)}
-                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                onFocus={() => combinedModels.length > 0 && setShowModelSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
                             />
-                            {showSuggestions && modelSuggestions.length > 0 && (
-                                <div className="absolute top-[calc(100%+0.5rem)] left-0 right-0 z-[100] bg-card/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl overflow-hidden py-1 animate-in fade-in duration-200">
-                                    {modelSuggestions.map((m) => (
+                            {showModelSuggestions && combinedModels.length > 0 && (
+                                <div className="absolute top-[calc(100%+0.5rem)] left-0 right-0 z-[100] max-h-60 overflow-y-auto bg-card/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl py-1 animate-in fade-in duration-200">
+                                    {combinedModels.map((m) => (
                                         <button
                                             key={m}
                                             type="button"
-                                            onMouseDown={() => {
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
                                                 setValue("deviceModel", m);
-                                                setShowSuggestions(false);
+                                                setShowModelSuggestions(false);
                                             }}
                                             className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors"
                                         >

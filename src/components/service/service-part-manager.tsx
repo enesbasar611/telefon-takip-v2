@@ -1,8 +1,8 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import { useState, useTransition } from "react";
-import { Plus, Package, Trash2, Loader2 } from "lucide-react";
+import { useState, useTransition, useEffect } from "react";
+import { Plus, Package, Trash2, Loader2, Search, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { addPartToService, removePartFromService } from "@/lib/actions/service-actions";
+import { searchProducts } from "@/lib/actions/product-actions";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -28,8 +29,31 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [quantity, setQuantity] = useState("1");
   const queryClient = useQueryClient();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.length >= 2) {
+        setIsSearching(true);
+        const results = await searchProducts(searchQuery);
+        setSearchResults(results);
+        setIsSearching(false);
+        setShowResults(true);
+      } else {
+        setSearchResults([]);
+        setShowResults(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const handleAdd = () => {
     if (!selectedProductId) return;
@@ -39,6 +63,8 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
         toast.success("Parça eklendi.");
         setOpen(false);
         setSelectedProductId("");
+        setSelectedProduct(null);
+        setSearchQuery("");
         setQuantity("1");
         queryClient.invalidateQueries({ queryKey: ["service-ticket", ticketId] });
       } else {
@@ -76,20 +102,74 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
               <DialogTitle className="font-medium text-sm ">Servise Parça Ekle</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label className="font-medium text-xs  text-muted-foreground">Ürün Seçin</Label>
-                <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                  <SelectTrigger className="bg-white/[0.03] border-white/10 rounded-xl h-12">
-                    <SelectValue placeholder="Envanterden ürün seçin..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0F172A] border-white/10 text-white rounded-xl">
-                    {products.map((p) => (
-                      <SelectItem key={p.id} value={p.id} className="text-xs  py-3">
-                        {p.name} (Stok: {p.stock}) - ₺{Number(p.sellPrice).toLocaleString('tr-TR')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2 relative">
+                <Label className="font-medium text-xs  text-muted-foreground">Ürün Ara ve Seç</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setSelectedProductId("");
+                      setSelectedProduct(null);
+                    }}
+                    onFocus={() => {
+                      if (searchQuery.length >= 2) setShowResults(true);
+                    }}
+                    onBlur={() => {
+                      // Small delay to allow click on results
+                      setTimeout(() => setShowResults(false), 200);
+                    }}
+                    placeholder="Parça adı veya barkod yazın..."
+                    className="pl-9 bg-white/[0.03] border-border/50 rounded-xl h-12"
+                  />
+                  {isSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                {showResults && searchResults.length > 0 && (
+                  <div className="absolute top-[100%] left-0 w-full z-50 mt-1 max-h-60 overflow-y-auto bg-[#0F172A] border border-white/10 text-white rounded-xl shadow-xl">
+                    {searchResults.map((p) => {
+                      const outOfStock = p.stock <= 0;
+                      return (
+                        <div
+                          key={p.id}
+                          className={`px-4 py-3 transition-colors border-b border-white/5 last:border-0 flex items-center justify-between ${
+                            outOfStock
+                              ? "opacity-50 cursor-not-allowed bg-rose-500/5"
+                              : "cursor-pointer hover:bg-white/5"
+                          }`}
+                          onClick={() => {
+                            if (outOfStock) return;
+                            setSelectedProductId(p.id);
+                            setSelectedProduct(p);
+                            setSearchQuery(p.name);
+                            setShowResults(false);
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span className={`text-sm font-medium ${outOfStock ? "text-rose-400" : ""}`}>{p.name}</span>
+                            <span className={`text-xs ${outOfStock ? "text-rose-500/70 font-semibold" : "text-muted-foreground"}`}>
+                              Stok: {p.stock} {outOfStock && "(Stokta Yok)"}
+                            </span>
+                          </div>
+                          <span className={`text-sm font-medium ${outOfStock ? "text-rose-400" : "text-blue-400"}`}>
+                            ₺{Number(p.sellPrice).toLocaleString('tr-TR')}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {selectedProduct && !showResults && (
+                   <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex justify-between items-center">
+                     <div>
+                       <p className="text-xs text-blue-400 font-medium">{selectedProduct.name}</p>
+                       <p className="text-[10px] text-muted-foreground">Seçildi</p>
+                     </div>
+                     <Check className="h-4 w-4 text-blue-500" />
+                   </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="font-medium text-xs  text-muted-foreground">Adet</Label>
