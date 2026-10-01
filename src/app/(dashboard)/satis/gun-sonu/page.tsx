@@ -113,7 +113,7 @@ export default async function EndOfDayPrintPage({
                         </tr>
                     </thead>
                     <tbody>
-                        {historyData.items.map((item) => (
+                        {historyData.items.map((item: any) => (
                             <tr key={item.id} className="border-b border-gray-300">
                                 <td className="py-1.5">{format(new Date(item.date), "HH:mm")}</td>
                                 <td className="py-1.5">{item.type === "SALE" ? "Satış" : item.type === "PAYMENT" ? "Tahsilat" : item.type === "DEBT_DIRECT" ? "Veresiye" : "İşlem"}</td>

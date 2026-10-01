@@ -4,6 +4,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getDailySummary } from "@/lib/actions/finance-actions";
 import { AccountList } from "../account-list";
 import { FinanceDashboard } from "../finance-dashboard";
+import { FinanceCharts } from "../finance-charts";
 import { CashResetReport } from "../cash-reset-report";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -33,9 +34,9 @@ export function FinancialSummaryStream() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
-            <FinanceDashboard summary={summary} />
+        <div className="space-y-5 animate-in fade-in duration-700">
             <AccountList accounts={summary?.accounts || []} />
+            <FinanceDashboard summary={summary} />
             <CashResetReport />
         </div>
     );

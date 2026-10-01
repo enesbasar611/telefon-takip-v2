@@ -165,14 +165,25 @@ export function TransactionHistory({
         return `finansal-hareketler-${sanitizeFilename(filterPart)}-${date}.${extension}`;
     };
 
+    const fixTurkish = (text: string | null | undefined) => {
+        if (!text) return "";
+        return String(text)
+            .replace(/ı/g, 'i').replace(/İ/g, 'I')
+            .replace(/ş/g, 's').replace(/Ş/g, 'S')
+            .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+            .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+            .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+            .replace(/ç/g, 'c').replace(/Ç/g, 'C');
+    };
+
     const handleExportCsv = () => {
         if (exportRows.length === 0) {
             toast.error("Dışa aktarılacak finansal hareket bulunamadı.");
             return;
         }
 
-        const headers = ["Tarih", "Hesap", "Ödeme Yöntemi", "Tip", "Açıklama", "Kategori", "Müşteri", "Tedarikçi", "Sorumlu", "Para Birimi", "Tutar", "Bakiye"];
-        const escapeCell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+        const headers = ["Tarih", "Hesap", "Odeme Yontemi", "Tip", "Aciklama", "Kategori", "Musteri", "Tedarikci", "Sorumlu", "Para Birimi", "Tutar", "Bakiye"];
+        const escapeCell = (value: unknown) => `"${fixTurkish(String(value ?? "")).replace(/"/g, '""')}"`;
         const rows = exportRows.map((row) => [
             row.tarih,
             row.hesap,
@@ -209,34 +220,30 @@ export function TransactionHistory({
             doc.setFontSize(14);
             doc.text("Finansal Hareketler", 14, 14);
             doc.setFontSize(9);
-            doc.text(`${exportRows.length} hareket | Filtre: ${paymentFilter === "ALL" ? "Tümü" : paymentLabels[paymentFilter] || paymentFilter}`, 14, 21);
-            doc.text(`Oluşturma: ${format(new Date(), "dd.MM.yyyy HH:mm")}`, 14, 27);
+            doc.text(`${exportRows.length} hareket | Filtre: ${fixTurkish(paymentFilter === "ALL" ? "Tumu" : paymentLabels[paymentFilter] || paymentFilter)}`, 14, 21);
+            doc.text(`Olusturma: ${format(new Date(), "dd.MM.yyyy HH:mm")}`, 14, 27);
 
             autoTable(doc, {
                 startY: 33,
-                head: [["Tarih", "Hesap", "Ödeme", "Tip", "Açıklama", "Sorumlu", "Tutar", "Bakiye"]],
+                head: [["Tarih", "Hesap", "Odeme", "Tip", "Aciklama", "Sorumlu", "Tutar", "Bakiye"]],
                 body: exportRows.map((row) => [
-                    row.tarih,
-                    row.hesap,
-                    row.odemeYontemi,
-                    row.tip,
-                    row.aciklama,
-                    row.sorumlu,
+                    fixTurkish(row.tarih),
+                    fixTurkish(row.hesap),
+                    fixTurkish(row.odemeYontemi),
+                    fixTurkish(row.tip),
+                    fixTurkish(row.aciklama),
+                    fixTurkish(row.sorumlu),
                     formatMoney(row.tutar, row.paraBirimi),
                     row.bakiye === null ? "-" : formatMoney(row.bakiye, row.paraBirimi),
                 ]),
                 styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
                 headStyles: { fillColor: [37, 99, 235], textColor: 255 },
                 columnStyles: {
-                    0: { cellWidth: 25 },
-                    1: { cellWidth: 32 },
-                    2: { cellWidth: 22 },
-                    3: { cellWidth: 20 },
-                    4: { cellWidth: 75 },
-                    5: { cellWidth: 28 },
-                    6: { halign: "right", cellWidth: 28 },
-                    7: { halign: "right", cellWidth: 28 },
+                    4: { cellWidth: 'auto' }, // Açıklama wraps naturally
+                    6: { halign: "right" },
+                    7: { halign: "right" },
                 },
+                margin: { top: 30, right: 10, bottom: 10, left: 10 },
             });
 
             doc.save(exportFilename("pdf"));

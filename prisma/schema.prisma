@@ -687,6 +687,7 @@ model DailySession {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   shopId         String
+  metadata       Json?
   closedBy       User?         @relation("ClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
   openedBy       User?         @relation("OpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
   shop           Shop          @relation(fields: [shopId], references: [id])

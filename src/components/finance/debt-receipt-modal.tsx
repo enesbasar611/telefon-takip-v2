@@ -455,11 +455,11 @@ export function DebtReceiptModal({
                     <DebtStatementModern
                         customer={customer}
                         debts={filteredDebts}
-                        shopName={shopName}
-                        shopPhone={shopPhone}
-                        shopAddress={shopAddress}
-                        shopWebsite={shopWebsite}
-                        shopLogo={shopLogo}
+                        shopName={shopName || ""}
+                        shopPhone={shopPhone || ""}
+                        shopAddress={shopAddress || ""}
+                        shopWebsite={shopWebsite || ""}
+                        shopLogo={shopLogo || ""}
                         rates={activeRates}
                         showPaid={showPaid}
                         defaultCurrency={defaultCurrency}

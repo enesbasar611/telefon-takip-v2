@@ -143,19 +143,21 @@ export default async function DashboardLayout({
 
                                     <div className={`flex flex-1 bg-background/20 text-foreground font-sans overflow-hidden relative z-0 ${isCourier ? 'flex-col' : ''}`}>
                                         {!isCourier && (
-                                            <Sidebar
-                                                className="hidden lg:flex"
-                                                user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined}
-                                                shop={shop}
-                                            />
+                                            <div className="print:hidden h-full">
+                                                <Sidebar
+                                                    className="hidden lg:flex"
+                                                    user={adminUser ? { name: adminUser.name, role: adminUser.role } : undefined}
+                                                    shop={shop}
+                                                />
+                                            </div>
                                         )}
 
                                         <DashboardContent className={isCourier ? "p-0" : ""}>
-                                            {!isCourier && <Navbar shop={shop} />}
+                                            {!isCourier && <div className="print:hidden"><Navbar shop={shop} /></div>}
                                             <main className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'lg:p-10 p-0'}`}>
                                                 <div className={isCourier
-                                                    ? "w-full min-h-screen pb-20 relative z-10"
-                                                    : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-32 lg:p-10 lg:px-12 relative z-10 transition-opacity duration-300"
+                                                    ? "w-full min-h-screen pb-32 relative z-10"
+                                                    : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-48 lg:p-10 lg:px-12 lg:pb-10 relative z-10 transition-opacity duration-300"
                                                 }>
                                                     <style dangerouslySetInnerHTML={{
                                                         __html: `
@@ -179,7 +181,7 @@ export default async function DashboardLayout({
                                             </main>
                                         </DashboardContent>
 
-                                        {!isCourier && <BottomNav />}
+                                        {!isCourier && <div className="print:hidden"><BottomNav /></div>}
                                     </div>
                                 </div>
                             </ShortageProvider>

@@ -117,9 +117,9 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                     )}
                 >
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CardContent className="p-6 relative z-10">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="h-12 w-12 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500 bg-blue-600 text-white border-blue-600/20">
+                    <CardContent className="p-4 relative z-10">
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="h-10 w-10 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500 bg-blue-600 text-white border-blue-600/20">
                                 <Wallet className="h-6 w-6" />
                             </div>
                             <Badge variant="outline" className="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-lg bg-background/50 backdrop-blur-sm border-zinc-200 dark:border-zinc-800 h-fit">
@@ -128,7 +128,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                         </div>
                         <div>
                             <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">Toplam Kasa</h3>
-                            <p className="text-2xl tracking-tighter text-foreground">
+                            <p className="text-xl font-bold tracking-tighter text-foreground">
                                 {formatDisplayMoney(accounts.reduce((sum, acc) => {
                                     if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
                                     return sum + Number(acc.balance);
@@ -165,9 +165,9 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                             )}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <CardContent className="p-6 relative z-10">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500", colors[account.type])}>
+                            <CardContent className="p-4 relative z-10">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500", colors[account.type])}>
                                         <Icon className="h-6 w-6" />
                                     </div>
                                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
@@ -210,7 +210,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
-                                    <p className="text-2xl tracking-tighter text-foreground">{formatDisplayMoney(Number(account.balance))}</p>
+                                    <p className="text-xl font-bold tracking-tighter text-foreground">{formatDisplayMoney(Number(account.balance))}</p>
                                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Hesap para birimi: {account.currency || "TRY"}</p>
                                     <div className="flex gap-2 mt-0.5 opacity-60">
                                         <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
@@ -236,7 +236,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                         </div>
                                     )}
                                 </div>
-                                <div className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                                <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                                     <AccountDetailModal account={account} />
                                     <CreateAccountModal account={account} />
                                     <TransferModal accounts={accounts} fromAccountId={account.id} />

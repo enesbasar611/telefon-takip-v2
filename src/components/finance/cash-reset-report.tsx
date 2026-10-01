@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { cn } from "@/lib/utils";
+import { CashResetModal } from "./cash-reset-modal";
+import { CashResetDetailModal } from "./cash-reset-detail-modal";
 
 const periods = [
     { value: "DAY", label: "Günlük" },
@@ -49,7 +51,10 @@ export function CashResetReport() {
                         <ArchiveRestore className="h-5 w-5 text-amber-600" />
                     </div>
                     <div>
-                        <h2 className="font-semibold text-base">Kasa Sıfırlama Geçmişi</h2>
+                        <div className="flex items-center gap-4">
+                            <h2 className="font-semibold text-base">Kasa Sıfırlama Geçmişi</h2>
+                            <CashResetModal />
+                        </div>
                         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Dönem kapanışları ve hesap bazlı son bakiyeler</p>
                     </div>
                 </div>
@@ -98,36 +103,38 @@ export function CashResetReport() {
                         Henüz sıfırlama geçmişi bulunmuyor.
                     </div>
                 ) : resets.map((reset: any) => (
-                    <div key={reset.id} className="rounded-xl border border-border/60 bg-background/50 p-4 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <div>
-                                <h3 className="font-semibold">{reset.title}</h3>
-                                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                    <CalendarDays className="h-3.5 w-3.5" />
-                                    {format(new Date(reset.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}
-                                    {reset.user?.name ? ` • ${reset.user.name}` : ""}
-                                </p>
+                    <CashResetDetailModal key={reset.id} reset={reset}>
+                        <div className="rounded-xl border border-border/60 bg-background/50 p-4 space-y-4 cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/5 transition-colors">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <h3 className="font-semibold">{reset.title}</h3>
+                                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                        <CalendarDays className="h-3.5 w-3.5" />
+                                        {format(new Date(reset.createdAt), "dd MMMM yyyy HH:mm", { locale: tr })}
+                                        {reset.user?.name ? ` • ${reset.user.name}` : ""}
+                                    </p>
+                                </div>
+                                <p className="text-lg font-bold tabular-nums">{symbol}{(defaultCurrency === "USD" ? Number(reset.totalBalance || 0) / usdRate : Number(reset.totalBalance || 0)).toLocaleString("tr-TR", { maximumFractionDigits: 2 })}</p>
                             </div>
-                            <p className="text-lg font-bold tabular-nums">{symbol}{(defaultCurrency === "USD" ? Number(reset.totalBalance || 0) / usdRate : Number(reset.totalBalance || 0)).toLocaleString("tr-TR", { maximumFractionDigits: 2 })}</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
-                            {reset.accounts.map((account: any) => {
-                                const Icon = iconFor(account.accountType);
-                                const display = defaultCurrency === "USD" ? Number(account.closingBalance || 0) / usdRate : Number(account.closingBalance || 0);
-                                return (
-                                    <div key={account.id} className="rounded-lg border border-border/50 p-3 flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                                {reset.accounts.map((account: any) => {
+                                    const Icon = iconFor(account.accountType);
+                                    const display = defaultCurrency === "USD" ? Number(account.closingBalance || 0) / usdRate : Number(account.closingBalance || 0);
+                                    return (
+                                        <div key={account.id} className="rounded-lg border border-border/50 p-3 flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                                                <Icon className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-semibold truncate">{account.accountName}</p>
+                                                <p className="text-[11px] text-muted-foreground tabular-nums">{symbol}{display.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}</p>
+                                            </div>
                                         </div>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-semibold truncate">{account.accountName}</p>
-                                            <p className="text-[11px] text-muted-foreground tabular-nums">{symbol}{display.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    </CashResetDetailModal>
                 ))}
             </div>
         </section>

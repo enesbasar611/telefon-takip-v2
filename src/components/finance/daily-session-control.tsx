@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 interface DailySession {
     id: string;
@@ -24,10 +25,59 @@ interface DailySession {
     transactions?: any[];
 }
 
+function CurrencyInput({ value, onChange, symbol, id, name }: { value: string, onChange: (v: string) => void, symbol: string, id: string, name: string }) {
+    const formatValue = (val: string) => {
+        if (!val) return "";
+        let [int, dec] = val.split(",");
+        int = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        if (dec !== undefined) {
+            return `${int},${dec.slice(0, 2)}`;
+        }
+        return int;
+    };
+
+    return (
+        <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">{symbol}</span>
+            <Input
+                id={id}
+                type="text"
+                className="h-11 rounded-xl text-sm bg-muted/20 border-border/40 pl-8"
+                value={formatValue(value)}
+                onFocus={() => {
+                    if (value === "0" || value === "0,00") onChange("");
+                }}
+                onBlur={() => {
+                    if (value === "") onChange("0");
+                    else if (!value.includes(",")) onChange(value + ",00");
+                    else if (value.endsWith(",")) onChange(value + "00");
+                }}
+                onChange={(e) => {
+                    let val = e.target.value.replace(/\./g, "");
+                    val = val.replace(/[^0-9,]/g, "");
+                    const parts = val.split(",");
+                    if (parts.length > 2) {
+                        val = parts[0] + "," + parts.slice(1).join("");
+                    }
+                    onChange(val);
+                }}
+            />
+            <input type="hidden" name={name} value={value.replace(",", ".")} />
+        </div>
+    );
+}
+
 export function DailySessionControl({ session }: { session: DailySession | null }) {
     const [loading, setLoading] = useState(false);
     const [openModal, setOpenModal] = useState(false);
     const [closeModal, setCloseModal] = useState(false);
+    const [tryValue, setTryValue] = useState("0,00");
+    const [usdValue, setUsdValue] = useState("0,00");
+    const [eurValue, setEurValue] = useState("0,00");
+    
+    const { rates } = useDashboardData();
+    const usdRate = Number(rates?.usd) || 34.50;
+    const eurRate = Number(rates?.eur) || 38.20;
 
     const sessionSummary = session?.transactions?.reduce((acc, t) => {
         const amount = Number(t.amount);
@@ -51,10 +101,18 @@ export function DailySessionControl({ session }: { session: DailySession | null 
         e.preventDefault();
         setLoading(true);
         const formData = new FormData(e.currentTarget);
-        const amount = Number(formData.get("openingBalance"));
+        const tryAmount = Number(formData.get("tryBalance")) || 0;
+        const usdAmount = Number(formData.get("usdBalance")) || 0;
+        const eurAmount = Number(formData.get("eurBalance")) || 0;
         const notes = formData.get("notes") as string;
+        
+        const totalOpeningInTry = tryAmount + (usdAmount * usdRate) + (eurAmount * eurRate);
+        const metadata = {
+            opening: { try: tryAmount, usd: usdAmount, eur: eurAmount },
+            rates: { usd: usdRate, eur: eurRate }
+        };
 
-        const result = await openDailySession(amount, notes);
+        const result = await openDailySession(totalOpeningInTry, notes, metadata);
         setLoading(false);
         if (result.success) {
             toast.success("Kasa oturumu başarıyla açıldı.");
@@ -75,7 +133,17 @@ export function DailySessionControl({ session }: { session: DailySession | null 
         const result = await closeDailySession(session.id, actualBalance, notes);
         setLoading(false);
         if (result.success) {
-            toast.success("Kasa oturumu başarıyla kapatıldı. Günlük rapor hazır.");
+            toast.success("Kasa oturumu başarıyla kapatıldı. Günlük rapor hazır.", {
+                action: {
+                    label: "Gün Sonu Çıktısı Al",
+                    onClick: () => {
+                        const start = new Date(session.createdAt).toISOString();
+                        const end = new Date().toISOString();
+                        window.open(`/satis/gun-sonu?startDate=${start}&endDate=${end}`, "_blank");
+                    }
+                },
+                duration: 15000,
+            });
             setCloseModal(false);
         } else {
             toast.error(result.error);
@@ -124,9 +192,21 @@ export function DailySessionControl({ session }: { session: DailySession | null 
                                     </DialogHeader>
 
                                     <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="openingBalance" className="font-medium text-[10px]  text-muted-foreground ml-1 uppercase letter-spacing-wider">DEVREDEN NAKİT TUTAR (TL)</Label>
-                                            <Input id="openingBalance" name="openingBalance" type="number" required defaultValue="0" step="0.01" className="h-11 rounded-xl text-sm  bg-muted/20 border-border/40" />
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="tryBalance" className="font-medium text-[10px] text-muted-foreground ml-1 uppercase letter-spacing-wider">DEVREDEN NAKİT (TL)</Label>
+                                                <CurrencyInput id="tryBalance" name="tryBalance" value={tryValue} onChange={setTryValue} symbol="₺" />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="usdBalance" className="font-medium text-[10px] text-muted-foreground ml-1 uppercase letter-spacing-wider">DEVREDEN NAKİT (USD)</Label>
+                                                    <CurrencyInput id="usdBalance" name="usdBalance" value={usdValue} onChange={setUsdValue} symbol="$" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="eurBalance" className="font-medium text-[10px] text-muted-foreground ml-1 uppercase letter-spacing-wider">DEVREDEN NAKİT (EUR)</Label>
+                                                    <CurrencyInput id="eurBalance" name="eurBalance" value={eurValue} onChange={setEurValue} symbol="€" />
+                                                </div>
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="notes" className="font-medium text-[10px]  text-muted-foreground ml-1 uppercase letter-spacing-wider">NOTLAR (İSTEĞE BAĞLI)</Label>

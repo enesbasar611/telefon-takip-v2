@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Wallet, PlusCircle } from "lucide-react";
 import { CreateTransactionModal } from "@/components/finance/create-transaction-modal";
+import { IntelligentAlerts } from "@/components/finance/intelligent-alerts";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
@@ -43,16 +44,13 @@ export default async function KasaRaporuPage({
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-700">
+            <div className="flex flex-col gap-5 pb-8 animate-in fade-in duration-700">
                 <PageHeader
                     title="Kasa & Finans"
                     description="Nakit akışını, günlük raporları ve finansal seansları tek bir merkezden yönetin."
                     icon={Wallet}
                     iconColor="text-indigo-500"
                     iconBgColor="bg-indigo-500/10"
-                    badge={
-                        <DailySessionStream />
-                    }
                     actions={
                         <CreateTransactionModal
                             trigger={
@@ -65,24 +63,30 @@ export default async function KasaRaporuPage({
                     }
                 />
 
-                <div className="grid grid-cols-1 gap-10">
+                <div className="grid grid-cols-1 gap-5">
+                    <DailySessionStream />
+                    <IntelligentAlerts />
                     <FinancialSummaryStream />
-                    <Suspense fallback={
-                        <div className="space-y-4 bg-white/5 p-8 rounded-[2rem] border border-white/10">
-                            <div className="flex items-center gap-4 mb-8">
-                                <Skeleton className="h-10 w-10 rounded-2xl" />
-                                <div className="space-y-2">
-                                    <Skeleton className="h-5 w-32" />
-                                    <Skeleton className="h-3 w-48 opacity-50" />
+                    
+                    <div className="mt-4">
+                        <h3 className="text-lg font-bold mb-3">Son İşlemler</h3>
+                        <Suspense fallback={
+                            <div className="space-y-4 bg-white/5 p-8 rounded-[2rem] border border-white/10">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <Skeleton className="h-10 w-10 rounded-2xl" />
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-5 w-32" />
+                                        <Skeleton className="h-3 w-48 opacity-50" />
+                                    </div>
                                 </div>
+                                {[...Array(3)].map((_, i) => (
+                                    <Skeleton key={i} className="h-20 w-full rounded-2xl opacity-40" />
+                                ))}
                             </div>
-                            {[...Array(6)].map((_, i) => (
-                                <Skeleton key={i} className="h-20 w-full rounded-2xl opacity-40" />
-                            ))}
-                        </div>
-                    }>
-                        <TransactionListStream initialSearch={initialSearch} accountId={accountId} />
-                    </Suspense>
+                        }>
+                            <TransactionListStream initialSearch={initialSearch} accountId={accountId} />
+                        </Suspense>
+                    </div>
                 </div>
             </div>
         </HydrationBoundary>

@@ -291,7 +291,7 @@ export function SalesHistoryClient({
                 return;
             }
 
-            const exportData = data.items.map(op => ({
+            const exportData = data.items.map((op: any) => ({
                 "İşlem No": op.number || (op.id ? op.id.substring(0, 8) : ""),
                 "Tarih": format(new Date(op.date), "dd.MM.yyyy HH:mm"),
                 "İşlem Tipi": getTypeLabel(op.type as any),

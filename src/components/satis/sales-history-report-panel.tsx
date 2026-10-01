@@ -85,9 +85,31 @@ export function SalesHistoryReportPanel({ report, isLoading = false }: { report:
         },
     ];
 
+    const bestDay = report.dailyTrend.length > 0 
+        ? report.dailyTrend.reduce((max, current) => current.revenue > max.revenue ? current : max, report.dailyTrend[0])
+        : null;
+
     return (
         <div className={cn("space-y-5 transition-opacity", isLoading && "opacity-70")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {bestDay && bestDay.revenue > 0 && (
+                    <Card className="col-span-1 sm:col-span-2 xl:col-span-4 rounded-2xl border-emerald-500/20 bg-emerald-500/5 shadow-sm overflow-hidden relative">
+                        <div className="absolute inset-y-0 left-0 w-1 bg-emerald-500" />
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                    <TrendingUp className="h-5 w-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-semibold text-emerald-600/80 uppercase tracking-widest">En Çok Satış Yapılan Gün</p>
+                                    <p className="text-sm font-medium text-foreground">
+                                        {formatMoney(bestDay.revenue)} <span className="text-muted-foreground font-normal ml-1">({new Date(bestDay.date).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })})</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
                 {kpis.map((kpi) => {
                     const Icon = kpi.icon;
                     const PositiveIcon = kpi.change >= 0 ? ArrowUpRight : ArrowDownRight;

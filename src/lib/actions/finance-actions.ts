@@ -1010,7 +1010,7 @@ export async function getDailySession() {
   }
 }
 
-export async function openDailySession(openingBalance: number, notes?: string) {
+export async function openDailySession(openingBalance: number, notes?: string, metadata?: any) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
@@ -1025,6 +1025,7 @@ export async function openDailySession(openingBalance: number, notes?: string) {
       data: {
         openingBalance,
         notes,
+        metadata,
         status: "OPEN",
         openedById: userId,
         shopId
@@ -1198,7 +1199,7 @@ export async function getAccountAnalytics(accountId: string, period: "DAY" | "WE
     const [transactions, rates] = await Promise.all([
       prisma.transaction.findMany({
         where: {
-          financeAccountId: accountId,
+          ...(accountId !== "ALL" ? { financeAccountId: accountId } : {}),
           shopId,
           createdAt: { gte: startDate }
         },
