@@ -146,23 +146,35 @@ const getItemCurrentStock = (item: any): number | null => {
     return null;
 };
 
-const getSmartCategory = (item: any, shopCategories: any[] = []) => {
-    const explicitCategory = item?.product?.category?.name || item?.returnTicket?.product?.category?.name || item?.category?.name;
-    if (explicitCategory) return explicitCategory;
+const getSmartCategory = (item: any) => {
+    const name = (item?.name || item?.product?.name || item?.returnTicket?.product?.name || "").toUpperCase();
+    if (!name) return "DİĞER";
 
-    const name = (item?.name || item?.product?.name || item?.returnTicket?.product?.name || "").toLowerCase();
-    
-    // Smart inference: check if any of the shop's existing categories match the product name
-    for (const cat of shopCategories) {
-        if (!cat.name) continue;
-        const catNameLower = cat.name.toLowerCase();
-        // Plural matching basics or exact inclusion
-        if (name.includes(catNameLower) || catNameLower.includes(name.split(' ')[0])) {
-            return cat.name;
+    // 1. Check for specific keywords first (fulfills the 'contains keyword' rule)
+    if (name.includes("BATARYA") || name.includes("PİL")) return "BATARYALAR";
+    if (name.includes("EKRAN") || name.includes("LCD")) return "EKRANLAR";
+    if (name.includes("BORD") || name.includes("SOKET") || name.includes("FİLM")) return "ŞARJ BORDLARI / FİLMLER";
+    if (name.includes("KASA") || name.includes("KAPAK")) return "KASA & KAPAK";
+    if (name.includes("CAM")) return "CAMLAR";
+    if (name.includes("KILIF")) return "KILIFLAR";
+    if (name.includes("KABLO") || name.includes("ADAPTÖR") || name.includes("ŞARJ ALETİ")) return "ŞARJ & KABLO";
+    if (name.includes("KULAKLIK")) return "KULAKLIKLAR";
+
+    // 2. Multitenant fallback: Extract the last word of the product name as the generic group
+    const words = name.split(/[\s-]+/).filter((w: string) => w.length > 2 && !w.includes("("));
+    if (words.length > 0) {
+        let lastWord = words[words.length - 1];
+        
+        // Simple pluralization for Turkish
+        if (!lastWord.endsWith("LAR") && !lastWord.endsWith("LER") && !lastWord.endsWith("LARI") && !lastWord.endsWith("LERİ")) {
+            const lastVowel = lastWord.match(/[AEIİOÖUÜ]/g)?.pop() || 'A';
+            const isFrontVowel = /[EİÖÜ]/.test(lastVowel);
+            lastWord += isFrontVowel ? "LER" : "LAR";
         }
+        return lastWord;
     }
 
-    return "Diğer";
+    return "DİĞER";
 };
 
 export function CourierDashboardClient({
