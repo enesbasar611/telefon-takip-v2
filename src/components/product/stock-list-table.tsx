@@ -12,6 +12,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useTransition } from "react";
 import {
   Search,
   Filter,
@@ -93,13 +94,7 @@ export function StockListTable({
   const [printProduct, setPrintProduct] = useState<any>(null);
   const [printProducts, setPrintProducts] = useState<any[]>([]);
 
-  // Sync searchTerm with URL query param
-  useEffect(() => {
-    const q = searchParams.get("q");
-    if (q !== null && q !== searchTerm) {
-      setSearchTerm(q);
-    }
-  }, [searchParams]);
+  const [isPending, startTransition] = useTransition();
 
   // Selection persistence across pages
   const [selectedIds, setSelectedIds] = useState<string[]>(() => {
@@ -163,17 +158,21 @@ export function StockListTable({
   // Debounced search update for URL
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchTerm === (searchParams.get("q") || "")) return;
+      const currentQ = searchParams.get("q") || "";
+      if (searchTerm === currentQ) return;
 
       const params = new URLSearchParams(searchParams.toString());
       if (searchTerm) params.set("q", searchTerm);
       else params.delete("q");
       params.set("page", "1"); // Reset to page 1 on search
-      router.push(`?${params.toString()}`);
-    }, 500);
+      
+      startTransition(() => {
+        router.replace(`?${params.toString()}`, { scroll: false });
+      });
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, router, searchParams]);
+  }, [searchTerm, searchParams, router]);
 
   const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filteredProducts, "name", "asc");
   const selectedProducts = useMemo(

@@ -146,6 +146,25 @@ const getItemCurrentStock = (item: any): number | null => {
     return null;
 };
 
+const getSmartCategory = (item: any, shopCategories: any[] = []) => {
+    const explicitCategory = item?.product?.category?.name || item?.returnTicket?.product?.category?.name || item?.category?.name;
+    if (explicitCategory) return explicitCategory;
+
+    const name = (item?.name || item?.product?.name || item?.returnTicket?.product?.name || "").toLowerCase();
+    
+    // Smart inference: check if any of the shop's existing categories match the product name
+    for (const cat of shopCategories) {
+        if (!cat.name) continue;
+        const catNameLower = cat.name.toLowerCase();
+        // Plural matching basics or exact inclusion
+        if (name.includes(catNameLower) || catNameLower.includes(name.split(' ')[0])) {
+            return cat.name;
+        }
+    }
+
+    return "Diğer";
+};
+
 export function CourierDashboardClient({
     initialItems = EMPTY_ARRAY,
     initialAllShortages = EMPTY_ARRAY,
@@ -1077,20 +1096,13 @@ export function CourierDashboardClient({
                     {(() => {
                         const groupsMap = new Map();
                         filteredItems.forEach((item: any) => {
-                            // Group by customer if available, then by requesterName, then by shop
-                            const groupKey = item.customerId
-                                ? `customer-${item.customerId}`
-                                : item.requesterName
-                                    ? `requester-${item.requesterName}`
-                                    : `shop-${item.shopId || 'default'}`;
+                            const smartCat = getSmartCategory(item, categories);
+                            const groupKey = `smart-${smartCat}`;
 
                             if (!groupsMap.has(groupKey)) {
                                 groupsMap.set(groupKey, {
                                     id: groupKey,
-                                    title: item.customer?.name || item.requesterName || item.shop?.name || 'GENEL',
-                                    customer: item.customer,
-                                    shop: item.shop,
-                                    requesterName: item.requesterName,
+                                    title: smartCat,
                                     items: []
                                 });
                             }
@@ -1103,20 +1115,14 @@ export function CourierDashboardClient({
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
                                             "h-10 w-10 rounded-xl flex items-center justify-center border text-white font-black text-xs shadow-lg uppercase",
-                                            getDeterministicColor(group.customer?.name || group.requesterName || group.shop?.name || "DÜKKAN")
+                                            getDeterministicColor(group.title)
                                         )}>
-                                            {getInitials(group.customer?.name || group.requesterName || group.shop?.name || "DÜKKAN")}
+                                            {getInitials(group.title)}
                                         </div>
                                         <div>
                                             <h3 className="text-lg font-black uppercase tracking-tight">
-                                                {group.customer?.name || group.requesterName || group.shop?.name || "DÜKKAN"}
+                                                {group.title}
                                             </h3>
-                                            {(group.customer?.phone || group.shop?.phone) && (
-                                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
-                                                    <Phone className="w-3 h-3" />
-                                                    {group.customer?.phone || group.shop?.phone}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">

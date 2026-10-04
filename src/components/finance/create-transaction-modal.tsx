@@ -481,6 +481,7 @@ export function CreateTransactionModal({
                     <SelectItem value="MAAŞ" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Maaş Ödemesi</SelectItem>
                     <SelectItem value="FATURA" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Fatura Ödemesi</SelectItem>
                     <SelectItem value="STOK" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Stok Alımı</SelectItem>
+                    <SelectItem value="YEMEK" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Yemek Gideri</SelectItem>
                     <SelectItem value="DİĞER" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Diğer</SelectItem>
                   </SelectContent>
                 </Select>
