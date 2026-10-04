@@ -1108,7 +1108,7 @@ export function CourierDashboardClient({
                     {(() => {
                         const groupsMap = new Map();
                         filteredItems.forEach((item: any) => {
-                            const smartCat = getSmartCategory(item, categories);
+                            const smartCat = getSmartCategory(item);
                             const groupKey = `smart-${smartCat}`;
 
                             if (!groupsMap.has(groupKey)) {
