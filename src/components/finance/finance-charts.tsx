@@ -95,7 +95,7 @@ export function FinanceCharts() {
                                         boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)',
                                         fontSize: '12px'
                                     }}
-                                    formatter={(value: number) => [`₺${value.toLocaleString('tr-TR')}`, undefined]}
+                                    formatter={(value: any) => [`₺${Number(value || 0).toLocaleString('tr-TR')}`, '']}
                                 />
                                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} iconType="circle" />
                                 <Line type="monotone" dataKey="income" name="Gelir" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: "#10b981", strokeWidth: 2 }} activeDot={{ r: 6 }} />

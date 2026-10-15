@@ -119,23 +119,24 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
     };
 
     return (
-        <div className="animate-in fade-in duration-700 space-y-10">
+        <div className="animate-in fade-in duration-700 space-y-4 sm:space-y-8">
             <PageHeader
                 title="Müşteri Portföyü"
                 description={`Toplam ${totalCount} müşteri kayıtlı. Müşteri bazlı işlem geçmişini ve sadakat puanlarını takip edin.`}
                 icon={Users}
                 actions={
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
                         {isFetching && (
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/5 border border-blue-500/10 animate-in fade-in zoom-in duration-300">
+                            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/5 border border-blue-500/10 animate-in fade-in zoom-in duration-300">
                                 <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
                                 <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">GÜNCELLENİYOR</span>
                             </div>
                         )}
                         <Link href="/musteriler/yeni">
-                            <Button className="bg-blue-500 hover:bg-blue-400 text-black px-8 h-12 rounded-2xl transition-all hover:-translate-y-1 flex gap-3">
-                                <Plus className="h-5 w-5 stroke-[3px]" />
-                                YENİ MÜŞTERİ TANIMLA
+                            <Button className="bg-blue-500 hover:bg-blue-400 text-black px-4 sm:px-8 h-10 sm:h-12 rounded-xl sm:rounded-2xl transition-all hover:-translate-y-1 flex gap-2 sm:gap-3 text-xs sm:text-sm font-bold">
+                                <Plus className="h-4 w-4 sm:h-5 sm:w-5 stroke-[3px]" />
+                                <span className="hidden sm:inline">YENİ MÜŞTERİ TANIMLA</span>
+                                <span className="sm:hidden">YENİ MÜŞTERİ</span>
                             </Button>
                         </Link>
                     </div>
@@ -511,9 +512,9 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
 
                         <div className="flex gap-4">
                             <Button
-                                variant="outline"
+                                variant="cancel"
                                 onClick={() => setDeleteId(null)}
-                                className="flex-1 h-14 rounded-2xl border-white/5 bg-white/5 hover:bg-white/10 text-muted-foreground transition-all"
+                                className="flex-1 h-14 rounded-2xl transition-all"
                             >
                                 Vazgeç
                             </Button>

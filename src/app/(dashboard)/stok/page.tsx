@@ -34,9 +34,9 @@ function TableSkeleton() {
 
 function CardSkeleton() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
       {[...Array(4)].map((_, i) => (
-        <Skeleton key={i} className="h-40 rounded-3xl" />
+        <Skeleton key={i} className="h-28 sm:h-40 rounded-xl sm:rounded-3xl" />
       ))}
     </div>
   );

@@ -252,7 +252,7 @@ export function DeviceImportModal() {
 
                 <DialogFooter className="p-6 mt-auto bg-muted/5 border-t border-border/40">
                     <div className="flex items-center justify-between w-full">
-                        <Button variant="ghost" className="rounded-xl" onClick={reset}>Vazgeç</Button>
+                        <Button variant="cancel" className="rounded-xl" onClick={reset}>Vazgeç</Button>
 
                         <div className="flex items-center gap-3">
                             {step === "mapping" && (

@@ -341,7 +341,7 @@ export function SupplierPaymentModal({
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-                        <Button type="button" variant="ghost" onClick={onClose} disabled={isPending} className="text-muted-foreground hover:text-foreground  h-11 px-6 rounded-xl hover:bg-accent/10">
+                        <Button type="button" variant="cancel" onClick={onClose} disabled={isPending} className="h-11 px-6 rounded-xl">
                             İptal
                         </Button>
                         <Button type="submit" disabled={isPending} className={cn(

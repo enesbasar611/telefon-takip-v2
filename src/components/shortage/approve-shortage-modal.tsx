@@ -569,7 +569,7 @@ export function ApproveShortageModal({
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="ghost" onClick={() => setStep("CHOICE")} className="flex-1 h-12 text-[10px] font-black uppercase tracking-widest">
+                                <Button variant="cancel" onClick={() => setStep("CHOICE")} className="flex-1 h-12 text-[10px] font-black uppercase tracking-widest">
                                     Vazgec
                                 </Button>
                                 <Button onClick={handlePriceConfirm} className="flex-[2] h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">

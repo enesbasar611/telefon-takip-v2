@@ -522,7 +522,7 @@ export async function updateProduct(id: string, rawData: Partial<z.infer<typeof 
         sellPriceUsd: data.sellPriceUsd !== undefined ? (data.sellPriceUsd ? Number(data.sellPriceUsd) : null) : undefined,
         stock: newStock,
         criticalStock: productFields.criticalStock !== undefined ? Number(productFields.criticalStock) : undefined,
-        categoryId: productFields.categoryId !== undefined ? productFields.categoryId : undefined,
+        categoryId: productFields.categoryId !== undefined ? (productFields.categoryId as any) : undefined,
         supplierId: productFields.supplierId !== undefined ? productFields.supplierId : undefined,
         location: productFields.location !== undefined ? productFields.location : undefined,
         isSecondHand: productFields.isSecondHand,

@@ -73,7 +73,7 @@ export function CategoryAddModal({
                         </div>
                     </div>
                     <DialogFooter className="gap-2">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">Vazgeç</Button>
+                        <Button type="button" variant="cancel" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest">Vazgeç</Button>
                         <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold uppercase tracking-widest px-6 h-11 rounded-xl shadow-lg shadow-indigo-500/10" disabled={isPending}>
                             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kaydet ve Oluştur"}
                         </Button>
@@ -141,7 +141,7 @@ export function CategoryEditModal({
                         </div>
                     </div>
                     <DialogFooter className="gap-2">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">Vazgeç</Button>
+                        <Button type="button" variant="cancel" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest">Vazgeç</Button>
                         <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold uppercase tracking-widest px-6 h-11 rounded-xl shadow-lg shadow-indigo-500/10" disabled={isPending}>
                             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Güncelle"}
                         </Button>
@@ -329,7 +329,7 @@ export function CategoryBulkAddModal({
                         </div>
                     </div>
                     <DialogFooter className="gap-2">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">Vazgeç</Button>
+                        <Button type="button" variant="cancel" onClick={() => onOpenChange(false)} className="text-xs font-bold uppercase tracking-widest">Vazgeç</Button>
                         <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold uppercase tracking-widest px-8 h-11 rounded-xl shadow-lg shadow-indigo-500/10" disabled={isPending || !bulkNames.trim()}>
                             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Varyantları Oluştur"}
                         </Button>

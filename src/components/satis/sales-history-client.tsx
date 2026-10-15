@@ -23,6 +23,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -78,6 +79,8 @@ export function SalesHistoryClient({
     staffList = [],
 }: SalesHistoryClientProps) {
     const router = useRouter();
+    const [activeTab, setActiveTab] = useState<string>("charts");
+    const [comparisonMode, setComparisonMode] = useState<"TTD" | "ROLLING_SPAN">("TTD");
     const [page, setPage] = useState(currentPage || 1);
     const [searchTerm, setSearchTerm] = useState(propSearch);
     const [appliedSearch, setAppliedSearch] = useState(propSearch);
@@ -119,8 +122,8 @@ export function SalesHistoryClient({
     });
 
     const { data: activeReport = reportData, isFetching: reportFetching } = useQuery({
-        queryKey: ["sales-history-report", rangeStart, rangeEnd],
-        queryFn: () => getSalesHistoryReport({ startDate: rangeStart, endDate: rangeEnd }),
+        queryKey: ["sales-history-report", rangeStart, rangeEnd, comparisonMode],
+        queryFn: () => getSalesHistoryReport({ startDate: rangeStart, endDate: rangeEnd, comparisonMode }),
         placeholderData: keepPreviousData,
     });
 
@@ -156,7 +159,7 @@ export function SalesHistoryClient({
         setAppliedRange(resetRange);
     };
 
-    const setQuickRange = (type: "today" | "yesterday" | "thisWeek" | "thisMonth" | "lastMonth") => {
+    const setQuickRange = (type: "today" | "yesterday" | "thisWeek" | "thisMonth" | "thisMonthTTD" | "lastMonthTTD" | "lastMonth") => {
         const now = new Date();
         let range = { from: now, to: now };
         switch (type) {
@@ -172,17 +175,48 @@ export function SalesHistoryClient({
                 range = { from: weekStart, to: endOfDay(now) };
                 break;
             case "thisMonth":
-                range = { from: startOfMonth(now), to: endOfMonth(now) };
+            case "thisMonthTTD":
+                // 1st of month to today (true MTD)
+                range = { from: startOfMonth(now), to: endOfDay(now) };
                 break;
-            case "lastMonth":
+            case "lastMonthTTD": {
+                // Equivalent calendar days in previous month (e.g. 1-15 Sep)
+                const prevM = subMonths(now, 1);
+                const prevStart = startOfMonth(prevM);
+                const prevDay = Math.min(now.getDate(), endOfMonth(prevM).getDate());
+                const prevEnd = new Date(prevM.getFullYear(), prevM.getMonth(), prevDay);
+                range = { from: startOfDay(prevStart), to: endOfDay(prevEnd) };
+                break;
+            }
+            case "lastMonth": {
                 const prevMonth = subMonths(now, 1);
                 range = { from: startOfMonth(prevMonth), to: endOfMonth(prevMonth) };
                 break;
+            }
         }
         setDateRange(range);
         setAppliedRange(range);
         setPage(1);
         setCalendarOpen(false);
+    };
+
+    const handleDrilldownNavigation = (params: { searchTerm?: string; startDate?: string; endDate?: string; paymentMethod?: string }) => {
+        if (params.searchTerm) {
+            setSearchTerm(params.searchTerm);
+            setAppliedSearch(params.searchTerm);
+        }
+        if (params.paymentMethod) {
+            setPaymentMethodFilter(params.paymentMethod);
+        }
+        if (params.startDate) {
+            const from = new Date(params.startDate);
+            const to = params.endDate ? new Date(params.endDate) : from;
+            setDateRange({ from, to });
+            setAppliedRange({ from, to });
+        }
+        setPage(1);
+        setActiveTab("list");
+        toast.info("İşlem listesi filtrelendi.");
     };
 
     const handlePrintReceipt = async (op: UnifiedOperation) => {
@@ -363,160 +397,256 @@ export function SalesHistoryClient({
 
     return (
         <div className="space-y-6">
-            <Tabs defaultValue="list" className="w-full">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                    <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Satış Geçmişi</h2>
-                        <p className="text-sm text-muted-foreground">İşlem arşivini ve finansal istatistikleri inceleyin.</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <TabsList className="bg-muted/50 rounded-xl p-1 h-12 border border-border/40 shadow-sm">
-                            <TabsTrigger value="list" className="rounded-lg px-4 md:px-6 text-sm font-semibold h-full data-[state=active]:bg-background data-[state=active]:shadow-sm">İşlem Listesi</TabsTrigger>
-                            <TabsTrigger value="charts" className="rounded-lg px-4 md:px-6 text-sm font-semibold h-full data-[state=active]:bg-background data-[state=active]:shadow-sm">Grafikler ve Raporlar</TabsTrigger>
-                        </TabsList>
-                        <Button variant="outline" className="h-12 rounded-xl border-border/60 bg-background/50 shadow-sm font-semibold gap-2" onClick={exportToExcel}>
-                            <Download className="h-4 w-4 text-green-600" />
-                            <span className="hidden md:inline">Excel'e Aktar</span>
+            {/* Page Header & Quick Actions */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5">
+                        <span>Finansal Kokpit & Satış Arşivi</span>
+                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 font-bold">
+                            Executive
+                        </Badge>
+                    </h2>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                        Canlı ciro akışı, Time-to-Date eşdeğer gün analizleri ve işlem arşivi.
+                    </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="h-10 rounded-xl border-border/60 bg-background/60 shadow-sm font-semibold gap-2 text-xs hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/30" 
+                        onClick={exportToExcel}
+                    >
+                        <Download className="h-4 w-4 text-emerald-600" />
+                        <span>Excel'e Aktar</span>
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="h-10 rounded-xl border-border/60 bg-background/60 shadow-sm font-semibold gap-2 text-xs hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/30" 
+                        onClick={handlePrintEndOfDay}
+                    >
+                        <Printer className="h-4 w-4 text-blue-600" />
+                        <span>Gün Sonu PDF</span>
+                    </Button>
+                </div>
+            </div>
+
+            {/* Top Shared Filter Bar: Quick Range Pills + Date Picker + Time-to-Date Toggle */}
+            <div className="p-3.5 sm:p-4 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-md shadow-sm space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    {/* Quick Range Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
+                            onClick={() => setQuickRange("today")}
+                        >
+                            Bugün
                         </Button>
-                        <Button variant="outline" className="h-12 rounded-xl border-border/60 bg-background/50 shadow-sm font-semibold gap-2" onClick={handlePrintEndOfDay}>
-                            <Printer className="h-4 w-4 text-blue-600" />
-                            <span className="hidden md:inline">Gün Sonu</span>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
+                            onClick={() => setQuickRange("yesterday")}
+                        >
+                            Dün
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
+                            onClick={() => setQuickRange("thisWeek")}
+                        >
+                            Bu Hafta
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 rounded-lg px-2.5 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 shrink-0" 
+                            onClick={() => setQuickRange("thisMonthTTD")}
+                        >
+                            🎯 Ay Başından Bugüne (MTD)
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
+                            onClick={() => setQuickRange("lastMonthTTD")}
+                        >
+                            🔄 Geçen Ay Eşdeğer Gün
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
+                            onClick={() => setQuickRange("lastMonth")}
+                        >
+                            Geçen Ay (Tam)
+                        </Button>
+                    </div>
+
+                    {/* Date Picker Popover + Comparison Mode Button */}
+                    <div className="flex items-center gap-2">
+                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-9 rounded-xl border-border/60 justify-start gap-2 text-xs flex-1 sm:flex-none sm:min-w-[230px]">
+                                    <CalendarIcon className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                    <span className="truncate">{formattedRange}</span>
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 rounded-2xl border-border shadow-2xl flex flex-col md:flex-row" align="end">
+                                <div className="flex flex-row md:flex-col p-2 gap-1 border-b md:border-b-0 md:border-r border-border bg-muted/20 overflow-x-auto md:w-36 justify-start items-stretch">
+                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("today")}>Bugün</Button>
+                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("yesterday")}>Dün</Button>
+                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("thisWeek")}>Bu Hafta</Button>
+                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs font-bold text-primary" onClick={() => setQuickRange("thisMonthTTD")}>Ay Başından Bugüne</Button>
+                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("lastMonthTTD")}>Geçen Ay Eşdeğer</Button>
+                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("lastMonth")}>Geçen Ay (Tam)</Button>
+                                </div>
+                                <div className="flex flex-col">
+                                    <Calendar
+                                        mode="range"
+                                        selected={dateRange}
+                                        onSelect={(range) => {
+                                            setDateRange(range);
+                                            if (range?.from && range?.to) {
+                                                setAppliedRange(range);
+                                                setPage(1);
+                                            }
+                                        }}
+                                        numberOfMonths={2}
+                                        defaultMonth={dateRange?.from}
+                                        locale={tr}
+                                        weekStartsOn={1}
+                                    />
+                                    <div className="flex items-center justify-end gap-2 border-t border-border p-3">
+                                        <Button variant="cancel" size="sm" className="rounded-xl" onClick={() => { setDateRange(appliedRange); setCalendarOpen(false); }}>
+                                            Vazgeç
+                                        </Button>
+                                        <Button size="sm" className="rounded-xl" onClick={applyDateRange}>
+                                            Uygula
+                                        </Button>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setComparisonMode(prev => prev === "TTD" ? "ROLLING_SPAN" : "TTD")}
+                            className={cn(
+                                "h-9 rounded-xl text-xs font-semibold gap-1.5 transition-all shrink-0",
+                                comparisonMode === "TTD" 
+                                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" 
+                                    : "bg-muted/30 text-muted-foreground border-border/60"
+                            )}
+                            title="Önceki ayın aynı takvim günleri ile kıyaslar"
+                        >
+                            <span>⏱️ TTD: {comparisonMode === "TTD" ? "Eşdeğer Gün" : "Sürekli Aralık"}</span>
                         </Button>
                     </div>
                 </div>
+            </div>
+
+            {/* Tabs for Charts vs Detailed Operation Archive */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="bg-muted/50 rounded-xl p-1 h-12 border border-border/40 shadow-sm w-full sm:w-auto grid grid-cols-2 mb-4">
+                    <TabsTrigger value="charts" className="rounded-lg px-4 sm:px-8 text-xs sm:text-sm font-bold h-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                        Grafikler ve Raporlar
+                    </TabsTrigger>
+                    <TabsTrigger value="list" className="rounded-lg px-4 sm:px-8 text-xs sm:text-sm font-bold h-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                        İşlem Arşivi ({historyData.total})
+                    </TabsTrigger>
+                </TabsList>
 
                 <TabsContent value="charts" className="mt-0 outline-none">
-                    <SalesHistoryReportPanel report={activeReport} isLoading={reportFetching} />
+                    <SalesHistoryReportPanel 
+                        report={activeReport} 
+                        isLoading={reportFetching} 
+                        onNavigateToListWithFilter={handleDrilldownNavigation}
+                    />
                 </TabsContent>
 
                 <TabsContent value="list" className="mt-0 outline-none space-y-6">
                     <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden bg-card/70 backdrop-blur-xl">
-                <CardHeader className="p-5 md:p-6 border-b border-border/40 bg-muted/5">
-                    <div className="flex flex-col gap-5">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="text-sm text-muted-foreground">
-                                Seçili aralıktaki işlemleri filtreleyin ve yönetin.
-                            </div>
-                            <div className="text-xs text-muted-foreground rounded-xl border border-border/60 bg-background/50 px-3 py-2">
-                                Aktif aralık: <span className="font-semibold text-foreground">{formattedRange}</span>
-                            </div>
-                        </div>
+                        <CardHeader className="p-4 sm:p-5 border-b border-border/40 bg-muted/5">
+                            <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-1 xl:grid-cols-[minmax(260px,1fr)_auto] gap-3">
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Müşteri, fiş, ürün veya telefon ara..."
+                                            className="pl-12 h-11 rounded-xl bg-background border-border/60 text-sm"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                                        />
+                                    </div>
 
-                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(260px,1fr)_auto] gap-3">
-                            <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Müşteri, fiş, ürün veya telefon ara..."
-                                    className="pl-12 h-12 rounded-xl bg-background border-border/60 text-sm"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                                />
-                            </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Select value={paymentMethodFilter} onValueChange={(val) => { setPage(1); setPaymentMethodFilter(val); }}>
+                                            <SelectTrigger className="w-[150px] h-11 rounded-xl border-border/60 text-xs">
+                                                <SelectValue placeholder="Ödeme Tipi" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ALL">Tüm Ödemeler</SelectItem>
+                                                <SelectItem value="CASH">Nakit</SelectItem>
+                                                <SelectItem value="CARD">Kredi Kartı</SelectItem>
+                                                <SelectItem value="TRANSFER">Havale/EFT</SelectItem>
+                                                <SelectItem value="DEBT">Veresiye</SelectItem>
+                                            </SelectContent>
+                                        </Select>
 
-                            <div className="flex flex-wrap items-center gap-2">
-                                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="h-12 rounded-xl border-border/60 justify-start gap-2 min-w-[240px]">
-                                            <CalendarIcon className="h-4 w-4 text-emerald-600" />
-                                            {dateRange?.from
-                                                ? dateRange.to
-                                                    ? `${format(dateRange.from, "d MMM yyyy", { locale: tr })} - ${format(dateRange.to, "d MMM yyyy", { locale: tr })}`
-                                                    : format(dateRange.from, "d MMM yyyy", { locale: tr })
-                                                : "Tarih aralığı seç"}
+                                        <Select value={staffFilter} onValueChange={(val) => { setPage(1); setStaffFilter(val); }}>
+                                            <SelectTrigger className="w-[150px] h-11 rounded-xl border-border/60 text-xs">
+                                                <SelectValue placeholder="Personel" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ALL">Tüm Personeller</SelectItem>
+                                                {staffList.map((staff) => (
+                                                    <SelectItem key={staff.id} value={staff.id}>{staff.name} {staff.surname || ""}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        <Button type="button" className="h-11 rounded-xl px-5 text-xs font-semibold" onClick={applySearch}>
+                                            Ara
                                         </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 rounded-2xl border-border shadow-2xl flex flex-col md:flex-row" align="end">
-                                        <div className="flex flex-row md:flex-col p-2 gap-1 border-b md:border-b-0 md:border-r border-border bg-muted/20 overflow-x-auto md:w-32 justify-start items-stretch">
-                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("today")}>Bugün</Button>
-                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("yesterday")}>Dün</Button>
-                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("thisWeek")}>Bu Hafta</Button>
-                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("thisMonth")}>Bu Ay</Button>
-                                            <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("lastMonth")}>Geçen Ay</Button>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <Calendar
-                                                mode="range"
-                                                selected={dateRange}
-                                                onSelect={(range) => {
-                                                    setDateRange(range);
-                                                    if (range?.from && range?.to) {
-                                                        setAppliedRange(range);
-                                                        setPage(1);
-                                                    }
-                                                }}
-                                                numberOfMonths={2}
-                                                defaultMonth={dateRange?.from}
-                                                locale={tr}
-                                                weekStartsOn={1}
-                                            />
-                                            <div className="flex items-center justify-end gap-2 border-t border-border p-3">
-                                                <Button variant="outline" size="sm" className="rounded-xl" onClick={() => { setDateRange(appliedRange); setCalendarOpen(false); }}>
-                                                    Vazgeç
-                                                </Button>
-                                                <Button size="sm" className="rounded-xl" onClick={applyDateRange}>
-                                                    Uygula
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                <Select value={paymentMethodFilter} onValueChange={(val) => { setPage(1); setPaymentMethodFilter(val); }}>
-                                    <SelectTrigger className="w-[160px] h-12 rounded-xl border-border/60">
-                                        <SelectValue placeholder="Ödeme Tipi" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ALL">Tüm Ödemeler</SelectItem>
-                                        <SelectItem value="CASH">Nakit</SelectItem>
-                                        <SelectItem value="CARD">Kredi Kartı</SelectItem>
-                                        <SelectItem value="TRANSFER">Havale/EFT</SelectItem>
-                                        <SelectItem value="DEBT">Veresiye</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Select value={staffFilter} onValueChange={(val) => { setPage(1); setStaffFilter(val); }}>
-                                    <SelectTrigger className="w-[160px] h-12 rounded-xl border-border/60">
-                                        <SelectValue placeholder="Personel" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ALL">Tüm Personeller</SelectItem>
-                                        {staffList.map((staff) => (
-                                            <SelectItem key={staff.id} value={staff.id}>{staff.name} {staff.surname || ""}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Button type="button" className="h-12 rounded-xl px-5 text-sm font-semibold" onClick={applySearch}>
-                                    Ara
-                                </Button>
-                                <Button type="button" variant="ghost" className="h-12 rounded-xl px-4 text-sm font-semibold" onClick={clearFilters}>
-                                    Temizle
-                                </Button>
-                            </div>
-                        </div>
+                                        <Button type="button" variant="ghost" className="h-11 rounded-xl px-3 text-xs font-semibold" onClick={clearFilters}>
+                                            Temizle
+                                        </Button>
+                                    </div>
+                                </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
-                            {typeFilters.map((filter) => (
-                                <Button
-                                    key={filter.key}
-                                    variant={(typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "default" : "outline"}
-                                    size="sm"
-                                    className={cn(
-                                        "h-10 rounded-xl px-4 text-xs font-semibold",
-                                        (typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" : "border-border/60"
+                                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/30">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        {typeFilters.map((filter) => (
+                                            <Button
+                                                key={filter.key}
+                                                variant={(typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "default" : "outline"}
+                                                size="sm"
+                                                className={cn(
+                                                    "h-8 rounded-xl px-3 text-xs font-semibold",
+                                                    (typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "bg-primary text-primary-foreground shadow-sm" : "border-border/60"
+                                                )}
+                                                onClick={() => {
+                                                    setPage(1);
+                                                    setTypeFilter(filter.key);
+                                                }}
+                                            >
+                                                {filter.label}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    {historyFetching && (
+                                        <span className="text-xs text-muted-foreground animate-pulse">Liste güncelleniyor...</span>
                                     )}
-                                    onClick={() => {
-                                        setPage(1);
-                                        setTypeFilter(filter.key);
-                                    }}
-                                >
-                                    {filter.label}
-                                </Button>
-                            ))}
-                            {historyFetching && (
-                                <span className="text-xs text-muted-foreground ml-1">Liste güncelleniyor...</span>
-                            )}
-                        </div>
-                    </div>
-                </CardHeader>
+                                </div>
+                            </div>
+                        </CardHeader>
 
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">

@@ -158,11 +158,11 @@ export function QuickShortcuts({ shop, categories = [], suppliers = [] }: QuickS
                 <DialogTrigger asChild>
                     <Button
                         variant="outline"
-                        className="h-10 px-4 gap-2 border-border/40 bg-card/40 backdrop-blur-md hover:bg-primary/10 hover:text-primary hover:border-primary/40 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm group"
+                        className="h-10 px-3 sm:px-4 gap-1.5 sm:gap-2 border-border/40 bg-card/40 backdrop-blur-md hover:bg-primary/10 hover:text-primary hover:border-primary/40 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm group shrink-0 whitespace-nowrap"
                     >
-                        <Zap className="w-4 h-4 text-amber-500 group-hover:rotate-12 transition-transform" />
+                        <Zap className="w-4 h-4 text-amber-500 group-hover:rotate-12 transition-transform shrink-0" />
                         <span>Hızlı İşlemler</span>
-                        <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:translate-y-0.5 transition-transform" />
+                        <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover:translate-y-0.5 transition-transform shrink-0" />
                     </Button>
                 </DialogTrigger>
                 <DialogContent

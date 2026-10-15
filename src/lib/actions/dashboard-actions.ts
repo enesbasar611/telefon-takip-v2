@@ -127,11 +127,25 @@ export async function getDashboardStats() {
  */
 export async function getDashboardInit(shopIdParam?: string) {
   const shopId = shopIdParam || await getShopId();
-  if (!shopId) return { rates: null, stats: {}, settings: [] };
+  if (!shopId) return { rates: null, stats: {}, settings: [], tenant: null };
 
-  const [stats, settings] = await Promise.all([
+  const [stats, settings, shop] = await Promise.all([
     getDashboardStats(),
-    prisma.setting.findMany({ where: { shopId } })
+    prisma.setting.findMany({ where: { shopId } }),
+    prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        id: true,
+        name: true,
+        industry: true,
+        enabledModules: true,
+        isCourierEnabled: true,
+        isEInvoiceEnabled: true,
+        isFinanceEnabled: true,
+        isServiceEnabled: true,
+        isStockEnabled: true,
+      }
+    })
   ]);
 
   const rates = await getExchangeRates(shopId);
@@ -149,7 +163,8 @@ export async function getDashboardInit(shopIdParam?: string) {
   return serializePrisma({
     stats,
     settings: settings.map(s => ({ key: s.key, value: s.value })),
-    rates
+    rates,
+    tenant: shop || null
   });
 }
 

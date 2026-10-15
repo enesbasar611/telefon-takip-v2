@@ -28,10 +28,10 @@ export function FloatingSaveBar({ hasChanges, isSaving, onSave, onCancel }: Floa
 
             <Button
                 onClick={onCancel}
-                variant="ghost"
+                variant="cancel"
                 size="sm"
                 disabled={isSaving}
-                className="text-muted-foreground hover:text-white h-9 px-4 text-xs font-bold"
+                className="h-9 px-4 text-xs font-bold"
             >
                 <X className="h-3.5 w-3.5 mr-1.5" />
                 İptal

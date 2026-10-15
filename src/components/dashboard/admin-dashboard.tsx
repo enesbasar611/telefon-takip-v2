@@ -170,14 +170,14 @@ export function AdminDashboard({
 
     const widgets = {
         // Stats
-        stat_sales: <StatWidgetWrapper type="DAILY_SALES" stat={statItems[0]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
-        stat_accounts: <StatWidgetWrapper type="CASH_BALANCE" stat={statItems[1]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
-        stat_income: <StatWidgetWrapper type="REPAIR_INCOME" stat={statItems[2]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
-        stat_pending: <StatWidgetWrapper type="PENDING_SERVICES" stat={statItems[3]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
-        stat_collections: <StatWidgetWrapper type="COLLECTIONS" stat={statItems[4]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
-        stat_ready: <StatWidgetWrapper type="READY_DEVICES" stat={statItems[5]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
-        stat_stock: <StatWidgetWrapper type="CRITICAL_STOCK" stat={statItems[6]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
-        stat_debts: <StatWidgetWrapper type="TOTAL_DEBTS" stat={statItems[7]} shopId={shopId || ""} defaultCurrency={defaultCurrency} />,
+        stat_sales: <StatWidgetWrapper type="DAILY_SALES" stat={statItems[0]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
+        stat_accounts: <StatWidgetWrapper type="CASH_BALANCE" stat={statItems[1]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
+        stat_income: <StatWidgetWrapper type="REPAIR_INCOME" stat={statItems[2]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
+        stat_pending: <StatWidgetWrapper type="PENDING_SERVICES" stat={statItems[3]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
+        stat_collections: <StatWidgetWrapper type="COLLECTIONS" stat={statItems[4]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
+        stat_ready: <StatWidgetWrapper type="READY_DEVICES" stat={statItems[5]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
+        stat_stock: <StatWidgetWrapper type="CRITICAL_STOCK" stat={statItems[6]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
+        stat_debts: <StatWidgetWrapper type="TOTAL_DEBTS" stat={statItems[7]} shopId={shopId || ""} defaultCurrency={defaultCurrency} shop={shop} categories={categories} suppliers={suppliers} rates={rates} />,
 
         // Modules
         revenue: <RevenueAnalysisStream />,
@@ -194,68 +194,71 @@ export function AdminDashboard({
     const initialLayout = user?.dashboardLayout || [];
 
     return (
-        <div className="space-y-8 pb-10">
+        <div className="space-y-6 sm:space-y-8 pb-10">
             <DashboardOnboardingClient categories={categories} shop={shop} />
 
-            {/* Original Editorial Header Style */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center gap-5">
-                    <div className="hidden md:flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl shadow-primary/5">
-                        <LayoutDashboard className="h-7 w-7 text-primary animate-in zoom-in duration-500" />
+            {/* Mobile-First Editorial Header Style */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+                <div className="flex items-center gap-3 sm:gap-5 w-full md:w-auto">
+                    <div className="hidden sm:flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-[1.2rem] bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl shadow-primary/5 shrink-0">
+                        <LayoutDashboard className="h-6 w-6 sm:h-7 sm:w-7 text-primary animate-in zoom-in duration-500" />
                     </div>
-                    <div className="space-y-1.5">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">
-                                {viewMode === "system" ? (shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "SİSTEM PANALİ") : "PERSONEL DURUMU"}
+                    <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                            <h1 className="text-xl sm:text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic truncate">
+                                {viewMode === "system" ? (shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "SİSTEM PANELİ") : "PERSONEL DURUMU"}
                             </h1>
-                            <div className="flex items-center bg-card/40 backdrop-blur-md border border-border/40 p-0 rounded-full shadow-sm overflow-hidden scale-90 origin-left">
-                                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/5 border-r border-border/40">
+                            <div className="flex items-center bg-card/40 backdrop-blur-md border border-border/40 p-0 rounded-full shadow-sm overflow-hidden scale-90 origin-left shrink-0">
+                                <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-emerald-500/5 border-r border-border/40">
                                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                                     <span className="text-[8px] text-emerald-600 tracking-tight font-bold uppercase">AKTİF</span>
                                 </div>
-                                <div className="px-3 py-1">
-                                    <span className="text-[8px] text-muted-foreground tracking-tight uppercase font-bold">GERÇEK ZAMANLI</span>
+                                <div className="px-2.5 sm:px-3 py-1">
+                                    <span className="text-[8px] text-muted-foreground tracking-tight uppercase font-bold">CANLI</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] opacity-40">
-                            <span>OPERASYON VE FİNANCE TAKİP MERKEZİ</span>
-                            <span>•</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-wider sm:tracking-[0.3em] opacity-40 flex-wrap">
+                            <span className="hidden sm:inline">OPERASYON VE FİNANS MERKEZİ</span>
+                            <span className="hidden sm:inline">•</span>
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {format(new Date(), "d MMMM yyyy", { locale: tr })}</span>
                             <LiveClock />
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 self-end md:self-auto">
-                    <DashboardEditButton />
-                    <QuickShortcuts shop={shop} categories={categories} suppliers={suppliers} />
+                {/* Horizontal scrollable strip on mobile, clean inline bar on desktop */}
+                <div className="w-full md:w-auto overflow-x-auto no-scrollbar py-1 -my-1">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-nowrap">
+                        <DashboardEditButton />
+                        <QuickShortcuts shop={shop} categories={categories} suppliers={suppliers} />
 
-                    <div className="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-inner">
-                        <Button
-                            variant={viewMode === "system" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => setViewMode("system")}
-                            className={cn(
-                                "rounded-xl px-4 py-1.5 text-xs font-bold transition-all duration-300",
-                                viewMode === "system" ? "shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <LayoutDashboard className="w-3.5 h-3.5 mr-2" />
-                            SİSTEM
-                        </Button>
-                        <Button
-                            variant={viewMode === "staff" ? "default" : "ghost"}
-                            size="sm"
-                            onClick={() => setViewMode("staff")}
-                            className={cn(
-                                "rounded-xl px-4 py-1.5 text-xs font-bold transition-all duration-300",
-                                viewMode === "staff" ? "shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <Users className="w-3.5 h-3.5 mr-2" />
-                            PERSONEL
-                        </Button>
+                        <div className="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-inner shrink-0">
+                            <Button
+                                variant={viewMode === "system" ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => setViewMode("system")}
+                                className={cn(
+                                    "rounded-xl px-3 sm:px-4 py-1.5 text-xs font-bold transition-all duration-300 shrink-0 whitespace-nowrap",
+                                    viewMode === "system" ? "shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                <LayoutDashboard className="w-3.5 h-3.5 mr-1.5 sm:mr-2 shrink-0" />
+                                SİSTEM
+                            </Button>
+                            <Button
+                                variant={viewMode === "staff" ? "default" : "ghost"}
+                                size="sm"
+                                onClick={() => setViewMode("staff")}
+                                className={cn(
+                                    "rounded-xl px-3 sm:px-4 py-1.5 text-xs font-bold transition-all duration-300 shrink-0 whitespace-nowrap",
+                                    viewMode === "staff" ? "shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                <Users className="w-3.5 h-3.5 mr-1.5 sm:mr-2 shrink-0" />
+                                PERSONEL
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

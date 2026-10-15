@@ -50,7 +50,7 @@ export default async function DashboardPage() {
     return (
       <DashboardProvider>
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <div className="p-4 sm:p-8 max-w-[1600px] mx-auto animate-in fade-in duration-700">
+          <div className="p-0 sm:p-6 lg:p-8 max-w-[1600px] mx-auto animate-in fade-in duration-700">
             <AdminDashboard
               stats={initialStats.stats}
               rates={initialStats.rates}

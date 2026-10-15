@@ -439,9 +439,9 @@ export function ProfileClient() {
 
                             <DialogFooter className="p-6 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-end gap-3 sticky bottom-0">
                                 <Button
-                                    variant="ghost"
+                                    variant="cancel"
                                     onClick={() => setIsEditModalOpen(false)}
-                                    className="rounded-xl h-11 px-6 font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                    className="rounded-xl h-11 px-6 font-bold"
                                 >
                                     Vazgeç
                                 </Button>

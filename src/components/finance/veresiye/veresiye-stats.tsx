@@ -21,7 +21,7 @@ interface VeresiyeStatsProps {
 
 export function VeresiyeStats({ statsData, onStatClick }: VeresiyeStatsProps) {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
             {statsData.map((stat, i) => (
                 <motion.div
                     key={i}
@@ -31,20 +31,20 @@ export function VeresiyeStats({ statsData, onStatClick }: VeresiyeStatsProps) {
                     onClick={() => onStatClick(stat.type)}
                     className="cursor-pointer"
                 >
-                    <Card className="border-none bg-muted/40 backdrop-blur-2xl shadow-xl shadow-black/5 overflow-hidden rounded-[2.5rem] group hover:bg-muted/50 transition-all duration-500 border border-border">
-                        <CardHeader className="flex flex-row items-center justify-between px-8 pt-8 pb-2">
-                            <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">
+                    <Card className="border-none bg-muted/40 backdrop-blur-2xl shadow-lg sm:shadow-xl shadow-black/5 overflow-hidden rounded-xl sm:rounded-[2.5rem] group hover:bg-muted/50 transition-all duration-500 border border-border">
+                        <CardHeader className="flex flex-row items-center justify-between px-3.5 pt-3.5 sm:px-8 sm:pt-8 pb-1 sm:pb-2">
+                            <CardTitle className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.12em] sm:tracking-[0.2em] text-muted-foreground/70 truncate">
                                 {stat.title}
                             </CardTitle>
-                            <div className={cn("p-4 rounded-2xl transition-all duration-500 group-hover:scale-110", stat.bg, stat.color)}>
-                                <stat.icon className="w-5 h-5" />
+                            <div className={cn("p-2 sm:p-4 rounded-lg sm:rounded-2xl transition-all duration-500 group-hover:scale-110 shrink-0", stat.bg, stat.color)}>
+                                <stat.icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                             </div>
                         </CardHeader>
-                        <CardContent className="px-8 pb-8">
-                            <div className="text-3xl font-black text-foreground tabular-nums tracking-tighter mb-1">
+                        <CardContent className="px-3.5 pb-3.5 sm:px-8 sm:pb-8">
+                            <div className="text-base sm:text-3xl font-black text-foreground tabular-nums tracking-tighter mb-0.5 sm:mb-1 truncate">
                                 {stat.value}
                             </div>
-                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                            <p className="text-[8px] sm:text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest truncate">
                                 {stat.subValue}
                             </p>
                         </CardContent>

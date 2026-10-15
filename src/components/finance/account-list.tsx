@@ -104,7 +104,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card
                     onClick={() => {
                         const params = new URLSearchParams(searchParams.toString());
@@ -112,32 +112,32 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
                     }}
                     className={cn(
-                        "group relative overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm rounded-[2rem] cursor-pointer",
+                        "group relative overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm rounded-xl sm:rounded-[2rem] cursor-pointer",
                         !searchParams.get("accountId") ? "ring-2 ring-blue-500 border-blue-500/50 bg-blue-500/5" : "hover:border-blue-500/30"
                     )}
                 >
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CardContent className="p-4 relative z-10">
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="h-10 w-10 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500 bg-blue-600 text-white border-blue-600/20">
-                                <Wallet className="h-6 w-6" />
+                    <CardContent className="p-3 sm:p-4 relative z-10">
+                        <div className="flex items-start justify-between mb-2 sm:mb-3">
+                            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500 bg-blue-600 text-white border-blue-600/20">
+                                <Wallet className="h-4 w-4 sm:h-6 sm:w-6" />
                             </div>
-                            <Badge variant="outline" className="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-lg bg-background/50 backdrop-blur-sm border-zinc-200 dark:border-zinc-800 h-fit">
+                            <Badge variant="outline" className="text-[8px] sm:text-[10px] tracking-widest uppercase px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg bg-background/50 backdrop-blur-sm border-zinc-200 dark:border-zinc-800 h-fit">
                                 Hepsi
                             </Badge>
                         </div>
                         <div>
-                            <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">Toplam Kasa</h3>
-                            <p className="text-xl font-bold tracking-tighter text-foreground">
+                            <h3 className="font-medium text-xs sm:text-sm tracking-tight text-foreground/80 uppercase mb-0.5 sm:mb-1 truncate">Toplam Kasa</h3>
+                            <p className="text-base sm:text-xl font-bold tracking-tighter text-foreground truncate">
                                 {formatDisplayMoney(accounts.reduce((sum, acc) => {
                                     if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
                                     return sum + Number(acc.balance);
                                 }, 0))}
                             </p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5 opacity-60">
-                                Varsayılan para birimi: {defaultCurrency}
+                            <p className="text-[8px] sm:text-[10px] text-muted-foreground mt-0.5 opacity-60 truncate">
+                                Birim: {defaultCurrency}
                             </p>
-                            <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest opacity-60">TÜM HAREKETLERİ GÖR</p>
+                            <p className="hidden sm:block text-[10px] text-muted-foreground mt-1 uppercase tracking-widest opacity-60">TÜM HAREKETLERİ GÖR</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -160,15 +160,15 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                 router.replace(`${pathname}?${params.toString()}`, { scroll: false });
                             }}
                             className={cn(
-                                "group relative overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm rounded-[2rem] cursor-pointer",
+                                "group relative overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-zinc-200 dark:border-zinc-800 bg-background/50 backdrop-blur-sm rounded-xl sm:rounded-[2rem] cursor-pointer",
                                 isSelected ? "ring-2 ring-blue-500 border-blue-500/50 bg-blue-500/5" : (isCentral ? "hover:border-blue-500/50" : "hover:border-rose-500/30")
                             )}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <CardContent className="p-4 relative z-10">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500", colors[account.type])}>
-                                        <Icon className="h-6 w-6" />
+                            <CardContent className="p-3 sm:p-4 relative z-10">
+                                <div className="flex items-start justify-between mb-2 sm:mb-3">
+                                    <div className={cn("h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 duration-500", colors[account.type])}>
+                                        <Icon className="h-4 w-4 sm:h-6 sm:w-6" />
                                     </div>
                                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                         {!isCentral && (
@@ -192,7 +192,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter className="gap-3">
-                                                        <AlertDialogCancel className="rounded-xl border-zinc-200 dark:border-zinc-800 h-10 px-6 text-xs">Vazgeç</AlertDialogCancel>
+                                                        <AlertDialogCancel className="rounded-xl h-10 px-6 text-xs">Vazgeç</AlertDialogCancel>
                                                         <AlertDialogAction
                                                             onClick={() => handleDelete(account.id)}
                                                             className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white border-none h-10 px-8 text-xs"

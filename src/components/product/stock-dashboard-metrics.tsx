@@ -24,27 +24,27 @@ interface StockStats {
 
 export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-6 sm:mb-8">
             {/* Total Inventory Value - Large Card */}
-            <Card className="md:col-span-2 relative overflow-hidden bg-rose-500/5 border-rose-500/30 p-6 matte-card">
+            <Card className="col-span-2 relative overflow-hidden bg-rose-500/5 border-rose-500/30 p-4 sm:p-6 matte-card">
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                     <Package className="h-32 w-32 text-rose-500" />
                 </div>
                 <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="h-8 w-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-                            <DollarSign className="h-4 w-4 text-rose-500" />
+                    <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-500" />
                         </div>
-                        <span className="text-[10px] text-rose-500 tracking-wider">TOPLAM STOK MALİYETİ</span>
+                        <span className="text-[9px] sm:text-[10px] text-rose-500 tracking-wider">TOPLAM STOK MALİYETİ</span>
                     </div>
                     <div className="flex flex-col">
                         <div className="flex items-baseline gap-2">
                             <RevealFinancial
                                 amount={stats.totalValue}
-                                className="text-4xl text-rose-500 tracking-tight"
+                                className="text-2xl sm:text-4xl text-rose-500 tracking-tight"
                             />
                         </div>
-                        <p className="text-[10px] text-rose-500/80 mt-2 flex items-center gap-1">
+                        <p className="text-[9px] sm:text-[10px] text-rose-500/80 mt-1.5 sm:mt-2 flex items-center gap-1">
                             <TrendingUp className="h-3 w-3 text-rose-500" />
                             Şu anki dükkan mal varlığı değeri
                         </p>
@@ -53,36 +53,36 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
             </Card>
 
             {/* Potential Profit and Stats Column */}
-            <Card className="bg-card/40 border-border/50 p-6 relative overflow-hidden matte-card">
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <Card className="col-span-1 bg-card/40 border-border/50 p-3.5 sm:p-6 relative overflow-hidden matte-card">
+                <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                    <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
                     </div>
-                    <span className="text-[10px]  text-muted-foreground/80 tracking-wider">BEKLENEN KÂR</span>
+                    <span className="text-[8px] sm:text-[10px] text-muted-foreground/80 tracking-wider truncate">BEKLENEN KÂR</span>
                 </div>
                 <div className="flex flex-col">
                     <RevealFinancial
                         amount={stats.potentialProfit}
-                        className="text-2xl text-foreground tracking-tight"
+                        className="text-lg sm:text-2xl text-foreground tracking-tight"
                     />
-                    <div className="flex items-center gap-1 mt-2">
+                    <div className="flex items-center gap-1 mt-1.5 sm:mt-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] text-emerald-500/80  uppercase">Satış Odaklı Kâr</span>
+                        <span className="text-[8px] sm:text-[10px] text-emerald-500/80 uppercase">Satış Kârı</span>
                     </div>
                 </div>
-                <div className="mt-auto pt-6 border-t border-white/5">
+                <div className="mt-auto pt-4 sm:pt-6 border-t border-white/5">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Layers className="h-4 w-4 text-sky-500" />
-                            <span className="text-[10px]  text-muted-foreground/80">TOPLAM ADET</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-sky-500" />
+                            <span className="text-[8px] sm:text-[10px] text-muted-foreground/80">ADET</span>
                         </div>
-                        <span className="text-xl text-foreground font-black">{stats.totalItems}</span>
+                        <span className="text-base sm:text-xl text-foreground font-black">{stats.totalItems}</span>
                     </div>
                 </div>
             </Card>
 
             {/* Stock Alerts Column */}
-            <div className="flex flex-col gap-4">
+            <div className="col-span-1 flex flex-col gap-2.5 sm:gap-4">
                 {/* Out of Stock (Bitenler) */}
                 <Link href="/stok?outOfStock=true" className="flex-1">
                     <Card className={`h-full p-4 matte-card border transition-all hover:border-rose-500/50 hover:bg-rose-500/10 cursor-pointer ${stats.outOfStockCount > 0 ? 'bg-rose-500/5 border-rose-500/20' : 'bg-card/40 border-border/50'}`}>

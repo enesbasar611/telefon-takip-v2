@@ -234,6 +234,50 @@
   }
 }
 
+/* ───────── Scroll & Focus Stability (No-Flicker / No-Jump) ───────── */
+html {
+  /* Smooth scroll fights browser focus scrolling and causes "jump to top" */
+  scroll-behavior: auto !important;
+}
+
+.app-scroll-root,
+[data-radix-scroll-area-viewport],
+[role="dialog"] {
+  overflow-anchor: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Focused fields stay clear of sticky headers / mobile keyboard */
+  scroll-padding-block: 6rem;
+}
+
+.app-scroll-root {
+  /* Own compositor layer for scroll without creating a containing block for fixed children */
+  will-change: scroll-position;
+  scrollbar-gutter: stable;
+}
+
+/* Prevent iOS Safari auto-zoom on focus (which shifts scroll position) */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Long forms: skip rendering/painting of off-screen sections to avoid scroll jank */
+.form-section-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Nexus Scrollbar — İnce ve Zarif */
 ::-webkit-scrollbar {
   width: 5px;

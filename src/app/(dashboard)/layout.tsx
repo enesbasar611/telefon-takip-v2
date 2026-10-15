@@ -13,6 +13,7 @@ import { getStaffShell, checkActiveLeave } from "@/lib/actions/staff-actions";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { getSettings, getShop } from "@/lib/actions/setting-actions";
 import { GlobalSearch } from "@/components/global-search";
+import { ScrollFocusGuard } from "@/components/common/scroll-focus-guard";
 import { LeaveLockModal } from "@/components/staff/leave-lock-modal";
 import { redirect } from "next/navigation";
 import { getShopId, getSession } from "@/lib/auth";
@@ -132,9 +133,10 @@ export default async function DashboardLayout({
                                     <LeaveLockModal leave={leaveData.leave} userName={session.user.name || ""} />
                                 )}
 
+                                <ScrollFocusGuard />
                                 {!isCourier && <GlobalSearch />}
 
-                                <div className="flex flex-col h-screen overflow-hidden">
+                                <div className="flex flex-col h-screen h-[100dvh] overflow-hidden">
                                     {isSuperAdmin && (session.user as any).isImpersonating && (
                                         <ImpersonationBanner shopName={shop?.name || "Bilinmeyen Dükkan"} />
                                     )}
@@ -154,10 +156,10 @@ export default async function DashboardLayout({
 
                                         <DashboardContent className={isCourier ? "p-0" : ""}>
                                             {!isCourier && <div className="print:hidden"><Navbar shop={shop} /></div>}
-                                            <main className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'lg:p-10 p-0'}`}>
+                                            <main id="app-scroll-container" data-scroll-root className={`app-scroll-root flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'lg:p-10 p-0'}`}>
                                                 <div className={isCourier
                                                     ? "w-full min-h-screen pb-32 relative z-10"
-                                                    : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] p-4 pb-48 lg:p-10 lg:px-12 lg:pb-10 relative z-10 transition-opacity duration-300"
+                                                    : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] px-2 py-3 sm:p-4 pb-28 lg:p-10 lg:px-12 lg:pb-10 relative z-10 transition-opacity duration-300"
                                                 }>
                                                     <style dangerouslySetInnerHTML={{
                                                         __html: `
@@ -181,7 +183,7 @@ export default async function DashboardLayout({
                                             </main>
                                         </DashboardContent>
 
-                                        {!isCourier && <div className="print:hidden"><BottomNav /></div>}
+                                        {!isCourier && <div className="print:hidden"><BottomNav shop={shop} /></div>}
                                     </div>
                                 </div>
                             </ShortageProvider>

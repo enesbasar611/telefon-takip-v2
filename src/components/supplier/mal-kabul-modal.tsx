@@ -374,7 +374,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                         <p className="text-3xl  text-blue-500 tracking-tighter">₺{currentTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button onClick={onClose} variant="ghost" className="h-12 px-6 rounded-2xl  text-xs">İptal</Button>
+                        <Button onClick={onClose} variant="cancel" className="h-12 px-6 rounded-2xl text-xs">İptal</Button>
                         <Button
                             onClick={() => {
                                 if (window.confirm("Mal kabul işlemini tamamlamak ve stokları güncellemek istediğinize emin misiniz?")) {

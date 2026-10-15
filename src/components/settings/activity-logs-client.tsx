@@ -361,10 +361,10 @@ export default function ActivityLogsClient({ userRole }: { userRole: string }) {
                     </div>
                     <DialogFooter className="p-8 pt-0 gap-3 border-t border-slate-50 dark:border-white/5 pt-8">
                         <Button
-                            variant="ghost"
+                            variant="cancel"
                             onClick={() => setIsClearDialogOpen(false)}
                             disabled={isDeleting}
-                            className="rounded-2xl h-14 px-8 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-slate-50 dark:hover:bg-white/5"
+                            className="rounded-2xl h-14 px-8 text-[10px] font-black uppercase tracking-widest"
                         >
                             Vazgeç
                         </Button>

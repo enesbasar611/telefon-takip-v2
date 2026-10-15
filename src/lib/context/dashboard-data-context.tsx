@@ -9,10 +9,23 @@ interface DashboardSetting {
     value: unknown;
 }
 
+export interface TenantConfig {
+    id: string;
+    name: string;
+    industry: string;
+    enabledModules: string[];
+    isCourierEnabled: boolean;
+    isEInvoiceEnabled: boolean;
+    isFinanceEnabled: boolean;
+    isServiceEnabled: boolean;
+    isStockEnabled: boolean;
+}
+
 interface DashboardDataContextType {
     rates: any;
     stats: any;
     settings: DashboardSetting[];
+    tenant?: TenantConfig | null;
     isLoading: boolean;
     refresh: () => void;
     defaultCurrency: "TRY" | "USD" | "EUR";
@@ -26,18 +39,20 @@ export function DashboardDataProvider({
     initialRates,
     initialStats,
     initialSettings,
+    initialTenant,
     shopId,
 }: {
     children: React.ReactNode;
     initialRates: any;
     initialStats: any;
     initialSettings: DashboardSetting[];
+    initialTenant?: TenantConfig | null;
     shopId?: string;
 }) {
     const { data, isLoading, refetch: refresh } = useQuery({
         queryKey: ["dashboard-init", shopId],
         queryFn: () => getDashboardInit(shopId || ""),
-        initialData: { rates: initialRates, stats: initialStats, settings: initialSettings },
+        initialData: { rates: initialRates, stats: initialStats, settings: initialSettings, tenant: initialTenant || null },
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5, // 5 minutes
         refetchOnWindowFocus: false,
@@ -63,6 +78,7 @@ export function DashboardDataProvider({
 
     const rates = data?.rates || initialRates || cachedRates;
     const settings: DashboardSetting[] = data?.settings || initialSettings || [];
+    const tenant: TenantConfig | null = data?.tenant || initialTenant || null;
     const defaultCurrency = (settings.find(s => s.key === "defaultCurrency")?.value as any) || "TRY";
 
     return (
@@ -71,6 +87,7 @@ export function DashboardDataProvider({
                 rates,
                 stats: data?.stats || initialStats,
                 settings,
+                tenant,
                 defaultCurrency,
                 isLoading,
                 refresh,
@@ -88,4 +105,37 @@ export function useDashboardData() {
         throw new Error("useDashboardData must be used within a DashboardDataProvider");
     }
     return context;
+}
+
+/**
+ * Multi-Tenant adaptation hook:
+ * Enables components to adapt based on tenant configuration, branch type and enabled modules.
+ */
+export function useTenant() {
+    const { tenant } = useDashboardData();
+
+    const isModuleEnabled = React.useCallback((moduleKey: string): boolean => {
+        if (!tenant) return true;
+        if (tenant.enabledModules && Array.isArray(tenant.enabledModules)) {
+            return tenant.enabledModules.includes(moduleKey);
+        }
+        return true;
+    }, [tenant]);
+
+    const industry = tenant?.industry || "GENERAL";
+    const isServiceBranch = industry === "TECHNICAL_SERVICE" || (tenant?.isServiceEnabled ?? true);
+    const isRetailBranch = industry === "RETAIL" || industry === "PHONE_COMMUNICATION";
+
+    return {
+        tenant,
+        industry,
+        isServiceBranch,
+        isRetailBranch,
+        isCourierEnabled: tenant?.isCourierEnabled ?? true,
+        isEInvoiceEnabled: tenant?.isEInvoiceEnabled ?? true,
+        isFinanceEnabled: tenant?.isFinanceEnabled ?? true,
+        isServiceEnabled: tenant?.isServiceEnabled ?? true,
+        isStockEnabled: tenant?.isStockEnabled ?? true,
+        isModuleEnabled,
+    };
 }

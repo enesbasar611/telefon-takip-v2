@@ -2001,7 +2001,7 @@ export function CourierDashboardClient({
 
                     <DialogFooter className="flex gap-2 sm:gap-0">
                         <Button
-                            variant="ghost"
+                            variant="cancel"
                             onClick={() => setIsTransferModalOpen(false)}
                             className="flex-1 h-12 rounded-2xl font-black uppercase tracking-widest text-[10px]"
                         >

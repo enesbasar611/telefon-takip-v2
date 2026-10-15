@@ -1075,7 +1075,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
-                                        <AlertDialogCancel className="rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10">Vazgeç</AlertDialogCancel>
+                                        <AlertDialogCancel className="rounded-xl">Vazgeç</AlertDialogCancel>
                                         <AlertDialogAction
                                             className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl"
                                             onClick={async () => {
@@ -1112,7 +1112,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10">Vazgeç</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl">Vazgeç</AlertDialogCancel>
                         <AlertDialogAction
                             className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
                             onClick={async () => {
@@ -1234,7 +1234,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
 
                         <div className="flex gap-4 pt-4">
-                            <Button variant="ghost" onClick={() => setIsAddingManual(false)} className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-normal text-slate-500 dark:text-white/40 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all">İptal</Button>
+                            <Button variant="cancel" onClick={() => setIsAddingManual(false)} className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-normal transition-all">İptal</Button>
                             <Button
                                 onClick={handleCreateAndAddPart}
                                 disabled={loading}

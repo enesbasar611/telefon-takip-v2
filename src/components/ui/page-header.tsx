@@ -27,26 +27,26 @@ export function PageHeader({
     className,
 }: PageHeaderProps) {
     return (
-        <div className={`flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-4 md:mb-6 px-4 md:px-0 ${className || ""}`}>
-            <div className="flex items-start gap-4 flex-1 min-w-0 group">
-                <div className={`h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl ${iconBgColor} flex items-center justify-center border border-border/50 shadow-sm shrink-0 transition-transform group-hover:scale-110 duration-500`}>
-                    <Icon className={`h-5 w-5 md:h-6 md:w-6 ${iconColor}`} />
+        <div className={`flex flex-col xl:flex-row xl:items-start justify-between gap-3 sm:gap-6 mb-3 sm:mb-6 px-1 sm:px-0 ${className || ""}`}>
+            <div className="flex items-center md:items-start gap-3 sm:gap-4 flex-1 min-w-0 group">
+                <div className={`h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl ${iconBgColor} flex items-center justify-center border border-border/50 shadow-sm shrink-0 transition-transform group-hover:scale-110 duration-500`}>
+                    <Icon className={`h-4.5 w-4.5 sm:h-6 sm:w-6 ${iconColor}`} />
                 </div>
-                <div className="space-y-1 md:space-y-1.5 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <h1 className="font-extrabold text-xl md:text-2xl text-slate-900 dark:text-white tracking-tight leading-none truncate group-hover:text-primary transition-colors duration-500">
+                <div className="space-y-0.5 sm:space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <h1 className="font-extrabold text-lg sm:text-2xl text-slate-900 dark:text-white tracking-tight leading-tight truncate group-hover:text-primary transition-colors duration-500">
                             {title}
                         </h1>
-                        {badge && <div className="shrink-0">{badge}</div>}
+                        {badge && <div className="shrink-0 scale-95 sm:scale-100 origin-left">{badge}</div>}
                     </div>
                     {description && (
-                        <div className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-2xl font-bold tracking-tight leading-relaxed">
+                        <div className="hidden sm:block text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl font-bold tracking-tight leading-relaxed">
                             {description}
                         </div>
                     )}
                 </div>
             </div>
-            {actions && <div className="flex items-center gap-2 self-start xl:self-auto shrink-0 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">{actions}</div>}
+            {actions && <div className="flex items-center gap-2 self-start xl:self-auto shrink-0 w-full xl:w-auto overflow-x-auto no-scrollbar pb-1 xl:pb-0">{actions}</div>}
         </div>
     );
 }

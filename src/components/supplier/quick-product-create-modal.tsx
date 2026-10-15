@@ -187,7 +187,7 @@ export function QuickProductCreateModal({
                 </div>
 
                 <DialogFooter className="p-6 bg-accent/5 border-t border-border flex items-center justify-between sm:justify-end gap-3">
-                    <Button variant="ghost" onClick={onClose} disabled={isLoading} className="h-12 px-6 rounded-xl text-xs font-bold uppercase tracking-widest">
+                    <Button variant="cancel" onClick={onClose} disabled={isLoading} className="h-12 px-6 rounded-xl text-xs font-bold uppercase tracking-widest">
                         Vazgeç
                     </Button>
                     <Button

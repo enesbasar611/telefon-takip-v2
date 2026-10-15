@@ -134,7 +134,7 @@ export function ServiceStatusModal({ ticket, isOpen, onClose }: ServiceStatusMod
 
         <DialogFooter className="p-4 bg-muted/30 border-t border-border/50">
           <div className="flex items-center justify-between w-full">
-            <Button variant="ghost" className="text-xs font-medium" onClick={onClose}>İptal</Button>
+            <Button variant="cancel" className="text-xs font-medium" onClick={onClose}>İptal</Button>
             <Button
               className="bg-orange-500 hover:bg-orange-600 text-white  text-xs px-8 shadow-lg shadow-orange-500/20 gap-2 h-11"
               onClick={handleUpdate}

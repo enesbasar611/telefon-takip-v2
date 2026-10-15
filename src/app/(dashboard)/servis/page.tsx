@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ServisMerkeziPage() {
   return (
-    <div className="flex flex-col gap-10 animate-in fade-in duration-500 pb-20">
+    <div className="flex flex-col gap-4 sm:gap-8 animate-in fade-in duration-500 pb-16">
       <ServiceTabsHeader />
       <ServiceProfitCards />
       <ServiceTabsController />

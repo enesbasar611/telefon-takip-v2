@@ -120,7 +120,7 @@ export function EditCustomerPaymentModal({
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-border/50 mt-2">
                         <AlertDialogCancel asChild>
-                            <Button variant="ghost" className="rounded-xl h-12 uppercase tracking-widest text-[10px] font-bold">İptal</Button>
+                            <Button variant="cancel" className="rounded-xl h-12 uppercase tracking-widest text-[10px] font-bold">İptal</Button>
                         </AlertDialogCancel>
                         <Button
                             onClick={handleUpdate}

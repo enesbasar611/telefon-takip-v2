@@ -201,7 +201,7 @@ export function WhatsAppTab({ shop, formData, onChange, savingKeys }: WhatsAppTa
                             </div>
 
                             <div className="flex items-center justify-end gap-3 pt-2">
-                                <Button variant="ghost" onClick={() => { setIsAdding(false); setIsEditing(null); }} className="rounded-xl px-6 h-10 text-xs font-medium">İptal</Button>
+                                <Button variant="cancel" onClick={() => { setIsAdding(false); setIsEditing(null); }} className="rounded-xl px-6 h-10 text-xs font-medium">İptal</Button>
                                 <Button
                                     onClick={() => isEditing ? handleUpdate(isEditing) : handleCreate()}
                                     disabled={isPending}

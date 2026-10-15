@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { resetCashRegisters } from "@/lib/actions/finance-actions";
 import { useQueryClient } from "@tanstack/react-query";
 
-export function CashResetModal({ trigger }: { trigger?: React.ReactNode }) {
+export function CashResetModal({ trigger, accounts }: { trigger?: React.ReactNode; accounts?: any[] }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const queryClient = useQueryClient();
@@ -26,7 +26,7 @@ export function CashResetModal({ trigger }: { trigger?: React.ReactNode }) {
         const data = {
             title: formData.get("title") as string,
             notes: formData.get("notes") as string,
-            periodType: formData.get("periodType") as string,
+            periodType: (formData.get("periodType") as any) || "DAY",
         };
 
         const result = await resetCashRegisters(data);

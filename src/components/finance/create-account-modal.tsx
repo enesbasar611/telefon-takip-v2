@@ -373,7 +373,7 @@ export function CreateAccountModal({ account, trigger }: { account?: any, trigge
                                     <Trash2 className="h-5 w-5" />
                                 </Button>
                             )}
-                            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-xl text-sm font-semibold border-border text-muted-foreground hover:text-foreground">
+                            <Button type="button" variant="cancel" onClick={() => setOpen(false)} className="flex-1 h-12 rounded-xl text-sm font-semibold border-border">
                                 Vazgeç
                             </Button>
                             <Button type="submit" disabled={loading} className={cn("flex-[2] h-12 rounded-xl shadow-lg text-white text-sm font-semibold", isEdit ? "bg-orange-600 hover:bg-orange-700 shadow-orange-500/20" : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20")}>

@@ -198,12 +198,22 @@ export async function getUnifiedHistory(options: {
     }
 }
 
-type PeriodKey = "current" | "previous" | "twoAgo";
+export type PeriodKey = "current" | "previous" | "twoAgo";
+
+export interface SalesHistoryInsight {
+    id: string;
+    title: string;
+    text: string;
+    tone: "positive" | "negative" | "warning" | "neutral" | "highlight";
+    iconName: "TrendingUp" | "TrendingDown" | "Award" | "AlertTriangle" | "Banknote" | "Clock" | "Boxes" | "Percent";
+    metric?: string;
+}
 
 export interface SalesHistoryReport {
     periods: Record<PeriodKey, {
         key: PeriodKey;
         label: string;
+        shortLabel: string;
         start: string;
         end: string;
         revenue: number;
@@ -223,13 +233,36 @@ export interface SalesHistoryReport {
         revenueVsTwoAgo: number;
         profitVsPrevious: number;
         saleCountVsPrevious: number;
+        averageSaleVsPrevious: number;
+        profitMarginDiff: number;
+        isTimeToDate: boolean;
+        comparisonLabel: string;
+        previousEqualPeriodLabel: string;
     };
-    dailyTrend: { date: string; revenue: number; profit: number; count: number }[];
-    paymentBreakdown: { method: string; label: string; total: number; count: number }[];
-    topProducts: { name: string; quantity: number; revenue: number; profit: number }[];
-    topCategories: { name: string; revenue: number; profit: number }[];
-    staffPerformance: { id: string; name: string; revenue: number; profit: number }[];
+    dailyTrend: { 
+        date: string; 
+        dateKey: string;
+        dateFull: string;
+        dayName: string;
+        revenue: number; 
+        profit: number; 
+        count: number;
+        averageBasket: number;
+    }[];
+    paymentBreakdown: { method: string; label: string; total: number; count: number; percentage: number }[];
+    topProducts: { name: string; quantity: number; revenue: number; profit: number; margin: number }[];
+    topCategories: { name: string; revenue: number; profit: number; share: number }[];
+    staffPerformance: { id: string; name: string; revenue: number; profit: number; saleCount: number }[];
     insights: string[];
+    smartInsights: SalesHistoryInsight[];
+    bestDay?: {
+        dateKey: string;
+        dateFormatted: string;
+        dayName: string;
+        revenue: number;
+        profit: number;
+        count: number;
+    } | null;
 }
 
 const percentChange = (current: number, previous: number) => {
@@ -243,7 +276,8 @@ const toSupportedCurrency = (value?: string | null): TransactionCurrency => {
 
 const createEmptyPeriod = (key: PeriodKey, date: Date) => ({
     key,
-    label: format(date, "MMMM yyyy"),
+    label: format(date, "MMMM yyyy", { locale: tr }),
+    shortLabel: format(date, "MMM yyyy", { locale: tr }),
     start: startOfMonth(date).toISOString(),
     end: endOfMonth(date).toISOString(),
     revenue: 0,
@@ -259,50 +293,91 @@ const createEmptyPeriod = (key: PeriodKey, date: Date) => ({
     debtRevenue: 0,
 });
 
-export async function getSalesHistoryReport(options: { startDate?: string | Date; endDate?: string | Date } = {}): Promise<SalesHistoryReport> {
+export async function getSalesHistoryReport(options: { 
+    startDate?: string | Date; 
+    endDate?: string | Date;
+    comparisonMode?: "TTD" | "ROLLING_SPAN";
+} = {}): Promise<SalesHistoryReport> {
     try {
         const shopId = await getShopId();
         const now = new Date();
         const currentStart = options.startDate ? startOfDay(new Date(options.startDate)) : startOfMonth(now);
         const currentEnd = options.endDate ? endOfDay(new Date(options.endDate)) : endOfDay(now);
-        const spanDays = Math.max(0, differenceInCalendarDays(currentEnd, currentStart));
-        const previousEnd = endOfDay(subDays(currentStart, 1));
-        const previousStart = startOfDay(subDays(previousEnd, spanDays));
-        const twoAgoEnd = endOfDay(subDays(previousStart, 1));
-        const twoAgoStart = startOfDay(subDays(twoAgoEnd, spanDays));
 
-        const periodRanges: Record<PeriodKey, { start: Date; end: Date; label: string }> = {
-            current: { start: currentStart, end: currentEnd, label: `${format(currentStart, "d MMM", { locale: tr })} - ${format(currentEnd, "d MMM yyyy", { locale: tr })}` },
-            previous: { start: previousStart, end: previousEnd, label: `${format(previousStart, "d MMM", { locale: tr })} - ${format(previousEnd, "d MMM yyyy", { locale: tr })}` },
-            twoAgo: { start: twoAgoStart, end: twoAgoEnd, label: `${format(twoAgoStart, "d MMM", { locale: tr })} - ${format(twoAgoEnd, "d MMM yyyy", { locale: tr })}` },
+        // Time-To-Date (TTD) Equal Day Logic:
+        // Comparing ongoing month (e.g. Oct 1-15) against prior month (Sep 1-15) gives true equal-day comparison.
+        let previousStart: Date;
+        let previousEnd: Date;
+        let twoAgoStart: Date;
+        let twoAgoEnd: Date;
+        let isTimeToDate = true;
+
+        if (options.comparisonMode === "ROLLING_SPAN") {
+            const spanDays = Math.max(0, differenceInCalendarDays(currentEnd, currentStart));
+            previousEnd = endOfDay(subDays(currentStart, 1));
+            previousStart = startOfDay(subDays(previousEnd, spanDays));
+            twoAgoEnd = endOfDay(subDays(previousStart, 1));
+            twoAgoStart = startOfDay(subDays(twoAgoEnd, spanDays));
+            isTimeToDate = false;
+        } else {
+            // TTD Equal Calendar Days (Default)
+            previousStart = startOfDay(subMonths(currentStart, 1));
+            previousEnd = endOfDay(subMonths(currentEnd, 1));
+            twoAgoStart = startOfDay(subMonths(currentStart, 2));
+            twoAgoEnd = endOfDay(subMonths(currentEnd, 2));
+        }
+
+        const periodRanges: Record<PeriodKey, { start: Date; end: Date; label: string; shortLabel: string }> = {
+            current: { 
+                start: currentStart, 
+                end: currentEnd, 
+                label: `${format(currentStart, "d MMM", { locale: tr })} - ${format(currentEnd, "d MMM yyyy", { locale: tr })}`,
+                shortLabel: `${format(currentStart, "d MMM", { locale: tr })} - ${format(currentEnd, "d MMM", { locale: tr })}`
+            },
+            previous: { 
+                start: previousStart, 
+                end: previousEnd, 
+                label: isTimeToDate 
+                    ? `${format(previousStart, "d MMM", { locale: tr })} - ${format(previousEnd, "d MMM yyyy", { locale: tr })} (Eşdeğer Dönem)` 
+                    : `${format(previousStart, "d MMM", { locale: tr })} - ${format(previousEnd, "d MMM yyyy", { locale: tr })}`,
+                shortLabel: `${format(previousStart, "d MMM", { locale: tr })} - ${format(previousEnd, "d MMM", { locale: tr })}`
+            },
+            twoAgo: { 
+                start: twoAgoStart, 
+                end: twoAgoEnd, 
+                label: isTimeToDate 
+                    ? `${format(twoAgoStart, "d MMM", { locale: tr })} - ${format(twoAgoEnd, "d MMM yyyy", { locale: tr })} (Eşdeğer Dönem)` 
+                    : `${format(twoAgoStart, "d MMM", { locale: tr })} - ${format(twoAgoEnd, "d MMM yyyy", { locale: tr })}`,
+                shortLabel: `${format(twoAgoStart, "d MMM", { locale: tr })} - ${format(twoAgoEnd, "d MMM", { locale: tr })}`
+            },
         };
 
         const periods: SalesHistoryReport["periods"] = {
-            current: { ...createEmptyPeriod("current", currentStart), label: periodRanges.current.label, start: currentStart.toISOString(), end: currentEnd.toISOString() },
-            previous: { ...createEmptyPeriod("previous", previousStart), label: periodRanges.previous.label, start: previousStart.toISOString(), end: previousEnd.toISOString() },
-            twoAgo: { ...createEmptyPeriod("twoAgo", twoAgoStart), label: periodRanges.twoAgo.label, start: twoAgoStart.toISOString(), end: twoAgoEnd.toISOString() },
+            current: { ...createEmptyPeriod("current", currentStart), label: periodRanges.current.label, shortLabel: periodRanges.current.shortLabel, start: currentStart.toISOString(), end: currentEnd.toISOString() },
+            previous: { ...createEmptyPeriod("previous", previousStart), label: periodRanges.previous.label, shortLabel: periodRanges.previous.shortLabel, start: previousStart.toISOString(), end: previousEnd.toISOString() },
+            twoAgo: { ...createEmptyPeriod("twoAgo", twoAgoStart), label: periodRanges.twoAgo.label, shortLabel: periodRanges.twoAgo.shortLabel, start: twoAgoStart.toISOString(), end: twoAgoEnd.toISOString() },
         };
 
         const [sales, rates] = await Promise.all([
             prisma.sale.findMany({
-            where: {
-                shopId,
-                createdAt: {
-                    gte: twoAgoStart,
-                    lte: currentEnd,
-                },
-            },
-            include: {
-                items: {
-                    include: {
-                        product: { include: { category: true } },
+                where: {
+                    shopId,
+                    createdAt: {
+                        gte: twoAgoStart,
+                        lte: currentEnd,
                     },
                 },
-                transaction: true,
-                customer: true,
-                user: true,
-            },
-            orderBy: { createdAt: "asc" },
+                include: {
+                    items: {
+                        include: {
+                            product: { include: { category: true } },
+                        },
+                    },
+                    transaction: true,
+                    customer: true,
+                    user: true,
+                },
+                orderBy: { createdAt: "asc" },
             }),
             getExchangeRates(shopId),
         ]);
@@ -313,15 +388,19 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
         }).map((day) => ({
             key: format(day, "yyyy-MM-dd"),
             date: format(day, "d MMM", { locale: tr }),
+            dateKey: format(day, "yyyy-MM-dd"),
+            dateFull: format(day, "dd MMMM yyyy", { locale: tr }),
+            dayName: format(day, "EEEE", { locale: tr }),
             revenue: 0,
             profit: 0,
             count: 0,
+            averageBasket: 0,
         }));
         const dailyMap = new Map(currentDays.map((day) => [day.key, day]));
         const paymentMap = new Map<string, { method: string; label: string; total: number; count: number }>();
         const productMap = new Map<string, { name: string; quantity: number; revenue: number; profit: number }>();
         const categoryMap = new Map<string, { name: string; revenue: number; profit: number }>();
-        const staffMap = new Map<string, { id: string; name: string; revenue: number; profit: number }>();
+        const staffMap = new Map<string, { id: string; name: string; revenue: number; profit: number; saleCount: number }>();
 
         const resolvePeriod = (date: Date): PeriodKey | null => {
             if (date >= periodRanges.current.start && date <= periodRanges.current.end) return "current";
@@ -374,8 +453,8 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
 
                 const labels: Record<string, string> = {
                     CASH: "Nakit",
-                    CARD: "Kart",
-                    TRANSFER: "Havale",
+                    CARD: "Kredi Kartı",
+                    TRANSFER: "Havale/EFT",
                     DEBT: "Veresiye",
                 };
                 const payment = paymentMap.get(paymentMethod) || {
@@ -391,9 +470,10 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
                 if (sale.user) {
                     const staffId = sale.user.id;
                     const staffName = `${sale.user.name} ${sale.user.surname || ""}`.trim();
-                    const staff = staffMap.get(staffId) || { id: staffId, name: staffName, revenue: 0, profit: 0 };
+                    const staff = staffMap.get(staffId) || { id: staffId, name: staffName, revenue: 0, profit: 0, saleCount: 0 };
                     staff.revenue += revenue;
                     staff.profit += profit;
+                    staff.saleCount += 1;
                     staffMap.set(staffId, staff);
                 }
 
@@ -418,6 +498,10 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
             }
         }
 
+        for (const day of currentDays) {
+            day.averageBasket = day.count > 0 ? day.revenue / day.count : 0;
+        }
+
         for (const key of Object.keys(periods) as PeriodKey[]) {
             const period = periods[key];
             period.averageSale = period.saleCount > 0 ? period.revenue / period.saleCount : 0;
@@ -429,28 +513,122 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
             revenueVsTwoAgo: percentChange(periods.current.revenue, periods.twoAgo.revenue),
             profitVsPrevious: percentChange(periods.current.profit, periods.previous.profit),
             saleCountVsPrevious: percentChange(periods.current.saleCount, periods.previous.saleCount),
+            averageSaleVsPrevious: percentChange(periods.current.averageSale, periods.previous.averageSale),
+            profitMarginDiff: periods.current.profitMargin - periods.previous.profitMargin,
+            isTimeToDate,
+            comparisonLabel: isTimeToDate 
+                ? `Önceki ayın eşdeğer günleri (${periodRanges.previous.shortLabel}) ile Time-to-Date kıyaslaması`
+                : `Önceki ${periodRanges.previous.label} dönemi ile kıyaslama`,
+            previousEqualPeriodLabel: periodRanges.previous.label,
         };
 
-        const topProducts = Array.from(productMap.values())
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 6);
+        const totalRevenue = periods.current.revenue || 1;
 
-        const topCategories = Array.from(categoryMap.values()).sort((a, b) => b.revenue - a.revenue);
+        const topProducts = Array.from(productMap.values())
+            .map((prod) => ({
+                ...prod,
+                margin: prod.revenue > 0 ? (prod.profit / prod.revenue) * 100 : 0,
+            }))
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 8);
+
+        const topCategories = Array.from(categoryMap.values())
+            .map((cat) => ({
+                ...cat,
+                share: (cat.revenue / totalRevenue) * 100,
+            }))
+            .sort((a, b) => b.revenue - a.revenue);
+
         const staffPerformance = Array.from(staffMap.values()).sort((a, b) => b.revenue - a.revenue);
 
-        const paymentBreakdown = Array.from(paymentMap.values()).sort((a, b) => b.total - a.total);
-        const bestProduct = topProducts[0];
-        const insights = [
-            comparisons.revenueVsPrevious >= 0
-                ? `Ciro geçen aya göre %${Math.abs(comparisons.revenueVsPrevious).toFixed(1)} arttı.`
-                : `Ciro geçen aya göre %${Math.abs(comparisons.revenueVsPrevious).toFixed(1)} düştü.`,
-            comparisons.profitVsPrevious >= 0
-                ? `Tahmini kâr geçen aya göre %${Math.abs(comparisons.profitVsPrevious).toFixed(1)} arttı.`
-                : `Tahmini kâr geçen aya göre %${Math.abs(comparisons.profitVsPrevious).toFixed(1)} düştü.`,
-            bestProduct
-                ? `Bu ay en çok ciro getiren ürün: ${bestProduct.name}.`
-                : "Bu ay ürün bazlı satış verisi henüz oluşmadı.",
-        ];
+        const paymentBreakdown = Array.from(paymentMap.values())
+            .map((pay) => ({
+                ...pay,
+                percentage: (pay.total / totalRevenue) * 100,
+            }))
+            .sort((a, b) => b.total - a.total);
+
+        const bestDayItem = currentDays.reduce((best, curr) => (curr.revenue > (best?.revenue || 0) ? curr : best), null as any);
+        const bestDay = bestDayItem && bestDayItem.revenue > 0 ? {
+            dateKey: bestDayItem.dateKey,
+            dateFormatted: bestDayItem.dateFull,
+            dayName: bestDayItem.dayName,
+            revenue: bestDayItem.revenue,
+            profit: bestDayItem.profit,
+            count: bestDayItem.count,
+        } : null;
+
+        // Smart textual insights & "Did You Know?" executive intelligence
+        const smartInsights: SalesHistoryInsight[] = [];
+        
+        if (bestDay) {
+            smartInsights.push({
+                id: "best-day",
+                title: "Dönemin En Çok Ciro Getiren Günü",
+                text: `Bu dönemin en kârlı ve hareketli günü ${bestDay.dayName} (${bestDay.dateFormatted}) oldu. Toplam ${bestDay.revenue.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺ ciro ve ${bestDay.count} satış kaydedildi.`,
+                tone: "highlight",
+                iconName: "Award",
+                metric: `${bestDay.revenue.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺`,
+            });
+        }
+
+        const revDiff = comparisons.revenueVsPrevious;
+        smartInsights.push({
+            id: "ttd-comparison",
+            title: isTimeToDate ? "Eşdeğer Gün (Time-to-Date) Ciro Kıyaslaması" : "Önceki Dönem Ciro Kıyaslaması",
+            text: revDiff >= 0
+                ? `${periodRanges.previous.shortLabel} eşdeğer günlerine göre net cironuz %${Math.abs(revDiff).toFixed(1)} artış gösterdi.`
+                : `${periodRanges.previous.shortLabel} eşdeğer günlerine göre net cironuz %${Math.abs(revDiff).toFixed(1)} geriledi.`,
+            tone: revDiff >= 0 ? "positive" : "warning",
+            iconName: revDiff >= 0 ? "TrendingUp" : "TrendingDown",
+            metric: `${revDiff >= 0 ? "+" : ""}%${revDiff.toFixed(1)}`,
+        });
+
+        const avgDiff = comparisons.averageSaleVsPrevious;
+        smartInsights.push({
+            id: "average-basket",
+            title: "Ortalama Sepet / Fiş Hacmi",
+            text: `Satış başına düşen ortalama sepet tutarı ${periods.current.averageSale.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺ oldu (${avgDiff >= 0 ? "+" : ""}%${avgDiff.toFixed(1)} değişim).`,
+            tone: avgDiff >= 0 ? "positive" : "neutral",
+            iconName: "Banknote",
+            metric: `${periods.current.averageSale.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺`,
+        });
+
+        if (topCategories.length > 0) {
+            const leader = topCategories[0];
+            smartInsights.push({
+                id: "top-category",
+                title: "Lider Gelir Kaynağı",
+                text: `"${leader.name}" kategorisi, toplam cironun %${leader.share.toFixed(1)}'ini oluşturarak en büyük ciro jeneratörü oldu (${leader.revenue.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺).`,
+                tone: "positive",
+                iconName: "Boxes",
+                metric: `%${leader.share.toFixed(0)} Pay`,
+            });
+        }
+
+        const debtRate = periods.current.revenue > 0 ? (periods.current.debtRevenue / periods.current.revenue) * 100 : 0;
+        if (debtRate > 20) {
+            smartInsights.push({
+                id: "debt-warning",
+                title: "Veresiye / Alacak Risk Uyarısı",
+                text: `Bu dönemdeki satışların %${debtRate.toFixed(1)}'i veresiye (${periods.current.debtRevenue.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺) olarak kaydedildi. Nakit akışı için tahsilatları takip etmeniz önerilir.`,
+                tone: "warning",
+                iconName: "AlertTriangle",
+                metric: `%${debtRate.toFixed(0)} Veresiye`,
+            });
+        } else {
+            const immediateCashRate = 100 - debtRate;
+            smartInsights.push({
+                id: "cash-flow",
+                title: "Sağlıklı Nakit Akışı",
+                text: `Satışların %${immediateCashRate.toFixed(1)}'i anında nakit, kart veya havale ile tahsil edildi.`,
+                tone: "positive",
+                iconName: "Banknote",
+                metric: `%${immediateCashRate.toFixed(0)} Anında`,
+            });
+        }
+
+        const legacyInsights = smartInsights.map((i) => `${i.title}: ${i.text}`);
 
         return serializePrisma({
             periods,
@@ -460,7 +638,9 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
             topProducts,
             topCategories,
             staffPerformance,
-            insights,
+            insights: legacyInsights,
+            smartInsights,
+            bestDay,
         });
     } catch (error) {
         console.error("Sales history report error:", error);
@@ -472,13 +652,25 @@ export async function getSalesHistoryReport(options: { startDate?: string | Date
         };
         return {
             periods,
-            comparisons: { revenueVsPrevious: 0, revenueVsTwoAgo: 0, profitVsPrevious: 0, saleCountVsPrevious: 0 },
+            comparisons: { 
+                revenueVsPrevious: 0, 
+                revenueVsTwoAgo: 0, 
+                profitVsPrevious: 0, 
+                saleCountVsPrevious: 0,
+                averageSaleVsPrevious: 0,
+                profitMarginDiff: 0,
+                isTimeToDate: true,
+                comparisonLabel: "Karşılaştırma verisi bulunmuyor",
+                previousEqualPeriodLabel: "Önceki Dönem"
+            },
             dailyTrend: [],
             paymentBreakdown: [],
             topProducts: [],
             topCategories: [],
             staffPerformance: [],
             insights: [],
+            smartInsights: [],
+            bestDay: null,
         };
     }
 }

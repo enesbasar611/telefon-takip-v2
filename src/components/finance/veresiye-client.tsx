@@ -379,6 +379,7 @@ export function VeresiyeClient({
     const [allocationModalTx, setAllocationModalTx] = useState<any>(null);
     const [allocations, setAllocations] = useState<PaymentAllocation[]>([]);
     const [reconciliationCustomer, setReconciliationCustomer] = useState<any>(null);
+    const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
 
     const outputPromptResolverRef = useRef<((includePaidItems: boolean) => void) | null>(null);
     const [outputPromptOpen, setOutputPromptOpen] = useState(false);
@@ -1668,35 +1669,49 @@ export function VeresiyeClient({
                     </div>
                 }
                 actions={
-                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
-                        {selectedCustomerIds.length > 0 && (
-                            <Button
-                                onClick={handleBulkWhatsAppReminders}
-                                className="h-12 flex-1 sm:flex-none px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 gap-2 text-xs font-black uppercase tracking-widest text-white transition-all animate-in zoom-in-95"
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                                {selectedCustomerIds.length} Kişiye Hatırlatma At
-                            </Button>
-                        )}
-                        <AddDebtModal rates={rates} />
-                        <Button
-                            onClick={exportToExcel}
-                            variant="ghost"
-                            className="h-12 flex-1 sm:flex-none px-6 rounded-xl bg-muted/50 border border-border shadow-xl gap-2 text-xs hover:bg-muted transition-all text-foreground"
-                        >
-                            <Download className="w-4 h-4 text-indigo-400" />
-                            <span className="hidden sm:inline">Tabloyu İndir (Excel)</span>
-                            <span className="sm:hidden">Excel</span>
-                        </Button>
-                        <Button
-                            onClick={exportToCsv}
-                            variant="ghost"
-                            className="h-12 flex-1 sm:flex-none px-6 rounded-xl bg-muted/50 border border-border shadow-xl gap-2 text-xs hover:bg-muted transition-all text-foreground"
-                        >
-                            <FileText className="w-4 h-4 text-emerald-400" />
-                            <span className="hidden sm:inline">Dışarı Aktar (CSV)</span>
-                            <span className="sm:hidden">CSV</span>
-                        </Button>
+                    <div className="w-full sm:w-auto overflow-x-auto no-scrollbar py-1 -my-1">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-nowrap shrink-0">
+                            {selectedCustomerIds.length > 0 && (
+                                <Button
+                                    onClick={handleBulkWhatsAppReminders}
+                                    className="h-11 sm:h-12 shrink-0 px-4 sm:px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 gap-2 text-xs font-black uppercase tracking-wider text-white transition-all animate-in zoom-in-95 whitespace-nowrap"
+                                >
+                                    <MessageCircle className="w-4 h-4" />
+                                    <span>{selectedCustomerIds.length} Kişiye Hatırlatma</span>
+                                </Button>
+                            )}
+                            <div className="shrink-0">
+                                <AddDebtModal rates={rates} />
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        className="h-11 sm:h-12 shrink-0 px-4 sm:px-5 rounded-xl bg-muted/50 border border-border shadow-sm gap-2 text-xs font-bold hover:bg-muted transition-all text-foreground whitespace-nowrap"
+                                    >
+                                        <Download className="w-4 h-4 text-indigo-400" />
+                                        <span>Dışa Aktar</span>
+                                        <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-xl border-border bg-card/95 backdrop-blur-md p-1.5 z-50">
+                                    <DropdownMenuItem
+                                        onClick={exportToExcel}
+                                        className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer hover:bg-muted focus:bg-muted transition-colors text-foreground"
+                                    >
+                                        <Download className="w-4 h-4 text-emerald-500" />
+                                        <span>Excel Olarak İndir (.xlsx)</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={exportToCsv}
+                                        className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer hover:bg-muted focus:bg-muted transition-colors text-foreground"
+                                    >
+                                        <FileText className="w-4 h-4 text-indigo-400" />
+                                        <span>CSV Olarak İndir (.csv)</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 }
             />
@@ -1876,7 +1891,7 @@ export function VeresiyeClient({
                 setIgnoreBalance={setIgnoreBalance}
             />
 
-            <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setSelectedDebtIds([]); } }}>
+            <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setSelectedDebtIds([]); setExpandedTxId(null); } }}>
                 <AlertDialogContent
                     className="max-w-[800px] h-[85vh] bg-card rounded-[2.5rem] p-0 overflow-hidden flex flex-col shadow-2xl border border-border/50"
                 >
@@ -2153,7 +2168,7 @@ export function VeresiyeClient({
                             {/* Kapat */}
                             <button
                                 title="Kapat"
-                                onClick={() => { setHistoryCustomer(null); setSelectedDebtIds([]); setSelectedSaleItemIds([]); }}
+                                onClick={() => { setHistoryCustomer(null); setSelectedDebtIds([]); setSelectedSaleItemIds([]); setExpandedTxId(null); }}
                                 className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50 transition-all ml-1"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
@@ -2404,56 +2419,212 @@ export function VeresiyeClient({
                                                     )}
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <div key={`tx-${item.id}`} className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 transition-all border-dashed group">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white">
-                                                        <TrendingUp className="w-3 h-3" />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{item.description || "Tahsilat"}</span>
-                                                        <span className="text-[9px] text-emerald-600/60 dark:text-emerald-400/60 font-medium">
-                                                            {(() => {
-                                                                const d = new Date(item.createdAt);
-                                                                return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy, HH:mm", { locale: tr }) : "-";
-                                                            })()}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right flex items-center gap-3">
-                                                    <span className="text-sm font-black text-emerald-600 tabular-nums">
-                                                        + {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
-                                                    </span>
-                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Button variant="ghost" size="sm" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const allDebts = statementData?.debts || [];
-                                                            const allTxs = statementData?.transactions || [];
-                                                            const mapped = calculatePaymentAllocations(item.id, allDebts, allTxs, usdRate);
-                                                            setAllocations(mapped);
-                                                            setAllocationModalTx(item);
-                                                        }} className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-700 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg" title="Hangi borçları kapattı?">
-                                                            <Eye className="w-3 h-3" />
-                                                        </Button>
+                                        ) : (() => {
+                                            const isExpanded = expandedTxId === item.id;
+                                            const allDebts = statementData?.debts || [];
+                                            const allTxs = statementData?.transactions || [];
+                                            const txAllocations = calculatePaymentAllocations(item.id, allDebts, allTxs, usdRate);
+                                            const isUSD = item.currency === 'USD';
+                                            const totalAllocated = txAllocations.reduce(
+                                                (sum, a) => sum + (isUSD ? a.allocatedAmountUSD : a.allocatedAmountTRY),
+                                                0
+                                            );
+                                            const excessAmount = Math.max(0, Number(item.amount || 0) - totalAllocated);
+                                            const d = new Date(item.createdAt);
+                                            const formattedDate = !isNaN(d.getTime()) ? format(d, "dd MMM yyyy, HH:mm", { locale: tr }) : "-";
 
-                                                        <Button variant="ghost" size="sm" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingTransaction(item);
-                                                            setEditTxAmount(String(item.amount));
-                                                            setEditTxNotes(item.description || "");
-                                                        }} className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-700 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg">
-                                                            <Pencil className="w-3 h-3" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="sm" onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteTransaction(item.id);
-                                                        }} className="h-6 w-6 p-0 text-rose-600 hover:text-rose-700 bg-rose-500/5 hover:bg-rose-500/10 rounded-lg">
-                                                            <RotateCcw className="w-3 h-3" />
-                                                        </Button>
+                                            return (
+                                                <div
+                                                    key={`tx-${item.id}`}
+                                                    className={cn(
+                                                        "rounded-2xl border transition-all duration-200 overflow-hidden",
+                                                        isExpanded
+                                                            ? "bg-emerald-500/[0.08] dark:bg-emerald-500/[0.12] border-emerald-500/40 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/20"
+                                                            : "bg-emerald-500/[0.03] dark:bg-emerald-500/[0.06] border-emerald-500/20 hover:border-emerald-500/35 hover:bg-emerald-500/[0.06]"
+                                                    )}
+                                                >
+                                                    {/* Concise Summary Row (Default View, Click to expand) */}
+                                                    <div
+                                                        onClick={() => setExpandedTxId(prev => prev === item.id ? null : item.id)}
+                                                        className="flex items-center justify-between p-3.5 cursor-pointer select-none transition-colors"
+                                                    >
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-sm shadow-emerald-500/20">
+                                                                <TrendingUp className="w-4 h-4" />
+                                                            </div>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 truncate">
+                                                                        {item.description || "Tahsilat İşlemi"}
+                                                                    </span>
+                                                                    {item.paymentMethod && (
+                                                                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 font-bold border-emerald-500/30 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10">
+                                                                            {item.paymentMethod === 'CASH' ? 'Nakit' : item.paymentMethod === 'CREDIT_CARD' ? 'Kredi Kartı' : item.paymentMethod === 'BANK' ? 'Havale/EFT' : item.paymentMethod}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 font-medium">
+                                                                    {formattedDate}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                                                            <div className="text-right flex flex-col items-end">
+                                                                <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                                                    + {isUSD ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </span>
+                                                                <span className="text-[9px] font-bold text-muted-foreground/80">
+                                                                    {txAllocations.length > 0 ? `${txAllocations.length} Borç Kapandı` : excessAmount > 0 ? 'Cari Avans' : 'Detay'}
+                                                                </span>
+                                                            </div>
+                                                            <div className={cn(
+                                                                "w-7 h-7 rounded-lg flex items-center justify-center transition-transform duration-200 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+                                                                isExpanded && "rotate-180 bg-emerald-500 text-white"
+                                                            )}>
+                                                                <ChevronDown className="w-4 h-4" />
+                                                            </div>
+                                                        </div>
                                                     </div>
+
+                                                    {/* Smoothly Collapsible Detail Accordion */}
+                                                    <AnimatePresence initial={false}>
+                                                        {isExpanded && (
+                                                            <motion.div
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.22, ease: "easeInOut" }}
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <div className="p-3.5 pt-0 space-y-3">
+                                                                    <div className="pt-3 border-t border-emerald-500/15 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                                        <div className="p-2.5 rounded-xl bg-background/80 dark:bg-zinc-900/60 border border-emerald-500/15">
+                                                                            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Tahsil Edilen</span>
+                                                                            <span className="text-sm font-black text-emerald-600 tabular-nums block">
+                                                                                {isUSD ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                                                                            </span>
+                                                                            <span className="text-[9px] text-muted-foreground block mt-0.5">
+                                                                                ≈ {isUSD ? `₺${(Number(item.amount) * usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}` : `$${(Number(item.amount) / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="p-2.5 rounded-xl bg-background/80 dark:bg-zinc-900/60 border border-emerald-500/15">
+                                                                            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Ödeme Yöntemi</span>
+                                                                            <span className="text-xs font-black text-foreground block truncate">
+                                                                                {item.paymentMethod === 'CASH' ? 'Nakit Kasa' : item.paymentMethod === 'CREDIT_CARD' ? 'Kredi Kartı / POS' : item.paymentMethod === 'BANK' ? 'Banka Havale/EFT' : (item.paymentMethod || 'Kasa / Tahsilat')}
+                                                                            </span>
+                                                                            <span className="text-[9px] text-muted-foreground block mt-0.5 truncate">
+                                                                                {formattedDate}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="p-2.5 rounded-xl bg-background/80 dark:bg-zinc-900/60 border border-emerald-500/15">
+                                                                            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Borç Kapatma Durumu</span>
+                                                                            <span className="text-xs font-black text-foreground block">
+                                                                                {isUSD ? '$' : '₺'}{totalAllocated.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} Mahsup
+                                                                            </span>
+                                                                            {excessAmount > 0.01 ? (
+                                                                                <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 block mt-0.5">
+                                                                                    + {isUSD ? '$' : '₺'}{excessAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} Cari Avans
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-[9px] font-bold text-emerald-600 block mt-0.5">
+                                                                                    Tüm Tutar Eşleşti
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* FIFO Breakdowns */}
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+                                                                            <span>Kapatılan Borçlar (FIFO)</span>
+                                                                            <span>{txAllocations.length} Kayıt</span>
+                                                                        </div>
+
+                                                                        {txAllocations.length === 0 ? (
+                                                                            <div className="text-xs text-muted-foreground p-3 rounded-xl bg-background/60 border border-dashed border-border/80 text-center">
+                                                                                Bu tahsilat açık bir borçla eşleşmedi (Cari hesaba avans/emanet bakiye olarak işlendi).
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
+                                                                                {txAllocations.map((alloc, aidx) => (
+                                                                                    <div key={aidx} className="flex items-center justify-between p-2.5 rounded-xl bg-background/70 dark:bg-zinc-900/50 border border-border/60 text-xs">
+                                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                                                            <div className="flex flex-col min-w-0">
+                                                                                                <span className="font-bold text-foreground truncate">{alloc.debtDescription}</span>
+                                                                                                <span className="text-[9px] text-muted-foreground">
+                                                                                                    {format(new Date(alloc.debtCreatedAt), "dd MMM yyyy", { locale: tr })} tarihli borç
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div className="text-right shrink-0 ml-2">
+                                                                                            <span className="font-black text-emerald-600 tabular-nums">
+                                                                                                {isUSD
+                                                                                                    ? `$${alloc.allocatedAmountUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                                                                    : `₺${alloc.allocatedAmountTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                                                                }
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Mobile-friendly Action Buttons */}
+                                                                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-emerald-500/15">
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setAllocations(txAllocations);
+                                                                                setAllocationModalTx(item);
+                                                                            }}
+                                                                            className="h-8 px-3 rounded-xl text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20 gap-1.5"
+                                                                        >
+                                                                            <Eye className="w-3.5 h-3.5" />
+                                                                            <span>Detay Penceresi</span>
+                                                                        </Button>
+
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setEditingTransaction(item);
+                                                                                setEditTxAmount(String(item.amount));
+                                                                                setEditTxNotes(item.description || "");
+                                                                            }}
+                                                                            className="h-8 px-3 rounded-xl text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 gap-1.5"
+                                                                        >
+                                                                            <Pencil className="w-3.5 h-3.5" />
+                                                                            <span>Düzenle</span>
+                                                                        </Button>
+
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeleteTransaction(item.id);
+                                                                            }}
+                                                                            className="h-8 px-3 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-500/10 hover:bg-rose-500/20 gap-1.5"
+                                                                        >
+                                                                            <RotateCcw className="w-3.5 h-3.5" />
+                                                                            <span>İptal Et</span>
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
                                                 </div>
-                                            </div>
-                                        )
+                                            );
+                                        })()
                                     ))}
                                 </>
                             );
@@ -2576,7 +2747,7 @@ export function VeresiyeClient({
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-border/50 mt-2">
-                        <Button variant="ghost" onClick={() => setEditingDebt(null)}>İptal</Button>
+                        <Button variant="cancel" onClick={() => setEditingDebt(null)}>İptal</Button>
                         <Button onClick={submitDebtUpdate} className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl">Kaydet</Button>
                     </div>
                 </AlertDialogContent>
@@ -2613,7 +2784,7 @@ export function VeresiyeClient({
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-border/50 mt-2">
-                        <Button variant="ghost" onClick={() => setEditingTransaction(null)}>İptal</Button>
+                        <Button variant="cancel" onClick={() => setEditingTransaction(null)}>İptal</Button>
                         <Button onClick={handleUpdateTransaction} disabled={isPending} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl min-w-[100px]">
                             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Güncelle"}
                         </Button>
@@ -3043,7 +3214,7 @@ export function VeresiyeClient({
                                             <div className="flex items-center gap-2 shrink-0 pr-1">
                                                 {/* Action Buttons - Now side by side with amount in a flex container */}
                                                 {statsModalType === 'COLLECTED' && (
-                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                                                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all scale-95 sm:scale-90 sm:group-hover:scale-100">
                                                         <Button
                                                             variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10"
                                                             onClick={(e) => { e.stopPropagation(); setEditingTransaction(item); setEditTxAmount(item.amount.toString()); setEditTxNotes(item.description || ""); }}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -26,12 +26,12 @@ export const CartItem = React.memo(({
     displayPrice,
     isCompact = false
 }: CartItemProps) => {
-    const initialPrice = displayPrice ?? item.sellPrice;
+    const initialPrice = displayPrice ?? item.unitPrice ?? item.sellPrice ?? 0;
     const [localPrice, setLocalPrice] = useState(Number(initialPrice).toFixed(2));
 
     useEffect(() => {
-        setLocalPrice(Number(displayPrice ?? item.sellPrice).toFixed(2));
-    }, [displayPrice, item.sellPrice]);
+        setLocalPrice(Number(displayPrice ?? item.unitPrice ?? item.sellPrice ?? 0).toFixed(2));
+    }, [displayPrice, item.unitPrice, item.sellPrice]);
 
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalPrice(e.target.value);
@@ -50,13 +50,13 @@ export const CartItem = React.memo(({
     };
     if (isCompact) {
         return (
-            <div className="bg-card border-2 border-border/40 p-4 rounded-[1.5rem] space-y-4 shadow-sm hover:border-blue-500/20 transition-all">
-                <div className="flex justify-between items-start gap-4">
+            <div className="bg-card border border-border/50 p-3 sm:p-4 rounded-2xl space-y-3 shadow-sm hover:border-blue-500/20 transition-all">
+                <div className="flex justify-between items-start gap-3">
                     <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-black text-foreground truncate uppercase tracking-tight">{item.name}</h4>
-                        <div className="flex items-center gap-3 mt-2">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl transition-all hover:bg-blue-500/10">
-                                <span className="text-[10px] text-blue-600 font-black">{getCartCurrencySymbol()}</span>
+                        <h4 className="text-xs font-bold text-foreground truncate uppercase tracking-tight">{item.name}</h4>
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl transition-all hover:bg-blue-500/15 focus-within:ring-2 focus-within:ring-blue-500/30">
+                                <span className="text-xs text-blue-500 font-extrabold">{getCartCurrencySymbol()}</span>
                                 <input
                                     type="text"
                                     inputMode="decimal"
@@ -64,17 +64,20 @@ export const CartItem = React.memo(({
                                     onChange={handlePriceChange}
                                     onBlur={handlePriceBlur}
                                     onKeyDown={handleKeyDown}
-                                    className="bg-transparent border-none text-[11px] text-blue-700 font-extrabold focus:ring-0 w-20 p-0 h-auto outline-none tabular-nums"
+                                    className="bg-transparent border-none text-xs text-blue-400 font-extrabold focus:ring-0 w-20 p-0 h-auto outline-none tabular-nums"
+                                    title="Fiyatı değiştirmek için dokunun"
                                 />
+                                <Pencil className="h-3 w-3 text-blue-400 opacity-60 ml-0.5 shrink-0 pointer-events-none" />
                             </div>
                             <Badge variant="outline" className="text-[9px] bg-muted/30 border-none text-muted-foreground uppercase">
-                                {item.category?.name || "KATEGORİSİZ"}
+                                {item.category?.name || "GENEL"}
                             </Badge>
                         </div>
                     </div>
                     <button
                         onClick={() => removeFromCart(item.id)}
-                        className="text-muted-foreground/30 hover:text-rose-500 p-2 rounded-xl transition-all hover:bg-rose-500/10"
+                        className="text-muted-foreground/40 hover:text-rose-500 p-1.5 rounded-xl transition-all hover:bg-rose-500/10"
+                        title="Sepetten Çıkar"
                     >
                         <Trash2 className="h-4 w-4" />
                     </button>
@@ -97,7 +100,7 @@ export const CartItem = React.memo(({
                     </div>
                     <div className="text-right">
                         <span className="text-sm font-black text-foreground tabular-nums">
-                            {getCartCurrencySymbol()}{Number((displayPrice ?? item.sellPrice) * item.quantity).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {getCartCurrencySymbol()}{Number((displayPrice ?? item.unitPrice ?? item.sellPrice ?? 0) * item.quantity).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                     </div>
                 </div>

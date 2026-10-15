@@ -55,11 +55,13 @@ import { Sparkles, ScanLine } from "lucide-react";
 import { getSettings } from "@/lib/actions/setting-actions";
 import { ScannerModal } from "@/components/scanner/scanner-modal";
 import { useScanner } from "@/hooks/use-scanner";
-import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { useDashboardData, useTenant } from "@/lib/context/dashboard-data-context";
 import { ProductCard } from "./parts/product-card";
 import { CartItem } from "./parts/cart-item";
 import { CustomerSelector } from "./parts/customer-selector";
 import { CheckoutSummary } from "./parts/checkout-summary";
+import { QuickCreateProductModal } from "@/components/product/quick-create-product-modal";
+import { SmartStockGuardrailModal } from "./parts/smart-stock-guardrail-modal";
 
 export function POSInterface({ initialSaleId }: {
   initialSaleId?: string;
@@ -97,6 +99,13 @@ export function POSInterface({ initialSaleId }: {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Frictionless & Smart Eye State
+  const [quickProductOpen, setQuickProductOpen] = useState(false);
+  const [quickProductName, setQuickProductName] = useState("");
+  const [guardrailOpen, setGuardrailOpen] = useState(false);
+  const [guardrailProduct, setGuardrailProduct] = useState<any>(null);
+  const tenantConfig = useTenant();
 
   // Show receipt if arrived via sale confirmation URL
   useEffect(() => {
@@ -238,103 +247,120 @@ export function POSInterface({ initialSaleId }: {
     }
   };
 
-  const { rates: exchangeRates, defaultCurrency, shopId } = useDashboardData();
+  const { rates: exchangeRates, defaultCurrency = "TRY", shopId } = useDashboardData();
 
   const usdRate = useMemo(() => {
     const rawRate = exchangeRates?.usd || exchangeRates?.USD;
     const numRate = typeof rawRate === "string" ? parseFloat(rawRate.replace(",", ".")) : Number(rawRate);
-    return isNaN(numRate) || numRate <= 0 ? 1 : numRate;
+    return isNaN(numRate) || numRate <= 0 ? 34.5 : numRate;
   }, [exchangeRates]);
 
   const eurRate = useMemo(() => {
     const rawRate = exchangeRates?.eur || exchangeRates?.EUR;
     const numRate = typeof rawRate === "string" ? parseFloat(rawRate.replace(",", ".")) : Number(rawRate);
-    return isNaN(numRate) || numRate <= 0 ? 1 : numRate;
+    return isNaN(numRate) || numRate <= 0 ? 37.0 : numRate;
   }, [exchangeRates]);
 
-  function getCartItemCurrency(item: any): "TRY" | "USD" | "EUR" {
-    const storedCurrency = item?.attributes?.priceCurrency;
-    if (storedCurrency === "USD" || storedCurrency === "EUR") return storedCurrency;
-    return item?.sellPriceUsd ? "USD" : "TRY";
-  }
+  // Active sale currency (User can toggle freely between TRY and USD)
+  const [saleCurrency, setSaleCurrency] = useState<"TRY" | "USD">(
+    defaultCurrency === "USD" ? "USD" : "TRY"
+  );
 
-  const getCartCurrencySymbol = useCallback(() => {
-    if (defaultCurrency === "USD") return "$";
-    if (defaultCurrency === "EUR") return "€";
-    return "₺";
+  useEffect(() => {
+    if (defaultCurrency === "USD" || defaultCurrency === "TRY") {
+      setSaleCurrency(defaultCurrency);
+    }
   }, [defaultCurrency]);
 
+  const toggleSaleCurrency = (newCurrency: "TRY" | "USD") => {
+    if (newCurrency === saleCurrency) return;
+    setCart((prevCart) =>
+      prevCart.map((item) => {
+        let newUnitPrice = item.unitPrice ?? item.sellPrice;
+        if (newCurrency === "USD") {
+          newUnitPrice = Number((newUnitPrice / usdRate).toFixed(2));
+        } else {
+          newUnitPrice = Number((newUnitPrice * usdRate).toFixed(2));
+        }
+        return {
+          ...item,
+          unitPrice: newUnitPrice,
+          sellPrice: newCurrency === "TRY" ? newUnitPrice : Number((newUnitPrice * usdRate).toFixed(2)),
+          sellPriceUsd: newCurrency === "USD" ? newUnitPrice : Number((newUnitPrice / usdRate).toFixed(2)),
+        };
+      })
+    );
+    setSaleCurrency(newCurrency);
+    toast({
+      title: `Para Birimi: ${newCurrency === "USD" ? "Dolar ($)" : "Türk Lirası (₺)"}`,
+      description: `Sepet ve ürün fiyatları ${newCurrency} olarak güncellendi.`,
+    });
+  };
+
+  const getCartCurrencySymbol = useCallback(() => {
+    if (saleCurrency === "USD") return "$";
+    return "₺";
+  }, [saleCurrency]);
+
   const getCartDisplayPrice = useCallback((item: any) => {
-    let price = 0;
-    // If the dashboard is in USD mode
-    if (defaultCurrency === "USD") {
-      // Use the USD price if it exists, otherwise convert TRY price to USD
-      price = Number(item.sellPriceUsd || (item.sellPrice / usdRate));
-    } else if (defaultCurrency === "EUR") {
-      // Direct conversion to EUR
-      price = (item.sellPrice / eurRate);
-    } else {
-      // If the dashboard is in TRY mode
-      // If the product has a USD price, convert it to TL using the current rate
-      if (item.sellPriceUsd && item.sellPriceUsd > 0) {
-        price = item.sellPriceUsd * usdRate;
-      } else {
-        price = item.sellPrice || 0;
+    if (!item) return 0;
+    if (saleCurrency === "USD") {
+      if (item.sellPriceUsd !== null && item.sellPriceUsd !== undefined && Number(item.sellPriceUsd) > 0) {
+        return Number(Number(item.sellPriceUsd).toFixed(2));
       }
+      const tl = Number(item.sellPrice || 0);
+      return Number((tl / usdRate).toFixed(2));
+    } else {
+      if (item.sellPrice !== null && item.sellPrice !== undefined && Number(item.sellPrice) > 0) {
+        return Number(Number(item.sellPrice).toFixed(2));
+      }
+      if (item.sellPriceUsd !== null && item.sellPriceUsd !== undefined && Number(item.sellPriceUsd) > 0) {
+        return Number((Number(item.sellPriceUsd) * usdRate).toFixed(2));
+      }
+      return 0;
     }
-    return Number(price.toFixed(2));
-  }, [defaultCurrency, usdRate, eurRate]);
+  }, [saleCurrency, usdRate]);
 
   const getEquivalentDisplay = useCallback((item: any) => {
     if (!exchangeRates) return "";
-
-    // Determine the equivalent value to display based on current dashboard currency
-    const isDefaultUSD = defaultCurrency === "USD";
-    const isDefaultEUR = defaultCurrency === "EUR";
-
-    if (isDefaultUSD) {
-      // We are in USD mode, show TRY equivalent
-      // item could be a product or a total
+    if (saleCurrency === "USD") {
       let priceTl = 0;
-      if (item.sellPriceUsd) {
-        priceTl = item.sellPriceUsd * usdRate;
-      } else {
-        priceTl = item.sellPrice || 0;
-      }
-      return `₺${Number(priceTl.toFixed(2)).toLocaleString("tr-TR")}`;
-    } else if (isDefaultEUR) {
-      // We are in EUR mode, show TRY equivalent
-      let priceTl = 0;
-      if (item.sellPriceEur) {
-        priceTl = item.sellPriceEur * eurRate;
+      if (item.sellPriceUsd && Number(item.sellPriceUsd) > 0) {
+        priceTl = Number(item.sellPriceUsd) * usdRate;
       } else {
         priceTl = item.sellPrice || 0;
       }
       return `₺${Number(priceTl.toFixed(2)).toLocaleString("tr-TR")}`;
     } else {
-      // We are in TRY mode, show USD equivalent
-      const priceUsd = item.sellPriceUsd || ((item.sellPrice || 0) / usdRate);
+      const priceUsd = (item.sellPriceUsd && Number(item.sellPriceUsd) > 0)
+        ? Number(item.sellPriceUsd)
+        : ((item.sellPrice || 0) / usdRate);
       return `$${Number(priceUsd.toFixed(2)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
-  }, [defaultCurrency, usdRate, eurRate, exchangeRates]);
+  }, [saleCurrency, usdRate, exchangeRates]);
 
-  const addToCart = useCallback((product: any) => {
-    if (products.length === 0) return;
+  const addToCart = useCallback((product: any, forceAllowZero = false) => {
+    if (!product) return;
+
+    const isService = product.category?.name?.toLowerCase() === "hizmet";
+    const currentStock = Number(product.stock || 0);
+
+    // Smart Eye Stock Guardrail: Never block abruptly; guide proactively
+    if (!forceAllowZero && !isService && currentStock <= 0) {
+      setGuardrailProduct(product);
+      setGuardrailOpen(true);
+      return;
+    }
+
+    const unitPrice = getCartDisplayPrice(product);
 
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.id === product.id);
 
-      const isService = product.category?.name?.toLowerCase() === "hizmet";
-
-      // Stock check for first-time addition
-      if (!existing && !isService && product.stock <= 0) {
-        toast({ title: "Stokta Yok", description: "Bu ürünün stoğu tükenmiş.", variant: "destructive" });
-        return currentCart;
-      }
-
       if (existing) {
-        if (!isService && existing.quantity >= product.stock) {
-          toast({ title: "Stok Yetersiz", description: "Daha fazla ekleyemezsiniz.", variant: "destructive" });
+        if (!forceAllowZero && !isService && existing.quantity >= currentStock) {
+          setGuardrailProduct(product);
+          setGuardrailOpen(true);
           return currentCart;
         }
         return currentCart.map((item) =>
@@ -344,12 +370,13 @@ export function POSInterface({ initialSaleId }: {
       const cartItem = {
         ...product,
         quantity: 1,
-        // Ensure sellPrice (TL) is populated correctly even if product only has sellPriceUsd
-        sellPrice: Number((product.sellPrice || (product.sellPriceUsd ? (product.sellPriceUsd * usdRate) : 0)).toFixed(2))
+        unitPrice,
+        sellPrice: saleCurrency === "TRY" ? unitPrice : Number((unitPrice * usdRate).toFixed(2)),
+        sellPriceUsd: saleCurrency === "USD" ? unitPrice : Number((unitPrice / usdRate).toFixed(2)),
       };
       return [...currentCart, cartItem];
     });
-  }, [toast, products, usdRate]);
+  }, [getCartDisplayPrice, saleCurrency, usdRate]);
 
   const addBarcodeMatchToCart = (value: string) => {
     const normalizedValue = value.trim().toUpperCase();
@@ -360,11 +387,13 @@ export function POSInterface({ initialSaleId }: {
       p.sku?.toUpperCase() === normalizedValue
     );
 
+    // Frictionless Action: If product is not found, offer instant creation inline without page hopping
     if (!product) {
+      setQuickProductName(normalizedValue);
+      setQuickProductOpen(true);
       toast({
-        title: "Ürün Bulunamadı",
-        description: `${normalizedValue} barkodlu ürün sistemde kayıtlı değil.`,
-        variant: "destructive"
+        title: "Ürün Bulunamadı • Hızlı Kayıt",
+        description: `${normalizedValue} barkodu için ürün oluşturma ekranı açıldı.`,
       });
       return null;
     }
@@ -381,15 +410,18 @@ export function POSInterface({ initialSaleId }: {
         const newQty = Math.max(1, item.quantity + delta);
         const originalProduct = products.find((p: any) => p.id === id);
         const isService = originalProduct?.category?.name?.toLowerCase() === "hizmet";
-        if (delta > 0 && !isService && newQty > (originalProduct?.stock || 0)) {
-          toast({ title: "Stok Yetersiz", variant: "destructive" });
+        const availableStock = Number(originalProduct?.stock || 0);
+
+        if (delta > 0 && !isService && newQty > availableStock) {
+          setGuardrailProduct(originalProduct || item);
+          setGuardrailOpen(true);
           return item;
         }
         return { ...item, quantity: newQty };
       }
       return item;
     }));
-  }, [products, toast]);
+  }, [products]);
 
   const updatePrice = useCallback((id: string, newPrice: number) => {
     setCart((prev) => prev.map((item) => {
@@ -530,17 +562,14 @@ export function POSInterface({ initialSaleId }: {
 
 
   const displayTotal = useMemo(() => {
-    const discount = defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
-      defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
-        loyaltyDiscountAmount;
-    return displaySubtotal - discount;
-  }, [displaySubtotal, loyaltyDiscountAmount, defaultCurrency, usdRate, eurRate]);
+    const discount = saleCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) : loyaltyDiscountAmount;
+    return Math.max(0, displaySubtotal - discount);
+  }, [displaySubtotal, loyaltyDiscountAmount, saleCurrency, usdRate]);
 
   // Pre-formatted strings for consistent display across components
   const { formattedTotal, formattedSubtotal, formattedTax, formattedEquivalentTotal } = useMemo(() => {
     const symbol = getCartCurrencySymbol();
-    const isUSD = defaultCurrency === "USD";
-    const isEUR = defaultCurrency === "EUR";
+    const isUSD = saleCurrency === "USD";
     const locale = isUSD ? 'en-US' : 'tr-TR';
 
     const fmt = (val: number) => symbol + val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -554,12 +583,10 @@ export function POSInterface({ initialSaleId }: {
       formattedSubtotal: fmt(subtotalNoTax),
       formattedTax: fmt(taxValue),
       formattedEquivalentTotal: `(${getEquivalentDisplay(
-        isUSD ? { sellPriceUsd: displayTotal } :
-          isEUR ? { sellPriceEur: displayTotal } :
-            { sellPrice: finalTotal }
+        isUSD ? { sellPriceUsd: displayTotal } : { sellPrice: finalTotal }
       )})`
     };
-  }, [displayTotal, defaultCurrency, getCartCurrencySymbol, getEquivalentDisplay, finalTotal]);
+  }, [displayTotal, saleCurrency, getCartCurrencySymbol, getEquivalentDisplay, finalTotal]);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -576,33 +603,18 @@ export function POSInterface({ initialSaleId }: {
       try {
         const result = await createSale({
           customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
-          items: cart.map(item => {
-            const isItemUSD = item.sellPriceUsd && item.sellPriceUsd > 0;
-            let finalUnitPrice = item.sellPrice; // Default to TL
-
-            if (defaultCurrency === "USD") {
-              finalUnitPrice = isItemUSD ? item.sellPriceUsd : Number((item.sellPrice / usdRate).toFixed(2));
-            } else if (defaultCurrency === "EUR") {
-              const isItemEUR = item.sellPriceEur && item.sellPriceEur > 0;
-              finalUnitPrice = isItemEUR ? item.sellPriceEur : Number((item.sellPrice / eurRate).toFixed(2));
-            } else {
-              // TRY mode: If it was a USD item, use calculated TL
-              finalUnitPrice = isItemUSD ? Number((item.sellPriceUsd * usdRate).toFixed(2)) : item.sellPrice;
-            }
-
-            return {
-              productId: item.id,
-              quantity: item.quantity,
-              unitPrice: finalUnitPrice
-            };
-          }),
-          totalAmount: displayTotal,
-          currency: defaultCurrency || 'TRY',
+          items: cart.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            unitPrice: Number((item.unitPrice ?? item.sellPrice).toFixed(2))
+          })),
+          totalAmount: Number(displayTotal.toFixed(2)),
+          currency: saleCurrency,
           paymentMethod,
           accountId: paymentMethod === "DEBT" ? undefined : selectedAccountId,
-          discountAmount: defaultCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) :
-            defaultCurrency === "EUR" ? (loyaltyDiscountAmount / eurRate) :
-              loyaltyDiscountAmount,
+          discountAmount: saleCurrency === "USD"
+            ? Number((loyaltyDiscountAmount / usdRate).toFixed(2))
+            : Number(loyaltyDiscountAmount.toFixed(2)),
           usedPoints,
           description: saleDescription
         });
@@ -666,7 +678,7 @@ export function POSInterface({ initialSaleId }: {
 
   const content = (
     <div ref={containerRef} className={cn(
-      "flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 bg-background h-full overflow-hidden p-2 sm:p-4 lg:p-6 relative transition-all duration-700",
+      "flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-6 bg-transparent sm:bg-background h-full overflow-hidden p-0 sm:p-4 lg:p-6 relative transition-all duration-700",
       isFullscreen && "fixed inset-0 z-[40] p-4 lg:p-8 bg-background/95 backdrop-blur-xl",
       showReceipt && "bg-emerald-950/20"
     )} style={{ zIndex: isFullscreen ? 40 : undefined }}>
@@ -679,26 +691,75 @@ export function POSInterface({ initialSaleId }: {
         <div className="absolute inset-0 z-0 pointer-events-none animate-success-pulse bg-emerald-500/5 transition-all" />
       )}
       {/* Product Selection Area (Left Pane) */}
-      <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
-        <div className="flex flex-col flex-1 overflow-hidden bg-card border border-border/40 rounded-[2.5rem] shadow-sm">
-          {/* Header & Search - Mobile Optimized */}
-          <div className="p-4 sm:p-8 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-8 bg-muted/5">
-            <div className="flex items-center gap-4 flex-shrink-0">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+      <div className="lg:col-span-8 flex flex-col gap-4 sm:gap-6 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden bg-card/60 sm:bg-card border-0 sm:border sm:border-border/40 rounded-2xl sm:rounded-[2.5rem] shadow-none sm:shadow-sm">
+          {/* Header & Search - Single Clean Row on Mobile */}
+          <div className="p-3 sm:p-8 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-8 bg-muted/5">
+            <div className="flex items-center justify-between sm:justify-start gap-3 flex-shrink-0">
+              <div className="flex items-center gap-2.5 sm:gap-4">
+                <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-full bg-primary flex items-center justify-center shadow-md shadow-primary/20 shrink-0">
+                  <ShoppingCart className="h-4.5 w-4.5 sm:h-6 sm:w-6 text-primary-foreground" />
+                </div>
+                <div className="flex flex-col">
+                  <h2 className="font-bold text-base sm:text-2xl text-foreground leading-none">Hızlı <span className="text-primary">Satış</span></h2>
+                  <p className="text-[8px] sm:text-[11px] text-muted-foreground font-semibold leading-none mt-1 uppercase tracking-wider">POS v2.0</p>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <h2 className="font-medium text-lg sm:text-2xl text-foreground whitespace-nowrap">Hızlı <span className="text-primary">Satış</span></h2>
-                <p className="text-[9px] sm:text-[11px] text-muted-foreground font-semibold leading-none mt-1 uppercase tracking-wider">POS Terminal v2.0</p>
+
+              {/* Action buttons next to title on mobile */}
+              <div className="flex sm:hidden items-center rounded-lg border border-border/40 bg-muted/30 p-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => toggleSaleCurrency("TRY")}
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[10px] font-black transition-all",
+                    saleCurrency === "TRY" ? "bg-emerald-600 text-white shadow-sm" : "text-muted-foreground"
+                  )}
+                >
+                  ₺
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleSaleCurrency("USD")}
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[10px] font-black transition-all",
+                    saleCurrency === "USD" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground"
+                  )}
+                >
+                  $
+                </button>
+              </div>
+              <div className="flex sm:hidden items-center gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    setQuickProductName(displaySearchTerm || "");
+                    setQuickProductOpen(true);
+                  }}
+                  className="h-8 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 text-[10px] font-bold gap-1 shrink-0 transition-all"
+                  title="Sayfadan ayrılmadan yeni ürün kaydet"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Ürün</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleFullscreen}
+                  className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted/50 transition-all shrink-0"
+                >
+                  {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </Button>
               </div>
             </div>
 
-            <div className="flex-1 w-full sm:max-w-xl order-3 sm:order-2">
+            <div className="flex-1 w-full sm:max-w-xl">
               <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input
                   placeholder="Ürün adı veya barkod okut..."
-                  className="pl-12 pr-12 bg-muted/30 border-border/40 h-14 sm:h-12 rounded-2xl text-sm sm:text-xs focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
+                  className="pl-10 pr-10 sm:pl-12 sm:pr-12 bg-muted/30 border-border/40 h-11 sm:h-12 rounded-xl sm:rounded-2xl text-xs sm:text-xs focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
                   value={displaySearchTerm}
                   onChange={(e) => setDisplaySearchTerm(e.target.value)}
                   onKeyDown={(e) => {
@@ -712,15 +773,50 @@ export function POSInterface({ initialSaleId }: {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-8 sm:w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-colors"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-8 sm:w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg sm:rounded-xl transition-colors"
                   onClick={() => setIsScannerModalOpen(true)}
                 >
-                  <ScanLine className="h-5 w-5 sm:h-4 sm:w-4" />
+                  <ScanLine className="h-4 w-4 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 order-2 sm:order-3 self-end sm:self-auto">
+            {/* Desktop buttons */}
+            <div className="hidden sm:flex items-center rounded-xl border border-border/40 bg-muted/40 p-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => toggleSaleCurrency("TRY")}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-black transition-all",
+                  saleCurrency === "TRY" ? "bg-emerald-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                ₺ TL
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleSaleCurrency("USD")}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-black transition-all",
+                  saleCurrency === "USD" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                $ USD
+              </button>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 sm:gap-3 shrink-0">
+              <Button
+                type="button"
+                onClick={() => {
+                  setQuickProductName(displaySearchTerm || "");
+                  setQuickProductOpen(true);
+                }}
+                className="h-10 sm:h-12 rounded-xl sm:rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 sm:px-4 text-xs font-bold gap-1.5 shrink-0 transition-all"
+                title="Sayfadan ayrılmadan yeni ürün kaydet"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Hızlı Ürün</span>
+              </Button>
               <Button
                 variant="outline"
                 size="icon"
@@ -762,9 +858,26 @@ export function POSInterface({ initialSaleId }: {
                 <Loader2 className="h-10 w-10 text-primary animate-spin opacity-50" />
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
-                <Package className="h-12 w-12 mb-4" />
-                <p className="text-sm font-bold tracking-widest uppercase">Ürün Bulunamadı</p>
+              <div className="h-full w-full flex flex-col items-center justify-center py-16 px-4 text-center">
+                <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mb-4 shadow-inner">
+                  <Package className="h-8 w-8" />
+                </div>
+                <p className="text-base font-bold text-foreground tracking-tight">
+                  {displaySearchTerm ? `"${displaySearchTerm}" ile eşleşen ürün bulunamadı` : "Bu kategoride ürün bulunamadı"}
+                </p>
+                <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-6">
+                  Sayfadan ayrılmadan bu ürünü anında sisteme kaydedebilir ve doğrudan sepete ekleyebilirsiniz.
+                </p>
+                <Button
+                  onClick={() => {
+                    setQuickProductName(displaySearchTerm || "");
+                    setQuickProductOpen(true);
+                  }}
+                  className="h-11 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{displaySearchTerm ? `"${displaySearchTerm}" Ürününü Anında Oluştur` : "Hızlı Ürün Oluştur"}</span>
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
@@ -895,6 +1008,39 @@ export function POSInterface({ initialSaleId }: {
         }
       `}</style>
       <ScannerModal open={isScannerModalOpen} onOpenChange={setIsScannerModalOpen} shopIdOrUserId={shopId || "global"} />
+
+      {/* Frictionless Instant Product Creator */}
+      <QuickCreateProductModal
+        open={quickProductOpen}
+        onOpenChange={setQuickProductOpen}
+        categories={categories as any}
+        initialName={quickProductName}
+        onSuccess={(created) => {
+          queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
+          if (created) {
+            addToCart(created, true);
+            setDisplaySearchTerm("");
+            toast({
+              title: "Ürün Eklendi",
+              description: `${created.name} oluşturuldu ve sepete aktarıldı.`,
+            });
+          }
+        }}
+      />
+
+      {/* Smart Eye Stock Guardrail */}
+      <SmartStockGuardrailModal
+        open={guardrailOpen}
+        onOpenChange={setGuardrailOpen}
+        product={guardrailProduct}
+        onStockAddedAndAddToCart={(updatedProduct) => {
+          queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
+          addToCart(updatedProduct, true);
+        }}
+        onAllowZeroStockSale={(prod) => {
+          addToCart(prod, true);
+        }}
+      />
     </div>
   );
 

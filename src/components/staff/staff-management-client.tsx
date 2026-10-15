@@ -1207,7 +1207,7 @@ export function StaffManagementClient({
                     </div>
                     <DialogFooter className="gap-2">
                         <Button
-                            variant="outline"
+                            variant="cancel"
                             className="rounded-xl"
                             onClick={() => setExpenseMember(null)}
                             disabled={isActionPending}

@@ -180,7 +180,7 @@ export function EdmSetupModal({ shop, open, onOpenChange, onSuccess }: EdmSetupM
 
                 <DialogFooter className="gap-2">
                     <Button
-                        variant="outline"
+                        variant="cancel"
                         onClick={() => onOpenChange(false)}
                         className="rounded-xl"
                         disabled={loading}

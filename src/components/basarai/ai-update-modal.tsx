@@ -279,10 +279,10 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                             <div className="flex gap-3">
                                 <Button
-                                    variant="outline"
+                                    variant="cancel"
                                     onClick={() => setAiResponse(null)}
                                     disabled={isPending}
-                                    className="flex-1 h-11 border-[#333] hover:bg-[#222] text-muted-foreground "
+                                    className="flex-1 h-11"
                                 >
                                     <ArrowLeft className="h-4 w-4 mr-2" /> Geri Dön
                                 </Button>

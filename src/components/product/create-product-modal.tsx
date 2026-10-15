@@ -140,10 +140,12 @@ export function CreateProductModal({
   });
 
   useEffect(() => {
-    if (searchParams?.addProduct) {
+    if (searchParams?.addProduct || searchParams?.action === "new") {
       setOpen(true);
-      setValue("name", decodeURIComponent(searchParams.addProduct));
-      if (searchParams.price) {
+      if (searchParams?.addProduct && typeof searchParams.addProduct === "string" && searchParams.addProduct !== "true") {
+        setValue("name", decodeURIComponent(searchParams.addProduct));
+      }
+      if (searchParams?.price) {
         setValue("buyPrice", searchParams.price);
         setValue("sellPrice", searchParams.price);
       }

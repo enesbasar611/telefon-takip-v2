@@ -101,7 +101,7 @@ export function RefundBalanceModal({ open, onClose, customer }: RefundBalanceMod
                 )}
 
                 <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={loading}>İptal</Button>
+                    <Button variant="cancel" onClick={onClose} disabled={loading}>İptal</Button>
                     <Button onClick={handleRefund} disabled={loading || !amount || Number(amount) <= 0}>
                         {loading ? "İşleniyor..." : "İadeyi Tamamla"}
                     </Button>

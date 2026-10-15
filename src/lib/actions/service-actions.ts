@@ -1083,29 +1083,142 @@ export async function getServiceTicketById(id: string) {
   }
 }
 
-export async function queryServiceStatus(ticketNumber: string, phone: string) {
-  // Querying status doesn't necessarily need shopId in the filter if ticketNumber is globally unique-ish,
-  // but for multi-tenancy it's better to fetch based on what we have.
-  // Actually, a public query page might not have shopId context.
-  // BUT we can use the phone prefix or something.
-  // For now, let's keep it simple.
+export async function queryServiceStatus(ticketNumber: string, phone?: string) {
   try {
+    const cleanPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const cleanTicket = ticketNumber ? ticketNumber.trim().toUpperCase() : '';
+
+    const conditions: any[] = [];
+    if (cleanTicket) {
+      conditions.push({ ticketNumber: cleanTicket });
+    }
+    if (cleanPhone) {
+      conditions.push({ customer: { phone: { contains: cleanPhone } } });
+    }
+
+    if (conditions.length === 0) return null;
+
+    let shopId: string | null = null;
+    try {
+      shopId = await getShopId();
+    } catch {
+      shopId = null;
+    }
+
+    const where: any = conditions.length === 1 ? conditions[0] : { AND: conditions };
+    if (shopId) {
+      where.shopId = shopId;
+    }
+
     const ticket = await prisma.serviceTicket.findFirst({
-      where: {
-        ticketNumber: ticketNumber.toUpperCase(),
-        customer: {
-          phone: phone.replace(/\s+/g, '')
-        }
-      },
+      where,
+      orderBy: { createdAt: "desc" },
       include: {
         customer: true,
+        technician: true,
         logs: { orderBy: { createdAt: "desc" } },
+        usedParts: { include: { product: true } },
       }
     });
     return serializePrisma(ticket);
   } catch (error) {
     console.error("Query service status error:", error);
     return null;
+  }
+}
+
+export async function searchServiceTicketsQuick(params: {
+  query?: string;
+  ticketNumber?: string;
+  phone?: string;
+  statusFilter?: string;
+  limit?: number;
+}) {
+  try {
+    const shopId = await getShopId();
+    const query = params.query?.trim() || "";
+    const ticketNo = params.ticketNumber?.trim() || "";
+    const phone = params.phone?.trim() || "";
+    const cleanPhone = (phone || query).replace(/[^0-9]/g, "");
+
+    const andConditions: any[] = [{ shopId }];
+
+    if (ticketNo) {
+      andConditions.push({
+        ticketNumber: { contains: ticketNo, mode: "insensitive" }
+      });
+    }
+
+    if (phone && cleanPhone.length >= 3) {
+      andConditions.push({
+        customer: { phone: { contains: cleanPhone } }
+      });
+    }
+
+    if (query) {
+      const orList: any[] = [
+        { ticketNumber: { contains: query, mode: "insensitive" } },
+        { customer: { name: { contains: query, mode: "insensitive" } } },
+        { deviceBrand: { contains: query, mode: "insensitive" } },
+        { deviceModel: { contains: query, mode: "insensitive" } },
+        { imei: { contains: query, mode: "insensitive" } },
+        { serialNumber: { contains: query, mode: "insensitive" } },
+      ];
+
+      if (cleanPhone.length >= 4) {
+        orList.push({ customer: { phone: { contains: cleanPhone } } });
+      }
+
+      andConditions.push({ OR: orList });
+    }
+
+    if (params.statusFilter && params.statusFilter !== "ALL") {
+      if (params.statusFilter === "ACTIVE") {
+        andConditions.push({
+          status: { in: [ServiceStatus.PENDING, ServiceStatus.APPROVED, ServiceStatus.REPAIRING, ServiceStatus.WAITING_PART] }
+        });
+      } else {
+        andConditions.push({ status: params.statusFilter as ServiceStatus });
+      }
+    }
+
+    const tickets = await prisma.serviceTicket.findMany({
+      where: { AND: andConditions },
+      take: params.limit || 20,
+      orderBy: { createdAt: "desc" },
+      include: {
+        customer: true,
+        technician: true,
+        logs: { orderBy: { createdAt: "desc" } },
+        usedParts: { include: { product: true } },
+      },
+    });
+
+    return serializePrisma(tickets);
+  } catch (error) {
+    console.error("searchServiceTicketsQuick error:", error);
+    return [];
+  }
+}
+
+export async function getRecentServiceTickets(limit: number = 8) {
+  try {
+    const shopId = await getShopId();
+    const tickets = await prisma.serviceTicket.findMany({
+      where: { shopId },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        customer: true,
+        technician: true,
+        logs: { orderBy: { createdAt: "desc" } },
+        usedParts: { include: { product: true } },
+      },
+    });
+    return serializePrisma(tickets);
+  } catch (error) {
+    console.error("getRecentServiceTickets error:", error);
+    return [];
   }
 }
 

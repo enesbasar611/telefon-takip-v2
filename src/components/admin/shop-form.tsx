@@ -101,7 +101,7 @@ export function ShopForm({ shop, open, onOpenChange, onSaved }: {
                         </p>
                     </div>
                     <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl hover:bg-white/5">
+                        <Button type="button" variant="cancel" onClick={() => onOpenChange(false)} className="rounded-xl">
                             İptal
                         </Button>
                         <Button type="submit" disabled={loading} className="rounded-xl bg-blue-600 hover:bg-blue-700 h-11 px-8 font-bold">

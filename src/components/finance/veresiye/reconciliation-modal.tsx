@@ -63,7 +63,7 @@ export function ReconciliationModal({ open, onClose, customer }: ReconciliationM
                 </div>
 
                 <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={loading}>İptal</Button>
+                    <Button variant="cancel" onClick={onClose} disabled={loading}>İptal</Button>
                     <Button onClick={handleConfirm} disabled={loading || !note.trim()}>
                         {loading ? "Kaydediliyor..." : "Mutabakatı Kaydet"}
                     </Button>

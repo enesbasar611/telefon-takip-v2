@@ -201,33 +201,33 @@ export function ServiceProfitCards() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <Card
             key={stat.title}
             className={cn(
-              "relative overflow-hidden rounded-2xl border bg-card/40 p-5 shadow-none transition-colors",
+              "relative overflow-hidden rounded-xl sm:rounded-2xl border bg-card/40 p-3 sm:p-5 shadow-none transition-colors",
               stat.border
             )}
           >
-            <div className={cn("absolute right-0 top-0 h-20 w-20 rounded-full blur-3xl", stat.bg)} />
-            <div className="relative z-10 flex items-start justify-between gap-4">
+            <div className={cn("absolute right-0 top-0 h-16 w-16 sm:h-20 sm:w-20 rounded-full blur-2xl sm:blur-3xl", stat.bg)} />
+            <div className="relative z-10 flex items-start justify-between gap-2 sm:gap-4">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground truncate">
                   {stat.title}
                 </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <p className="truncate text-2xl font-black tracking-tight text-foreground">
+                <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-2">
+                  <p className="truncate text-base sm:text-2xl font-black tracking-tight text-foreground">
                     {stat.value}
                   </p>
-                  {isFetching && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
+                  {isFetching && <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 shrink-0 animate-spin text-muted-foreground" />}
                 </div>
-                <p className="mt-3 text-xs font-medium text-muted-foreground">
+                <p className="mt-1.5 sm:mt-3 text-[10px] sm:text-xs font-medium text-muted-foreground line-clamp-1">
                   {stat.detail}
                 </p>
               </div>
-              <div className={cn("rounded-xl p-3", stat.bg)}>
-                <stat.icon className={cn("h-5 w-5", stat.color)} />
+              <div className={cn("rounded-lg sm:rounded-xl p-2 sm:p-3 shrink-0", stat.bg)}>
+                <stat.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", stat.color)} />
               </div>
             </div>
           </Card>

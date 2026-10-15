@@ -615,7 +615,7 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsPaymentModalOpen(false)}>İptal</Button>
+                        <Button variant="cancel" onClick={() => setIsPaymentModalOpen(false)}>İptal</Button>
                         <Button
                             className="bg-emerald-600 hover:bg-emerald-700 text-white"
                             onClick={handleCollectPayment}
@@ -674,7 +674,7 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
                         </p>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditingTransaction(null)}>İptal</Button>
+                        <Button variant="cancel" onClick={() => setEditingTransaction(null)}>İptal</Button>
                         <Button
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                             onClick={handleUpdateTransaction}

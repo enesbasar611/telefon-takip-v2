@@ -162,13 +162,13 @@ export function DashboardClient({ initialLayout, widgets, widgetLabels = {}, sho
         ...widgetLabels
     };
 
-    // Tighter grid for better density, responsive column styling on mobile
+    // Tighter grid for better density, responsive 2-column flow on mobile
     const gridStyle: React.CSSProperties = {
         display: "grid",
-        gridTemplateColumns: isMobile ? "repeat(1, minmax(0, 1fr))" : "repeat(24, minmax(0, 1fr))",
+        gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(24, minmax(0, 1fr))",
         gridAutoRows: isMobile ? "auto" : "minmax(120px, auto)", // Tighter base row height
         gridAutoFlow: "row dense", // Use row dense to fill empty spaces aggressively
-        gap: isMobile ? "0.5rem" : "0.75rem", // Extremely reduced gap to fix visual empty spaces
+        gap: isMobile ? "0.625rem" : "0.75rem",
     };
 
     return (
@@ -272,11 +272,12 @@ function SortableItem({ id, children, cols, rows, isEditMode, onRemove, onResize
     // Dynamic row calculation: if empty and not in edit mode, force height to 1 row
     const actualRows = (!isEditMode && isEmpty) ? 1 : (rows || 1);
 
+    const isStat = String(id).startsWith("stat_");
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 1000 : isResizing ? 500 : 1,
-        gridColumn: isMobile ? "span 1 / span 1" : `span ${cols || 1} / span ${cols || 1}`,
+        gridColumn: isMobile ? (isStat ? "span 1 / span 1" : "span 2 / span 2") : `span ${cols || 1} / span ${cols || 1}`,
         gridRow: isMobile ? "auto" : `span ${actualRows} / span ${actualRows}`,
     };
 

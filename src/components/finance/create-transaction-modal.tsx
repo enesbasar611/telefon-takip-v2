@@ -42,7 +42,8 @@ import {
   History,
   ChevronRight,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from "lucide-react";
 import { createManualTransaction, updateManualTransaction, getAccounts, getTransactions } from "@/lib/actions/finance-actions";
 import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
@@ -358,6 +359,45 @@ export function CreateTransactionModal({
     return amountValue > selectedAccount.balance;
   }, [transactionType, selectedAccount, amountValue]);
 
+  // Smart Eye Keyword Dictionary for Proactive Category Recommendations
+  const SMART_CATEGORY_MAP: { keywords: string[]; category: string; label: string }[] = useMemo(() => [
+    { keywords: ["kira", "dükkan kirası", "depo kirası", "aidat"], category: "KİRA", label: "Kira / Gider" },
+    { keywords: ["elektrik", "fatura", "su", "internet", "doğalgaz", "turkcell", "vodafone", "telekom", "enerjisa"], category: "FATURA", label: "Fatura Ödemesi" },
+    { keywords: ["maaş", "avans", "personel", "prim", "yevmiye"], category: "MAAŞ", label: "Maaş Ödemesi" },
+    { keywords: ["stok", "malzeme", "toptan", "ürün alımı", "parça alımı"], category: "STOK", label: "Stok Alımı" },
+    { keywords: ["yemek", "öğle yemeği", "restoran", "lokanta", "çay", "kahve", "ikram", "pasta"], category: "YEMEK", label: "Yemek Gideri" },
+  ], []);
+
+  const smartCategorySuggestion = useMemo(() => {
+    const desc = watch("description");
+    const currentCat = watch("category");
+    if (transactionType !== "EXPENSE" || !desc?.trim()) return null;
+    if (currentCat && currentCat !== "GENEL" && currentCat !== "DİĞER") return null;
+
+    const lowerDesc = desc.toLowerCase();
+    for (const item of SMART_CATEGORY_MAP) {
+      if (item.keywords.some(kw => lowerDesc.includes(kw))) {
+        return item;
+      }
+    }
+    return null;
+  }, [transactionType, watch("description"), watch("category"), SMART_CATEGORY_MAP]);
+
+  // High Cash Drain Guardrail: Warn if expense exceeds 50% of the active physical cash balance
+  const cashDrainWarning = useMemo(() => {
+    if (transactionType !== "EXPENSE" || !selectedAccount || selectedAccount.type !== "CASH" || !amountValue) return null;
+    const balance = Number(selectedAccount.balance || 0);
+    if (balance <= 0) return null;
+    const ratio = amountValue / balance;
+    if (ratio >= 0.5 && amountValue <= balance) {
+      return {
+        ratio: Math.round(ratio * 100),
+        balance,
+      };
+    }
+    return null;
+  }, [transactionType, selectedAccount, amountValue]);
+
   const onSubmit = async (data: TransactionFormValues) => {
     if (isInsufficient) {
       toast.error("Yetersiz bakiye! Bu kasa eksiye düşeceği için işlem yapılamaz.");
@@ -494,6 +534,28 @@ export function CreateTransactionModal({
                     />
                   </div>
                 )}
+
+                {/* Smart Eye Category Recommendation */}
+                {smartCategorySuggestion && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 animate-in fade-in slide-in-from-top-1 text-xs mt-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Sparkles className="w-4 h-4 text-indigo-500 shrink-0 animate-pulse" />
+                      <span className="text-[11px] font-bold text-foreground truncate">
+                        Akıllı Göz: Yazdığınız açıklama <strong>"{smartCategorySuggestion.label}"</strong> ile uyuşuyor.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("category", smartCategorySuggestion.category);
+                        toast.success(`Kategori "${smartCategorySuggestion.label}" olarak güncellendi.`);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] tracking-wide shrink-0 transition-all active:scale-95 shadow-sm ml-2"
+                    >
+                      Kategoriye Uygula
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -610,6 +672,19 @@ export function CreateTransactionModal({
                     <p className="text-[10px] text-rose-500 font-medium">Bu kasada yeterli bakiye yok! Kasa eksiye düşeceği için işlem yapılamaz.</p>
                   </div>
                 )}
+
+                {/* Smart Eye Cash Drain Guardrail */}
+                {cashDrainWarning && !isInsufficient && (
+                  <div className="flex items-start gap-2.5 mt-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-400 text-xs animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-wider">Nakit Kasa Güvenlik Bildirimi</p>
+                      <p className="text-[10px] opacity-90 leading-relaxed mt-0.5">
+                        Bu harcama eldeki nakit kasanın %{cashDrainWarning.ratio}'sini ({formatMoney(cashDrainWarning.balance, "TRY")} bakiyeden) kullanacaktır. Nakit akışı güvenliği için banka havalesi veya şirket kartı hesabını tercih edebilirsiniz.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -700,7 +775,7 @@ export function CreateTransactionModal({
             </div>
 
             <div className="sticky -bottom-6 md:-bottom-8 lg:-bottom-10 -mx-6 md:-mx-8 lg:-mx-10 mt-6 flex gap-3 border-t border-border/70 bg-background/95 px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10 pt-4 backdrop-blur-xl z-10">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending} className="h-14 flex-1 rounded-2xl text-xs font-semibold uppercase tracking-widest shadow-sm">İptal</Button>
+              <Button type="button" variant="cancel" onClick={() => setOpen(false)} disabled={isPending} className="h-14 flex-1 rounded-2xl text-xs font-semibold uppercase tracking-widest">İptal</Button>
               <Button type="submit" disabled={isPending || isInsufficient} className={cn(
                 "h-14 flex-[1.6] rounded-2xl text-xs font-semibold uppercase tracking-widest text-white gap-2 shadow-xl",
                 transactionType === "INCOME" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20",

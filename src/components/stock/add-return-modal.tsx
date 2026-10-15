@@ -854,7 +854,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                         </div>
                         <div className="flex gap-3 w-full sm:w-auto shrink-0 mt-auto">
                             <Button
-                                variant="outline"
+                                variant="cancel"
                                 type="button"
                                 onClick={() => onOpenChange(false)}
                                 className="rounded-xl h-11 px-6 border-border/40 flex-1 sm:flex-none"

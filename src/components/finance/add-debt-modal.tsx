@@ -652,7 +652,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
 
                         <div className="p-5 md:p-8 bg-card/50 border-t border-border/50">
                             <DialogFooter className="flex-row gap-3">
-                                <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-14 rounded-2xl text-[11px] font-bold uppercase tracking-widest">İptal</Button>
+                                <Button type="button" variant="cancel" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-14 rounded-2xl text-[11px] font-bold uppercase tracking-widest">İptal</Button>
                                 <Button type="submit" disabled={isPending || debtItems.length === 0} className="flex-[2] h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl gap-3 shadow-xl border border-indigo-500/20 group">
                                     {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />}
                                     <span className="font-inter font-light uppercase text-xs">Hesaba Geçir</span>

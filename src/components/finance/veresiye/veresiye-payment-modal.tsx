@@ -261,7 +261,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                 </div>
 
                 <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 flex flex-col sm:flex-row gap-3 border-t border-border/50 bg-card/95 backdrop-blur shrink-0">
-                    <AlertDialogCancel className="h-12 flex-1 rounded-2xl border border-border bg-card text-muted-foreground text-[10px] font-black uppercase tracking-widest hover:bg-muted/50 transition-all mt-0">Vazgeç</AlertDialogCancel>
+                    <AlertDialogCancel className="h-12 flex-1 rounded-2xl border border-border text-[10px] font-black uppercase tracking-widest transition-all mt-0">Vazgeç</AlertDialogCancel>
                     <Button
                         type="button"
                         onClick={onConfirm}

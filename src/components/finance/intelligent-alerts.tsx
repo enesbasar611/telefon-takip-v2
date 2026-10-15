@@ -25,7 +25,7 @@ export function IntelligentAlerts() {
     }
 
     // Alert 2: Gider artışı (Temsili olarak bugünün gideri yüksekse)
-    if (summary.dailyTotalExpenses > summary.dailyTotalIncomes && summary.dailyTotalExpenses > 0) {
+    if (summary.todayExpense > summary.todayIncome && summary.todayExpense > 0) {
         alerts.push({
             type: "danger",
             icon: TrendingDown,
@@ -35,7 +35,7 @@ export function IntelligentAlerts() {
     }
 
     // Alert 3: Kâr durumu
-    if (summary.dailyTotalIncomes > summary.dailyTotalExpenses * 2 && summary.dailyTotalIncomes > 0) {
+    if (summary.todayIncome > summary.todayExpense * 2 && summary.todayIncome > 0) {
         alerts.push({
             type: "success",
             icon: TrendingUp,

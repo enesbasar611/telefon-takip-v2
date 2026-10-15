@@ -130,8 +130,8 @@ export function YeniMusteriClient() {
               <div className="flex items-center gap-3">
                 <Button
                   type="button"
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground rounded-xl"
+                  variant="cancel"
+                  className="rounded-xl"
                   onClick={() => router.back()}
                 >
                   İptal

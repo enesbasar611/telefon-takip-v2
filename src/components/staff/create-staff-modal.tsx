@@ -397,7 +397,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
 
           <div className="p-6 bg-slate-50/50 dark:bg-muted/20 border-t border-slate-100 dark:border-white/5 flex gap-3">
             <DialogClose asChild>
-              <Button type="button" variant="ghost" className="flex-1 h-12 rounded-2xl font-bold uppercase tracking-widest text-[10px]">İptal</Button>
+              <Button type="button" variant="cancel" className="flex-1 h-12 rounded-2xl font-bold uppercase tracking-widest text-[10px]">İptal</Button>
             </DialogClose>
             <Button disabled={isPending} type="submit" className="flex-[2] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (staff ? "Güncelle" : "Personel Oluştur")}

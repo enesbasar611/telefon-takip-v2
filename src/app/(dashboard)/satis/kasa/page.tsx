@@ -54,9 +54,10 @@ export default async function KasaRaporuPage({
                     actions={
                         <CreateTransactionModal
                             trigger={
-                                <Button className="h-12 rounded-xl px-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white text-xs tracking-widest gap-2 group transition-all">
-                                    <PlusCircle className="h-4 w-4 group-hover:rotate-90 transition-transform duration-500" />
-                                    GELİR / GİDER EKLE
+                                <Button className="h-10 sm:h-12 rounded-xl px-4 sm:px-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 text-white text-[10px] sm:text-xs tracking-widest gap-1.5 sm:gap-2 group transition-all shrink-0">
+                                    <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:rotate-90 transition-transform duration-500" />
+                                    <span className="hidden sm:inline">GELİR / GİDER EKLE</span>
+                                    <span className="sm:hidden">GELİR / GİDER</span>
                                 </Button>
                             }
                         />

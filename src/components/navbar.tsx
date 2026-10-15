@@ -123,22 +123,23 @@ export function Navbar({ shop }: { shop?: any }) {
               <div className="hidden xl:flex">
                 <CurrencyDisplay />
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleFinancialVisibility}
-                className="h-10 w-10 rounded-xl bg-muted/40 border border-border text-muted-foreground hover:text-primary transition-all"
-              >
-                {isFinancialVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-              </Button>
-
-
-
               {isAdmin && <ShortageList />}
               <ModeToggle />
             </div>
 
             <div className="flex items-center gap-1.5 ml-1">
+              {/* Fiyat Gizleme/Gösterme Butonu (Mobil ve Masaüstü) */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleFinancialVisibility}
+                className="h-10 w-10 rounded-xl bg-muted/20 md:bg-muted/40 border border-border/40 text-muted-foreground hover:text-primary transition-all shrink-0"
+                title={isFinancialVisible ? "Fiyatları / Tutarları Gizle" : "Fiyatları / Tutarları Göster"}
+                aria-label={isFinancialVisible ? "Fiyatları Gizle" : "Fiyatları Göster"}
+              >
+                {isFinancialVisible ? <Eye className="h-5 w-5 text-emerald-500" /> : <EyeOff className="h-5 w-5" />}
+              </Button>
+
               {/* Search Button - Icon only, moved here */}
               <Button
                 variant="ghost"
@@ -171,6 +172,13 @@ export function Navbar({ shop }: { shop?: any }) {
                     <Link href="/ayarlar" className="flex items-center gap-3 w-full">
                       <Settings2 className="h-4 w-4 text-primary" /> Sistem Ayarları
                     </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={toggleFinancialVisibility}
+                    className="p-3 text-sm rounded-xl cursor-pointer focus:bg-muted flex gap-3 items-center group"
+                  >
+                    {isFinancialVisible ? <EyeOff className="h-4 w-4 text-primary" /> : <Eye className="h-4 w-4 text-primary" />}
+                    <span>{isFinancialVisible ? "Fiyatları Gizle" : "Fiyatları Göster"}</span>
                   </DropdownMenuItem>
 
                   {/* Para Birimi Seçimi */}

@@ -544,7 +544,7 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
-                        <AlertDialogCancel className="rounded-xl border-none bg-muted/50">Vazgeç</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl">Vazgeç</AlertDialogCancel>
                         <Button
                             disabled={isPending}
                             onClick={handleApprove}
@@ -577,7 +577,7 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
                         />
                     </div>
                     <AlertDialogFooter className="gap-2">
-                        <AlertDialogCancel className="rounded-xl border-none bg-muted/50">Vazgeç</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-xl">Vazgeç</AlertDialogCancel>
                         <Button
                             disabled={isPending}
                             onClick={handleReject}

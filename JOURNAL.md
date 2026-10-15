@@ -523,6 +523,164 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
     - **Dogrulama**:
         - `npx tsc --noEmit`: Tip kontrolü 0 hata ile tamamlandı.
         - `graphify update .`: Kod haritası güncellendi.
+- [x] 2026-10-15: Dashboard (Vitrin) Mobil-First Dönüşümü ve Aksiyonel Özet Kartları:
+    - **Dosyalar**: `src/components/dashboard/admin-dashboard.tsx`, `src/components/dashboard/dashboard-client.tsx`, `src/components/dashboard/stat-widget-wrapper.tsx`, `src/components/dashboard/stat-card.tsx`, `src/components/dashboard/dashboard-edit-button.tsx`, `src/components/dashboard/quick-shortcuts.tsx`, `src/app/(dashboard)/dashboard/page.tsx`, `JOURNAL.md`.
+- [x] 2026-10-15: Mobil Alt Navigasyon (Bottom Dock) & Long-Press Kısayol Menüsü:
+    - **Dosyalar**: `src/components/bottom-nav.tsx`, `JOURNAL.md`.
+    - **Neden**: Eski havada asılı (floating) ortası boşluklu ve `+` butonlu tasarım kaldırıldı; ekranın en altına sıfırlanan (`fixed bottom-0 pb-safe`), safe area korumalı, modern bir native "Mobile App Dock" yerleştirildi (Ana Sayfa, Servis, Satış, Müşteriler, Profil). Her sekmeye uzun basıldığında (`long-press`) veya sağ tıklandığında haptic titreşim eşliğinde modüle özel hızlı aksiyon menüsü (örn. Müşteriler'e basılı tutunca doğrudan "Yeni Müşteri Ekle", "Veresiye Defteri", "Tahsilat Al") açılan animasyonlu popover entegre edildi. Tek tıklamada standart pürüzsüz sayfa navigasyonu korunuyor.
+- [x] 2026-10-15: Veresiye Sayfası Üst Buton Barı & Katlanabilir Tahsilat Akordiyonları (UX):
+    - **Dosyalar**: `src/components/finance/veresiye-client.tsx`, `src/components/finance/veresiye/veresiye-toolbar.tsx`, `JOURNAL.md`.
+    - **Neden**: Veresiye sayfasında mobilde butonların üst üste binmesi/taşması sorunu giderildi ve tahsilat satırlarının düzensiz metin dökümü yerine tıklanabilir özet satırı ve pürüzsüz açılır detay akordiyonuna dönüştürülmesi sağlandı.
+    - **Yapılanlar**:
+        - **Üst Buton Barı (Header Actions)**: `PageHeader` aksiyon alanı yatay kaydırılabilir (`overflow-x-auto no-scrollbar flex-nowrap`) yapıya kavuşturuldu. Excel ve CSV dışa aktarma butonları tek bir modern "Dışa Aktar" `DropdownMenu` bileşeni altında toplanarak mobil yatay alan ferahlatıldı, butonların wrap yapıp dikeyde birbirini ezmesi önlendi.
+        - **Toolbar Filtre Alanı**: `veresiye-toolbar.tsx` filtre seçicileri ve durum butonları `shrink-0` ve `overflow-x-auto` ile sarılarak küçük ekranlarda sayfa genişliğini taşırmadan yatay kaydırma desteği kazandı.
+        - **Katlanabilir Tahsilat Akordiyonları**: Müşteri hesap ekstresi dökümünde yer alan tahsilat (`PAYMENT`) satırları varsayılan olarak kompakt ve şık bir özet satırı (yeşil ikon, başlık, ödeme kanalı etiketi, tarih, tutar, kapanan borç sayısı ve döner ok ikonu) olarak gösterilecek şekilde yeniden tasarlandı. Satıra tıklandığında/dokunulduğunda Framer Motion (`AnimatePresence`) ile pürüzsüzce açılan zengin akordiyon devreye alındı. Açılan akordiyon içerisinde:
+            1. 3 kolonlu finansal özet kartları (tahsil edilen tutar ve döviz karşılığı, ödeme kanalı ve işlem saati, borç kapatma ve cari avans durumu),
+            2. FIFO (İlk Giren İlk Çıkar) borç dağılım dökümü (kapanan her borcun açıklaması, tarihi ve tahsil edilen tutarı veya avans durumu),
+            3. Mobilde hover gerektirmeyen doğrudan tıklanabilir işlem butonları ("Detay Penceresi", "Düzenle", "İptal Et / Geri Al") sunuldu.
+- [x] 2026-10-15: "Frictionless Business Management" Felsefesi ve Akıllı Göz (Smart Eye) Mimarisi:
+    - **Dosyalar**: `src/lib/context/dashboard-data-context.tsx`, `src/lib/actions/dashboard-actions.ts`, `src/components/pos/pos-interface.tsx`, `src/components/pos/parts/smart-stock-guardrail-modal.tsx`, `src/components/finance/create-transaction-modal.tsx`, `JOURNAL.md`.
+    - **Neden**: Kullanıcıyı sayfa değiştirmeye (page hopping) zorlamadan işlemleri anında bağlayan, pasif bir veritabanı yerine proaktif rehberlik sunan ("Akıllı Göz") ve şube/sektör kurallarına dinamik uyum sağlayan (Multi-Tenant) mimariyi sisteme entegre etmek.
+    - **Yapılanlar**:
+        1. **Contextual Actions (Sıfır Sayfa Zıplaması / No Page Hopping)**:
+           - Hızlı Satış (POS) ekranında barkod okutulduğunda veya arama yapıldığında ürün bulunamazsa, kullanıcı stok sayfasına gitmek zorunda bırakılmıyor. `QuickCreateProductModal` doğrudan POS içine entegre edildi. Boş arama ekranındaki interaktif butondan veya üst arama çubuğundaki "+ Hızlı Ürün" butonundan anında ürün oluşturulup doğrudan aktif sepete ekleniyor.
+           - `customer-selector.tsx` ve `create-account-modal.tsx` ile müşteri veya kasa eksiklikleri anlık olarak modal içinde çözülüyor.
+        2. **Sistemin "Akıllı Gözü" (Proactive Guardrails)**:
+           - **Stok Koruması (`SmartStockGuardrailModal`)**: POS'ta stoğu 0 veya yetersiz olan bir ürün sepete eklenmek istendiğinde sert bir hata vermek yerine akıllı rehber devreye giriyor:
+             * "Hızlı Stok Girişi Yap" (Sayfadan ayrılmadan +1, +5, +10 adet stok ekler ve sepete atar),
+             * "Rafta Var, Satışa Ekle" (Fiziki ürün mevcut kabulüyle işleme devam ettirir),
+             * "Kurye/Tedarik Havuzuna Yaz" (`addShortageItem` ile arka planda kurye/tedarik havuzuna aktarır).
+           - **Gider ve Kasa Yanlış Sınıflandırma Koruması (`create-transaction-modal.tsx`)**: Kullanıcı harcama girerken açıklamadaki anahtar kelimeler ("kira", "fatura", "elektrik", "maaş", "stok", "yemek" vb.) proaktif olarak taranır; genel/diğer kategorisi seçiliyse "Akıllı Göz" tek tıkla kategori düzeltme önerisi sunar. Ayrıca eldeki nakit kasanın %50'sinden fazlasını tüketen harcamalarda nakit akışını koruyucu güvenlik bildirimi sunar.
+        3. **Multi-Tenant Adaptation**:
+           - `getDashboardInit` fonksiyonu tenant (`Shop`: industry, enabledModules, isCourierEnabled vb.) metaverilerini tek seferde dönecek şekilde genişletildi.
+           - `useTenant()` hook'u oluşturuldu (`isModuleEnabled`, `isServiceBranch`, `isRetailBranch`, `tenant`). Bileşenler şube türüne (Teknik Servis, Perakende/İletişim, Genel) ve aktif modüllere göre dinamik olarak davranış ve terminoloji uyarlaması kazandı.
+- [x] 2026-10-15: Mobil Görünümde Fiyat Gizleme/Gösterme Butonu Düzeltmesi:
+    - **Dosyalar**: `src/components/navbar.tsx`, `JOURNAL.md`.
+    - **Neden**: Fiyat ve finansal tutarları gizleme/gösterme butonu (`toggleFinancialVisibility`) yalnızca büyük ekranlar (`hidden lg:flex`) içerisinde tanımlandığı için mobil cihazlarda görünmüyordu.
+    - **Yapılanlar**:
+        - `navbar.tsx` içerisindeki `Eye` / `EyeOff` butonu `hidden lg:flex` konteynerinden çıkarılarak hem mobil hem masaüstünde her zaman görünür olan ana aksiyon buton grubuna (`Arama`, `Bildirim`, `Profil` yanına) yerleştirildi. Aktif duruma göre yeşil renkli göz (`Eye`) veya `EyeOff` ikonu gösterilmektedir.
+        - Ayrıca kullanıcı profili dropdown menüsüne de "Fiyatları Gizle / Göster" seçeneği eklenerek her iki noktadan erişilebilir kılındı.
+- [x] 2026-10-15: Mobil Alt Dock Kısayol Rotaları Düzeltmesi & Ana Sayfadan Doğrudan Modal İşlemleri:
+    - **Dosyalar**: `src/components/bottom-nav.tsx`, `src/components/navbar/pos-drawer.tsx`, `src/components/service/service-tabs-controller.tsx`, `src/components/product/create-product-modal.tsx`, `src/app/(dashboard)/layout.tsx`, `JOURNAL.md`.
+    - **Neden**: Mobilde alt dock üzerindeki simgelere uzun basıldığında çıkan kısayol rotalarında 404 veren yollar (`/kasa`, `/stok/iadeler`, `/scanner` vb.) bulunuyordu. Kullanıcının talep ettiği gibi hem tüm rotalar Next.js App Router'daki gerçek sayfalara bağlandı hem de özellikle Gelir Ekleme, Gider Ekleme, Hızlı Satış (POS), Yeni Servis ve Yeni Müşteri işlemleri için sayfadan ayrılmadan doğrudan modal açılma özelliği entegre edildi.
+    - **Yapılanlar**:
+        1. **404 Hatalı Yolların Düzeltilmesi**:
+            - `/kasa?action=new` ve `/kasa` -> Gerçek kasa rotası olan `/satis/kasa` olarak güncellendi.
+            - `/stok/iadeler` -> Gerçek iade rotası olan `/stok/iade` olarak düzeltildi.
+            - `/scanner` -> Gerçek fiş ve servis sorgulama sayfası olan `/sorgula` rotasına bağlandı.
+            - `/servis?tab=pending` -> Servis tab kontrolcüsündeki gerçek sekme adı olan `/servis?tab=active` olarak düzeltildi. `service-tabs-controller.tsx` bileşeni URL'deki `?tab=` parametresini okuyacak şekilde güncellendi.
+            - `/stok?action=new` -> `create-product-modal.tsx` `searchParams?.action === 'new'` parametresini algılayacak şekilde genişletildi.
+            - `/kasa?tab=receivables` -> Alacak ve veresiye takibi için `/veresiye` sayfasına bağlandı.
+        2. **Doğrudan Modal Entegrasyonu (Sıfır Sayfa Zıplaması)**:
+            - `bottom-nav.tsx` bileşeni `CreateTransactionModal`, `POSDrawer`, `CreateServiceModal` ve `CreateCustomerModal` bileşenlerini bünyesinde barındıracak şekilde donatıldı.
+            - **Gelir Ekle**: Kısayola basıldığında doğrudan `CreateTransactionModal` (tip: `INCOME`) açılır.
+            - **Gider Ekle**: Kısayola basıldığında doğrudan `CreateTransactionModal` (tip: `EXPENSE`) açılır.
+            - **Hızlı Satış**: Kısayola basıldığında `POSDrawer` (kompakt satış çekmecesi) doğrudan açılır, sayfa değişimi gerektirmez.
+            - **Yeni Servis**: `CreateServiceModal` hızlı arıza ve servis kabul penceresini anında açar.
+            - **Yeni Müşteri**: `CreateCustomerModal` müşteri kayıt penceresini anında açar.
+        3. **Kontrollü POSDrawer**: `pos-drawer.tsx` bileşeni `open` ve `onOpenChange` propları alarak dışarıdan tetiklenebilir hale getirildi.
+    - **Doğrulama**: `npx tsc --noEmit` ile tip kontrolleri yapıldı, hiçbir derleme veya tip hatası olmadığı doğrulandı.
+- [x] 2026-10-15: Mobil UI/UX Temizliği: Çift Header Önleme, Konteyner Sadeleştirme ve 2'li Bilgi Kartı Düzeni:
+    - **Dosyalar**: `src/components/ui/page-header.tsx`, `src/app/(dashboard)/layout.tsx`, `src/app/(dashboard)/satis/page.tsx`, `src/components/pos/pos-interface.tsx`, `src/components/product/stock-dashboard-metrics.tsx`, `src/app/(dashboard)/stok/page.tsx`, `src/components/finance/finance-dashboard.tsx`, `src/components/finance/account-list.tsx`, `src/components/finance/streamed/financial-summary-stream.tsx`, `src/components/finance/veresiye/veresiye-stats.tsx`, `src/components/service/service-profit-cards.tsx`, `src/components/service/service-kpi-cards.tsx`, `src/components/customer/customer-list-client.tsx`, `src/app/(dashboard)/satis/kasa/page.tsx`, `src/app/(dashboard)/servis/page.tsx`, `JOURNAL.md`.
+    - **Neden**: Mobilde gereksiz dikey yer kaplayan çift başlıklar (sayfa başlığı + dahili bileşen başlığı), kutu içinde kutu (container-in-container) hissi veren iç içe kenarlıklar ve ekranı boydan boya kaplayan tek sütunlu bilgi kartları tek sayfa akışını bozuyordu.
+    - **Yapılanlar**:
+        1. **Çift Header Eliminasyonu ve Başlık Sadeleştirme**:
+           - `/satis` (POS) sayfasındaki dış `PageHeader` mobilde gizlendi (`hidden md:flex`), çünkü POS bileşeni zaten kendi başlığına ve aksiyonlarına sahip.
+           - `PageHeader` bileşeninde uzun açıklama paragrafları mobilde gizlendi (`hidden sm:block`) ve başlık boşlukları kompaktlaştırıldı (`mb-3 sm:mb-6 px-1 sm:px-0`).
+           - POS mobil üst çubuğu tek satır haline getirildi (Sol: İkon + Başlık + Durum Rozeti, Sağ: + Ürün & Tam Ekran butonları; hemen altında arama barı).
+        2. **Konteyner ve Kenarlık Sadeleştirme (Native Tek Sayfa Hissi)**:
+           - Dashboard layout mobilde `p-4 pb-48` yerine `px-2 py-3 sm:p-4 pb-28` haline getirilerek ekran kenarındaki boğucu boşluklar kaldırıldı.
+           - `satis/page.tsx` üzerindeki kalın dış kart arkaplanı, bordürü ve gölgesi mobilde sıfırlandı (`w-full sm:bg-white/[0.03] sm:border sm:rounded-[2rem]`).
+           - `pos-interface.tsx` üzerindeki iç içe kenarlıklar mobilde kaldırıldı (`border-0 sm:border rounded-none sm:rounded-[2.5rem] bg-transparent sm:bg-card p-0 sm:p-4`).
+           - Müşteri listesi ve servis sayfalarındaki devasa dikey aralıklar (`space-y-10`, `gap-10 pb-20`) mobilde orantılı seviyelere çekildi (`space-y-4`, `gap-4`).
+        3. **Bilgi ve Metrik Kartlarının Mobilde 2'li Gruplanması**:
+           - Stok metrik kartları (`stock-dashboard-metrics.tsx` ve skeleton): `grid-cols-1` yerine mobilde `grid-cols-2 md:grid-cols-4`, kart içi padding `p-3 sm:p-5`, font `text-base sm:text-2xl`.
+           - Finans özet kartları (`finance-dashboard.tsx` ve skeleton): `grid-cols-1` yerine `grid-cols-2 gap-2.5 sm:gap-6`, padding `p-3.5 sm:p-8`, yazı boyutları dengelendi.
+           - Kasa/hesap kartları (`account-list.tsx`): `grid-cols-1` yerine mobilde `grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4`.
+           - Veresiye istatistik kartları (`veresiye-stats.tsx`): `grid-cols-1` yerine mobilde `grid-cols-2 gap-2.5 sm:gap-6`.
+           - Servis kâr ve KPI kartları (`service-profit-cards.tsx`, `service-kpi-cards.tsx`): mobilde `grid-cols-2 gap-2.5 sm:gap-4`.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve sıfır hata ile tamamlandı.
+- [x] 2026-10-15: Cihaz ve Servis Sorgulama (@sorgula) Sayfasının Dinamikleştirilmesi ve Teknik Servis Entegrasyonu:
+    - **Dosyalar**: `src/lib/actions/service-actions.ts`, `src/app/(dashboard)/sorgula/page.tsx`, `src/app/(dashboard)/sorgula/sorgula-client.tsx`, `JOURNAL.md`.
+    - **Neden**: Eski sorgulama sayfası sabit tek bir form ve dış bir sayfa görünümündeydi; hem servis no hem telefon numarasını zorunlu tutuyordu ve bulunan servis kaydı üzerinde herhangi bir işlem yapılmasına izin vermiyordu. Kullanıcının talebi doğrultusunda hem tek başına servis no veya cep telefonu ile hızlı arama desteği hem de bulunan kayıt üzerinde anında teknik servis işlemlerini gerçekleştirebilme yeteneği kazandırıldı.
+    - **Yapılanlar**:
+        1. **Dinamik ve Esnek Arama Motoru (`searchServiceTicketsQuick`, `queryServiceStatus`, `getRecentServiceTickets`)**:
+           - Tek bir arama alanından Servis Numarası (SRV-...), Müşteri Telefonu (05xx...), IMEI veya Müşteri Adı ile anında arama desteği getirildi.
+           - İsteğe bağlı "Ayrıntılı Filtre" modu ile bağımsız fiş no ve telefon araması imkanı sağlandı.
+           - Durum bazlı hızlı filtre çipleri eklendi ("Tümü", "Aktif İşlemler", "Teslime Hazır", "Tamirde", "Parça Bekleyen", "Teslim Edilenler").
+           - Sayfa ilk açıldığında boş bir ekran yerine mağazanın son aktif servis kayıtları listelenerek anında etkileşim sağlandı.
+        2. **Teknik Servis Aksiyonları ("İşlem Yapabilme")**:
+           - **Servisi Yönet**: `ServiceManagementModal` entegre edildi. Teknisyen sorgulama sayfasından ayrılmadan cihaz durumunu değiştirebilir (Tamirde, Hazır, Teslim vb.), parça ekleyebilir/çıkarabilir, arıza ve işçilik tutarını güncelleyebilir, teknisyen atayabilir ve ödeme alarak cihazı teslim edebilir. Modal kapandığında sorgulama ekranındaki bilet verisi otomatik yenilenir.
+           - **Hızlı Teslim Et**: Teslime hazır veya tamirdeki cihazlar için tek tıkla doğrudan ödeme/teslim akışını açan `isQuickDeliver` kısayol butonu.
+           - **Fiş Yazdır**: `ServiceReceiptModal` entegre edilerek tek tıkla 80mm termal fiş veya A4 servis fişi yazdırma özelliği.
+           - **WhatsApp Bildirimi**: Müşterinin telefonuna hazır durum şablonuyla doğrudan tek tıkla WhatsApp mesajı açma.
+           - **Müşteriyi Ara**: Mobilde tek tıkla arama (`tel:`) desteği.
+           - **Servis Masasında Aç**: İlgili fiş numarasını doğrudan teknik servis tablosunda açma linki.
+        3. **Mobil Uyumluluk**:
+           - Tablet ve masaüstünde 2 sütunlu bilgi kartları, mobilde kompakt tek sütun düzeni.
+           - Çift başlık önlendi; tek kompakt sayfa başlığı ve arama barı sunuldu.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve sıfır hata ile tamamlandı.
+- [x] 2026-10-15: Hızlı Satış Mobil Sidebar (POS Drawer) Ferahlatma, Özel Ürün Yazma ve Dinamik Fiyat Düzenleme:
+    - **Dosyalar**: `src/components/navbar/pos-drawer.tsx`, `src/components/pos/pos-compact.tsx`, `src/components/pos/parts/cart-item.tsx`, `JOURNAL.md`.
+    - **Neden**: Mobilde hızlı satış çekmecesinde müşteri seçimi ve ödeme butonları ekranın %60'ını sürekli kaplayarak ürün listesini boğucu 150px'lik bir alana sıkıştırıyordu; kullanıcı listede olmayan bir ürünü/hizmeti serbestçe yazamıyor ve seçilen ürünlerin fiyatını kolayca değiştiremiyordu.
+    - **Yapılanlar**:
+        1. **Ferah ve Anlaşılır 2 Kademeli Mobil Akış**:
+           - **ÜRÜNLER (Katalog)** sekmesinde ekranın tamamı ürün arama ve seçimine ayrıldı. Ödeme ve kasa butonları bu alandan kaldırılarak 250px'den fazla dikey alan kazanıldı. Sepette ürün varken altta sadece kompakt `[🛒 X Ürün • Tutar] -> [Sepet & Ödemeye Geç]` şeridi görünür.
+           - **SEPET & ÖDEME** sekmesinde sepet kalemleri, müşteri seçimi, ödeme yöntemi (Nakit, Kart, Havale, Veresiye) ve kasa seçimi tek bir doğal kaydırılabilir ödeme akışı haline getirildi.
+           - `pos-drawer.tsx` başlık padding'i `p-8` yerine `px-4 py-3 sm:px-6` yapılarak mobil dikey alan ferahlatıldı.
+        2. **"Ürün Yazılsın" (Manuel / Özel Ürün Girişi)**:
+           - Arama çubuğuna `[+ Özel Ürün]` butonu eklendi.
+           - Arama kutusuna bir şey yazıldığında anında beliren `[✍️ "${productSearch}" olarak özel ürün yaz & ekle]` önerisi ile tek tıkla Ürün Adı, Fiyat ve Adet belirleme penceresi açılır ve doğrudan sepete eklenir.
+        3. **"Seçildikten Sonra Ürün Fiyatı Değiştirilebilsin"**:
+           - Katalogdaki her ürün kartına kalem ikonlu fiyat butonu `[₺ 50 ✎]` eklendi; sepete eklemeden önce tek tıkla özel fiyat girilebiliyor.
+           - `CartItem` sepet görünümünde birim fiyat alanı büyütülerek kalem ikonu ve `inputMode="decimal"` ile mobil dokunmatik klavyeye tam uyumlu hale getirildi. Fiyat değiştiğinde toplam tutar anında dinamik olarak güncellenir.
+        4. **Mobil Stabilite**:
+           - `overscroll-contain` ve `min-h-0` ile klavye açılmalarında kaydırma kilitlenmesi ve taşmalar önlendi.
+           - Dokunmatik buton boyutları ergonomik standartlara getirildi.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve sıfır hata ile tamamlandı.
 
+- [x] 2026-10-15: Para Birimi (TL / USD) Hesaplama Düzeltmesi ve Dinamik Satış Para Birimi Seçimi:
+    - **Dosyalar**: `src/components/pos/pos-compact.tsx`, `src/components/pos/pos-interface.tsx`, `src/components/pos/parts/cart-item.tsx`, `JOURNAL.md`.
+    - **Neden**: Kullanıcı 1$'lık ürün eklediğinde sepete 49$ ekleniyordu (dolar kuru ile TL fiyatının birbirine karışması). Ayrıca ürünlerin sistem varsayılan para birimine göre listelenmesi ve kullanıcının dilediğinde TL veya USD seçerek satışı tamamlayabilmesi talep edildi.
+    - **Kök Neden**: `addToCart` fonksiyonunda ürünün TL satış fiyatı (`sellPrice: 49.18`) ile USD fiyatı (`sellPriceUsd: 1.00`) işlenirken, `finalPrice` öncelikle `product.sellPrice` üzerinden (49.18) alınıyordu; ardından sistem para birimi USD olduğunda `sellPriceUsd = finalPrice` (49.18) olarak sepet nesnesine yazılıyordu. Bu durum 1$'lık ürünün sepette 49.18$ olarak hesaplanmasına neden oluyordu. Benzer şekilde `handleCheckout` aşamasında da mükerrer kur çarpımları yaşanıyordu.
+    - **Yapılanlar**:
+        1. **Dinamik Satış Para Birimi (`saleCurrency`)**: Mağazanın `defaultCurrency` ayarına duyarlı başlatılan ve hem mobil hem masaüstü başlıklarına eklenen `[ ₺ TL | $ USD ]` canlı seçici.
+        2. **Kusursuz Ürün Fiyat Gösterimi (`getProductDisplayPrice` & `getProductEquivalentDisplay`)**: USD modunda ürünün doğrudan `sellPriceUsd` değeri (1.00$) baz alınır; eşdeğer TL fiyatı parantez içinde gösterilir. TL modunda `sellPrice` baz alınır; eşdeğer USD fiyatı parantez içinde gösterilir. 1$'lık ürün sepete tam 1.00$ olarak eklenir.
+        3. **Tek Tıkla Sepet Para Birimi Dönüştürme (`toggleSaleCurrency`)**: Kullanıcı satış esnasında TL <-> USD butonuna bastığında, sepetteki tüm ürünlerin birim fiyatları ve toplamları kur oranına göre anında dönüştürülür.
+        4. **Checkout ve Satış Kaydı Entegrasyonu**: Satış tamamlanırken seçilen `saleCurrency`, `currency` parametresi olarak backend'e gönderilir.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve sıfır hata ile tamamlandı.
 
+- [x] 2026-10-15: Hızlı Satış (POS Drawer) Başlık Alanı Hizalama ve Sepet İkonu Entegrasyonu:
+    - **Dosyalar**: `src/components/navbar/pos-drawer.tsx`, `JOURNAL.md`.
+    - **Neden**: Mobilde hızlı satış modal/drawer başlığında boşluk oluşuyordu, başlık ve alt açıklama metinleri farklı hizalanıyordu ve görsel simge eksikti.
+    - **Yapılanlar**:
+        1. Başlığın sol tarafına modern, temaya uyumlu `ShoppingCart` sepet ikonu ve rozet kutusu eklendi.
+        2. `SheetHeader` için varsayılan `text-center` iptal edilerek başlık ("Hızlı Satış") ve altındaki açıklama ("Sık kullanılan ürünler ve hızlı sepet yönetimi") tam sol hizada (`text-left`) birebir eşit dikey hizada hizalandı.
+        3. Sağ üstteki kapatma (X) butonuyla çakışmayı önlemek için `pr-8` güvenli alan sağlandı.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve sıfır hata ile tamamlandı.
 
+- [x] 2026-10-15: Satış Arşivi, Grafikler ve Raporlar Sayfası Finansal Kokpit (Executive Cockpit) Dönüşümü:
+    - **Dosyalar**: `src/lib/actions/activity-actions.ts`, `src/components/satis/sales-history-report-panel.tsx`, `src/components/satis/sales-history-client.tsx`, `JOURNAL.md`.
+    - **Neden**: Kullanıcı satış arşivi ve grafikler sayfasının üst düzey bir finansal yönetim kokpitine dönüştürülmesini talep etti:
+        1. Tam ay ile devam eden mevcut ayın (örneğin ayın 15'i) kıyaslanmasının yanıltıcılığını önleyen gerçek **Time-to-Date (Eşdeğer Gün)** karşılaştırması (örn. 1-15 Ekim vs 1-15 Eylül).
+        2. Dinamik **"Akıllı Finansal Öngörüler & Biliyor muydunuz?"** bilgi paneli (en karlı gün, lider kategori payı, ortalama sepet büyüklüğü, veresiye risk analizi).
+        3. Grafikteki herhangi bir veri noktasına (gün, bar, ürün, kategori, ödeme kanalı) dokunulduğunda akıcı şekilde açılan **etkileşimli detay açılımı (Drilldown Modal & Fiş İnceleme)** ve işlem listesine doğrudan geçiş.
+        4. Uygulama geneliyle tam uyumlu, mobilde ferah ve dokunmatik dostu üst bar (Excel, Gün Sonu PDF, hızlı tarih çipleri).
+    - **Yapılanlar**:
+        1. **Gerçek Time-to-Date (TTD) Karşılaştırma Motoru (`getSalesHistoryReport`)**:
+           - Seçili takvim aralığının (örneğin 1-15 Ekim) önceki aylardaki tam karşılığı olan eşit günleri (`subMonths(1)` -> 1-15 Eylül, `subMonths(2)` -> 1-15 Ağustos) matematiksel olarak eşitlendi.
+           - `revenueVsPrevious`, `profitVsPrevious`, `saleCountVsPrevious`, `averageSaleVsPrevious` (ortalama sepet değişimi) ve `profitMarginDiff` (kâr marjı puan farkı) hesaplandı.
+           - Kullanıcı dilerse `[⏱️ TTD: Eşdeğer Gün / Sürekli Aralık]` butonuyla kıyaslama modunu tek tıkla değiştirebilir.
+        2. **Akıllı Öngörüler & "Biliyor muydunuz?" Paneli**:
+           - En karlı/hareketli gün tespiti (`bestDay` - örn. "Pazartesi, 12 Ekim 2026: ₺... ciro").
+           - Lider kategori gelir payı (`%... pay`).
+           - Sepet büyüklüğü değişimi (`%... artış/düşüş`).
+           - Veresiye ve nakit akış sağlık oranı (`%... nakit/kart, %... veresiye`).
+        3. **Etkileşimli Grafikler ve Satış Açılım Modalı (`OperationDrilldownModal`)**:
+           - Günlük Akış (AreaChart) üzerindeki herhangi bir güne veya altındaki dokunmatik gün çiplerine tıklandığında, o günün tüm satışlarını listeyen akıcı modal açılır.
+           - Aralık Karşılaştırması bar grafiğine, ödeme dilimlerine, ürünlere veya kategorilere tıklandığında anında ilgili işlemler listelenir.
+           - Modal içerisinden tek tıkla **Fiş Yazdırma** ve **"Tümünü İşlem Listesinde İncele ➔"** ile ana listeye filtrelenmiş aktarım sağlanır.
+        4. **Mobil & Masaüstü Filtre Strip'i**:
+           - Hızlı çipler eklendi: `[Bugün]`, `[Dün]`, `[Bu Hafta]`, `[🎯 Ay Başından Bugüne (MTD)]`, `[🔄 Geçen Ay Eşdeğer Gün]`, `[Geçen Ay (Tam)]`.
+           - `[Excel'e Aktar]` ve `[Gün Sonu PDF]` butonları responsive üst bara entegre edildi.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.

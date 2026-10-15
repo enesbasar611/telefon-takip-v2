@@ -55,26 +55,26 @@ export function FinanceDashboard({ summary }: { summary: any }) {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-2.5 sm:gap-6 grid-cols-2 md:grid-cols-2 xl:grid-cols-5">
                 {cards.map((stat, i) => (
                     <Card 
                         key={i} 
                         onClick={() => handleCardClick(stat.label)}
-                        className={`border-zinc-200 dark:border-zinc-800 shadow-sm group overflow-hidden relative bg-card/50 backdrop-blur-sm rounded-[2.5rem] ${stat.label === "BUGÜNKÜ GELİR" ? "cursor-pointer hover:border-emerald-500/30 transition-all" : ""}`}
+                        className={`border-zinc-200 dark:border-zinc-800 shadow-sm group overflow-hidden relative bg-card/50 backdrop-blur-sm rounded-xl sm:rounded-[2.5rem] ${stat.label === "BUGÜNKÜ GELİR" ? "cursor-pointer hover:border-emerald-500/30 transition-all" : ""} ${i === 4 ? "col-span-2 xl:col-span-1" : ""}`}
                     >
                         <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 opacity-[0.03] rounded-full bg-foreground group-hover:opacity-[0.06] transition-opacity" />
-                        <CardContent className="p-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} border border-current/10`}>
-                                    <stat.icon className="h-6 w-6" />
+                        <CardContent className="p-3.5 sm:p-8">
+                            <div className="flex items-center justify-between mb-2 sm:mb-4">
+                                <div className={`p-2 sm:p-3 rounded-lg sm:rounded-2xl ${stat.bg} ${stat.color} border border-current/10 shrink-0`}>
+                                    <stat.icon className="h-4 w-4 sm:h-6 sm:w-6" />
                                 </div>
-                                <Badge variant="outline" className="text-[9px] tracking-widest uppercase px-3 py-1 bg-background rounded-full border-zinc-200 dark:border-zinc-800">GÜNCEL DURUM</Badge>
+                                <Badge variant="outline" className="text-[7px] sm:text-[9px] tracking-widest uppercase px-1.5 sm:px-3 py-0.5 sm:py-1 bg-background rounded-full border-zinc-200 dark:border-zinc-800">DURUM</Badge>
                             </div>
-                            <p className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase mb-1 opacity-60">{stat.label}</p>
-                            <div className="mt-1 flex items-baseline gap-2">
-                                <RevealFinancial amount={toDisplayAmount(stat.value)} prefix={displayPrefix} className="text-4xl tracking-tighter" />
+                            <p className="text-[8px] sm:text-[10px] text-muted-foreground tracking-[0.14em] sm:tracking-[0.2em] uppercase mb-1 opacity-60 truncate">{stat.label}</p>
+                            <div className="mt-1 flex items-baseline gap-1 sm:gap-2">
+                                <RevealFinancial amount={toDisplayAmount(stat.value)} prefix={displayPrefix} className="text-lg sm:text-4xl tracking-tighter" />
                             </div>
-                            <p className="text-[11px] text-muted-foreground mt-4 leading-relaxed opacity-80">{stat.description}</p>
+                            <p className="text-[9px] sm:text-[11px] text-muted-foreground mt-2 sm:mt-4 leading-tight sm:leading-relaxed opacity-80 line-clamp-1 sm:line-clamp-none">{stat.description}</p>
                         </CardContent>
                     </Card>
                 ))}

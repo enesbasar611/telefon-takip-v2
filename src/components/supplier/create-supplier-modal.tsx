@@ -371,7 +371,7 @@ export function CreateSupplierModal() {
           </div>
 
           <div className="p-4 sm:px-6 sm:py-4 border-t border-border/50 bg-background flex items-center justify-between shrink-0">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="text-muted-foreground hover:text-foreground h-11 px-6 rounded-xl hover:bg-accent/5">
+            <Button type="button" variant="cancel" onClick={() => setOpen(false)} disabled={isPending} className="h-11 px-6 rounded-xl">
               İptal
             </Button>
             <Button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 gap-2 transition-all">

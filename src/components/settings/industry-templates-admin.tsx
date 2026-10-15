@@ -279,7 +279,7 @@ export function IndustryTemplatesAdmin({ initialTemplates }: { initialTemplates?
                                                 </div>
 
                                                 <div className="flex gap-3 pt-6 border-t border-white/5">
-                                                    <Button variant="ghost" onClick={cancelEdit} className="h-11 px-8 rounded-xl">İptal</Button>
+                                                    <Button variant="cancel" onClick={cancelEdit} className="h-11 px-8 rounded-xl">İptal</Button>
                                                     <Button onClick={() => saveEdit(t.id)} disabled={saving} className="h-11 px-10 rounded-xl bg-white text-black hover:bg-gray-200">
                                                         {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><CheckCircle2 className="h-5 w-5 mr-3" />Kaydet</>}
                                                     </Button>

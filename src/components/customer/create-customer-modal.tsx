@@ -136,7 +136,7 @@ export function CreateCustomerModal({
 
           <div className="p-8 bg-card/50 border-t border-border/50">
             <DialogFooter className="gap-4">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl  text-muted-foreground">Vazgeç</Button>
+              <Button type="button" variant="cancel" onClick={() => setOpen(false)} disabled={isPending} className="h-14 px-8 rounded-2xl">Vazgeç</Button>
               <Button type="submit" disabled={isPending} className="h-14 px-10 bg-blue-600 hover:bg-blue-500 text-white  text-sm rounded-2xl gap-3">
                 {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5" />}
                 Müşteriyi Kaydet

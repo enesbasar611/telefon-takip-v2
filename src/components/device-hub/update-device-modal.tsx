@@ -566,7 +566,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
           </div>
 
           <div className="p-5 md:p-8 border-t border-border/60 bg-card/10 flex flex-row gap-3">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="flex-1 h-12 md:h-14 rounded-xl md:rounded-2xl text-muted-foreground uppercase text-[11px] font-bold tracking-widest">Vazgeç</Button>
+            <Button type="button" variant="cancel" onClick={() => setOpen(false)} className="flex-1 h-12 md:h-14 rounded-xl md:rounded-2xl uppercase text-[11px] font-bold tracking-widest">Vazgeç</Button>
             <Button disabled={isPending} type="submit" className="flex-[2] h-12 md:h-14 rounded-xl md:rounded-2xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 gap-2 uppercase text-[11px] font-bold tracking-widest transition-all active:scale-95">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               KAYDET

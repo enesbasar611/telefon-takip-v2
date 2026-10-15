@@ -263,7 +263,7 @@ export function ModulesTab({ shop }: { shop: any }) {
                     </div>
                     <div className="flex gap-2">
                         <Button
-                            variant="ghost"
+                            variant="cancel"
                             size="sm"
                             onClick={() => {
                                 const current = shop?.enabledModules?.length ? shop.enabledModules : recommended;

@@ -272,7 +272,7 @@ export function WarrantySearchClient() {
                     </div>
 
                     <DialogFooter className="p-4 border-t border-border/20 bg-muted/10 pr-6 pb-6">
-                        <Button variant="ghost" className="rounded-xl " onClick={() => setIsModalOpen(false)}>İptal</Button>
+                        <Button variant="cancel" className="rounded-xl" onClick={() => setIsModalOpen(false)}>İptal</Button>
                         <Button
                             onClick={handleSubmitReturn}
                             disabled={submitLoading || !selectedPart || !returnReason}

@@ -59,9 +59,9 @@ export const VeresiyeToolbar: React.FC<VeresiyeToolbarProps> = ({
                     />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 relative z-10">
+                <div className="flex items-center gap-2 sm:gap-3 relative z-10 w-full xl:w-auto overflow-x-auto no-scrollbar py-1 -my-1">
                     <Select value={debtFilter} onValueChange={onDebtFilterChange}>
-                        <SelectTrigger className="h-12 w-[160px] bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
+                        <SelectTrigger className="h-11 sm:h-12 w-[145px] sm:w-[160px] shrink-0 bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
                             <SelectValue placeholder="Borç Filtresi" />
                         </SelectTrigger>
                         <SelectContent>
@@ -72,7 +72,7 @@ export const VeresiyeToolbar: React.FC<VeresiyeToolbarProps> = ({
                     </Select>
 
                     <Select value={sortOrder} onValueChange={onSortOrderChange}>
-                        <SelectTrigger className="h-12 w-[160px] bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
+                        <SelectTrigger className="h-11 sm:h-12 w-[145px] sm:w-[160px] shrink-0 bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
                             <SelectValue placeholder="Sıralama" />
                         </SelectTrigger>
                         <SelectContent>
@@ -81,13 +81,13 @@ export const VeresiyeToolbar: React.FC<VeresiyeToolbarProps> = ({
                         </SelectContent>
                     </Select>
 
-                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
+                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border shrink-0">
                         {(['all', 'pending', 'overdue', 'tracking'] as const).map((s) => (
                             <button
                                 key={s}
                                 onClick={() => onFilterStatusChange(s)}
                                 className={cn(
-                                    "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all",
+                                    "px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all whitespace-nowrap",
                                     filterStatus === s
                                         ? "bg-background dark:bg-zinc-800 text-indigo-600 shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
@@ -98,7 +98,7 @@ export const VeresiyeToolbar: React.FC<VeresiyeToolbarProps> = ({
                         ))}
                     </div>
 
-                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border">
+                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border shrink-0">
                         <button
                             onClick={() => onViewModeChange('list')}
                             className={cn(

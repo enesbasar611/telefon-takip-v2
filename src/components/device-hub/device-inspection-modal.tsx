@@ -128,7 +128,7 @@ export function DeviceInspectionModal({
                 <span className="text-[9px]  text-muted-foreground/80">Sistem Onayına Hazır</span>
            </div>
            <div className="flex items-center gap-3">
-                <Button variant="ghost" onClick={() => setOpen(false)} className="text-[10px]  text-muted-foreground/80 hover:text-white">İptal</Button>
+                <Button variant="cancel" onClick={() => setOpen(false)} className="text-[10px]">İptal</Button>
                 <Button onClick={handleSave} disabled={isPending} className="bg-blue-600 hover:bg-blue-500 text-white  px-8 h-12 rounded-2xl">
                     {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "RAPORU KAYDET"}
                 </Button>

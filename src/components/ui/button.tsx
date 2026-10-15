@@ -18,6 +18,9 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/10",
         ghost: "hover:bg-muted text-foreground border border-transparent hover:border-border/50",
         link: "text-primary underline-offset-4 hover:underline",
+        /** Unified İptal / Vazgeç / Geri Dön style — soft destructive tone, consistent across the app */
+        cancel:
+          "border border-rose-500/30 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20 dark:hover:text-rose-200 dark:hover:border-rose-400/45 shadow-sm shadow-rose-500/5 active:scale-[0.98] transition-all focus-visible:ring-rose-500/60",
       },
       size: {
         default: "h-12 px-6 py-2 rounded-xl ",

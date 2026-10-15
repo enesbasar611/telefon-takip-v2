@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getServiceTickets } from "@/lib/actions/service-actions";
 import { getWarrantyStats } from "@/lib/actions/warranty-actions";
@@ -51,6 +51,15 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
     });
 
     const [activeTab, setActiveTab] = useState("active");
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const tabParam = new URLSearchParams(window.location.search).get("tab");
+            if (tabParam && ["active", "ready", "delivered", "cancelled", "warranty"].includes(tabParam)) {
+                setActiveTab(tabParam);
+            }
+        }
+    }, []);
 
     const serviceLabel = getIndustryLabel(shop, "serviceTicket");
     const assetLabel = getIndustryLabel(shop, "customerAsset");

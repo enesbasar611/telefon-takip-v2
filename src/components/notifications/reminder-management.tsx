@@ -120,9 +120,9 @@ export function ReminderManagement({ onBack }: ReminderManagementProps) {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <Button
-                    variant="ghost"
+                    variant="cancel"
                     onClick={onBack}
-                    className="h-9 px-3 rounded-xl bg-white/5 border border-border hover:bg-white/10  text-[11px] gap-2 transition-all text-muted-foreground hover:text-white"
+                    className="h-9 px-3 rounded-xl border border-border text-[11px] gap-2 transition-all"
                 >
                     <ChevronLeft className="h-4 w-4" /> Geri Dön
                 </Button>

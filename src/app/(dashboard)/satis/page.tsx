@@ -17,6 +17,7 @@ function POSData({ searchParams }: { searchParams: { saleId?: string } }) {
   return (
     <>
       <PageHeader
+        className="hidden md:flex"
         title="Hızlı Satış (POS)"
         description="Anlık perakende satış ve sepet yönetimi."
         icon={ShoppingCart}
@@ -41,7 +42,7 @@ function POSData({ searchParams }: { searchParams: { saleId?: string } }) {
         </div>
       )}
 
-      <div className="bg-white/[0.03] dark:bg-black/20 backdrop-blur-3xl shadow-2xl shadow-slate-200/40 dark:shadow-black/40 rounded-[2rem] overflow-hidden border border-border/40 p-1">
+      <div className="w-full sm:bg-white/[0.03] sm:dark:bg-black/20 sm:backdrop-blur-3xl sm:shadow-2xl sm:rounded-[2rem] overflow-hidden sm:border sm:border-border/40 sm:p-1">
         <POSInterface
           initialSaleId={searchParams?.saleId}
         />
@@ -52,7 +53,7 @@ function POSData({ searchParams }: { searchParams: { saleId?: string } }) {
 
 export default function POSPage({ searchParams }: { searchParams: { saleId?: string } }) {
   return (
-    <div className="flex flex-col gap-10 pb-12 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-2 sm:gap-10 pb-4 sm:pb-12 animate-in fade-in duration-500">
       <POSData searchParams={searchParams} />
     </div>
   );

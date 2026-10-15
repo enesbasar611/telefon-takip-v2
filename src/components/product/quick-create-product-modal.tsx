@@ -257,7 +257,7 @@ export function QuickCreateProductModal({
                     <div className="flex gap-3 pt-2">
                         <Button
                             type="button"
-                            variant="ghost"
+                            variant="cancel"
                             onClick={() => onOpenChange(false)}
                             className="flex-1 h-11 rounded-xl"
                             disabled={isPending}
