@@ -2,12 +2,13 @@
 
 ## Genel Proje Durumu
 
-- Tarih: 2026-08-27
-- Mimari durum: Proje V2 mimarisinde ilerliyor. EDM Bilişim e-Fatura REST API tam entegrasyonu, POS senkronizasyonu, personel finansı ve veresiye alacak hızlı aksiyonları aktif.
-- Graphify durumu: `graphify-out/GRAPH_REPORT.md` güncellendi. Rapor `48e1a99b` commitinden üretildi.
-- Graphify ozeti: 519 dosya, 2918 node, 9790 edge, 205 community. En kritik ortak bağlantı noktaları `getShopId()`, `cn()`, `Button`, `prisma`.
-- Tip durumu: `npx tsc --noEmit` son kontrolde basarili calisti.
-- Calisma agaci notu: Graphify raporu ve veresiye alacak hızlı ekleme modal buton entegrasyonları senkronize edildi (`48e1a99b`).
+- Tarih: 2026-10-16
+- Mimari durum: Proje V2 mimarisinde ilerliyor. EDM Bilişim e-Fatura REST API tam entegrasyonu, POS senkronizasyonu, personel finansı, finansal kokpit, işlem arşivi ve Veresiye Terminali optimizasyonu aktif.
+- Graphify durumu: `graphify-out/GRAPH_REPORT.md` güncellendi (2026-10-16).
+- Graphify ozeti: 533 dosya, 2624 node, 5851 edge, 76 community (170 küme). `graph.json`, `graph.html` ve `GRAPH_REPORT.md` tamamen yenilendi.
+- Tip durumu: `npx tsc --noEmit` son kontrolde basarili calisti (0 hata).
+- Calisma agaci notu: Veresiye terminali hesaplama tutarlılığı, WhatsApp/Fiş/Excel dökümleri ve ferah mobil kart arayüzü tamamlandı.
+- Protokol notu: Yapılan tüm değişikliklerin her aşamada `JOURNAL.md` içerisine kaydedilmesi kuralı aktif olarak uygulanmaktadır.
 
 ## To-Do List (Backlog)
 
@@ -40,6 +41,27 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-16: `/veresiye` (Veresiye & Cari Takip Terminali) Kapsamlı Stabilizasyon ve Mobil UX Revizyonu:
+  - **Finansal Tutarlılık ve Yuvarlama Senkronizasyonu:**
+    - Fiş çıktısı (`debt-receipt-modal.tsx`), PDF dökümü (`debt-statement-modern.tsx`), ekran kartları ve WhatsApp mesajları arasındaki yuvarlama farkları giderildi (`Math.ceil` yerine 2-ondalık tam para formatı `formatDebtMoney` ve `formatCurrency` ile unifiye edildi).
+    - USD/TL çapraz kurlu tahsilat ve borçlarda ekranda görünen toplam portföy tutarı ile fiş ve WhatsApp dökümündeki toplamlar 1'e 1 eşitlendi.
+  - **WhatsApp Ekstre ve Mesajlaşma Standardizasyonu:**
+    - `buildUnifiedWhatsAppStatement` modülü geliştirildi (`src/lib/debt-statement-calculator.ts`). Açık borç kalemleri (kısmi ödeme yapılmışsa `(Kalan: ₺X)` detayıyla), son tahsilatlar, varsa müşterinin emanet/avans bakiyesi (`₺` ve `$`), ayrı TL ve USD toplamları ile varsayılan para biriminde net portföy tutarı tek standart mesaj formatında birleştirildi.
+    - Toplu hatırlatma ve tekli mesajlarda telefon formatlama hatası (başında 0 olan numaraların `wa.me/900...` olarak çift sıfırlı gitmesi) `formatWhatsAppLink` ile çözüldü.
+  - **Mobil UX ve Nefes Alan ("Ferah") Görünüm:**
+    - `VeresiyeCustomerCard` üzerinden dış `AddDebtModal` sarmalaması kaldırılarak karta tıklandığında/kaydırıldığında istem dışı açılan modal hatası engellendi; kart tıklaması müşteri detayına bağlandı, "Yeni Borç Ekle" işlem menüsüne (`...`) taşındı.
+    - Mobil kart tasarımı 3 temiz satıra indirgendi: 1. satır (Checkbox, renkli inisiyal avatar, müşteri adı, risk rozetleri, net bakiye), 2. satır (Tıklanabilir `tel:` linki, tarih, borç adedi), 3. satır (Hızlı `[Tahsilat]` emerald butonu, `[WhatsApp]`, `[Fiş / PDF]` ve `[...]` işlem menüsü).
+    - `VeresiyeAnalysisSide` (Risk & Yaşlandırma) mobilde müşteri listesini yüzlerce piksel aşağı itmemesi için mobilde `[📊 Risk & Yaşlandırma Analizini Göster/Gizle]` açılır butonuna bağlandı; masaüstünde 3 sütunlu sidebar olarak korunurken mobilde varsayılan olarak gizlendi.
+    - Ana tablo kartının mobildeki `rounded-[3rem]` (48px) aşırı köşe yuvarlaması ve boşluk kaybı `rounded-2xl sm:rounded-3xl` yapılarak ekran alanı ferahlatıldı.
+  - **Excel Çıktısı 2-Sayfalı Yapıya Dönüştürüldü:**
+    - 50 müşteride 50 ayrı sheet oluşturan hantal Excel yapısı kaldırılarak 2 sayfalı kurumsal standarda geçirildi:
+      1. `Musteri_Icmal_Listesi`: Müşteri bazında TL, USD, Emanet bakiye, genel toplam eşdeğeri, açık borç adedi, risk durumu ve en altta otomatik GENEL TOPLAM satırı.
+      2. `Detayli_Hareketler`: Tüm müşterilerin kalem kalem borç ve tahsilat hareketleri, işlem tutarları, kalanlar, para birimleri ve vadeleri.
+  - **Tip Kontrolü:** `npx tsc --noEmit` hatasız (0 error).
+- [x] 2026-10-16: graphify-out kod haritasi ve raporlari guncellendi:
+  - 533 dosya AST analiziyle bastan tarandi.
+  - Guncellenen ciktilar: graphify-out/graph.json, graphify-out/graph.html, graphify-out/GRAPH_REPORT.md.
+  - Guncel metrikler: 2624 node, 5851 edge, 76 community (170 kume), %81 extracted, %19 inferred.
 - [x] 2026-10-16: `/satis/gecmis` İşlem Arşivi filtre butonları ve tür rozetleri renk kodlaması tamamlandı:
   - Satışlar, Giderler, Veresiyeler, Tahsilatlar butonları tıklandığında yalnızca ilgili işlem türünü getirecek şekilde filtreleme tam ayrıştırıldı (`typeFilter` Prisma `where` koşulları `category`, `paymentMethod` ve `type` ile mutlak izole edildi).
   - Renk kodlaması uygulandı:

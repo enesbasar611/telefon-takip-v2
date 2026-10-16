@@ -61,7 +61,7 @@ const ReceiptContent = ({
     const currentTotals = getCurrentDebtTotals(debts);
     const totalTRY = currentTotals.try;
     const totalUSD = currentTotals.usd;
-    const portfolioTotalTRY = Math.ceil(totalTRY + (totalUSD * currentUsdRate));
+    const portfolioTotalTRY = Math.round(totalTRY + (totalUSD * currentUsdRate));
     const portfolioTotalUSD = (totalTRY / currentUsdRate) + totalUSD;
 
     const unpaid = debts.filter((d: any) => (

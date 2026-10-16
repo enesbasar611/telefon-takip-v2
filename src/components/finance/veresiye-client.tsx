@@ -37,7 +37,8 @@ import {
     Printer,
     ArrowLeftRight,
     Eye,
-    Check
+    Check,
+    BarChart3
 } from "lucide-react";
 
 import { VeresiyeToolbar } from './veresiye/veresiye-toolbar';
@@ -107,11 +108,12 @@ import { AddReturnModal } from "@/components/stock/add-return-modal";
 import { DebtReceiptModal } from "./debt-receipt-modal";
 import { RefundBalanceModal } from "./veresiye/refund-balance-modal";
 import { ReconciliationModal } from "./veresiye/reconciliation-modal";
-import { WHATSAPP_TEMPLATES, replacePlaceholders } from "@/lib/utils/notifications";
+import { WHATSAPP_TEMPLATES, replacePlaceholders, formatWhatsAppLink } from "@/lib/utils/notifications";
 import { buildReturnWhatsAppSummaryMessage } from "@/lib/returns/return-whatsapp-message";
 import {
     buildDebtStatementEntries,
-    getStatementItemTitle
+    getStatementItemTitle,
+    buildUnifiedWhatsAppStatement
 } from "@/lib/debt-statement-calculator";
 import { calculatePaymentAllocations, PaymentAllocation } from "@/lib/finance/payment-allocator";
 import { VERESIYE_LIVE_QUERY_OPTIONS } from "@/lib/finance/veresiye-query-options";
@@ -355,6 +357,7 @@ export function VeresiyeClient({
     // Bulk WhatsApp States
     const [bulkWhatsAppModalOpen, setBulkWhatsAppModalOpen] = useState(false);
     const [bulkCustomersToSend, setBulkCustomersToSend] = useState<any[]>([]);
+    const [showMobileAnalysis, setShowMobileAnalysis] = useState(false);
 
     const filteredAccountsCount = (type: string) => accounts.filter((acc: any) => acc.type === type).length;
 
@@ -1190,113 +1193,24 @@ export function VeresiyeClient({
         const toastId = toast.loading("Bilgiler hazırlanıyor...");
 
         try {
-            const res = await getCustomerStatement(customer.customerId);
+            const res = await getCustomerStatement(customer.customerId || customer.id);
 
             if (!res.success) {
                 toast.error("Hata: " + res.error, { id: toastId });
                 return;
             }
 
-            let message = `*${customer.name} - Hesap Özeti*\n\n`;
-
-            const unpaid = (res.debts || []).filter((d: any) => !d.isPaid);
-            const earliestDate = unpaid.length > 0
-                ? new Date(unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
-                : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-            const relevantTransactions = (res.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
-
-            const combined = [
-                ...unpaid.map((d: any) => ({
-                    date: new Date(d.createdAt),
-                    type: 'DEBT',
-                    currency: d.currency || 'TRY',
-                    amount: Number(d.amount),
-                    notes: d.notes || 'Hizmet/Ürün'
-                })),
-                ...relevantTransactions.map((t: any) => ({
-                    date: new Date(t.createdAt),
-                    type: 'PAYMENT',
-                    currency: t.currency || 'TRY',
-                    amount: Number(t.amount),
-                    notes: t.description || 'Tahsilat'
-                }))
-            ].sort((a, b) => a.date.getTime() - b.date.getTime());
-
-            // Group by date
-            const dateGroups: { [key: string]: any[] } = {};
-            const orderedUniqueDates: string[] = [];
-
-            combined.forEach(item => {
-                const dateKey = (() => {
-                    const d = new Date(item.date);
-                    return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }).toUpperCase() : "-";
-                })();
-                if (!dateGroups[dateKey]) {
-                    dateGroups[dateKey] = [];
-                    orderedUniqueDates.push(dateKey);
-                }
-                dateGroups[dateKey].push(item);
+            const message = buildUnifiedWhatsAppStatement({
+                customerName: customer.name,
+                debts: res.debts || [],
+                transactions: res.transactions || [],
+                usdRate,
+                defaultCurrency,
+                balanceTRY: Number(customer.balance || 0),
+                balanceUSD: Number(customer.balanceUsd || 0),
+                includePaid: false,
+                shopName: shop?.name || "Başar Teknik"
             });
-
-            orderedUniqueDates.forEach(dateKey => {
-                message += `*${dateKey}*\n`;
-                dateGroups[dateKey].forEach(item => {
-                    const isUSD = item.currency === 'USD';
-                    const symbol = isUSD ? '$' : '₺';
-                    const equivSymbol = isUSD ? '₺' : '$';
-
-                    const originalAmt = Math.round(item.amount);
-                    const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                    const equivFormatted = isUSD ? Math.round(equivalentAmt).toLocaleString('tr-TR') : equivalentAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-                    const isDefaultUSD = defaultCurrency === 'USD';
-
-                    if (item.type === 'DEBT') {
-                        if (isDefaultUSD) {
-                            const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
-                            const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
-                            message += `• ${item.notes}: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
-                        } else {
-                            const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
-                            const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
-                            message += `• ${item.notes}: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
-                        }
-                    } else {
-                        if (isDefaultUSD) {
-                            const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
-                            const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
-                            message += `• 🟢 Ödeme: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
-                        } else {
-                            const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
-                            const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
-                            message += `• 🟢 Ödeme: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
-                        }
-                    }
-                });
-                message += `\n`;
-            });
-
-            message += `*🔴 TOPLAM GÜNCEL BORÇ*\n`;
-            const totalTRY = customer.totalRemainingTRY || 0;
-            const totalUSD = customer.totalRemainingUSD || 0;
-            const isDefaultUSD = defaultCurrency === 'USD';
-
-            if (isDefaultUSD) {
-                const combinedTotalUSD = totalUSD + (totalTRY / usdRate);
-                const combinedTotalTRY = (totalUSD * usdRate) + totalTRY;
-                message += `*$${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')})*\n`;
-            } else {
-                const combinedTotalTRY = totalTRY + (totalUSD * usdRate);
-                const combinedTotalUSD = (totalTRY / usdRate) + totalUSD;
-                message += `*₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')} ($${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})*\n`;
-            }
-
-            if (totalTRY <= 0 && totalUSD <= 0) {
-                message += `✅ Bakiyeniz kapanmıştır. Teşekkürler.\n`;
-            } else {
-                message += `\n_İyi çalışmalar._`;
-            }
 
             setWhatsappMessageContent(message);
             setWhatsappModalOpen(true);
@@ -1354,98 +1268,25 @@ export function VeresiyeClient({
 
         try {
             for (const customer of bulkCustomersToSend) {
-                const res = await getCustomerStatement(customer.customerId);
+                const res = await getCustomerStatement(customer.customerId || customer.id);
                 if (!res.success) continue;
 
-                let message = `*${customer.name} - Hesap Özeti*\n\n`;
-
-                const unpaid = (res.debts || []).filter((d: any) => !d.isPaid);
-                const earliestDate = unpaid.length > 0
-                    ? new Date(unpaid.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
-                    : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-                const relevantTransactions = (res.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
-
-                const combined = [
-                    ...unpaid.map((d: any) => ({
-                        date: new Date(d.createdAt),
-                        type: 'DEBT',
-                        currency: d.currency || 'TRY',
-                        amount: Number(d.amount),
-                        notes: d.notes || 'Hizmet/Ürün'
-                    })),
-                    ...relevantTransactions.map((t: any) => ({
-                        date: new Date(t.createdAt),
-                        type: 'PAYMENT',
-                        currency: t.currency || 'TRY',
-                        amount: Number(t.amount),
-                        notes: t.description || 'Tahsilat'
-                    }))
-                ].sort((a, b) => a.date.getTime() - b.date.getTime());
-
-                // Group by date
-                const dateGroups: { [key: string]: any[] } = {};
-                const orderedUniqueDates: string[] = [];
-
-                combined.forEach(item => {
-                    const dateKey = (() => {
-                        const d = new Date(item.date);
-                        return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }).toUpperCase() : "-";
-                    })();
-                    if (!dateGroups[dateKey]) {
-                        dateGroups[dateKey] = [];
-                        orderedUniqueDates.push(dateKey);
-                    }
-                    dateGroups[dateKey].push(item);
+                const message = buildUnifiedWhatsAppStatement({
+                    customerName: customer.name,
+                    debts: res.debts || [],
+                    transactions: res.transactions || [],
+                    usdRate,
+                    defaultCurrency,
+                    balanceTRY: Number(customer.balance || 0),
+                    balanceUSD: Number(customer.balanceUsd || 0),
+                    includePaid: false,
+                    shopName: shop?.name || "Başar Teknik"
                 });
 
-                orderedUniqueDates.forEach(dateKey => {
-                    message += `*${dateKey}*\n`;
-                    dateGroups[dateKey].forEach(item => {
-                        const isUSD = item.currency === 'USD';
-                        const symbol = isUSD ? '$' : '₺';
-                        const equivSymbol = isUSD ? '₺' : '$';
-
-                        const originalAmt = Math.round(item.amount);
-                        const equivalentAmt = isUSD ? (originalAmt * usdRate) : (originalAmt / usdRate);
-                        const equivFormatted = Math.round(equivalentAmt).toLocaleString('tr-TR');
-
-                        if (item.type === 'DEBT') {
-                            message += `• ${item.notes}: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
-                        } else {
-                            message += `• 🟢 Ödeme: ${symbol}${originalAmt.toLocaleString('tr-TR')} (~${equivSymbol}${equivFormatted})\n`;
-                        }
-                    });
-                    message += `\n`;
-                });
-
-                message += `*🔴 Toplam Güncel Borç:*\n`;
-                const totalTRY = customer.totalRemainingTRY || 0;
-                const totalUSD = customer.totalRemainingUSD || 0;
-
-                if (totalTRY > 0) {
-                    const equivUSD = totalTRY / usdRate;
-                    message += `₺${totalTRY.toLocaleString('tr-TR')} (~$${Math.round(equivUSD).toLocaleString('tr-TR')})\n`;
-                }
-                if (totalUSD > 0) {
-                    const equivTRY = totalUSD * usdRate;
-                    message += `$${totalUSD.toLocaleString('tr-TR')} (~₺${Math.round(equivTRY).toLocaleString('tr-TR')})\n`;
-                }
-
-                if (totalTRY <= 0 && totalUSD <= 0) {
-                    message += `✅ Bakiyeniz kapanmıştır. Teşekkürler.\n`;
-                } else {
-                    const combinedTotal = totalTRY + (totalUSD * usdRate);
-                    message += `--------------------\n`;
-                    message += `*Genel Toplam:* ₺${Math.round(combinedTotal).toLocaleString('tr-TR')}\n`;
-                    message += `\n_İyi çalışmalar._`;
-                }
-
-                const encodedMsg = encodeURIComponent(message);
-                const url = `https://wa.me/90${(customer.phone ?? "").replace(/\D/g, '')}?text=${encodedMsg}`;
+                const url = formatWhatsAppLink(customer.phone ?? "", message);
                 window.open(url, '_blank');
 
-                // Add a small delay so browser doesn't block popups completely
+                // Delay between tabs to prevent browser popup block
                 await new Promise(resolve => setTimeout(resolve, 600));
             }
             toast.success("Tüm mesaj pencereleri açıldı.", { id: toastId });
@@ -1600,20 +1441,156 @@ export function VeresiyeClient({
 
         const XLSX = await import("xlsx");
         const wb = XLSX.utils.book_new();
+        const currentUsdRate = rates?.usd || 1;
 
-        sections.forEach((section, index) => {
-            const ws = XLSX.utils.aoa_to_sheet(exportRowsForCustomer(section));
-            ws["!cols"] = [
-                { wch: 16 },
-                { wch: 42 },
-                { wch: 16 },
-                { wch: 16 },
-                { wch: 14 },
-                { wch: 14 },
-                { wch: 14 },
-            ];
-            XLSX.utils.book_append_sheet(wb, ws, safeSheetName(section.customer.name, index));
+        // 1. Müşteri İcmal Listesi (Summary Sheet)
+        const summaryHeaders = [
+            "Müşteri Adı",
+            "Telefon",
+            "Kalan Borç (TL)",
+            "Kalan Borç (USD)",
+            "Emanet / Bakiye (TL)",
+            "Emanet / Bakiye (USD)",
+            "Toplam Eşdeğer (TL)",
+            "Açık Borç Adedi",
+            "Risk Durumu",
+        ];
+
+        let totalRemainingTRY = 0;
+        let totalRemainingUSD = 0;
+        let totalBalanceTRY = 0;
+        let totalBalanceUSD = 0;
+        let totalEquivalentTRY = 0;
+        let totalOpenDebtsCount = 0;
+
+        const summaryRows: any[][] = [summaryHeaders];
+
+        sections.forEach(({ customer, debts }) => {
+            const remTRY = customer.totalRemainingTRY || 0;
+            const remUSD = customer.totalRemainingUSD || 0;
+            const balTRY = customer.balance || 0;
+            const balUSD = customer.balanceUsd || 0;
+            const eqTRY = remTRY + (remUSD * currentUsdRate);
+            const openDebts = (debts || []).filter((d: any) => !d.isPaid).length;
+
+            totalRemainingTRY += remTRY;
+            totalRemainingUSD += remUSD;
+            totalBalanceTRY += balTRY;
+            totalBalanceUSD += balUSD;
+            totalEquivalentTRY += eqTRY;
+            totalOpenDebtsCount += openDebts;
+
+            const isOverdue = (debts || []).some((d: any) => !d.isPaid && d.dueDate && new Date(d.dueDate) < new Date());
+            const hasRisk = (debts || []).some((d: any) => d.isTracking);
+
+            let status = "Güncel";
+            if (isOverdue) status = "Vadesi Geçmiş";
+            else if (hasRisk) status = "Riskli";
+            else if (remTRY <= 0 && remUSD <= 0) status = "Borcu Yok";
+
+            summaryRows.push([
+                customer.name,
+                customer.phone || "-",
+                Number(remTRY.toFixed(2)),
+                Number(remUSD.toFixed(2)),
+                Number(balTRY.toFixed(2)),
+                Number(balUSD.toFixed(2)),
+                Number(eqTRY.toFixed(2)),
+                openDebts,
+                status,
+            ]);
         });
+
+        // Add Grand Total Row
+        summaryRows.push([]);
+        summaryRows.push([
+            "GENEL TOPLAM",
+            `${sections.length} Müşteri`,
+            Number(totalRemainingTRY.toFixed(2)),
+            Number(totalRemainingUSD.toFixed(2)),
+            Number(totalBalanceTRY.toFixed(2)),
+            Number(totalBalanceUSD.toFixed(2)),
+            Number(totalEquivalentTRY.toFixed(2)),
+            totalOpenDebtsCount,
+            "-",
+        ]);
+
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+        wsSummary["!cols"] = [
+            { wch: 26 },
+            { wch: 16 },
+            { wch: 16 },
+            { wch: 16 },
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 20 },
+            { wch: 15 },
+            { wch: 16 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Musteri_Icmal_Listesi");
+
+        // 2. Detaylı Hareketler (Detailed Debts & Payments Sheet)
+        const detailHeaders = [
+            "Müşteri Adı",
+            "Telefon",
+            "Tarih",
+            "İşlem Türü",
+            "Açıklama / Ürün",
+            "Tutar",
+            "Para Birimi",
+            "Kalan Borç",
+            "Durum",
+            "Vade Tarihi",
+        ];
+
+        const detailRows: any[][] = [detailHeaders];
+
+        sections.forEach(({ customer, debts, payments }) => {
+            (debts || []).forEach((debt: any) => {
+                detailRows.push([
+                    customer.name,
+                    customer.phone || "-",
+                    safeExportDate(debt.createdAt),
+                    "BORÇ",
+                    debtExportTitle(debt),
+                    Number(Number(debt.amount || 0).toFixed(2)),
+                    debt.currency || "TRY",
+                    Number(getSafeDebtRemaining(debt).toFixed(2)),
+                    debt.isPaid ? "Ödendi" : "Açık",
+                    safeExportDate(debt.dueDate),
+                ]);
+            });
+
+            (payments || []).forEach((payment: any) => {
+                detailRows.push([
+                    customer.name,
+                    customer.phone || "-",
+                    safeExportDate(payment.createdAt || payment.date),
+                    "TAHSİLAT",
+                    paymentExportTitle(payment),
+                    Number(Number(payment.amount || 0).toFixed(2)),
+                    payment.currency || "TRY",
+                    0,
+                    "Tahsil Edildi",
+                    "-",
+                ]);
+            });
+        });
+
+        const wsDetail = XLSX.utils.aoa_to_sheet(detailRows);
+        wsDetail["!cols"] = [
+            { wch: 24 },
+            { wch: 15 },
+            { wch: 14 },
+            { wch: 12 },
+            { wch: 38 },
+            { wch: 14 },
+            { wch: 12 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 14 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsDetail, "Detayli_Hareketler");
 
         const suffix = selectedCustomerIds.length > 0 ? "Secili_Musteriler" : "Tum_Musteriler";
         XLSX.writeFile(wb, `Veresiye_${suffix}.xlsx`);
@@ -1727,16 +1704,33 @@ export function VeresiyeClient({
             </LayoutCustomizer>
 
             {/* --- Main Section --- */}
-            <div className={cn("grid grid-cols-1 gap-10", isAnalysisHidden ? "lg:grid-cols-1" : "lg:grid-cols-12")}>
+            <div className={cn("grid grid-cols-1 gap-6 lg:gap-10", isAnalysisHidden ? "lg:grid-cols-1" : "lg:grid-cols-12")}>
 
                 {/* Left Sidebar: Aging Analysis & Insights */}
-                <LayoutCustomizer sectionKey="veresiye_analysis" settings={settings} onUpdate={() => router.refresh()} className="lg:col-span-3">
-                    <VeresiyeAnalysisSide aging={aging} defaultCurrency={defaultCurrency} />
-                </LayoutCustomizer>
+                <div className={cn("lg:col-span-3", !showMobileAnalysis && "hidden lg:block")}>
+                    <LayoutCustomizer sectionKey="veresiye_analysis" settings={settings} onUpdate={() => router.refresh()}>
+                        <VeresiyeAnalysisSide aging={aging} defaultCurrency={defaultCurrency} />
+                    </LayoutCustomizer>
+                </div>
 
                 {/* Right: Premium Customer Table */}
                 <LayoutCustomizer sectionKey="veresiye_table" settings={settings} onUpdate={() => router.refresh()} className={cn(isAnalysisHidden ? "lg:col-span-12" : "lg:col-span-9")}>
-                    <div className="space-y-8">
+                    <div className="space-y-4 sm:space-y-6">
+                        {/* Mobile toggle for Risk & Aging Analysis */}
+                        <div className="flex lg:hidden justify-between items-center">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowMobileAnalysis((prev) => !prev)}
+                                className="w-full h-10 rounded-xl bg-card border-border/80 text-xs font-bold gap-2 text-muted-foreground hover:text-foreground"
+                            >
+                                <BarChart3 className="w-4 h-4 text-indigo-500" />
+                                <span>{showMobileAnalysis ? "Risk & Yaşlandırma Analizini Gizle" : "Risk & Yaşlandırma Analizini Göster"}</span>
+                                <ChevronDown className={cn("w-4 h-4 transition-transform", showMobileAnalysis && "rotate-180")} />
+                            </Button>
+                        </div>
+
                         <VeresiyeToolbar
                             searchTerm={searchTerm}
                             onSearchChange={setSearchTerm}
@@ -1750,7 +1744,7 @@ export function VeresiyeClient({
                             onViewModeChange={handleViewModeChange}
                         />
 
-                        <Card className="bg-muted/20 backdrop-blur-3xl rounded-[3rem] shadow-2xl overflow-hidden border border-border relative z-10 min-h-[600px]">
+                        <Card className="bg-muted/20 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-border relative z-10 min-h-[600px]">
                             <div className={cn("transition-all duration-500 flex flex-col h-full", isPending ? "opacity-30 blur-md grayscale pointer-events-none scale-[0.99]" : "opacity-100 blur-0 grayscale-0 scale-100")}>
                                 {aggregatedData.length > 0 && !isPending && (
                                     <div className={cn(
@@ -1999,81 +1993,17 @@ export function VeresiyeClient({
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
                                     const includePaidItems = await requestIncludePaidItemsInOutput();
-                                    let message = `*${historyCustomer?.name} - Hesap Özeti*\n\n`;
-	                                    const outputDebts = filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems);
-                                    const earliestDate = outputDebts.length > 0
-                                        ? new Date([...outputDebts].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt)
-                                        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-                                    const relevantTransactions = (statementData.transactions || []).filter((t: any) => new Date(t.createdAt) >= earliestDate);
-                                    const combined = [
-                                        ...outputDebts.map((d: any) => ({ date: new Date(d.createdAt), type: 'DEBT', currency: d.currency || 'TRY', amount: Number(d.amount), notes: d.notes || 'Hizmet/Ürün' })),
-                                        ...relevantTransactions.map((t: any) => ({ date: new Date(t.createdAt), type: 'PAYMENT', currency: t.currency || 'TRY', amount: Number(t.amount), notes: t.description || 'Tahsilat' }))
-                                    ].sort((a, b) => a.date.getTime() - b.date.getTime());
-                                    const dateGroups: { [key: string]: any[] } = {};
-                                    const orderedUniqueDates: string[] = [];
-                                    combined.forEach(item => {
-                                        const dateKey = (() => {
-                                            const d = new Date(item.date);
-                                            return !isNaN(d.getTime()) ? format(d, "dd MMM yyyy", { locale: tr }).toUpperCase() : "-";
-                                        })();
-                                        if (!dateGroups[dateKey]) { dateGroups[dateKey] = []; orderedUniqueDates.push(dateKey); }
-                                        dateGroups[dateKey].push(item);
+                                    const message = buildUnifiedWhatsAppStatement({
+                                        customerName: historyCustomer?.name || "Müşteri",
+                                        debts: statementData.debts || [],
+                                        transactions: statementData.transactions || [],
+                                        usdRate,
+                                        defaultCurrency,
+                                        balanceTRY: Number(historyCustomer?.balance || 0),
+                                        balanceUSD: Number(historyCustomer?.balanceUsd || 0),
+                                        includePaid: includePaidItems,
+                                        shopName: shop?.name || "Başar Teknik"
                                     });
-                                    orderedUniqueDates.forEach(dateKey => {
-                                        message += `*${dateKey}*\n`;
-                                        dateGroups[dateKey].forEach(item => {
-                                            const isUSD = item.currency === 'USD';
-                                            const originalAmt = item.amount;
-                                            const isDefaultUSD = defaultCurrency === 'USD';
-
-                                            if (item.type === 'DEBT') {
-                                                if (isDefaultUSD) {
-                                                    const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
-                                                    const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
-                                                    message += `• ${item.notes}: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
-                                                } else {
-                                                    const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
-                                                    const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
-                                                    message += `• ${item.notes}: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
-                                                }
-                                            } else {
-                                                if (isDefaultUSD) {
-                                                    const primaryAmt = isUSD ? originalAmt : (originalAmt / usdRate);
-                                                    const secondaryAmt = isUSD ? (originalAmt * usdRate) : originalAmt;
-                                                    message += `• 🟢 Ödeme: $${primaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(secondaryAmt).toLocaleString('tr-TR')})\n`;
-                                                } else {
-                                                    const primaryAmt = !isUSD ? originalAmt : (originalAmt * usdRate);
-                                                    const secondaryAmt = !isUSD ? (originalAmt / usdRate) : originalAmt;
-                                                    message += `• 🟢 Ödeme: ₺${Math.round(primaryAmt).toLocaleString('tr-TR')} ($${secondaryAmt.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
-                                                }
-                                            }
-                                        });
-                                        message += `\n`;
-                                    });
-                                    message += `*🔴 TOPLAM GÜNCEL BORÇ*\n`;
-	                                    const totalTRY = outputDebts
-	                                        .filter((debt: any) => (debt.currency || "TRY") !== "USD")
-	                                        .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
-	                                    const totalUSD = outputDebts
-	                                        .filter((debt: any) => debt.currency === "USD")
-	                                        .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
-                                    const isDefaultUSD = defaultCurrency === 'USD';
-
-                                    if (isDefaultUSD) {
-                                        const combinedTotalUSD = totalUSD + (totalTRY / usdRate);
-                                        const combinedTotalTRY = (totalUSD * usdRate) + totalTRY;
-                                        message += `*$${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')})*\n`;
-                                    } else {
-                                        const combinedTotalTRY = totalTRY + (totalUSD * usdRate);
-                                        const combinedTotalUSD = (totalTRY / usdRate) + totalUSD;
-                                        message += `*₺${Math.round(combinedTotalTRY).toLocaleString('tr-TR')} ($${combinedTotalUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})*\n`;
-                                    }
-
-                                    if (Number(historyCustomer?.balance || 0) > 0) message += `🎁 TL Emanet: ₺${Number(historyCustomer.balance).toLocaleString('tr-TR')}\n`;
-                                    if (Number(historyCustomer?.balanceUsd || 0) > 0) message += `🎁 USD Emanet: $${Number(historyCustomer.balanceUsd).toLocaleString('tr-TR')}\n`;
-
-                                    if (totalTRY <= 0 && totalUSD <= 0) { message += `✅ Bakiyeniz tamamen kapanmıştır. Teşekkür ederiz.\n`; }
-                                    else { message += `\n_İyi çalışmalar._`; }
                                     setWhatsappMessageContent(message);
                                     setWhatsappCustomer(historyCustomer);
                                     setWhatsappModalOpen(true);

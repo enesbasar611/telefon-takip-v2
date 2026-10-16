@@ -38,73 +38,76 @@ export const VeresiyeToolbar: React.FC<VeresiyeToolbarProps> = ({
     onViewModeChange,
 }) => {
     return (
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 px-2">
-            <div className="space-y-2">
-                <h2 className="font-medium text-3xl text-foreground uppercase">Müşteri Portföyü</h2>
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-6 px-1">
+            <div className="space-y-0.5 sm:space-y-1">
                 <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] text-muted-foreground/80 opacity-80 uppercase tracking-widest font-bold">Aktif alacaklar ve cari hareketler listesi</span>
+                    <h2 className="font-bold text-lg sm:text-xl xl:text-2xl text-foreground uppercase tracking-tight">Müşteri Portföyü</h2>
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
+                <p className="text-[11px] text-muted-foreground/80 font-medium">Aktif alacaklar ve cari hesap hareketleri</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto mt-2">
-                <div className="relative group flex-1 md:flex-none md:w-80">
-                    <div className="absolute inset-0 bg-indigo-500/5 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/80 group-focus-within:text-indigo-400 transition-colors z-20" />
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full xl:w-auto">
+                {/* Search Bar */}
+                <div className="relative flex-1 md:flex-none md:w-72">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
                     <Input
-                        placeholder="İsim veya telefon numarası..."
+                        placeholder="İsim veya telefon ara..."
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        className="pl-14 h-14 bg-muted/50 border-border shadow-2xl rounded-2xl focus-visible:ring-indigo-500/20 focus-visible:bg-muted transition-all text-sm text-foreground relative z-10"
+                        className="pl-10 h-10 sm:h-11 bg-muted/40 border-border/70 rounded-xl text-xs sm:text-sm text-foreground focus-visible:ring-primary/20"
                     />
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 relative z-10 w-full xl:w-auto overflow-x-auto no-scrollbar py-1 -my-1">
+                {/* Filter and Mode Controls */}
+                <div className="flex items-center gap-2 relative z-10 w-full sm:w-auto overflow-x-auto no-scrollbar py-0.5">
                     <Select value={debtFilter} onValueChange={onDebtFilterChange}>
-                        <SelectTrigger className="h-11 sm:h-12 w-[145px] sm:w-[160px] shrink-0 bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
-                            <SelectValue placeholder="Borç Filtresi" />
+                        <SelectTrigger className="h-9 sm:h-10 w-[130px] sm:w-[145px] shrink-0 bg-muted/40 border-border/70 rounded-xl text-[11px] font-bold uppercase tracking-wider">
+                            <SelectValue placeholder="Borç Durumu" />
                         </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">TÜM MÜŞTERİLER</SelectItem>
+                        <SelectContent className="z-50">
+                            <SelectItem value="all">TÜMÜ</SelectItem>
                             <SelectItem value="hasDebt">BORCU OLANLAR</SelectItem>
                             <SelectItem value="noDebt">BORCU OLMAYANLAR</SelectItem>
                         </SelectContent>
                     </Select>
 
                     <Select value={sortOrder} onValueChange={onSortOrderChange}>
-                        <SelectTrigger className="h-11 sm:h-12 w-[145px] sm:w-[160px] shrink-0 bg-muted/50 border-border rounded-xl text-xs font-bold uppercase tracking-wider">
+                        <SelectTrigger className="h-9 sm:h-10 w-[125px] sm:w-[140px] shrink-0 bg-muted/40 border-border/70 rounded-xl text-[11px] font-bold uppercase tracking-wider">
                             <SelectValue placeholder="Sıralama" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-50">
                             <SelectItem value="newest">YENİDEN ESKİYE</SelectItem>
                             <SelectItem value="oldest">ESKİDEN YENİYE</SelectItem>
                         </SelectContent>
                     </Select>
 
-                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border shrink-0">
+                    {/* Quick Status Pills */}
+                    <div className="flex bg-muted/40 p-0.5 rounded-xl border border-border/60 shrink-0">
                         {(['all', 'pending', 'overdue', 'tracking'] as const).map((s) => (
                             <button
                                 key={s}
                                 onClick={() => onFilterStatusChange(s)}
                                 className={cn(
-                                    "px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all whitespace-nowrap",
+                                    "px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-tight transition-all whitespace-nowrap",
                                     filterStatus === s
-                                        ? "bg-background dark:bg-zinc-800 text-indigo-600 shadow-sm"
+                                        ? "bg-background text-primary shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                {s === 'all' ? 'Tümü' : s === 'pending' ? 'Bekleyen' : s === 'overdue' ? 'Gecikenler' : 'Takip'}
+                                {s === 'all' ? 'Tümü' : s === 'pending' ? 'Bekleyen' : s === 'overdue' ? 'Geciken' : 'Takip'}
                             </button>
                         ))}
                     </div>
 
-                    <div className="flex bg-muted/50 p-1 rounded-xl border border-border shrink-0">
+                    {/* View Mode Switcher */}
+                    <div className="hidden sm:flex bg-muted/40 p-0.5 rounded-xl border border-border/60 shrink-0">
                         <button
                             onClick={() => onViewModeChange('list')}
                             className={cn(
-                                "p-2 rounded-lg transition-all",
+                                "p-1.5 rounded-lg transition-all",
                                 viewMode === 'list'
-                                    ? "bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm"
+                                    ? "bg-background text-primary shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
                             )}
                             title="Liste Görünümü"
@@ -114,9 +117,9 @@ export const VeresiyeToolbar: React.FC<VeresiyeToolbarProps> = ({
                         <button
                             onClick={() => onViewModeChange('grid')}
                             className={cn(
-                                "p-2 rounded-lg transition-all",
+                                "p-1.5 rounded-lg transition-all",
                                 viewMode === 'grid'
-                                    ? "bg-white dark:bg-zinc-800 text-indigo-600 shadow-sm"
+                                    ? "bg-background text-primary shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
                             )}
                             title="Izgara Görünümü"

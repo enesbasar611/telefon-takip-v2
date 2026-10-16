@@ -183,3 +183,153 @@ export function getCurrentDebtTotals(items: DebtStatementItem[]) {
     { try: 0, usd: 0 }
   );
 }
+
+export function formatDebtMoney(amount: number, currency: string = "TRY"): string {
+  const isUSD = currency === "USD";
+  const num = money(amount);
+  return isUSD
+    ? `$${num.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `₺${num.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export interface UnifiedWhatsAppStatementOptions {
+  customerName: string;
+  debts: any[];
+  transactions?: any[];
+  usdRate: number;
+  defaultCurrency?: string;
+  balanceTRY?: number;
+  balanceUSD?: number;
+  includePaid?: boolean;
+  shopName?: string;
+}
+
+export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementOptions): string {
+  const {
+    customerName,
+    debts = [],
+    transactions = [],
+    usdRate = 1,
+    defaultCurrency = "TRY",
+    balanceTRY = 0,
+    balanceUSD = 0,
+    includePaid = false,
+    shopName = "Başar Teknik",
+  } = options;
+
+  const safeRate = Number.isFinite(Number(usdRate)) && Number(usdRate) > 0 ? Number(usdRate) : 1;
+  const isUsdDefault = defaultCurrency === "USD";
+
+  // Filter open debts or all debts
+  const openDebts = debts.filter((d: any) => {
+    if (includePaid) return true;
+    const remaining = Number(d.remainingAmount ?? d.amount ?? 0);
+    return !d.isPaid && remaining > 0.01;
+  });
+
+  // Calculate current real remaining totals
+  let totalRemainingTRY = 0;
+  let totalRemainingUSD = 0;
+  debts.forEach((d: any) => {
+    if (!d.isPaid) {
+      const remaining = Number(d.remainingAmount ?? d.amount ?? 0);
+      if (remaining > 0.01) {
+        if (d.currency === "USD") totalRemainingUSD += remaining;
+        else totalRemainingTRY += remaining;
+      }
+    }
+  });
+
+  totalRemainingTRY = money(totalRemainingTRY);
+  totalRemainingUSD = money(totalRemainingUSD);
+
+  // Relevant payments:
+  // If includePaid is true, show all payments. If false, show recent payments from the last 60 days
+  const now = Date.now();
+  const paymentCutoff = includePaid ? 0 : now - 45 * 24 * 60 * 60 * 1000;
+  const validPayments = transactions
+    .filter((t: any) => {
+      if (t.paymentMethod === "DEBT") return false;
+      const tTime = new Date(t.createdAt || t.date).getTime();
+      return !Number.isNaN(tTime) && tTime >= paymentCutoff;
+    })
+    .sort((a, b) => new Date(a.createdAt || a.date).getTime() - new Date(b.createdAt || b.date).getTime());
+
+  let message = `*${shopName}* - Hesap Ekstresi\n`;
+  message += `👤 *Müşteri:* ${customerName.trim().toUpperCase()}\n\n`;
+
+  if (openDebts.length > 0) {
+    message += includePaid ? `*📋 BORÇ / İŞLEM HAREKETLERİ:*\n` : `*📋 AÇIK BORÇ KALEMLERİ:*\n`;
+    openDebts.forEach((debt: any) => {
+      const isUSD = debt.currency === "USD";
+      const totalAmount = money(debt.amount || 0);
+      const remainingAmount = money(debt.remainingAmount ?? totalAmount);
+      const title = debt.notes || debt.description || (debt.sale?.items?.map((i: any) => i.product?.name || "Ürün").join(", ")) || "Hizmet / Ürün";
+      const isPaid = debt.isPaid || remainingAmount <= 0.01;
+
+      let line = `• ${title}: ${formatDebtMoney(totalAmount, debt.currency)}`;
+      if (isPaid) {
+        line += ` ✅ (Ödendi)`;
+      } else if (remainingAmount < totalAmount - 0.01) {
+        line += ` ⚠️ (Kalan: ${formatDebtMoney(remainingAmount, debt.currency)})`;
+      }
+      message += `${line}\n`;
+    });
+    message += `\n`;
+  }
+
+  if (validPayments.length > 0) {
+    message += `*🟢 SON TAHSİLATLAR & ÖDEMELER:*\n`;
+    validPayments.forEach((p: any) => {
+      const amount = money(p.amount || 0);
+      const desc = p.description || p.notes || "Tahsilat";
+      const pDate = new Date(p.createdAt || p.date);
+      const dateStr = !Number.isNaN(pDate.getTime())
+        ? `${pDate.getDate().toString().padStart(2, "0")}.${(pDate.getMonth() + 1).toString().padStart(2, "0")}.${pDate.getFullYear()}`
+        : "";
+      message += `• ${dateStr ? `[${dateStr}] ` : ""}${desc}: ${formatDebtMoney(amount, p.currency || "TRY")}\n`;
+    });
+    message += `\n`;
+  }
+
+  const emanetTRY = money(balanceTRY);
+  const emanetUSD = money(balanceUSD);
+  if (emanetTRY > 0 || emanetUSD > 0) {
+    message += `*🎁 MEVCUT EMANET / AVANSINIZ:*\n`;
+    if (emanetTRY > 0) message += `• TL Emanet: ₺${emanetTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    if (emanetUSD > 0) message += `• USD Emanet: $${emanetUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    message += `\n`;
+  }
+
+  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `*🔴 GÜNCEL BORÇ DURUMU:*\n`;
+
+  if (totalRemainingTRY <= 0 && totalRemainingUSD <= 0) {
+    message += `✅ *Açık borcunuz bulunmamaktadır.* Bizi tercih ettiğiniz için teşekkür ederiz.\n`;
+  } else {
+    if (totalRemainingTRY > 0) {
+      message += `• Toplam TL: ₺${totalRemainingTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    }
+    if (totalRemainingUSD > 0) {
+      message += `• Toplam USD: $${totalRemainingUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    }
+
+    const netEquivTRY = money(totalRemainingTRY + totalRemainingUSD * safeRate);
+    const netEquivUSD = money(totalRemainingUSD + totalRemainingTRY / safeRate);
+
+    if (isUsdDefault) {
+      message += `\n👉 *NET GENEL TOPLAM: $${netEquivUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n`;
+      message += `   (Yaklaşık ₺${netEquivTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+    } else {
+      message += `\n👉 *NET GENEL TOPLAM: ₺${netEquivTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n`;
+      if (totalRemainingUSD > 0) {
+        message += `   (Yaklaşık $${netEquivUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+      }
+    }
+  }
+
+  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `_İyi çalışmalar dileriz._`;
+
+  return message;
+}
