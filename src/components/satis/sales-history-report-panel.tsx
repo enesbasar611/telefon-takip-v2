@@ -82,6 +82,7 @@ interface DrilldownState {
     open: boolean;
     title: string;
     subtitle: string;
+    modalType: "sales" | "profit" | "expenses" | "collections";
     filterType: "date" | "product" | "category" | "payment" | "period";
     filterValue: string;
     dateStart?: string;
@@ -109,6 +110,7 @@ export function SalesHistoryReportPanel({
         open: false,
         title: "",
         subtitle: "",
+        modalType: "sales",
         filterType: "date",
         filterValue: "",
     });
@@ -128,15 +130,18 @@ export function SalesHistoryReportPanel({
     const openDrilldown = async (params: {
         title: string;
         subtitle: string;
+        modalType?: "sales" | "profit" | "expenses" | "collections";
         filterType: "date" | "product" | "category" | "payment" | "period";
         filterValue: string;
         dateStart?: string;
         dateEnd?: string;
     }) => {
+        const modalType = params.modalType || "sales";
         setDrilldown({
             open: true,
             title: params.title,
             subtitle: params.subtitle,
+            modalType,
             filterType: params.filterType,
             filterValue: params.filterValue,
             dateStart: params.dateStart,
@@ -148,8 +153,14 @@ export function SalesHistoryReportPanel({
         try {
             const queryOptions: any = {
                 page: 1,
-                pageSize: 50,
+                pageSize: 100,
             };
+
+            if (modalType === "expenses") {
+                queryOptions.typeFilter = "EXPENSE";
+            } else if (modalType === "sales") {
+                queryOptions.typeFilter = "SALE";
+            }
 
             if (params.filterType === "date") {
                 queryOptions.startDate = params.dateStart;
@@ -196,18 +207,22 @@ export function SalesHistoryReportPanel({
         }
     };
 
+    const totalCollected = current.cashRevenue + current.cardRevenue + current.transferRevenue;
+
     const kpis = [
         {
             id: "revenue",
             label: "Net Satış Cirosu",
             value: formatMoney(current.revenue),
             change: report.comparisons.revenueVsPrevious,
-            detail: `${current.saleCount} fiş / satış, ${current.itemCount} adet ürün`,
-            compareText: `vs ${previous.shortLabel || "Önceki Eşdeğer Gün"}`,
+            detail: `${current.saleCount} fiş, ${current.itemCount} adet ürün (Giderler hariç)`,
+            compareText: `vs ${previous.shortLabel || "Önceki Eşdeğer"}`,
             icon: TrendingUp,
+            iconTone: "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20",
             action: () => openDrilldown({
-                title: "Dönemin Tüm Satışları",
-                subtitle: `${current.label} tarih aralığındaki tüm satış işlemleri`,
+                title: "Bugün Ne Satmışım? (Net Satış ve Ciro Kalemleri)",
+                subtitle: `${current.label} tarih aralığındaki tüm mağaza satışları ve fişler`,
+                modalType: "sales",
                 filterType: "period",
                 filterValue: "all",
                 dateStart: current.start,
@@ -219,12 +234,52 @@ export function SalesHistoryReportPanel({
             label: "Net Tahmini Kâr",
             value: formatMoney(current.profit),
             change: report.comparisons.profitVsPrevious,
-            detail: `Net Kâr Marjı: %${current.profitMargin.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`,
-            compareText: `vs ${previous.shortLabel || "Önceki Eşdeğer Gün"}`,
+            detail: `Brüt Kâr Marjı: %${current.profitMargin.toLocaleString("tr-TR", { maximumFractionDigits: 1 })} (Giderler düşülmez)`,
+            compareText: `vs ${previous.shortLabel || "Önceki Eşdeğer"}`,
             icon: Banknote,
+            iconTone: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
             action: () => openDrilldown({
-                title: "Dönemin Kâr Analizi & Satışları",
-                subtitle: `${current.label} tarih aralığındaki satışlar ve ürün kalemleri`,
+                title: "Satış Kârlılık Analizi (Ne Kadarı Kâr?)",
+                subtitle: `${current.label} tarih aralığındaki ürün satış kârları ve alış maliyetleri`,
+                modalType: "profit",
+                filterType: "period",
+                filterValue: "all",
+                dateStart: current.start,
+                dateEnd: current.end,
+            })
+        },
+        {
+            id: "expense",
+            label: "İşletme Giderleri",
+            value: formatMoney(current.expense),
+            change: report.comparisons.expenseVsPrevious,
+            detail: `${current.expenseCount} gider ödemesi (Kârdan ayrı tutulur)`,
+            compareText: `Önceki: ${formatMoney(previous.expense)}`,
+            icon: Receipt,
+            iconTone: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
+            action: () => openDrilldown({
+                title: "İşletme Giderleri (Nereye Para Ödemişim?)",
+                subtitle: `${current.label} tarih aralığındaki tüm harcama ve ödeme kalemleri`,
+                modalType: "expenses",
+                filterType: "period",
+                filterValue: "all",
+                dateStart: current.start,
+                dateEnd: current.end,
+            })
+        },
+        {
+            id: "collections",
+            label: "Kasa & Tahsilat (Toplanan Para)",
+            value: formatMoney(totalCollected),
+            change: 0,
+            detail: `Nakit: ${formatMoney(current.cashRevenue)} • Kart: ${formatMoney(current.cardRevenue)} • Havale: ${formatMoney(current.transferRevenue)}`,
+            compareText: `Veresiye: ${formatMoney(current.debtRevenue)}`,
+            icon: CreditCard,
+            iconTone: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
+            action: () => openDrilldown({
+                title: "Tahsilat & Kasa Özeti (Kaç Para Toplamışım?)",
+                subtitle: `${current.label} tarih aralığında kasaya giren nakit, kart ve transferler`,
+                modalType: "collections",
                 filterType: "period",
                 filterValue: "all",
                 dateStart: current.start,
@@ -236,12 +291,14 @@ export function SalesHistoryReportPanel({
             label: "Ortalama Sepet Hacmi",
             value: formatMoney(current.averageSale),
             change: report.comparisons.averageSaleVsPrevious,
-            detail: `İşlem başına ortalama tutar`,
+            detail: `İşlem başına ortalama sepet büyüklüğü`,
             compareText: `Önceki: ${formatMoney(previous.averageSale)}`,
             icon: ShoppingBag,
+            iconTone: "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
             action: () => openDrilldown({
                 title: "Ortalama Sepet İşlemleri",
                 subtitle: `${current.label} tarih aralığındaki sepetler`,
+                modalType: "sales",
                 filterType: "period",
                 filterValue: "all",
                 dateStart: current.start,
@@ -254,28 +311,13 @@ export function SalesHistoryReportPanel({
             value: `${current.saleCount.toLocaleString("tr-TR")} Fiş`,
             change: report.comparisons.saleCountVsPrevious,
             detail: `${current.debtSales} veresiye satış`,
-            compareText: `Önceki eşdeğer: ${previous.saleCount} fiş`,
+            compareText: `Önceki: ${previous.saleCount} fiş`,
             icon: Boxes,
+            iconTone: "text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20",
             action: () => openDrilldown({
                 title: "Dönemin Fiş Hacmi",
                 subtitle: `${current.label} tarih aralığındaki işlem listesi`,
-                filterType: "period",
-                filterValue: "all",
-                dateStart: current.start,
-                dateEnd: current.end,
-            })
-        },
-        {
-            id: "margin",
-            label: "Kâr Marjı Değişimi",
-            value: `%${current.profitMargin.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`,
-            change: report.comparisons.profitMarginDiff,
-            detail: `Önceki Dönem: %${previous.profitMargin.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`,
-            compareText: `${report.comparisons.profitMarginDiff >= 0 ? "+" : ""}${report.comparisons.profitMarginDiff.toFixed(1)} puan`,
-            icon: Percent,
-            action: () => openDrilldown({
-                title: "Kâr Marjı Detayları",
-                subtitle: `${current.label} tarih aralığındaki ürün kârlılıkları`,
+                modalType: "sales",
                 filterType: "period",
                 filterValue: "all",
                 dateStart: current.start,
@@ -384,8 +426,8 @@ export function SalesHistoryReportPanel({
                 </div>
             )}
 
-            {/* 3. Executive KPI Metric Cards (5 Cards) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* 3. Executive KPI Metric Cards (6 Cards) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
                 {kpis.map((kpi) => {
                     const Icon = kpi.icon;
                     const isPositive = kpi.change >= 0;
@@ -395,32 +437,38 @@ export function SalesHistoryReportPanel({
                         <Card 
                             key={kpi.id} 
                             onClick={kpi.action}
-                            className="rounded-2xl border-border/60 bg-card/70 backdrop-blur-md shadow-sm transition-all hover:shadow-md hover:border-primary/40 cursor-pointer group"
+                            className="rounded-2xl border-border/60 bg-card/70 backdrop-blur-md shadow-sm transition-all hover:shadow-md hover:border-primary/40 cursor-pointer group flex flex-col justify-between"
                         >
                             <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-semibold text-muted-foreground group-hover:text-primary transition-colors">
+                                <div className="flex items-start justify-between gap-2.5">
+                                    <div className="space-y-1 min-w-0">
+                                        <p className="text-xs font-semibold text-muted-foreground group-hover:text-primary transition-colors truncate">
                                             {kpi.label}
                                         </p>
-                                        <p className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                                        <p className="text-lg sm:text-xl font-black tracking-tight text-foreground truncate">
                                             {kpi.value}
                                         </p>
                                     </div>
-                                    <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shrink-0">
+                                    <div className={cn("h-9 w-9 rounded-xl border flex items-center justify-center group-hover:scale-110 transition-transform shrink-0", kpi.iconTone || "bg-primary/10 border-primary/20 text-primary")}>
                                         <Icon className="h-4 w-4" />
                                     </div>
                                 </div>
 
-                                <div className="mt-4 pt-3 border-t border-border/40 flex flex-col gap-1.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <span className="text-[11px] text-muted-foreground truncate">{kpi.compareText}</span>
-                                        <Badge variant="outline" className={cn("rounded-lg text-[10px] font-bold px-1.5 py-0.5 gap-0.5 border", metricTone(kpi.change))}>
-                                            <TrendIcon className="h-3 w-3" />
-                                            {changeLabel(kpi.change)}
-                                        </Badge>
+                                <div className="mt-3 pt-2.5 border-t border-border/40 flex flex-col gap-1">
+                                    <div className="flex items-center justify-between gap-1">
+                                        <span className="text-[10px] text-muted-foreground truncate">{kpi.compareText}</span>
+                                        {kpi.id !== "collections" ? (
+                                            <Badge variant="outline" className={cn("rounded-md text-[10px] font-bold px-1.5 py-0 gap-0.5 border shrink-0", metricTone(kpi.change))}>
+                                                <TrendIcon className="h-2.5 w-2.5" />
+                                                {changeLabel(kpi.change)}
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="rounded-md text-[9px] font-bold px-1.5 py-0 bg-muted/40 text-muted-foreground border-border/40 shrink-0">
+                                                Net Kasa
+                                            </Badge>
+                                        )}
                                     </div>
-                                    <p className="text-[11px] text-muted-foreground/80 truncate">
+                                    <p className="text-[10px] text-muted-foreground/80 truncate">
                                         {kpi.detail}
                                     </p>
                                 </div>
@@ -905,58 +953,256 @@ export function SalesHistoryReportPanel({
                         </div>
                     </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
                         {drilldown.loading ? (
                             <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground animate-pulse text-xs">
                                 <ShoppingBag className="h-8 w-8 text-primary animate-bounce" />
-                                <span>İşlemler ve fiş kayıtları yükleniyor...</span>
+                                <span>Kayıtlar yükleniyor...</span>
                             </div>
-                        ) : drilldown.items && drilldown.items.length > 0 ? (
-                            drilldown.items.map((op) => (
-                                <div 
-                                    key={op.id}
-                                    className="p-3.5 rounded-xl border border-border/60 bg-card/60 hover:bg-muted/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                                >
-                                    <div className="space-y-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono font-bold text-foreground">#{op.number || op.id.substring(0, 8)}</span>
-                                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                                {op.paymentMethod === "CASH" ? "Nakit" : op.paymentMethod === "CARD" ? "Kredi Kartı" : op.paymentMethod === "DEBT" ? "Veresiye" : "Havale"}
-                                            </Badge>
-                                            <span className="text-muted-foreground text-[11px]">
-                                                {format(new Date(op.date), "dd MMM yyyy HH:mm", { locale: tr })}
-                                            </span>
-                                        </div>
-                                        <p className="font-semibold text-foreground truncate">
-                                            {op.customerName || "Perakende Müşteri"}
-                                        </p>
-                                        <p className="text-muted-foreground text-[11px] truncate">
-                                            {op.items?.map((it) => `${it.name} (${it.quantity}x)`).join(", ") || op.description}
-                                        </p>
+                        ) : drilldown.modalType === "profit" ? (
+                            <div className="space-y-4">
+                                {/* Profitability summary pills */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div className="p-3 rounded-xl border border-blue-500/20 bg-blue-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Net Satış Cirosu</span>
+                                        <p className="text-base sm:text-lg font-black text-blue-600 dark:text-blue-400 mt-0.5">{formatMoney(current.revenue)}</p>
                                     </div>
-
-                                    <div className="flex items-center sm:flex-col items-end justify-between sm:justify-center gap-2 shrink-0">
-                                        <span className="text-sm font-bold text-foreground">
-                                            {formatMoney(op.amount)}
-                                        </span>
-                                        {op.saleId && (
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-8 rounded-lg text-xs gap-1.5 border-border/60"
-                                                onClick={() => handlePrintReceipt(op)}
-                                                disabled={receiptLoading === op.saleId}
-                                            >
-                                                <Receipt className="h-3.5 w-3.5 text-primary" />
-                                                Fiş Yazdır
-                                            </Button>
-                                        )}
+                                    <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Tahmini Alış Maliyeti</span>
+                                        <p className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 mt-0.5">{formatMoney(Math.max(0, current.revenue - current.profit))}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Net Tahmini Kâr</span>
+                                        <p className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{formatMoney(current.profit)}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-purple-500/20 bg-purple-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Brüt Kâr Marjı</span>
+                                        <p className="text-base sm:text-lg font-black text-purple-600 dark:text-purple-400 mt-0.5">%{current.profitMargin.toFixed(1)}</p>
                                     </div>
                                 </div>
-                            ))
+
+                                {/* Informational banner */}
+                                <div className="p-3.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs text-foreground flex items-start gap-2.5">
+                                    <Info className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="font-bold">Tahmini Kâr Nasıl Hesaplanır?</p>
+                                        <p className="text-muted-foreground leading-relaxed">
+                                            Her satış için ürünün <b>(Satış Fiyatı - Alış Maliyeti) × Adet</b> tutarı toplanarak brüt kâr elde edilir. Dükkanın genel işletme giderleri kârdan düşülmez; muhasebe standartlarına göre giderler her zaman ayrı tutulur.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Product Profitability list */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
+                                        <span>Satılan Ürün & Kalem</span>
+                                        <span>Kâr & Marj</span>
+                                    </div>
+                                    {report.topProducts.map((prod, idx) => (
+                                        <div key={idx} className="p-3 rounded-xl border border-border/60 bg-card/60 flex items-center justify-between gap-3 text-xs">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-foreground truncate">{prod.name}</span>
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-muted/40 font-semibold">
+                                                        {prod.quantity} adet
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
+                                                    <span>Satış Tutarı: <b className="text-foreground">{formatMoney(prod.revenue)}</b></span>
+                                                    <span>Maliyet: <b>{formatMoney(Math.max(0, prod.revenue - prod.profit))}</b></span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">+{formatMoney(prod.profit)}</span>
+                                                <div className="text-[10px] text-muted-foreground font-semibold">%{prod.margin.toFixed(0)} Kâr Marjı</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {report.topProducts.length === 0 && (
+                                        <p className="text-xs text-muted-foreground py-8 text-center">Bu dönemde kayıtlı ürün satışı bulunmuyor.</p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : drilldown.modalType === "expenses" ? (
+                            <div className="space-y-4">
+                                {/* Expense summary pills */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Toplam İşletme Gideri</span>
+                                        <p className="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 mt-0.5">-{formatMoney(current.expense)}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-border/60 bg-muted/20">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Gider Ödeme Sayısı</span>
+                                        <p className="text-base sm:text-lg font-black text-foreground mt-0.5">{current.expenseCount} İşlem</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 col-span-2 sm:col-span-1">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Muhasebe Kuralı</span>
+                                        <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mt-1">Kârdan Düşülmez (Ayrı)</p>
+                                    </div>
+                                </div>
+
+                                {/* Informational banner */}
+                                <div className="p-3.5 rounded-xl border border-rose-500/25 bg-rose-500/10 text-xs text-foreground flex items-start gap-2.5">
+                                    <Info className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="font-bold">Nereye Para Ödenmiş?</p>
+                                        <p className="text-muted-foreground leading-relaxed">
+                                            Seçilen dönemde dükkan kasanızdan veya banka hesaplarınızdan çıkan harcamalar, ödenen muhataplar ve kategorileri aşağıda yer almaktadır. Giderler satış cirosuna dahil edilmemiştir.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Expenses list */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
+                                        <span>Gider & Ödeme Yeri</span>
+                                        <span>Ödenen Tutar</span>
+                                    </div>
+                                    {report.topExpenses && report.topExpenses.length > 0 ? (
+                                        report.topExpenses.map((exp) => (
+                                            <div key={exp.id} className="p-3 rounded-xl border border-border/60 bg-card/60 flex items-center justify-between gap-3 text-xs">
+                                                <div className="space-y-1 min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-foreground truncate">{exp.description}</span>
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-rose-500/10 text-rose-600 border-rose-500/20 shrink-0">
+                                                            {exp.category}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                                                        <span>Kasa/Hesap: <b>{exp.accountName || "Nakit Kasa"}</b></span>
+                                                        {exp.supplierName && <span>• Muhatap: <b>{exp.supplierName}</b></span>}
+                                                        <span>• {exp.dateFormatted}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <span className="text-sm font-black text-rose-600 dark:text-rose-400">-{formatMoney(exp.amount)}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground py-8 text-center">Bu dönemde kaydedilmiş işletme gideri bulunmuyor.</p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : drilldown.modalType === "collections" ? (
+                            <div className="space-y-4">
+                                {/* Collection summary pills */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Nakit Kasa</span>
+                                        <p className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{formatMoney(current.cashRevenue)}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-blue-500/20 bg-blue-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">POS / Kredi Kartı</span>
+                                        <p className="text-base font-black text-blue-600 dark:text-blue-400 mt-0.5">{formatMoney(current.cardRevenue)}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-purple-500/20 bg-purple-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Banka Havale</span>
+                                        <p className="text-base font-black text-purple-600 dark:text-purple-400 mt-0.5">{formatMoney(current.transferRevenue)}</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Açık Hesap (Veresiye)</span>
+                                        <p className="text-base font-black text-amber-600 dark:text-amber-400 mt-0.5">{formatMoney(current.debtRevenue)}</p>
+                                    </div>
+                                </div>
+
+                                {/* Payment breakdown bars */}
+                                <div className="p-4 rounded-xl border border-border/60 bg-card/60 space-y-3">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tahsilat Kanalları Oranı</h4>
+                                    {report.paymentBreakdown.map((pay) => (
+                                        <div key={pay.method} className="space-y-1 text-xs">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-semibold text-foreground">{pay.label} ({pay.count} işlem)</span>
+                                                <span className="font-bold">{formatMoney(pay.total)} (%{pay.percentage.toFixed(1)})</span>
+                                            </div>
+                                            <Progress value={pay.percentage} className="h-1.5" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         ) : (
-                            <div className="py-12 text-center text-xs text-muted-foreground">
-                                Bu filtreye uygun işlem kaydı bulunamadı.
+                            /* Standard Sales Modal ("Bugün ne satmışım?") */
+                            <div className="space-y-3">
+                                {/* Sales summary pills */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                                    <div className="p-2.5 rounded-xl border border-blue-500/20 bg-blue-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Net Satış Cirosu</span>
+                                        <p className="text-sm sm:text-base font-black text-blue-600 dark:text-blue-400 mt-0.5">{formatMoney(current.revenue)}</p>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl border border-border/60 bg-muted/20">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Toplam Fiş</span>
+                                        <p className="text-sm sm:text-base font-black text-foreground mt-0.5">{current.saleCount} Adet</p>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl border border-border/60 bg-muted/20">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Satılan Parça</span>
+                                        <p className="text-sm sm:text-base font-black text-foreground mt-0.5">{current.itemCount} Ürün</p>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                                        <span className="text-[11px] text-muted-foreground font-semibold">Ortalama Sepet</span>
+                                        <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{formatMoney(current.averageSale)}</p>
+                                    </div>
+                                </div>
+
+                                {drilldown.items && drilldown.items.length > 0 ? (
+                                    drilldown.items
+                                        .filter((op) => op.type === "SALE" || op.type === "DEBT_DIRECT")
+                                        .map((op) => (
+                                            <div 
+                                                key={op.id}
+                                                className="p-3.5 rounded-xl border border-border/60 bg-card/60 hover:bg-muted/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                                            >
+                                                <div className="space-y-1 min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono font-bold text-foreground">#{op.number || op.id.substring(0, 8)}</span>
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                                            {op.paymentMethod === "CASH" ? "Nakit" : op.paymentMethod === "CARD" ? "Kredi Kartı" : op.paymentMethod === "DEBT" ? "Veresiye" : "Havale"}
+                                                        </Badge>
+                                                        <span className="text-muted-foreground text-[11px]">
+                                                            {format(new Date(op.date), "dd MMM yyyy HH:mm", { locale: tr })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="font-bold text-foreground truncate">
+                                                        {op.customerName || "Perakende Müşteri"}
+                                                    </p>
+                                                    {op.items && op.items.length > 0 && (
+                                                        <p className="text-muted-foreground text-[11px] truncate">
+                                                            {op.items.map((it) => `${it.name} (${it.quantity}x)`).join(", ")}
+                                                        </p>
+                                                    )}
+                                                    {op.description && (
+                                                        <p className="text-[11px] text-muted-foreground/80 italic truncate">
+                                                            Not: "{op.description}"
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center sm:flex-col items-end justify-between sm:justify-center gap-2 shrink-0">
+                                                    <span className={cn(
+                                                        "text-sm font-black",
+                                                        op.type === "DEBT_DIRECT" ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+                                                    )}>
+                                                        {formatMoney(op.amount)}
+                                                    </span>
+                                                    {op.saleId && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-8 rounded-lg text-xs gap-1.5 border-border/60"
+                                                            onClick={() => handlePrintReceipt(op)}
+                                                            disabled={receiptLoading === op.saleId}
+                                                        >
+                                                            <Receipt className="h-3.5 w-3.5 text-primary" />
+                                                            Fiş Yazdır
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                ) : (
+                                    <div className="py-12 text-center text-xs text-muted-foreground">
+                                        Bu filtreye uygun satış kaydı bulunamadı.
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

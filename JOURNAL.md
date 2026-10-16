@@ -40,6 +40,28 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-16: `/satis/gecmis` İşlem Arşivi filtre butonları ve tür rozetleri renk kodlaması tamamlandı:
+  - Satışlar, Giderler, Veresiyeler, Tahsilatlar butonları tıklandığında yalnızca ilgili işlem türünü getirecek şekilde filtreleme tam ayrıştırıldı (`typeFilter` Prisma `where` koşulları `category`, `paymentMethod` ve `type` ile mutlak izole edildi).
+  - Renk kodlaması uygulandı:
+    - **Giderler:** Kırmızı / Rose (`bg-rose-600` aktif, `text-rose-600` rozet & tutar eksi)
+    - **Veresiyeler:** Turuncu / Orange (`bg-orange-600` aktif, `text-orange-600` rozet & tutar)
+    - **Tahsilatlar:** Yeşil / Emerald (`bg-emerald-600` aktif, `text-emerald-600` rozet & tutar)
+    - **Satışlar:** Mavi / Blue (`bg-blue-600` aktif, `text-blue-600` rozet & tutar)
+  - Tablo satırlarında (`SalesHistoryRow`) ve işlem detaylarında (`OperationDetails`) ikon ve tutar renkleri de bu renk sistemine bağlandı.
+  - Tip kontrolü: `npx tsc --noEmit` hatasız (0 error).
+- [x] 2026-10-16: `/satis/gecmis` Finansal Kokpit revizyonu tamamlandı:
+  - Giderler (Transaction EXPENSE) "Peşin Satış" yerine ayrı "Gider" tipi ve rose rozet ile listelendi, typeFilter'a eklendi.
+  - "Bugün, Dün, Bu Hafta" hızlı tarih filtreleri tıklandığında aktif olan filtre kutu içine alınarak (`ring-2 ring-primary/40 border-primary font-extrabold`) net belirgin hale getirildi.
+  - Sayfaya ilk girişte varsayılan aralık "Bugün" yapıldı; UTC saat farkından kaynaklanan dünün dahil edilmesi (startOfDay çift çevrimi) `getUnifiedHistory` ve `getSalesHistoryReport` üzerinde ISO string doğrudan alınarak giderildi.
+  - Tahmini kâr analiz edildi: Satış brüt kârı ((Satış - Alış) × Adet) ile işletme genel giderleri kesin olarak ayrıldı, giderler satış kârından düşülmedi.
+  - 6 adet bağımsız KPI kartı ve her birine özel amaca yönelik modal pencereleri oluşturuldu:
+    1. Net Satış Cirosu: Bugün ne satılmış, hangi fişler kesilmiş, ürünler ve satış açıklamaları.
+    2. Satış Kârlılık Analizi: Satılan ürünlerin alış maliyetleri, satış cirosu, elde edilen brüt kâr ve kâr marjı (giderler düşülmez).
+    3. İşletme Giderleri: Nereye para ödenmiş, kime/hangi tedarikçiye, hangi kategoride, hangi kasadan çıkış yapılmış.
+    4. Kasa & Tahsilat: Kasaya bugün kaç para toplanmış, Nakit, Kredi Kartı/POS, Banka Havale ve Veresiye dağılımı.
+    5. Ortalama Sepet Hacmi: Fiş başına düşen ortalama sepet büyüklüğü.
+    6. Satış & Fiş Hacmi: Fiş sayıları ve veresiye adedi.
+  - Tip kontrolü: `npx tsc --noEmit` hatasız geçti (0 error).
 - [x] 2026-05-12: `JOURNAL.md` eklendi. Neden: Kullanici tarafindan istenen surekli is protokolunu baslatmak ve proje durumunu kalici olarak kaydetmek.
 - [/] 2026-05-12: `Ozellik 2` calismasi baslatildi. Neden: Kurye is yukleme ve rota onceliklendirme icin Graphify Community 9/38/49 baglamlari uzerinden teknik plan hazirlanacak.
 - [/] 2026-05-12: `Ozellik 2` teknik plani netlestirildi. Degisecek ana dosyalar: `src/lib/actions/shortage-actions.ts`, `src/components/courier/courier-dashboard-client.tsx`. Neden: Kurye gorevleri mevcut `ShortageItem`, personel ve stok verileriyle skorlanacak; schema degisikligi yapmadan rota/oncelik bilgisi UI'a tasinacak.

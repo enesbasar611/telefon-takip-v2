@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeftRight, ChevronDown, ChevronUp, Loader2, Printer, User } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, ChevronUp, Loader2, Printer, ReceiptText, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -81,8 +81,14 @@ export function SalesHistoryRow({
             </td>
             <td className="px-6 py-2">
                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                        <User className="h-4 w-4 text-orange-600" />
+                    <div className={cn(
+                        "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                        op.type === "EXPENSE" ? "bg-rose-500/10 text-rose-600" :
+                        op.type === "DEBT_DIRECT" ? "bg-orange-500/10 text-orange-600" :
+                        op.type === "PAYMENT" ? "bg-emerald-500/10 text-emerald-600" :
+                        "bg-blue-500/10 text-blue-600"
+                    )}>
+                        {op.type === "EXPENSE" ? <ReceiptText className="h-4 w-4" /> : <User className="h-4 w-4" />}
                     </div>
                     <span className="text-sm font-semibold tracking-tight">{op.customerName}</span>
                 </div>
@@ -110,9 +116,12 @@ export function SalesHistoryRow({
                 <div className="flex flex-col items-end">
                     <span className={cn(
                         "text-lg font-bold tracking-tight",
-                        isIncome ? "text-emerald-500" : "text-rose-500"
+                        op.type === "EXPENSE" ? "text-rose-600 dark:text-rose-400" :
+                        op.type === "DEBT_DIRECT" ? "text-orange-600 dark:text-orange-400" :
+                        op.type === "PAYMENT" ? "text-emerald-600 dark:text-emerald-400" :
+                        "text-blue-600 dark:text-blue-400"
                     )}>
-                        {isIncome ? "+" : "-"}{displaySymbol}{displayAmount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                        {op.type === "EXPENSE" ? "-" : "+"}{displaySymbol}{displayAmount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
                     </span>
                     <div className="flex items-center gap-1 opacity-70">
                         <span className="text-xs font-semibold text-muted-foreground">

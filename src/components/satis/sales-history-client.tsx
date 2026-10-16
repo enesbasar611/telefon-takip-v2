@@ -64,6 +64,7 @@ interface SalesHistoryClientProps {
 const typeFilters = [
     { key: "ALL", label: "Hepsi" },
     { key: "SALE", label: "Satışlar" },
+    { key: "EXPENSE", label: "Giderler" },
     { key: "DEBT", label: "Veresiyeler" },
     { key: "PAYMENT", label: "Tahsilatlar" },
 ] as const;
@@ -87,6 +88,7 @@ export function SalesHistoryClient({
     const [typeFilter, setTypeFilter] = useState(propType || "ALL");
     const [paymentMethodFilter, setPaymentMethodFilter] = useState("ALL");
     const [staffFilter, setStaffFilter] = useState("ALL");
+    const [activeQuickFilter, setActiveQuickFilter] = useState<string>("today");
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: new Date(startDate),
         to: new Date(endDate),
@@ -141,6 +143,7 @@ export function SalesHistoryClient({
             return;
         }
         setPage(1);
+        setActiveQuickFilter("custom");
         setAppliedRange({ from: dateRange.from, to: dateRange.to || dateRange.from });
         setCalendarOpen(false);
     };
@@ -152,14 +155,11 @@ export function SalesHistoryClient({
         setPaymentMethodFilter("ALL");
         setStaffFilter("ALL");
         setPage(1);
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const resetRange = { from: monthStart, to: now };
-        setDateRange(resetRange);
-        setAppliedRange(resetRange);
+        setQuickRange("today");
     };
 
     const setQuickRange = (type: "today" | "yesterday" | "thisWeek" | "thisMonth" | "thisMonthTTD" | "lastMonthTTD" | "lastMonth") => {
+        setActiveQuickFilter(type);
         const now = new Date();
         let range = { from: now, to: now };
         switch (type) {
@@ -270,7 +270,8 @@ export function SalesHistoryClient({
 
     const getTypeLabel = (type: OperationType) => {
         switch (type) {
-            case "SALE": return "Peşin Satış";
+            case "SALE": return "Satış";
+            case "EXPENSE": return "Gider";
             case "DEBT_DIRECT": return "Veresiye";
             case "PAYMENT": return "Tahsilat";
             default: return "İşlem";
@@ -279,10 +280,11 @@ export function SalesHistoryClient({
 
     const getTypeColor = (type: OperationType) => {
         switch (type) {
-            case "SALE": return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
-            case "DEBT_DIRECT": return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
-            case "PAYMENT": return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
-            default: return "bg-slate-500/10 text-slate-600";
+            case "SALE": return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30";
+            case "EXPENSE": return "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30";
+            case "DEBT_DIRECT": return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30";
+            case "PAYMENT": return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+            default: return "bg-slate-500/10 text-slate-600 border-slate-500/30";
         }
     };
 
@@ -437,73 +439,63 @@ export function SalesHistoryClient({
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                     {/* Quick Range Pills */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
-                            onClick={() => setQuickRange("today")}
-                        >
-                            Bugün
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
-                            onClick={() => setQuickRange("yesterday")}
-                        >
-                            Dün
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
-                            onClick={() => setQuickRange("thisWeek")}
-                        >
-                            Bu Hafta
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 rounded-lg px-2.5 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 shrink-0" 
-                            onClick={() => setQuickRange("thisMonthTTD")}
-                        >
-                            🎯 Ay Başından Bugüne (MTD)
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
-                            onClick={() => setQuickRange("lastMonthTTD")}
-                        >
-                            🔄 Geçen Ay Eşdeğer Gün
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 rounded-lg px-2.5 text-xs font-semibold hover:bg-muted shrink-0" 
-                            onClick={() => setQuickRange("lastMonth")}
-                        >
-                            Geçen Ay (Tam)
-                        </Button>
+                        {[
+                            { key: "today", label: "Bugün" },
+                            { key: "yesterday", label: "Dün" },
+                            { key: "thisWeek", label: "Bu Hafta" },
+                            { key: "thisMonthTTD", label: "🎯 Ay Başından Bugüne (MTD)" },
+                            { key: "lastMonthTTD", label: "🔄 Geçen Ay Eşdeğer Gün" },
+                            { key: "lastMonth", label: "Geçen Ay (Tam)" },
+                        ].map((item) => {
+                            const isActive = activeQuickFilter === item.key;
+                            return (
+                                <Button 
+                                    key={item.key}
+                                    variant={isActive ? "default" : "outline"} 
+                                    size="sm" 
+                                    className={cn(
+                                        "h-8 rounded-lg px-3 text-xs transition-all shrink-0 border",
+                                        isActive
+                                            ? "bg-primary text-primary-foreground font-extrabold shadow-sm ring-2 ring-primary/40 border-primary" 
+                                            : "border-border/60 text-muted-foreground font-semibold hover:bg-muted hover:text-foreground"
+                                    )} 
+                                    onClick={() => setQuickRange(item.key as any)}
+                                >
+                                    {item.label}
+                                </Button>
+                            );
+                        })}
                     </div>
 
                     {/* Date Picker Popover + Comparison Mode Button */}
                     <div className="flex items-center gap-2">
                         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-9 rounded-xl border-border/60 justify-start gap-2 text-xs flex-1 sm:flex-none sm:min-w-[230px]">
+                                <Button variant="outline" size="sm" className={cn("h-9 rounded-xl border-border/60 justify-start gap-2 text-xs flex-1 sm:flex-none sm:min-w-[230px]", activeQuickFilter === "custom" && "ring-2 ring-primary/40 border-primary font-bold")}>
                                     <CalendarIcon className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                     <span className="truncate">{formattedRange}</span>
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0 rounded-2xl border-border shadow-2xl flex flex-col md:flex-row" align="end">
                                 <div className="flex flex-row md:flex-col p-2 gap-1 border-b md:border-b-0 md:border-r border-border bg-muted/20 overflow-x-auto md:w-36 justify-start items-stretch">
-                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("today")}>Bugün</Button>
-                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("yesterday")}>Dün</Button>
-                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("thisWeek")}>Bu Hafta</Button>
-                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs font-bold text-primary" onClick={() => setQuickRange("thisMonthTTD")}>Ay Başından Bugüne</Button>
-                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("lastMonthTTD")}>Geçen Ay Eşdeğer</Button>
-                                    <Button variant="ghost" size="sm" className="justify-start font-medium rounded-lg text-xs" onClick={() => setQuickRange("lastMonth")}>Geçen Ay (Tam)</Button>
+                                    {[
+                                        { key: "today", label: "Bugün" },
+                                        { key: "yesterday", label: "Dün" },
+                                        { key: "thisWeek", label: "Bu Hafta" },
+                                        { key: "thisMonthTTD", label: "Ay Başından Bugüne" },
+                                        { key: "lastMonthTTD", label: "Geçen Ay Eşdeğer" },
+                                        { key: "lastMonth", label: "Geçen Ay (Tam)" },
+                                    ].map((item) => (
+                                        <Button 
+                                            key={item.key} 
+                                            variant={activeQuickFilter === item.key ? "default" : "ghost"} 
+                                            size="sm" 
+                                            className={cn("justify-start rounded-lg text-xs", activeQuickFilter === item.key ? "font-bold bg-primary text-primary-foreground" : "font-medium")} 
+                                            onClick={() => setQuickRange(item.key as any)}
+                                        >
+                                            {item.label}
+                                        </Button>
+                                    ))}
                                 </div>
                                 <div className="flex flex-col">
                                     <Calendar
@@ -623,23 +615,50 @@ export function SalesHistoryClient({
 
                                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/30">
                                     <div className="flex flex-wrap items-center gap-1.5">
-                                        {typeFilters.map((filter) => (
-                                            <Button
-                                                key={filter.key}
-                                                variant={(typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "default" : "outline"}
-                                                size="sm"
-                                                className={cn(
-                                                    "h-8 rounded-xl px-3 text-xs font-semibold",
-                                                    (typeFilter === filter.key || (filter.key === "ALL" && !typeFilter)) ? "bg-primary text-primary-foreground shadow-sm" : "border-border/60"
-                                                )}
-                                                onClick={() => {
-                                                    setPage(1);
-                                                    setTypeFilter(filter.key);
-                                                }}
-                                            >
-                                                {filter.label}
-                                            </Button>
-                                        ))}
+                                        {typeFilters.map((filter) => {
+                                            const isSelected = typeFilter === filter.key || (filter.key === "ALL" && !typeFilter);
+                                            let btnClasses = "";
+
+                                            if (filter.key === "ALL") {
+                                                btnClasses = isSelected
+                                                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-md ring-2 ring-slate-400/30 font-bold"
+                                                    : "border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground font-medium";
+                                            } else if (filter.key === "SALE") {
+                                                btnClasses = isSelected
+                                                    ? "bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-500/40 font-bold"
+                                                    : "border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 font-semibold";
+                                            } else if (filter.key === "EXPENSE") {
+                                                btnClasses = isSelected
+                                                    ? "bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-500/40 font-bold"
+                                                    : "border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 font-semibold";
+                                            } else if (filter.key === "DEBT") {
+                                                btnClasses = isSelected
+                                                    ? "bg-orange-600 text-white border-orange-600 shadow-md ring-2 ring-orange-500/40 font-bold"
+                                                    : "border-orange-500/30 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 font-semibold";
+                                            } else if (filter.key === "PAYMENT") {
+                                                btnClasses = isSelected
+                                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/40 font-bold"
+                                                    : "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold";
+                                            }
+
+                                            return (
+                                                <Button
+                                                    key={filter.key}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className={cn(
+                                                        "h-8 rounded-xl px-3.5 text-xs transition-all",
+                                                        btnClasses
+                                                    )}
+                                                    onClick={() => {
+                                                        setPage(1);
+                                                        setTypeFilter(filter.key);
+                                                    }}
+                                                >
+                                                    {filter.label}
+                                                </Button>
+                                            );
+                                        })}
                                     </div>
                                     {historyFetching && (
                                         <span className="text-xs text-muted-foreground animate-pulse">Liste güncelleniyor...</span>

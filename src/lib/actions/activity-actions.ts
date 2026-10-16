@@ -9,7 +9,7 @@ import { tr } from "date-fns/locale";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { convertTransactionAmount, type TransactionCurrency } from "@/lib/finance/transaction-currency";
 
-export type OperationType = "SALE" | "DEBT_DIRECT" | "PAYMENT";
+export type OperationType = "SALE" | "DEBT_DIRECT" | "PAYMENT" | "EXPENSE";
 export type HistoryDateRange = "TODAY" | "THIS_MONTH" | "LAST_MONTH" | "TWO_MONTHS_AGO" | "ALL";
 
 export interface UnifiedOperation {
@@ -55,14 +55,15 @@ export async function getUnifiedHistory(options: {
                 { customer: { name: { contains: searchTerm, mode: "insensitive" } } },
                 { sale: { saleNumber: { contains: searchTerm, mode: "insensitive" } } },
                 { customer: { phone: { contains: searchTerm, mode: "insensitive" } } },
+                { supplier: { name: { contains: searchTerm, mode: "insensitive" } } },
             ] : undefined,
         };
 
         const now = new Date();
         if (startDate && endDate) {
             where.createdAt = {
-                gte: startOfDay(new Date(startDate)),
-                lte: endOfDay(new Date(endDate)),
+                gte: new Date(startDate),
+                lte: new Date(endDate),
             };
         } else if (dateRange === "TODAY") {
             where.createdAt = { gte: startOfDay(now), lte: endOfDay(now) };
@@ -78,9 +79,14 @@ export async function getUnifiedHistory(options: {
 
         if (typeFilter !== "ALL") {
             if (typeFilter === "SALE") {
+                where.type = "INCOME";
                 where.saleId = { not: null };
                 where.paymentMethod = { not: "DEBT" };
+                where.category = { not: "Tahsilat" };
+            } else if (typeFilter === "EXPENSE") {
+                where.type = "EXPENSE";
             } else if (typeFilter === "DEBT") {
+                where.type = { not: "EXPENSE" };
                 const debtConditions = [
                     { paymentMethod: "DEBT" as any },
                     { debtId: { not: null }, category: { not: "Tahsilat" } }
@@ -97,6 +103,7 @@ export async function getUnifiedHistory(options: {
                     where.OR = debtConditions;
                 }
             } else if (typeFilter === "PAYMENT") {
+                where.type = { not: "EXPENSE" };
                 where.category = "Tahsilat";
             }
         }
@@ -115,6 +122,7 @@ export async function getUnifiedHistory(options: {
                 where,
                 include: {
                     customer: true,
+                    supplier: true,
                     financeAccount: true,
                     sale: {
                         include: {
@@ -137,13 +145,15 @@ export async function getUnifiedHistory(options: {
                 return true;
             })
             .map((tx: any) => {
-            const isPayment = tx.category === "Tahsilat";
-            const isDebt = tx.paymentMethod === "DEBT" || (!!tx.debtId && !isPayment);
-            const isSale = !!tx.saleId && !isDebt;
+            const isExpense = tx.type === "EXPENSE";
+            const isPayment = tx.category === "Tahsilat" && !isExpense;
+            const isDebt = (tx.paymentMethod === "DEBT" || !!tx.debtId) && !isPayment && !isExpense;
+            const isSale = !!tx.saleId && !isDebt && !isExpense;
 
             let type: OperationType = "SALE";
-            if (isDebt) type = "DEBT_DIRECT";
-            if (isPayment) type = "PAYMENT";
+            if (isExpense) type = "EXPENSE";
+            else if (isDebt) type = "DEBT_DIRECT";
+            else if (isPayment) type = "PAYMENT";
 
             const operationItems = tx.sale?.items.map((item: any) => ({
                 name: item.product?.name || "Bilinmeyen Ürün",
@@ -165,21 +175,36 @@ export async function getUnifiedHistory(options: {
                 });
             }
 
+            if (isExpense && operationItems.length === 0) {
+                operationItems.push({
+                    name: tx.description || tx.category || "İşletme Gideri",
+                    quantity: 1,
+                    price: Number(tx.amount),
+                    productId: undefined,
+                    saleId: undefined,
+                    debtId: undefined,
+                });
+            }
+
+            const customerName = isExpense 
+                ? (tx.supplier?.name || tx.customer?.name || tx.category || "İşletme Gideri")
+                : (tx.customer ? tx.customer.name : (tx.saleId ? "HIZLI SATIŞ" : "DİĞER"));
+
             return {
                 id: tx.id,
                 type,
-                number: tx.sale?.saleNumber || (isDebt ? `B-${tx.id.substring(0, 6)}` : `O-${tx.id.substring(0, 6)}`),
+                number: tx.sale?.saleNumber || (isExpense ? `G-${tx.id.substring(0, 6)}` : isDebt ? `B-${tx.id.substring(0, 6)}` : `O-${tx.id.substring(0, 6)}`),
                 date: tx.createdAt,
                 amount: Number(tx.amount),
                 currency: tx.currency,
-                customerName: tx.customer?.name || "Perakende Müşteri",
+                customerName,
                 customerId: tx.customerId || undefined,
                 customerPhone: tx.customer?.phone || undefined,
                 paymentMethod: tx.paymentMethod,
                 accountName: tx.financeAccount?.name,
                 description: tx.description,
                 items: operationItems,
-                status: isSale ? "SATIŞ" : (isDebt ? "VERESİYE" : "TAHSİLAT"),
+                status: isExpense ? "GİDER" : (isSale ? "SATIŞ" : (isDebt ? "VERESİYE" : "TAHSİLAT")),
                 saleId: tx.saleId || undefined,
                 debtId: tx.debtId || undefined,
                 transactionType: tx.type,
@@ -218,6 +243,8 @@ export interface SalesHistoryReport {
         end: string;
         revenue: number;
         profit: number;
+        expense: number;
+        expenseCount: number;
         saleCount: number;
         itemCount: number;
         averageSale: number;
@@ -232,6 +259,7 @@ export interface SalesHistoryReport {
         revenueVsPrevious: number;
         revenueVsTwoAgo: number;
         profitVsPrevious: number;
+        expenseVsPrevious: number;
         saleCountVsPrevious: number;
         averageSaleVsPrevious: number;
         profitMarginDiff: number;
@@ -246,12 +274,23 @@ export interface SalesHistoryReport {
         dayName: string;
         revenue: number; 
         profit: number; 
+        expense: number;
         count: number;
         averageBasket: number;
     }[];
     paymentBreakdown: { method: string; label: string; total: number; count: number; percentage: number }[];
     topProducts: { name: string; quantity: number; revenue: number; profit: number; margin: number }[];
     topCategories: { name: string; revenue: number; profit: number; share: number }[];
+    topExpenses: {
+        id: string;
+        category: string;
+        description: string;
+        amount: number;
+        date: string;
+        dateFormatted: string;
+        accountName?: string;
+        supplierName?: string;
+    }[];
     staffPerformance: { id: string; name: string; revenue: number; profit: number; saleCount: number }[];
     insights: string[];
     smartInsights: SalesHistoryInsight[];
@@ -282,6 +321,8 @@ const createEmptyPeriod = (key: PeriodKey, date: Date) => ({
     end: endOfMonth(date).toISOString(),
     revenue: 0,
     profit: 0,
+    expense: 0,
+    expenseCount: 0,
     saleCount: 0,
     itemCount: 0,
     averageSale: 0,
@@ -301,8 +342,16 @@ export async function getSalesHistoryReport(options: {
     try {
         const shopId = await getShopId();
         const now = new Date();
-        const currentStart = options.startDate ? startOfDay(new Date(options.startDate)) : startOfMonth(now);
-        const currentEnd = options.endDate ? endOfDay(new Date(options.endDate)) : endOfDay(now);
+        const currentStart = options.startDate instanceof Date 
+            ? options.startDate 
+            : options.startDate 
+                ? new Date(options.startDate) 
+                : startOfDay(now);
+        const currentEnd = options.endDate instanceof Date 
+            ? options.endDate 
+            : options.endDate 
+                ? new Date(options.endDate) 
+                : endOfDay(now);
 
         // Time-To-Date (TTD) Equal Day Logic:
         // Comparing ongoing month (e.g. Oct 1-15) against prior month (Sep 1-15) gives true equal-day comparison.
@@ -358,7 +407,7 @@ export async function getSalesHistoryReport(options: {
             twoAgo: { ...createEmptyPeriod("twoAgo", twoAgoStart), label: periodRanges.twoAgo.label, shortLabel: periodRanges.twoAgo.shortLabel, start: twoAgoStart.toISOString(), end: twoAgoEnd.toISOString() },
         };
 
-        const [sales, rates] = await Promise.all([
+        const [sales, rates, expenses] = await Promise.all([
             prisma.sale.findMany({
                 where: {
                     shopId,
@@ -380,6 +429,21 @@ export async function getSalesHistoryReport(options: {
                 orderBy: { createdAt: "asc" },
             }),
             getExchangeRates(shopId),
+            prisma.transaction.findMany({
+                where: {
+                    shopId,
+                    type: "EXPENSE",
+                    createdAt: {
+                        gte: twoAgoStart,
+                        lte: currentEnd,
+                    },
+                },
+                include: {
+                    financeAccount: true,
+                    supplier: true,
+                },
+                orderBy: { createdAt: "desc" },
+            }),
         ]);
 
         const currentDays = eachDayOfInterval({
@@ -393,6 +457,7 @@ export async function getSalesHistoryReport(options: {
             dayName: format(day, "EEEE", { locale: tr }),
             revenue: 0,
             profit: 0,
+            expense: 0,
             count: 0,
             averageBasket: 0,
         }));
@@ -409,6 +474,7 @@ export async function getSalesHistoryReport(options: {
             return null;
         };
 
+        // Sales loop (isolated to sales revenue and gross merchandise profit)
         for (const sale of sales) {
             if (!sale.items || sale.items.length === 0) continue;
             const periodKey = resolvePeriod(sale.createdAt);
@@ -498,6 +564,39 @@ export async function getSalesHistoryReport(options: {
             }
         }
 
+        // Expenses loop (strictly separated from sales revenue and gross profit)
+        const topExpenses: SalesHistoryReport["topExpenses"] = [];
+        for (const exp of expenses) {
+            const periodKey = resolvePeriod(exp.createdAt);
+            if (!periodKey) continue;
+
+            const expCurrency = toSupportedCurrency(exp.currency);
+            const expenseAmount = convertTransactionAmount(Number(exp.amount || 0), expCurrency, rates).TRY;
+
+            const period = periods[periodKey];
+            period.expense += expenseAmount;
+            period.expenseCount += 1;
+
+            if (periodKey === "current") {
+                const dayKey = format(exp.createdAt, "yyyy-MM-dd");
+                const daily = dailyMap.get(dayKey);
+                if (daily) {
+                    daily.expense += expenseAmount;
+                }
+
+                topExpenses.push({
+                    id: exp.id,
+                    category: exp.category || "İşletme Gideri",
+                    description: exp.description || exp.category || "Gider Ödemesi",
+                    amount: expenseAmount,
+                    date: exp.createdAt.toISOString(),
+                    dateFormatted: format(exp.createdAt, "dd MMMM yyyy HH:mm", { locale: tr }),
+                    accountName: exp.financeAccount?.name || "Nakit Kasa",
+                    supplierName: exp.supplier?.name,
+                });
+            }
+        }
+
         for (const day of currentDays) {
             day.averageBasket = day.count > 0 ? day.revenue / day.count : 0;
         }
@@ -512,6 +611,7 @@ export async function getSalesHistoryReport(options: {
             revenueVsPrevious: percentChange(periods.current.revenue, periods.previous.revenue),
             revenueVsTwoAgo: percentChange(periods.current.revenue, periods.twoAgo.revenue),
             profitVsPrevious: percentChange(periods.current.profit, periods.previous.profit),
+            expenseVsPrevious: percentChange(periods.current.expense, periods.previous.expense),
             saleCountVsPrevious: percentChange(periods.current.saleCount, periods.previous.saleCount),
             averageSaleVsPrevious: percentChange(periods.current.averageSale, periods.previous.averageSale),
             profitMarginDiff: periods.current.profitMargin - periods.previous.profitMargin,
@@ -594,6 +694,17 @@ export async function getSalesHistoryReport(options: {
             metric: `${periods.current.averageSale.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺`,
         });
 
+        if (periods.current.expense > 0) {
+            smartInsights.push({
+                id: "current-expense",
+                title: "Dönem İşletme Giderleri",
+                text: `Bu dönemde toplam ${periods.current.expenseCount} işlemle ${periods.current.expense.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺ gider gerçekleşti. Giderler satış brüt kârından ayrı tutulmaktadır.`,
+                tone: "neutral",
+                iconName: "Banknote",
+                metric: `${periods.current.expense.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} ₺ Gider`,
+            });
+        }
+
         if (topCategories.length > 0) {
             const leader = topCategories[0];
             smartInsights.push({
@@ -637,6 +748,7 @@ export async function getSalesHistoryReport(options: {
             paymentBreakdown,
             topProducts,
             topCategories,
+            topExpenses,
             staffPerformance,
             insights: legacyInsights,
             smartInsights,
@@ -656,6 +768,7 @@ export async function getSalesHistoryReport(options: {
                 revenueVsPrevious: 0, 
                 revenueVsTwoAgo: 0, 
                 profitVsPrevious: 0, 
+                expenseVsPrevious: 0,
                 saleCountVsPrevious: 0,
                 averageSaleVsPrevious: 0,
                 profitMarginDiff: 0,
@@ -667,6 +780,7 @@ export async function getSalesHistoryReport(options: {
             paymentBreakdown: [],
             topProducts: [],
             topCategories: [],
+            topExpenses: [],
             staffPerformance: [],
             insights: [],
             smartInsights: [],

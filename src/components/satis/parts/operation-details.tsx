@@ -100,9 +100,12 @@ export function OperationDetails({
                         <div className="flex items-baseline justify-between mt-2">
                             <span className={cn(
                                 "text-3xl font-black tracking-tighter",
-                                isIncome ? "text-emerald-500" : "text-rose-500"
+                                op.type === "EXPENSE" ? "text-rose-600 dark:text-rose-400" :
+                                op.type === "DEBT_DIRECT" ? "text-orange-600 dark:text-orange-400" :
+                                op.type === "PAYMENT" ? "text-emerald-600 dark:text-emerald-400" :
+                                "text-blue-600 dark:text-blue-400"
                             )}>
-                                {isIncome ? "+" : "-"}{displaySymbol}{displayAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                                {op.type === "EXPENSE" ? "-" : "+"}{displaySymbol}{displayAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                             </span>
                             <Badge variant="outline" className={cn("text-[10px] font-black tracking-[0.1em] px-3 py-1 uppercase rounded-lg border-2", getTypeColor(op.type))}>
                                 {getTypeLabel(op.type)}

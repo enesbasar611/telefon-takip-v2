@@ -1,6 +1,6 @@
 import { getSalesHistoryReport, getUnifiedHistory, type HistoryDateRange } from "@/lib/actions/activity-actions";
 import { SalesHistoryClient } from "@/components/satis/sales-history-client";
-import { endOfDay, startOfMonth } from "date-fns";
+import { endOfDay, startOfDay, startOfMonth } from "date-fns";
 import { getStaffShell } from "@/lib/actions/staff-actions";
 
 import { Metadata } from "next";
@@ -21,7 +21,7 @@ export default async function SalesHistoryPage({
     const searchTerm = searchParams.search || "";
     const typeFilter = searchParams.type || "ALL";
     const now = new Date();
-    const startDate = searchParams.startDate || startOfMonth(now).toISOString();
+    const startDate = searchParams.startDate || startOfDay(now).toISOString();
     const endDate = searchParams.endDate || endOfDay(now).toISOString();
 
     const [historyData, reportData, staffList] = await Promise.all([
