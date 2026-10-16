@@ -126,10 +126,25 @@ export function WhatsAppConfirmModal({
                         {mode === "bulk" ? <Users className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm leading-tight truncate">{mode === "bulk" ? "Toplu Hatırlatma" : (customerName || "Müşteri")}</p>
-                        <p className="text-[10px] text-white/80 leading-tight truncate">
-                            {mode === "bulk" ? `${targetPhones.length} Alıcı` : selectedPhone}
-                        </p>
+                        <p className="font-semibold text-sm leading-tight truncate">{mode === "bulk" ? "Toplu Hatırlatma" : (customerName || "Alıcı")}</p>
+                        {mode === "bulk" ? (
+                            <p className="text-[10px] text-white/80 leading-tight truncate">
+                                {targetPhones.length} Alıcı
+                            </p>
+                        ) : (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <input
+                                    type="text"
+                                    value={selectedPhone}
+                                    onChange={(e) => setSelectedPhone(e.target.value)}
+                                    placeholder="05xx..."
+                                    className="text-[11px] bg-black/20 text-white placeholder:text-white/50 px-2 py-0.5 rounded border border-white/20 focus:outline-none focus:border-white/50 w-36 font-mono"
+                                />
+                                {!selectedPhone && (
+                                    <span className="text-[10px] text-amber-200 font-medium">Numara giriniz</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                     {mode === "bulk" && <CheckCheck className="h-4 w-4 text-white/60" />}
                 </div>

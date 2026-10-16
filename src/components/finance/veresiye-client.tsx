@@ -1633,7 +1633,7 @@ export function VeresiyeClient({
     }
 
     return (
-        <div className="animate-in fade-in duration-700 space-y-12">
+        <div className="animate-in fade-in duration-700 space-y-4 sm:space-y-6">
             <PageHeader
                 title="Veresiye Terminali"
                 description="Dükkan alacak takibi, geciken ödemeler ve finansal risk analizi merkezi."
@@ -1658,7 +1658,12 @@ export function VeresiyeClient({
                                 </Button>
                             )}
                             <div className="shrink-0">
-                                <AddDebtModal rates={rates} />
+                                <AddDebtModal rates={rates}>
+                                    <Button className="h-11 sm:h-12 px-4 sm:px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm gap-2 shadow-lg shadow-blue-500/25 border-none transition-all active:scale-95 whitespace-nowrap">
+                                        <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                        <span>Yeni Borç Ekle</span>
+                                    </Button>
+                                </AddDebtModal>
                             </div>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -1715,7 +1720,7 @@ export function VeresiyeClient({
 
                 {/* Right: Premium Customer Table */}
                 <LayoutCustomizer sectionKey="veresiye_table" settings={settings} onUpdate={() => router.refresh()} className={cn(isAnalysisHidden ? "lg:col-span-12" : "lg:col-span-9")}>
-                    <div className="space-y-4 sm:space-y-6">
+                    <div className="space-y-3 sm:space-y-4">
                         {/* Mobile toggle for Risk & Aging Analysis */}
                         <div className="flex lg:hidden justify-between items-center">
                             <Button
@@ -1744,7 +1749,7 @@ export function VeresiyeClient({
                             onViewModeChange={handleViewModeChange}
                         />
 
-                        <Card className="bg-muted/20 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-border relative z-10 min-h-[600px]">
+                        <Card className="bg-muted/20 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-border relative z-10 min-h-[350px]">
                             <div className={cn("transition-all duration-500 flex flex-col h-full", isPending ? "opacity-30 blur-md grayscale pointer-events-none scale-[0.99]" : "opacity-100 blur-0 grayscale-0 scale-100")}>
                                 {aggregatedData.length > 0 && !isPending && (
                                     <div className={cn(

@@ -68,10 +68,11 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
             const initialQtys: Record<string, number> = {};
             const initialPrices: Record<string, number> = {};
             const initialCurrencies: Record<string, "TRY" | "USD"> = {};
+            const initialAddToStock: Record<string, boolean> = {};
 
             order.items.forEach((item: any) => {
                 initialQtys[item.id] = item.quantity;
-                const usdPrice = item.product?.buyPriceUsd || item.buyPriceUsd;
+                const usdPrice = item.buyPriceUsd || item.product?.buyPriceUsd;
                 if (usdPrice && Number(usdPrice) > 0) {
                     initialPrices[item.id] = Number(usdPrice);
                     initialCurrencies[item.id] = "USD";
@@ -79,10 +80,14 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                     initialPrices[item.id] = Number(item.buyPrice) || Number(item.product?.buyPrice) || 0;
                     initialCurrencies[item.id] = "TRY";
                 }
+                if (!item.productId) {
+                    initialAddToStock[item.id] = true;
+                }
             });
             setReceivedQtys(initialQtys);
             setBuyPrices(initialPrices);
             setCurrencies(initialCurrencies);
+            setAddToStock(initialAddToStock);
         }
     }, [order]);
 
@@ -101,7 +106,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
         const updates = order.items.map((item: any) => {
             const receivedQuantity = receivedQtys[item.id] || 0;
             const priceInput = buyPrices[item.id];
-            const hasNewPrice = priceInput !== undefined && !isNaN(priceInput) && priceInput > 0;
+            const hasNewPrice = priceInput !== undefined && !isNaN(priceInput) && priceInput >= 0;
             const isUsd = currencies[item.id] === 'USD';
 
             const finalPriceTry = !hasNewPrice
@@ -233,7 +238,7 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                         <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center w-28">Stok Durumu</th>
                                         <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center">Sipariş</th>
                                         <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center w-28">Gelen</th>
-                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center w-32">Alış Fiyatı ($)</th>
+                                        <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-center w-36">Alış Fiyatı</th>
                                         <th className="px-4 py-4 text-[10px] text-slate-500 font-black uppercase text-right">Durum</th>
                                     </tr>
                                 </thead>
@@ -249,18 +254,24 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                         <Package className="h-5 w-5 text-muted-foreground" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm  text-foreground">{item.name}</p>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <p className="text-[10px] font-medium text-muted-foreground truncate max-w-[150px]">ID: {item.productId || "Manuel Giriş"}</p>
+                                                        <p className="text-sm font-semibold text-foreground">{item.name}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {!item.productId ? (
+                                                                <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                                                                    Katalogda Yok
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] text-muted-foreground">ID: {item.productId.slice(-6)}</span>
+                                                            )}
                                                             {!item.productId && (
-                                                                <div className="flex items-center gap-1.5 ml-1">
+                                                                <div className="flex items-center gap-1.5 ml-1 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
                                                                     <Checkbox
                                                                         id={`add-stock-${item.id}`}
                                                                         checked={addToStock[item.id]}
                                                                         onCheckedChange={(checked) => setAddToStock(prev => ({ ...prev, [item.id]: !!checked }))}
-                                                                        className="h-3 w-3 border-blue-500/50 data-[state=checked]:bg-blue-500"
+                                                                        className="h-3 w-3 border-blue-500 data-[state=checked]:bg-blue-500"
                                                                     />
-                                                                    <label htmlFor={`add-stock-${item.id}`} className="text-[9px] font-bold text-blue-500 cursor-pointer uppercase tracking-tighter">Stoğa Ekle</label>
+                                                                    <label htmlFor={`add-stock-${item.id}`} className="text-[10px] font-bold text-blue-400 cursor-pointer uppercase">Stoğa Ekle</label>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -284,13 +295,13 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                         className="h-10 rounded-xl bg-background border-2 border-border/60 text-center text-sm font-bold text-foreground focus:border-blue-500"
                                                     />
                                                 </td>
-                                                <td className="px-4 py-4 w-32 align-top">
+                                                <td className="px-4 py-4 w-36 align-top">
                                                     <div className="relative">
                                                         <div className="absolute inset-y-0 left-0 flex items-center">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setCurrencies(prev => ({ ...prev, [item.id]: prev[item.id] === 'USD' ? 'TRY' : 'USD' }))}
-                                                                className="h-full px-2 text-xs  text-blue-400 bg-blue-500/10 border-r border-border rounded-l-xl hover:bg-blue-500/20 transition-colors"
+                                                                className="h-full px-2 text-xs text-blue-400 bg-blue-500/10 border-r border-border rounded-l-xl hover:bg-blue-500/20 transition-colors font-bold"
                                                             >
                                                                 {currencies[item.id] === 'USD' ? '$' : '₺'}
                                                             </button>
@@ -300,13 +311,18 @@ export function MalKabulModal({ isOpen, onClose, order }: MalKabulModalProps) {
                                                             step="0.01"
                                                             value={buyPrices[item.id] !== undefined ? buyPrices[item.id] : ""}
                                                             onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                                                            className="w-full h-10 bg-white/5 border-border text-xs  rounded-xl pl-8 text-right pr-2"
+                                                            className="w-full h-10 bg-white/5 border-border text-xs rounded-xl pl-8 text-right pr-2 font-bold"
                                                         />
                                                     </div>
                                                     {currencies[item.id] === 'USD' && buyPrices[item.id] > 0 && (
-                                                        <div className="text-[10px]  text-muted-foreground mt-1 text-right">
+                                                        <div className="text-[10px] text-muted-foreground mt-1 text-right">
                                                             ≈ {((buyPrices[item.id] || 0) * usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}₺
                                                         </div>
+                                                    )}
+                                                    {Number(item.buyPrice) !== buyPrices[item.id] && (
+                                                        <span className="text-[9px] text-amber-400 font-semibold block text-right mt-0.5">
+                                                            (Sipariş: ₺{Number(item.buyPrice).toLocaleString()})
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-4 text-right">

@@ -47,6 +47,14 @@ import { useEffect, useRef, useState } from "react";
 import { getIndustryLabel } from "@/lib/industry-utils";
 import { getExchangeRate } from "@/lib/currency-utils";
 import { PaymentStatus, PaymentMethod } from "@prisma/client";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { normalizeSearchText } from "@/lib/utils";
+import { sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
+
+function buildSupplierOrderWhatsAppMessage(orderNo: string, supplierName: string, items: { name: string; quantity: number }[]): string {
+    const list = items.map((it) => `• ${it.name} — ${it.quantity} Adet`).join("\n");
+    return `*Sipariş Talebi*\n*Tedarikçi:* ${supplierName}\n*Sipariş No:* #${orderNo}\n\n*Sipariş Edilen Ürünler:*\n${list}\n\n_Lütfen siparişin onayını ve teslimat bilgisini iletiniz._`;
+}
 
 interface PurchaseFormProps {
     isOpen: boolean;
@@ -97,6 +105,12 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
     const [quickCreateOpen, setQuickCreateOpen] = useState(false);
     const [newProductItems, setNewProductItems] = useState<{ tempId: string; name: string; buyPrice: number; currency: "TRY" | "USD" }[]>([]);
 
+    // WhatsApp order confirmation state
+    const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+    const [whatsappMessage, setWhatsappMessage] = useState("");
+    const [whatsappPhone, setWhatsappPhone] = useState("");
+    const [pendingCreatedOrder, setPendingCreatedOrder] = useState<any>(null);
+
     useEffect(() => {
         if (isOpen) {
             getExchangeRate().then(setExchangeRate);
@@ -106,14 +120,24 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
     const handleSearch = async (id: string, query: string) => {
         updateItem(id, "name", query);
-        if (query.length < 2) {
+        if (query.trim().length < 2) {
             setDialogSearchResults([]);
             return;
         }
 
         const results = await searchProducts(query);
-        setDialogSearchResults(results);
-        setSelectedIndex(results.length > 0 ? 0 : -1);
+        const normalizedQuery = normalizeSearchText(query);
+        const sorted = [...results].sort((a, b) => {
+            const aName = normalizeSearchText(a.name);
+            const bName = normalizeSearchText(b.name);
+            const aStarts = aName.startsWith(normalizedQuery);
+            const bStarts = bName.startsWith(normalizedQuery);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            return aName.localeCompare(bName, "tr");
+        });
+        setDialogSearchResults(sorted);
+        setSelectedIndex(sorted.length > 0 ? 0 : -1);
     };
 
     const handleDialogKeyDown = (e: React.KeyboardEvent) => {
@@ -128,9 +152,9 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
             if (selectedIndex >= 0 && dialogSearchResults[selectedIndex]) {
                 selectProduct(activeSearchId!, dialogSearchResults[selectedIndex]);
                 setIsSearchOpen(false);
-            } else if (searchQuery.length >= 2) {
+            } else if (searchQuery.trim().length >= 1) {
                 // If nothing selected but has query, use it as a non-inventory item
-                setItems(items.map(i => i.id === activeSearchId ? { ...i, name: searchQuery, productId: undefined } : i));
+                setItems(items.map(i => i.id === activeSearchId ? { ...i, name: searchQuery.trim(), productId: undefined } : i));
                 setIsSearchOpen(false);
             }
         }
@@ -140,7 +164,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
         setActiveSearchId(id);
         setSearchQuery(initialValue);
         setIsSearchOpen(true);
-        if (initialValue.length >= 2) {
+        if (initialValue.trim().length >= 2) {
             handleSearch(id, initialValue);
         } else {
             setDialogSearchResults([]);
@@ -148,12 +172,15 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
     };
 
     const selectProduct = (rowId: string, product: any) => {
+        const isUsd = product.buyPriceUsd && Number(product.buyPriceUsd) > 0;
+        const initialPrice = isUsd ? Number(product.buyPriceUsd) : (Number(product.buyPrice) || 0);
         setItems(items.map(i => i.id === rowId ? {
             ...i,
             name: product.name,
             productId: product.id,
-            buyPrice: product.buyPriceUsd && i.currency === "USD" ? Number(product.buyPriceUsd) : (Number(product.buyPrice) || i.buyPrice),
-            buyPriceUsd: Number(product.buyPriceUsd) || undefined,
+            currency: isUsd ? "USD" : "TRY",
+            buyPrice: initialPrice,
+            buyPriceUsd: isUsd ? Number(product.buyPriceUsd) : undefined,
         } : i));
     };
 
@@ -194,8 +221,12 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
             toast.error("Lütfen bir tedarikçi seçin.");
             return;
         }
-        if (items.some(i => !i.name || i.buyPrice <= 0)) {
-            toast.error("Tüm ürün bilgilerini eksiksiz doldurun.");
+        if (items.some(i => !i.name || !i.name.trim())) {
+            toast.error("Lütfen tüm ürünlerin adlarını girin.");
+            return;
+        }
+        if (items.some(i => i.quantity <= 0)) {
+            toast.error("Ürün adetleri en az 1 olmalıdır.");
             return;
         }
 
@@ -203,11 +234,6 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
             toast.error("Peşin ödemeler için Kasa / Hesap seçmelisiniz.");
             return;
         }
-
-        // Logic check: If user entered some items that are not in stock (no productId),
-        // we can either force product creation OR just record them as name-only items.
-        // The user said "stokta ürün yoksa yeni siparişmiş gibi algıla", which means just record it.
-        // We'll skip product creation modal to satisfy this "fluid" requirement.
 
         await submitOrder();
     };
@@ -241,12 +267,30 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
 
         if (res.success) {
             toast.success("Satın alma emri oluşturuldu.");
-            if (onSuccess) onSuccess(res.order);
-            onClose();
+            const created = res.order;
+            setPendingCreatedOrder(created);
+
+            const supplierName = selectedSupplier?.name || "Tedarikçi";
+            const msg = buildSupplierOrderWhatsAppMessage(
+                orderNo,
+                supplierName,
+                finalItems.map(i => ({ name: i.name, quantity: i.quantity }))
+            );
+            setWhatsappMessage(msg);
+            setWhatsappPhone(sanitizeWhatsAppPhone(selectedSupplier?.phone));
+            setWhatsappModalOpen(true);
         } else {
             toast.error(res.error || "Hata oluştu.");
         }
         setLoading(false);
+    };
+
+    const handleCloseWhatsAppModal = () => {
+        setWhatsappModalOpen(false);
+        if (onSuccess && pendingCreatedOrder) {
+            onSuccess(pendingCreatedOrder);
+        }
+        onClose();
     };
 
     const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
@@ -333,12 +377,25 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                                     <div
                                                         onClick={() => openSearch(item.id, item.name)}
                                                         className={cn(
-                                                            "h-12 w-full bg-accent/5 border border-border rounded-xl px-4 flex items-center justify-between cursor-pointer transition-all hover:bg-accent/10 hover:border-blue-500/30",
+                                                            "min-h-[50px] py-1.5 w-full bg-accent/5 border border-border rounded-xl px-4 flex items-center justify-between cursor-pointer transition-all hover:bg-accent/10 hover:border-blue-500/30",
                                                             item.name ? "text-foreground font-medium" : "text-muted-foreground/40"
                                                         )}
                                                     >
-                                                        <span className="text-sm truncate">{item.name || "Seçim yapın..."}</span>
-                                                        <Search className="h-4 w-4 opacity-40" />
+                                                        <div className="min-w-0 flex-1">
+                                                            <span className="text-sm truncate block font-medium">{item.name || "Ürün seçin veya isim yazın..."}</span>
+                                                            {item.name ? (
+                                                                item.productId ? (
+                                                                    <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1 mt-0.5">
+                                                                        <CheckCircle2 className="h-3 w-3" /> Stokta Kayıtlı
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1 mt-0.5">
+                                                                        <AlertCircle className="h-3 w-3" /> Stokta Yok (Teslimde Stoğa Eklenebilir)
+                                                                    </span>
+                                                                )
+                                                            ) : null}
+                                                        </div>
+                                                        <Search className="h-4 w-4 opacity-40 shrink-0 ml-2" />
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-3">
@@ -555,7 +612,31 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                             />
                         </div>
 
-                        <div className="max-h-[350px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                        <div className="max-h-[380px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                            {/* Always allow adding the custom query as a non-inventory product if typed */}
+                            {searchQuery.trim().length >= 1 && (
+                                <div
+                                    onClick={() => {
+                                        setItems(items.map(i => i.id === activeSearchId ? { ...i, name: searchQuery.trim(), productId: undefined } : i));
+                                        setIsSearchOpen(false);
+                                    }}
+                                    className="p-3.5 rounded-2xl cursor-pointer transition-all border border-dashed border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 flex items-center justify-between text-blue-600 dark:text-blue-400 group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-9 w-9 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                                            <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-xs">"{searchQuery.trim()}" — Stokta Olmayan Ürün Olarak Ekle</p>
+                                            <p className="text-[10px] text-muted-foreground">Katalogda kayıtlı olmadan listeye eklenir, teslimatta stoğa işlenebilir.</p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-[9px] border-blue-500/30 text-blue-500 font-bold uppercase shrink-0">
+                                        Manuel Giriş
+                                    </Badge>
+                                </div>
+                            )}
+
                             {dialogSearchResults.length > 0 ? (
                                 dialogSearchResults.map((p, idx) => (
                                     <div
@@ -570,45 +651,44 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                         )}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={cn("h-10 w-10 flex items-center justify-center rounded-xl", selectedIndex === idx ? "bg-white/20 text-white" : "bg-blue-500/10 text-blue-600")}>
+                                            <div className={cn("h-10 w-10 flex items-center justify-center rounded-xl shrink-0", selectedIndex === idx ? "bg-white/20 text-white" : "bg-blue-500/10 text-blue-600")}>
                                                 <Box className="h-5 w-5" />
                                             </div>
                                             <div>
                                                 <p className="font-bold text-sm tracking-tight">{p.name}</p>
-                                                <p className={cn("text-[9px] font-bold uppercase tracking-widest", selectedIndex === idx ? "text-white/60" : "text-muted-foreground")}>{p.category?.name}</p>
+                                                <p className={cn("text-[9px] font-bold uppercase tracking-widest", selectedIndex === idx ? "text-white/60" : "text-muted-foreground")}>{p.category?.name || "Kategorisiz"}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-black text-sm">₺{Number(p.buyPrice).toLocaleString()}</p>
-                                            <p className={cn("text-[9px] font-bold uppercase", p.stock > 0 ? (selectedIndex === idx ? "text-emerald-200" : "text-emerald-600") : "text-rose-500")}>Stok: {p.stock}</p>
+                                            <div className="flex items-center gap-1.5 justify-end">
+                                                <span className={cn("text-[10px] font-semibold", selectedIndex === idx ? "text-white/70" : "text-muted-foreground")}>Alış:</span>
+                                                <span className="font-black text-sm">
+                                                    {p.buyPriceUsd && Number(p.buyPriceUsd) > 0 ? `$${Number(p.buyPriceUsd).toLocaleString()}` : `₺${Number(p.buyPrice || 0).toLocaleString()}`}
+                                                </span>
+                                            </div>
+                                            {p.buyPriceUsd && Number(p.buyPriceUsd) > 0 && (
+                                                <p className={cn("text-[9px] font-medium", selectedIndex === idx ? "text-white/60" : "text-muted-foreground")}>
+                                                    ≈ ₺{Number(p.buyPrice || 0).toLocaleString()}
+                                                </p>
+                                            )}
+                                            <p className={cn("text-[9px] font-bold uppercase mt-0.5", p.stock > 0 ? (selectedIndex === idx ? "text-emerald-200" : "text-emerald-600") : "text-rose-500")}>Stok: {p.stock}</p>
                                         </div>
                                     </div>
                                 ))
-                            ) : searchQuery.length >= 2 ? (
-                                <div className="py-10 text-center space-y-6">
-                                    <div className="h-20 w-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto border border-dashed border-border">
-                                        <AlertCircle className="h-8 w-8 text-muted-foreground/30" />
+                            ) : searchQuery.trim().length >= 2 ? (
+                                <div className="py-10 text-center space-y-4">
+                                    <div className="h-16 w-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto border border-dashed border-border">
+                                        <AlertCircle className="h-6 w-6 text-muted-foreground/30" />
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-foreground font-bold">Sonuç Bulunamadı</p>
-                                        <p className="text-sm text-muted-foreground">"{searchQuery}" aramasına uygun kayıt bulunamadı.</p>
-                                    </div>
-                                    <div className="flex flex-col gap-3">
-                                        <Button
-                                            onClick={() => {
-                                                setItems(items.map(i => i.id === activeSearchId ? { ...i, name: searchQuery, productId: undefined } : i));
-                                                setIsSearchOpen(false);
-                                            }}
-                                            className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg"
-                                        >
-                                            <Plus className="h-4 w-4 mr-2" /> SADECE İSİMLE LİSTEYE EKLE
-                                        </Button>
+                                        <p className="text-foreground font-bold text-sm">Katalogda Eşleşen Ürün Bulunamadı</p>
+                                        <p className="text-xs text-muted-foreground">Yukarıdaki "Stokta Olmayan Ürün Olarak Ekle" butonuna basarak siparişe ekleyebilirsiniz.</p>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="py-20 text-center space-y-4">
+                                <div className="py-16 text-center space-y-3">
                                     <ShoppingBag className="h-10 w-10 text-muted-foreground/10 mx-auto" />
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Aramak için yazmaya başlayın</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Aramak için ürün adı yazın</p>
                                 </div>
                             )}
                         </div>
@@ -623,6 +703,14 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                 items={newProductItems}
                 onSuccess={handleQuickCreateSuccess}
                 shop={shop}
+            />
+
+            <WhatsAppConfirmModal
+                isOpen={whatsappModalOpen}
+                onClose={handleCloseWhatsAppModal}
+                phone={whatsappPhone}
+                customerName={selectedSupplier?.name || "Tedarikçi"}
+                initialMessage={whatsappMessage}
             />
         </Dialog>
     );

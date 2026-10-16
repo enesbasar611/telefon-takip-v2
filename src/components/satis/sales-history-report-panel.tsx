@@ -158,8 +158,10 @@ export function SalesHistoryReportPanel({
 
             if (modalType === "expenses") {
                 queryOptions.typeFilter = "EXPENSE";
-            } else if (modalType === "sales") {
+            } else if (modalType === "sales" || modalType === "profit") {
                 queryOptions.typeFilter = "SALE";
+            } else if (modalType === "collections") {
+                queryOptions.typeFilter = "PAYMENT";
             }
 
             if (params.filterType === "date") {
@@ -1119,6 +1121,31 @@ export function SalesHistoryReportPanel({
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* Collection transactions list */}
+                                {drilldown.items && drilldown.items.length > 0 && (
+                                    <div className="space-y-2 pt-1">
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Tahsilat Hareketleri</h4>
+                                        {drilldown.items.map((op) => (
+                                            <div key={op.id} className="p-3 rounded-xl border border-border/60 bg-card/60 flex items-center justify-between gap-3 text-xs">
+                                                <div className="space-y-1 min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-foreground truncate">{op.customerName || "Müşteri"}</span>
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                                            {op.paymentMethod === "CASH" ? "Nakit" : op.paymentMethod === "CARD" ? "Kredi Kartı" : op.paymentMethod === "TRANSFER" ? "Havale" : "Tahsilat"}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        {op.description || "Tahsilat Girişi"} • {format(new Date(op.date), "dd MMM yyyy HH:mm", { locale: tr })}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">+{formatMoney(op.amount)}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             /* Standard Sales Modal ("Bugün ne satmışım?") */
@@ -1145,7 +1172,6 @@ export function SalesHistoryReportPanel({
 
                                 {drilldown.items && drilldown.items.length > 0 ? (
                                     drilldown.items
-                                        .filter((op) => op.type === "SALE" || op.type === "DEBT_DIRECT")
                                         .map((op) => (
                                             <div 
                                                 key={op.id}

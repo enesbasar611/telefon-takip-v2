@@ -28,7 +28,7 @@ import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { createProduct } from "@/lib/actions/product-actions";
 import { ReceiptModal } from "./receipt-modal";
-import { cn } from "@/lib/utils";
+import { cn, normalizeSearchText } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSettings } from "@/lib/actions/setting-actions";
@@ -240,10 +240,15 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     }, [cart, isLoaded, syncCartToMobile]);
 
     const filteredProducts = useMemo(() => {
+        const searchNormalized = normalizeSearchText(productSearch);
+        const isSearching = searchNormalized.length > 0;
+
         return localProducts.filter((p) => {
-            const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                (p.barcode && p.barcode.includes(productSearch)) ||
-                (p.category?.name && p.category.name.toLowerCase().includes(productSearch.toLowerCase()));
+            const matchesSearch = !isSearching ||
+                normalizeSearchText(p.name).includes(searchNormalized) ||
+                (p.barcode && normalizeSearchText(p.barcode).includes(searchNormalized)) ||
+                (p.sku && normalizeSearchText(p.sku).includes(searchNormalized)) ||
+                (p.category?.name && normalizeSearchText(p.category.name).includes(searchNormalized));
             const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
             return matchesSearch && matchesCategory;
         });
@@ -347,7 +352,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         setIsCreatingCustom(true);
         try {
             let product = localProducts.find(
-                (p) => p.name.toLowerCase() === customName.trim().toLowerCase()
+                (p) => normalizeSearchText(p.name) === normalizeSearchText(customName)
             );
 
             const sellPriceTl = saleCurrency === "TRY" ? priceNum : Number((priceNum * usdRate).toFixed(2));

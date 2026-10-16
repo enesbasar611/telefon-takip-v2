@@ -52,6 +52,26 @@ export function formatName(str: string): string {
 }
 
 /**
+ * Normalizes text for Turkish-friendly, case-insensitive search.
+ * Eliminates 'i', 'İ', 'ı', 'I' and Turkish diacritic discrepancies.
+ */
+export function normalizeSearchText(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/İ/g, "i")
+    .replace(/I/g, "ı")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/i̇/g, "i")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .trim();
+}
+
+/**
  * Serializes Prisma objects for Next.js Server Components to Client Components.
  * Handles Dates, Decimals, and recursive objects/arrays.
  */

@@ -47,7 +47,7 @@ import { UnifiedSaleModal } from "./unified-sale-modal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { cn, formatPhone, formatCurrency } from "@/lib/utils";
+import { cn, formatPhone, formatCurrency, normalizeSearchText } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -169,20 +169,20 @@ export function POSInterface({ initialSaleId }: {
   }, [displaySearchTerm]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const searchLower = debouncedSearchTerm.toLowerCase().trim();
-      const isSearching = searchLower.length > 0;
+    const searchNormalized = normalizeSearchText(debouncedSearchTerm);
+    const isSearching = searchNormalized.length > 0;
 
+    return products.filter((p) => {
       const isService = p.category?.name?.toLowerCase() === "hizmet";
 
       // Always filter out items with no stock, unless it's a service
       if (!isService && p.stock != null && p.stock <= 0) return false;
 
-      const matchesSearch =
-        p.name.toLowerCase().includes(searchLower) ||
-        (p.barcode && p.barcode.toLowerCase().includes(searchLower)) ||
-        (p.sku && p.sku.toLowerCase().includes(searchLower)) ||
-        (p.category?.name && p.category.name.toLowerCase().includes(searchLower));
+      const matchesSearch = !isSearching ||
+        normalizeSearchText(p.name).includes(searchNormalized) ||
+        (p.barcode && normalizeSearchText(p.barcode).includes(searchNormalized)) ||
+        (p.sku && normalizeSearchText(p.sku).includes(searchNormalized)) ||
+        (p.category?.name && normalizeSearchText(p.category.name).includes(searchNormalized));
 
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
 
@@ -427,19 +427,23 @@ export function POSInterface({ initialSaleId }: {
     setCart((prev) => prev.map((item) => {
       if (item.id === id) {
         if (defaultCurrency === "USD") {
+          const tlPrice = Number((newPrice * usdRate).toFixed(2));
           return {
             ...item,
             sellPriceUsd: newPrice,
-            sellPrice: Number((newPrice * usdRate).toFixed(2)),
+            sellPrice: tlPrice,
+            unitPrice: tlPrice,
           };
         } else if (defaultCurrency === "EUR") {
+          const tlPrice = Number((newPrice * eurRate).toFixed(2));
           return {
             ...item,
             sellPriceEur: newPrice,
-            sellPrice: Number((newPrice * eurRate).toFixed(2)),
+            sellPrice: tlPrice,
+            unitPrice: tlPrice,
           };
         } else {
-          return { ...item, sellPrice: newPrice };
+          return { ...item, sellPrice: newPrice, unitPrice: newPrice };
         }
       }
       return item;
@@ -606,7 +610,7 @@ export function POSInterface({ initialSaleId }: {
           items: cart.map(item => ({
             productId: item.id,
             quantity: item.quantity,
-            unitPrice: Number((item.unitPrice ?? item.sellPrice).toFixed(2))
+            unitPrice: Number(((item.sellPrice !== undefined ? item.sellPrice : item.unitPrice) || 0).toFixed(2))
           })),
           totalAmount: Number(displayTotal.toFixed(2)),
           currency: saleCurrency,

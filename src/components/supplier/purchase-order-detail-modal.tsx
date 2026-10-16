@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Printer, CheckCircle2, Clock, Phone, Mail, MapPin, Globe } from "lucide-react";
+import { Printer, CheckCircle2, Clock, Phone, Mail, MapPin, Globe, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
 
 interface PurchaseOrderDetailModalProps {
     isOpen: boolean;
@@ -14,11 +17,17 @@ interface PurchaseOrderDetailModalProps {
 }
 
 export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrderDetailModalProps) {
+    const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+
     if (!order) return null;
 
     const handlePrint = () => {
         window.print();
     };
+
+    const items = (order.items || []).map((it: any) => `• ${it.name} — ${it.quantity} Adet`).join("\n");
+    const whatsAppMessage = `*Sipariş Talebi*\n*Tedarikçi:* ${order.supplier?.name || "Tedarikçi"}\n*Sipariş No:* #${order.orderNo}\n\n*Sipariş Listesi:*\n${items}\n\n_Lütfen siparişin onayını ve teslimat bilgisini iletiniz._`;
+    const whatsAppPhone = sanitizeWhatsAppPhone(order.supplier?.phone);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -87,11 +96,22 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                                     <p className="text-[10px] sm:text-xs font-medium text-muted-foreground pt-0.5">Sipariş No: #{order.orderNo}</p>
                                 </div>
                             </div>
-                            <Button onClick={handlePrint} variant="default" size="sm" className="h-10 px-4 sm:h-12 sm:px-8 rounded-xl sm:rounded-2xl gap-2 sm:gap-3 bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/20">
-                                <Printer className="h-4 w-4 sm:h-5 sm:w-5" />
-                                <span className="hidden sm:inline">A4 Yazdır</span>
-                                <span className="sm:hidden">Yazdır</span>
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    onClick={() => setIsWhatsAppOpen(true)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-10 px-3 sm:h-12 sm:px-5 rounded-xl sm:rounded-2xl gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 font-bold"
+                                >
+                                    <MessageCircle className="h-4 w-4" />
+                                    <span className="hidden sm:inline">WhatsApp Gönder</span>
+                                </Button>
+                                <Button onClick={handlePrint} variant="default" size="sm" className="h-10 px-4 sm:h-12 sm:px-8 rounded-xl sm:rounded-2xl gap-2 sm:gap-3 bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/20">
+                                    <Printer className="h-4 w-4 sm:h-5 sm:w-5" />
+                                    <span className="hidden sm:inline">A4 Yazdır</span>
+                                    <span className="sm:hidden">Yazdır</span>
+                                </Button>
+                            </div>
                         </DialogHeader>
 
                         {/* Print Only Header Section */}
@@ -256,6 +276,14 @@ export function PurchaseOrderDetailModal({ isOpen, onClose, order }: PurchaseOrd
                     </div>
                 </div>
             </DialogContent>
+
+            <WhatsAppConfirmModal
+                isOpen={isWhatsAppOpen}
+                onClose={() => setIsWhatsAppOpen(false)}
+                phone={whatsAppPhone}
+                customerName={order.supplier?.name || "Tedarikçi"}
+                initialMessage={whatsAppMessage}
+            />
         </Dialog>
     );
 }

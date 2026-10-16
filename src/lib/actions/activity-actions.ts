@@ -48,6 +48,122 @@ export async function getUnifiedHistory(options: {
         const { page = 1, pageSize = 20, searchTerm = "", typeFilter = "ALL", dateRange = "ALL", startDate, endDate, paymentMethod, staffId } = options;
         const skip = (page - 1) * pageSize;
 
+        const now = new Date();
+        const dateWhere: Prisma.DateTimeFilter = {};
+        if (startDate && endDate) {
+            dateWhere.gte = new Date(startDate);
+            dateWhere.lte = new Date(endDate);
+        } else if (dateRange === "TODAY") {
+            dateWhere.gte = startOfDay(now);
+            dateWhere.lte = endOfDay(now);
+        } else if (dateRange === "THIS_MONTH") {
+            dateWhere.gte = startOfMonth(now);
+            dateWhere.lte = endOfMonth(now);
+        } else if (dateRange === "LAST_MONTH") {
+            const target = subMonths(now, 1);
+            dateWhere.gte = startOfMonth(target);
+            dateWhere.lte = endOfMonth(target);
+        } else if (dateRange === "TWO_MONTHS_AGO") {
+            const target = subMonths(now, 2);
+            dateWhere.gte = startOfMonth(target);
+            dateWhere.lte = endOfMonth(target);
+        }
+
+        // When filtering specifically for sales, query prisma.sale directly so 100% of store sales
+        // (including all items, receipts, cash, card, transfer, debt) are accurately returned.
+        if (typeFilter === "SALE") {
+            const saleWhere: Prisma.SaleWhereInput = {
+                shopId,
+            };
+
+            if (Object.keys(dateWhere).length > 0) {
+                saleWhere.createdAt = dateWhere;
+            }
+
+            if (searchTerm) {
+                saleWhere.OR = [
+                    { saleNumber: { contains: searchTerm, mode: "insensitive" } },
+                    { customer: { name: { contains: searchTerm, mode: "insensitive" } } },
+                    { customer: { phone: { contains: searchTerm, mode: "insensitive" } } },
+                    { items: { some: { product: { name: { contains: searchTerm, mode: "insensitive" } } } } },
+                ];
+            }
+
+            if (paymentMethod && paymentMethod !== "ALL") {
+                saleWhere.paymentMethod = paymentMethod as any;
+            }
+
+            if (staffId && staffId !== "ALL") {
+                saleWhere.userId = staffId;
+            }
+
+            const [total, sales] = await Promise.all([
+                prisma.sale.count({ where: saleWhere }),
+                prisma.sale.findMany({
+                    where: saleWhere,
+                    include: {
+                        customer: true,
+                        user: true,
+                        transaction: true,
+                        items: {
+                            include: { product: { include: { category: true } } },
+                        },
+                    },
+                    orderBy: { createdAt: "desc" },
+                    skip,
+                    take: pageSize,
+                }),
+            ]);
+
+            const items: UnifiedOperation[] = sales.map((sale) => {
+                const isDebt = sale.paymentMethod === "DEBT";
+                const operationItems = (sale.items || []).map((item) => ({
+                    name: item.product?.name || "Bilinmeyen Ürün",
+                    quantity: item.quantity,
+                    price: Number(item.unitPrice),
+                    productId: item.productId,
+                    saleId: sale.id,
+                }));
+
+                const customerName = sale.customer 
+                    ? sale.customer.name 
+                    : (isDebt ? "VERESİYE MÜŞTERİ" : "HIZLI SATIŞ");
+
+                return {
+                    id: sale.id,
+                    type: isDebt ? "DEBT_DIRECT" : "SALE",
+                    number: sale.saleNumber,
+                    date: sale.createdAt,
+                    amount: Number(sale.finalAmount),
+                    currency: sale.transaction?.currency || "TRY",
+                    customerName,
+                    customerId: sale.customerId || undefined,
+                    customerPhone: sale.customer?.phone || undefined,
+                    paymentMethod: sale.paymentMethod,
+                    accountName: undefined,
+                    description: sale.transaction?.description || `Satış ${sale.saleNumber}`,
+                    items: operationItems,
+                    status: isDebt ? "VERESİYE" : "SATIŞ",
+                    saleId: sale.id,
+                    debtId: undefined,
+                    transactionType: "INCOME" as const,
+                };
+            });
+
+            return {
+                items: serializePrisma(items),
+                total,
+                totalPages: Math.ceil(total / pageSize),
+                currentPage: page,
+                pagination: {
+                    total,
+                    page,
+                    pageSize,
+                    totalPages: Math.ceil(total / pageSize),
+                },
+            };
+        }
+
         const where: Prisma.TransactionWhereInput = {
             shopId,
             OR: searchTerm ? [
@@ -59,31 +175,12 @@ export async function getUnifiedHistory(options: {
             ] : undefined,
         };
 
-        const now = new Date();
-        if (startDate && endDate) {
-            where.createdAt = {
-                gte: new Date(startDate),
-                lte: new Date(endDate),
-            };
-        } else if (dateRange === "TODAY") {
-            where.createdAt = { gte: startOfDay(now), lte: endOfDay(now) };
-        } else if (dateRange === "THIS_MONTH") {
-            where.createdAt = { gte: startOfMonth(now), lte: endOfMonth(now) };
-        } else if (dateRange === "LAST_MONTH") {
-            const target = subMonths(now, 1);
-            where.createdAt = { gte: startOfMonth(target), lte: endOfMonth(target) };
-        } else if (dateRange === "TWO_MONTHS_AGO") {
-            const target = subMonths(now, 2);
-            where.createdAt = { gte: startOfMonth(target), lte: endOfMonth(target) };
+        if (Object.keys(dateWhere).length > 0) {
+            where.createdAt = dateWhere;
         }
 
         if (typeFilter !== "ALL") {
-            if (typeFilter === "SALE") {
-                where.type = "INCOME";
-                where.saleId = { not: null };
-                where.paymentMethod = { not: "DEBT" };
-                where.category = { not: "Tahsilat" };
-            } else if (typeFilter === "EXPENSE") {
+            if (typeFilter === "EXPENSE") {
                 where.type = "EXPENSE";
             } else if (typeFilter === "DEBT") {
                 where.type = { not: "EXPENSE" };
@@ -138,12 +235,6 @@ export async function getUnifiedHistory(options: {
         ]);
 
         const items: UnifiedOperation[] = transactions
-            .filter((tx: any) => {
-                if (tx.saleId && tx.sale && (!tx.sale.items || tx.sale.items.length === 0)) {
-                    return false;
-                }
-                return true;
-            })
             .map((tx: any) => {
             const isExpense = tx.type === "EXPENSE";
             const isPayment = tx.category === "Tahsilat" && !isExpense;
@@ -474,7 +565,31 @@ export async function getSalesHistoryReport(options: {
             return null;
         };
 
-        // Sales loop (isolated to sales revenue and gross merchandise profit)
+        // Helper to determine product buy cost (strictly 0 TL for service, software, repair and zero-cost items)
+        const getProductCost = (productName?: string | null, categoryName?: string | null, rawBuyPrice?: any): number => {
+            const numBuyPrice = rawBuyPrice ? Number(rawBuyPrice) : 0;
+            if (numBuyPrice <= 0) return 0;
+            const lowerName = (productName || "").trim().toLowerCase();
+            const lowerCat = (categoryName || "").trim().toLowerCase();
+            if (
+                lowerName.includes("yazılım") ||
+                lowerName.includes("yazilim") ||
+                lowerName.includes("repair") ||
+                lowerName.includes("cihaz kârı") ||
+                lowerName.includes("cihaz kari") ||
+                lowerName.includes("işçilik") ||
+                lowerName.includes("iscilik") ||
+                lowerName.includes("servis") ||
+                lowerName.includes("hizmet") ||
+                lowerCat.includes("hizmet") ||
+                lowerCat.includes("servis")
+            ) {
+                return 0;
+            }
+            return numBuyPrice;
+        };
+
+        // Sales loop (isolated to sales revenue and gross merchandise profit: Satış Fiyatı - Alış Maliyeti)
         for (const sale of sales) {
             if (!sale.items || sale.items.length === 0) continue;
             const periodKey = resolvePeriod(sale.createdAt);
@@ -487,15 +602,57 @@ export async function getSalesHistoryReport(options: {
                 rates
             ).TRY;
             const itemCount = sale.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-            const profit = sale.items.reduce((sum, item) => {
-                const unitPrice = convertTransactionAmount(Number(item.unitPrice || 0), saleCurrency, rates).TRY;
-                const cost = Number(item.product?.buyPrice || 0);
-                return sum + ((unitPrice - cost) * Number(item.quantity || 0));
+
+            // Compute raw sum of items in TRY to check for catalog dummy prices (e.g. 1 TL)
+            const rawItemsSum = sale.items.reduce((sum, item) => {
+                const up = convertTransactionAmount(Number(item.unitPrice || 0), saleCurrency, rates).TRY;
+                return sum + (up * Number(item.quantity || 1));
             }, 0);
+
+            const isPlaceholderPricing = rawItemsSum > 0 && revenue > 0 && rawItemsSum < revenue * 0.5;
+
+            let saleProfit = 0;
+
+            for (const item of sale.items) {
+                const productName = item.product?.name || "Bilinmeyen Ürün";
+                const categoryName = item.product?.category?.name || "Kategorisiz";
+                const quantity = Number(item.quantity || 1);
+
+                // Realized effective item revenue
+                let itemRevenue = 0;
+                if (isPlaceholderPricing) {
+                    const itemShare = rawItemsSum > 0 ? ((Number(item.unitPrice || 0) * quantity) / rawItemsSum) : (1 / sale.items.length);
+                    itemRevenue = revenue * itemShare;
+                } else if (rawItemsSum > 0 && Math.abs(rawItemsSum - revenue) > 0.01) {
+                    const rawItemTotal = convertTransactionAmount(Number(item.unitPrice || 0), saleCurrency, rates).TRY * quantity;
+                    itemRevenue = (rawItemTotal / rawItemsSum) * revenue;
+                } else {
+                    itemRevenue = convertTransactionAmount(Number(item.unitPrice || 0), saleCurrency, rates).TRY * quantity;
+                }
+
+                // Buy cost (0 TL for service items)
+                const unitCost = getProductCost(productName, categoryName, item.product?.buyPrice);
+                const itemCost = unitCost * quantity;
+                const itemProfit = Math.max(0, itemRevenue - itemCost);
+                saleProfit += itemProfit;
+
+                if (periodKey === "current") {
+                    const product = productMap.get(productName) || { name: productName, quantity: 0, revenue: 0, profit: 0 };
+                    product.quantity += quantity;
+                    product.revenue += itemRevenue;
+                    product.profit += itemProfit;
+                    productMap.set(productName, product);
+
+                    const category = categoryMap.get(categoryName) || { name: categoryName, revenue: 0, profit: 0 };
+                    category.revenue += itemRevenue;
+                    category.profit += itemProfit;
+                    categoryMap.set(categoryName, category);
+                }
+            }
 
             const period = periods[periodKey];
             period.revenue += revenue;
-            period.profit += profit;
+            period.profit += saleProfit;
             period.saleCount += 1;
             period.itemCount += itemCount;
 
@@ -513,7 +670,7 @@ export async function getSalesHistoryReport(options: {
                 const daily = dailyMap.get(dayKey);
                 if (daily) {
                     daily.revenue += revenue;
-                    daily.profit += profit;
+                    daily.profit += saleProfit;
                     daily.count += 1;
                 }
 
@@ -538,28 +695,9 @@ export async function getSalesHistoryReport(options: {
                     const staffName = `${sale.user.name} ${sale.user.surname || ""}`.trim();
                     const staff = staffMap.get(staffId) || { id: staffId, name: staffName, revenue: 0, profit: 0, saleCount: 0 };
                     staff.revenue += revenue;
-                    staff.profit += profit;
+                    staff.profit += saleProfit;
                     staff.saleCount += 1;
                     staffMap.set(staffId, staff);
-                }
-
-                for (const item of sale.items) {
-                    const productName = item.product?.name || "Bilinmeyen Ürün";
-                    const categoryName = item.product?.category?.name || "Kategorisiz";
-                    const quantity = Number(item.quantity || 0);
-                    const itemRevenue = convertTransactionAmount(Number(item.totalPrice || 0), saleCurrency, rates).TRY;
-                    const itemProfit = (convertTransactionAmount(Number(item.unitPrice || 0), saleCurrency, rates).TRY - Number(item.product?.buyPrice || 0)) * quantity;
-                    
-                    const product = productMap.get(productName) || { name: productName, quantity: 0, revenue: 0, profit: 0 };
-                    product.quantity += quantity;
-                    product.revenue += itemRevenue;
-                    product.profit += itemProfit;
-                    productMap.set(productName, product);
-
-                    const category = categoryMap.get(categoryName) || { name: categoryName, revenue: 0, profit: 0 };
-                    category.revenue += itemRevenue;
-                    category.profit += itemProfit;
-                    categoryMap.set(categoryName, category);
                 }
             }
         }
@@ -630,7 +768,7 @@ export async function getSalesHistoryReport(options: {
                 margin: prod.revenue > 0 ? (prod.profit / prod.revenue) * 100 : 0,
             }))
             .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 8);
+            .slice(0, 50);
 
         const topCategories = Array.from(categoryMap.values())
             .map((cat) => ({

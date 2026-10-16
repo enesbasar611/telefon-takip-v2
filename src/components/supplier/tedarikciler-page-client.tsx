@@ -37,8 +37,11 @@ import {
     ListFilter,
     Trash2,
     RefreshCcw,
-    XCircle
+    XCircle,
+    MessageCircle
 } from "lucide-react";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -163,6 +166,24 @@ export function TedarikcilerPageClient({
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
     const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<{ ids: string[] } | null>(null);
     const [cancelConfirmOrder, setCancelConfirmOrder] = useState<any | null>(null);
+    const [orderWhatsAppModalOpen, setOrderWhatsAppModalOpen] = useState(false);
+    const [orderWhatsAppMessage, setOrderWhatsAppMessage] = useState("");
+    const [orderWhatsAppPhone, setOrderWhatsAppPhone] = useState("");
+    const [orderWhatsAppSupplierName, setOrderWhatsAppSupplierName] = useState("");
+
+    const handleOpenOrderWhatsApp = (order: any) => {
+        const supplier = order.supplier || suppliers.find((s: any) => s.id === order.supplierId);
+        const supplierName = supplier?.name || "Tedarikçi";
+        const phone = sanitizeWhatsAppPhone(supplier?.phone);
+
+        const items = (order.items || []).map((it: any) => `• ${it.name} — ${it.quantity} Adet`).join("\n");
+        const msg = `*Sipariş Talebi*\n*Tedarikçi:* ${supplierName}\n*Sipariş No:* #${order.orderNo}\n\n*Sipariş Listesi:*\n${items}\n\n_Lütfen siparişin onayını ve teslimat bilgisini iletiniz._`;
+
+        setOrderWhatsAppSupplierName(supplierName);
+        setOrderWhatsAppPhone(phone);
+        setOrderWhatsAppMessage(msg);
+        setOrderWhatsAppModalOpen(true);
+    };
 
     const router = useRouter();
     const pathname = usePathname();
@@ -646,6 +667,18 @@ export function TedarikcilerPageClient({
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleOpenOrderWhatsApp(order);
+                                                                        }}
+                                                                        className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"
+                                                                        title="WhatsApp ile Sipariş Gönder"
+                                                                    >
+                                                                        <MessageCircle className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
                                                                         onClick={() => {
                                                                             setGlobalSelectedOrder(order);
                                                                             setIsGlobalDetailOpen(true);
@@ -745,6 +778,18 @@ export function TedarikcilerPageClient({
                                                                 title={order.status === "PENDING" || order.status === "ORDERED" ? "Teslim Al" : "İncele"}
                                                             >
                                                                 {order.status === "PENDING" || order.status === "ORDERED" ? <TrendingUp className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleOpenOrderWhatsApp(order);
+                                                                }}
+                                                                className="h-8 w-8 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"
+                                                                title="WhatsApp ile Sipariş Gönder"
+                                                            >
+                                                                <MessageCircle className="h-4 w-4" />
                                                             </Button>
                                                             {(order.status === "PENDING" || order.status === "ORDERED" || order.status === "ON_WAY") && (
                                                                 <Button
@@ -1024,6 +1069,14 @@ export function TedarikcilerPageClient({
                     // Refetch or update state
                     window.location.reload();
                 }}
+            />
+
+            <WhatsAppConfirmModal
+                isOpen={orderWhatsAppModalOpen}
+                onClose={() => setOrderWhatsAppModalOpen(false)}
+                phone={orderWhatsAppPhone}
+                customerName={orderWhatsAppSupplierName}
+                initialMessage={orderWhatsAppMessage}
             />
 
             <AlertDialog open={!!deleteConfirmSupplier} onOpenChange={(open) => !open && setDeleteConfirmSupplier(null)}>

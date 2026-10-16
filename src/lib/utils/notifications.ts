@@ -1,12 +1,26 @@
+export function sanitizeWhatsAppPhone(phone?: string | null): string {
+  if (!phone) return "";
+  let clean = phone.replace(/\D/g, "");
+  if (!clean) return "";
+
+  // Strip all leading zeros
+  clean = clean.replace(/^0+/, "");
+
+  if (clean.startsWith("90")) {
+    // Strip any extra zeros after country code 90 (e.g. 900532... -> 90532...)
+    const after90 = clean.slice(2).replace(/^0+/, "");
+    clean = "90" + after90;
+  } else if (clean.length === 10 && clean.startsWith("5")) {
+    clean = "90" + clean;
+  } else if (clean.length === 11 && clean.startsWith("05")) {
+    clean = "90" + clean.slice(1);
+  }
+
+  return clean;
+}
+
 export function formatWhatsAppLink(phone: string, message: string, type: 'web' | 'desktop' = 'web') {
-  // Clear any non-numeric characters from the phone number
-  const cleanPhone = phone.replace(/\D/g, "");
-
-  // If phone starts with 0, replace with 90 (Turkey country code)
-  const formattedPhone = cleanPhone.startsWith("0")
-    ? "90" + cleanPhone.substring(1)
-    : cleanPhone.startsWith("90") ? cleanPhone : "90" + cleanPhone;
-
+  const formattedPhone = sanitizeWhatsAppPhone(phone);
   const encodedMessage = encodeURIComponent(message);
 
   if (type === 'desktop') {

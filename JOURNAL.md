@@ -41,6 +41,86 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-16: Teknik Servis Hızlı İşlem Kaydı Donma ve Stabilite İyileştirmesi (`create-service-modal.tsx` & `service-actions.ts`):
+  - **Donma Sebeplerinin Tespiti ve Giderilmesi:**
+    - `create-service-modal.tsx` içerisinde kayıt tamamlandığında `setServiceLabel` otomatik tetikleniyor ve 350ms sonra arka planda `window.print()` çalıştırılıyordu. `window.print()` tarayıcı ana thread'ini (UI döngüsünü) senkron olarak dondurduğu için animasyonlar kilitleniyor, kullanıcı tepkisizlik ve donma yaşıyordu. Otomatik etiket yazdırma zorunluluğu kaldırılarak buton kontrollü hale getirildi.
+    - Modal kaydı bittikten hemen sonra çağrılan `router.refresh()`'in ardından, 2 saniyelik progress bar animasyonu tamamlandığında ikinci bir `router.refresh()` veya kullanıcının bulunduğu sayfadan koparılıp zorla `/servis` sayfasına yönlendirilmesi (`router.push('/servis')`) yapılıyordu. Bu durum sunucuya mükerrer RSC istekleri yollayıp veritabanı kilitlenmelerine ve arayüz takılmalarına yol açıyordu; ikinci refresh ve zorunlu yönlendirme döngüsü iptal edildi.
+  - **Yeni Zengin ve Etkileşimli Başarı Paneli:**
+    - Kayıt tamamlandığında açılan ekran donuk ve kapatılamaz olmaktan çıkarıldı. Oluşturulan servis fiş numarası (`SRV-XXX`), cihaz bilgisi, müşteri ve tahmini tutar net bir özet kartı olarak sunuldu.
+    - **Barkod Etiketi Butonu:** Kullanıcı dilerse tek tıkla termal cihaz barkod etiketini yazdırma penceresine gönderebiliyor.
+    - **Servis Fişi / Paylaş Butonu:** `ServiceReceiptModal` entegrasyonu ile dükkan A4 veya termal fiş dökümünü inceleyebilir, indirebilir veya doğrudan WhatsApp ile müşteriye gönderebilir.
+    - **Yeni Kayıt Butonu:** Sayfa yenilenmesine gerek kalmadan hemen bir sonraki cihaz kaydına devam etme imkanı sağlandı.
+    - **Kapatma / Otomatik Kapanma:** Kullanıcı dilediği anda "X" veya "Tamam" ile modalı anında kapatabiliyor; işlem yapılmazsa 5 saniye sonra arayüzü kilitlemeden kendi kendine kayboluyor.
+  - **Veritabanı ve Model İlişkisi:**
+    - `service-actions.ts` içindeki `createServiceTicket` fonksiyonunda `prisma.serviceTicket.create` sorgusuna `include: { customer: true }` eklenerek dönen veride müşteri adı ve telefonunun her zaman eksiksiz ve anında hazır olması sağlandı.
+
+- [x] 2026-10-16: Tedarikçi Yönetimi (`/tedarikciler`) Satın Alma Formu, Mal Kabul, Fiyat Düzenleme ve Sade WhatsApp Sipariş Önizlemesi:
+  - **Ürün Arama ve Alış Fiyatı Gösterimi (`purchase-form.tsx` & `product-actions.ts`):**
+    - `searchProducts` server action'ında `buyPrice` ve `buyPriceUsd` alanları sorguya dahil edildi.
+    - PostgreSQL ve Prisma ILIKE aramalarındaki Türkçe `i - İ - ı - I` eşleşme problemini çözmek için arama teriminin Türkçe büyük/küçük varyasyonları (`queryVariants`) üretilerek OR sorgusu genişletildi.
+    - Hızlı arama modalında (`purchase-form.tsx`) ürünlerin alış fiyatları (`Alış: ₺...` veya `$..`) ve stok durumları belirgin şekilde gösterildi; istemci tarafında da `normalizeSearchText` ile Türkçe karakter duyarsız sıralama uygulandı.
+  - **Stokta Olmayan Ürünleri İsimle Ekleme:**
+    - Arama modalında, eşleşen ürün olsa dahi her zaman *"'{searchQuery}' — Stokta Olmayan Ürün Olarak Ekle"* opsiyonu sunuldu.
+    - Katalogda olmayan ürünler sipariş formuna isim ve adetle eklenir; satırda turuncu renkli *"Stokta Yok (Teslimde Stoğa Eklenebilir)"* rozeti ile gösterilir.
+    - Satın alma formu onaylanırken fiyatı henüz belli olmayan veya serbest eklenen ürünler için `buyPrice >= 0` serbestisi sağlandı.
+  - **Teslim Al (Mal Kabul - `mal-kabul-modal.tsx` & `purchase-actions.ts`):**
+    - Mal kabul tablosunda birim alış fiyatı alanı (`buyPrices`) serbestçe düzenlenebilir hale getirildi; teslimattaki fiyat değişimleri hem sipariş kalemine hem de envanterdeki ürün kartına anında yansıtılır.
+    - Orijinal sipariş fiyatından farklı bir fiyat girildiğinde kullanıcıya turuncu renkte `(Sipariş: ₺...)` referans bilgisi sunuldu.
+    - Katalogda olmayan (`item.productId` boş) ürünler için teslim alım ekranında *"Stoğa Ekle"* seçeneği varsayılan aktif getirildi; ürünün kategori ve satış fiyatı girilerek doğrudan sisteme yeni ürün kartı ve stok hareketi olarak açılması sağlandı. Fallback ile kategori seçilmemiş olsa bile dükkanın ilk kategorisine otomatik bağlanarak veri kaybı önlendi.
+  - **Sade WhatsApp Sipariş Formatı (Sadece İsim + Adet, Fiyat Yok):**
+    - Sipariş tedarikçiye WhatsApp ile iletilirken kullanıcının kesin talebi doğrultusunda **sadece ürün adı ve adet bilgisi** (`• [Ürün] — [Adet] Adet`) yer alacak şekilde sadeleştirildi; kesinlikle fiyat, tutar ve KDV yazılmaz.
+    - Sipariş oluşturulduğunda otomatik olarak önizlemeli `WhatsAppConfirmModal` açılır; tedarikçi telefon numarası kayıtlıysa doğrudan hazır gelir, yoksa pencere başlığından anında numara girilebilir.
+    - Tedarikçi siparişleri listesindeki (`tedarikciler-page-client.tsx`) ve sipariş detay modalındaki (`purchase-order-detail-modal.tsx`) her sipariş satırına *"WhatsApp ile Sipariş Gönder"* butonu eklenerek siparişin dilediği zaman yeniden paylaşılması sağlandı.
+  - **WhatsApp +900 Hatasının Önlenmesi (`notifications.ts`):**
+    - `sanitizeWhatsAppPhone` ve `formatWhatsAppLink` fonksiyonları güncellendi. Başında `0` veya `90` olan, ya da `+90 (05xx)...` gibi formatlardan gelen tüm numaralardaki çift sıfır veya 90 sonrası sıfır artıkları (`clean.replace(/^0+/, "")` ve `90` sonrası sıfırların temizlenmesi) filtrelenerek `+900` prefix hatası kökten engellendi.
+  - **Tip Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
+- [x] 2026-10-16: Hızlı Satış Sayfası ve Sidebar Hızlı Satışta Türkçe Harf ("i - İ - ı - I") Duyarsız Arama Normalizasyonu:
+  - **Türkçe Karakter Normalizasyon Fonksiyonu (`normalizeSearchText`):**
+    - `src/lib/utils.ts` içerisine `normalizeSearchText` fonksiyonu eklendi.
+    - Büyük/küçük harf `"İ" -> "i"`, `"I" -> "ı"`, `"ı" -> "i"` eşitlemesi ve Unicode birleşik nokta karakterleri (`\u0307`) temizlendi.
+    - Türkçe klavyeden veya İngilizce klavyeden girilen `i`, `İ`, `ı`, `I` harflerinin birbirini sorunsuz bulması sağlandı; ayrıca `ğ/g`, `ü/u`, `ş/s`, `ö/o`, `ç/c` toleransı entegre edildi.
+  - **Hızlı Satış Sayfası (`/satis` -> `pos-interface.tsx`):**
+    - Ürün arama filtrelemesinde (`filteredProducts`) isim, barkod, SKU ve kategori aramaları `normalizeSearchText` fonksiyonuyla tamamen Türkçe ve büyük/küçük harf duyarsız hale getirildi.
+  - **Sidebar Hızlı Satış (`pos-drawer.tsx` -> `pos-compact.tsx`):**
+    - Sidebar kompakt POS ekranındaki ürün arama filtrelemesi ve özel ürün isim kontrolü `normalizeSearchText` ile güncellendi.
+  - **Müşteri Arama Seçici (`customer-selector.tsx`):**
+    - POS müşteri arama ve hızlı kayıt kontrolleri `normalizeSearchText` ile güncellendi (örn. "ismail" arandığında "İSMAİL" veya "İbrahim" tam eşleşir).
+  - **Tip Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-16: `/veresiye` (Veresiye Terminali) "Yeni Borç Ekle" Buton Görünürlüğü ve Kompakt Liste Optimizasyonu:
+  - **Müşteri Kartında "Yeni Borç Ekle" Butonu Belirginleştirildi:**
+    - Üç noktalı (`...`) menüde gizli olan "Yeni Borç Ekle" butonu, masaüstü ve tablet ekranlarında doğrudan işlem butonlarının yanına (`hidden sm:inline-flex`) mavi renkli ve belirgin (`bg-blue-600 hover:bg-blue-700`) olarak çıkarıldı.
+    - Ekran çok küçüldüğünde (`sm:hidden` / dar mobil ekranlar), butonun satırı kırmaması için üç noktalı dot menüdeki "Yeni Borç Ekle" seçeneği otomatik aktifleşerek yer tasarrufu sağlar.
+  - **Sayfa Başlığı Sağ Üst "Yeni Borç Ekle" Butonu Güçlendirildi:**
+    - Veresiye Terminali ana sayfa başlığının sağ üst kısmına büyük, gradient'lı ve yüksek görünürlüklü (`h-11 sm:h-12 bg-gradient-to-r from-blue-600 to-indigo-600 font-black`) "Yeni Borç Ekle" ana aksiyon butonu eklendi.
+  - **Gereksiz Boşluklar Temizlendi (Kompakt Liste Düzeni):**
+    - Müşteri kartlarındaki aşırı dikey boşluklar (`md:py-4` yerine `py-2 px-3 sm:py-2.5 sm:px-4 md:px-5`) ve avatar boyutları (`w-8 h-8 sm:w-9 sm:h-9`) optimize edilerek satır yüksekliği %40 küçültüldü.
+    - Çok sayıda müşteri olduğunda ekranda tek bakışta 2 kat daha fazla müşterinin sıkışmadan, ferah ve kompakt bir biçimde görüntülenmesi sağlandı.
+    - Sayfa ana dikey boşlukları (`space-y-12` -> `space-y-4 sm:space-y-6`) ve kart min-yüksekliği gereksiz kaydırmaları önleyecek şekilde dengelendi.
+  - **Tip Kontrolü:** `npx tsc --noEmit` hatasız (0 error).
+
+- [x] 2026-10-16: `/satis/gecmis` (Satış Arşivi & Raporlama) Net Tahmini Kâr, Ciro Hesaplama ve Detay Modalları Revizyonu:
+  - **Net Tahmini Kâr Formülü ve Hizmet Ürünleri Maliyetsizleştirme:**
+    - "Genel Yazılım", "Repair", "Cihaz Kârı", "işçilik", "servis", "hizmet" vb. yazılım ve işçilik kalemlerinin alış fiyatı otomatik olarak 0 TL (`buyPrice = 0`) kabul edilecek şekilde `getProductCost` fonksiyonu entegre edildi.
+    - Katalogda opsiyonel/dummy 1 TL olarak girilen ancak POS'ta özel tutarla satılan kalemlerde, fişteki gerçek satış tutarı satılan ürün kalemine yansıtıldı (`isPlaceholderPricing` dinamik dağıtım algoritması).
+    - Tahmini kâr: Her satılan ürün için `(Satış Fiyatı - Alış Maliyeti) * Adet` formülüyle kesin olarak hesaplandı. Alış maliyeti 0 TL olan hizmetlerde kâr marjı %100 ve kâr = ciro olarak netleştirildi.
+    - Dükkanın genel işletme giderleri muhasebe kurallarına uygun olarak brüt kârdan düşülmeyip ayrı bir gider kalemi olarak korundu.
+  - **Net Satış Cirosu:**
+    - Ciro alanı sadece satılan ürünlerin gerçekleşen satış fiyatlarını yansıtacak şekilde izole edildi.
+  - **"Bugün Ne Satmışım?" Modal Listeleme Hatası Çözüldü:**
+    - `getUnifiedHistory` fonksiyonunda `typeFilter === "SALE"` seçildiğinde aracı Transaction tablosu yerine doğrudan `prisma.sale` tablosu sorgulanarak, filtreleme veya eksik kayıt sebebiyle boş görünme ("Bu filtreye uygun satış kaydı bulunamadı") sorunu kökten çözüldü.
+    - Gün içinde yapılan tüm fişler (nakit, kart, havale, veresiye) satılan parçaları, müşteri bilgileri ve fiş yazdırma butonuyla modalda eksiksiz listelendi.
+  - **Modalların İşlem Türlerine Göre Ayrıştırılması:**
+    - **Net Satış Cirosu Modalı:** Sadece satış işlemleri ve fişler listelenir.
+    - **Net Tahmini Kâr Modalı:** Satılan ürünler, satış tutarı, 0 TL alış maliyeti, net kâr ve % kâr marjı detaylarıyla listelenir (`topProducts` limiti 50'ye çıkarıldı).
+    - **İşletme Giderleri Modalı:** Yalnızca dükkandan çıkan gider ödemeleri, kategorileri ve muhatapları listelenir.
+    - **Kasa & Tahsilat Modalı:** Nakit, POS, Havale kanal oranlarının yanı sıra kasaya giren tekil tahsilat hareketleri listelenir.
+  - **POS Arayüzü Fiyat Güncelleme Senkronizasyonu:**
+    - POS arayüzünde (`pos-interface.tsx`) kasiyer ürün fiyatını değiştirdiğinde `unitPrice` değerinin de güncellenmesi sağlandı ve checkout sırasında `item.sellPrice ?? item.unitPrice` önceliğiyle `SaleItem` tablosuna girilen gerçek satış fiyatının yazılması garanti altına alındı.
+  - **Tip Kontrolü:** `npx tsc --noEmit` hatasız (0 error).
+
 - [x] 2026-10-16: `/veresiye` (Veresiye & Cari Takip Terminali) Kapsamlı Stabilizasyon ve Mobil UX Revizyonu:
   - **Finansal Tutarlılık ve Yuvarlama Senkronizasyonu:**
     - Fiş çıktısı (`debt-receipt-modal.tsx`), PDF dökümü (`debt-statement-modern.tsx`), ekran kartları ve WhatsApp mesajları arasındaki yuvarlama farkları giderildi (`Math.ceil` yerine 2-ondalık tam para formatı `formatDebtMoney` ve `formatCurrency` ile unifiye edildi).

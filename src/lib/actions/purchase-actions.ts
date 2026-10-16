@@ -295,14 +295,30 @@ export async function receivePurchaseOrderAction(
                     let productId = item.productId;
 
                     // 2a. If we need to create a new product for this entry
-                    if (!productId && rItem.addToStock && rItem.categoryId && rItem.sellPrice) {
+                    if (!productId && rItem.addToStock) {
+                        let categoryId = rItem.categoryId;
+                        if (!categoryId) {
+                            const defaultCat = await tx.category.findFirst({ where: { shopId } });
+                            if (defaultCat) {
+                                categoryId = defaultCat.id;
+                            } else {
+                                const newCat = await tx.category.create({
+                                    data: { name: "Genel", shopId }
+                                });
+                                categoryId = newCat.id;
+                            }
+                        }
+                        const sellPrice = (rItem.sellPrice && Number(rItem.sellPrice) > 0)
+                            ? Number(rItem.sellPrice)
+                            : (priceToUse > 0 ? Math.round(priceToUse * 1.3) : 0);
+
                         const newProduct = await tx.product.create({
                             data: {
                                 name: item.name,
-                                categoryId: rItem.categoryId,
+                                categoryId,
                                 buyPrice: priceToUse,
                                 buyPriceUsd: rItem.buyPriceUsd || null,
-                                sellPrice: rItem.sellPrice,
+                                sellPrice,
                                 stock: 0, // Will be incremented below
                                 criticalStock: 1,
                                 shopId,

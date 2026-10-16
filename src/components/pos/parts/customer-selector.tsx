@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Check, CheckCircle, ChevronRight, Plus, Search, User, UserCircle, UserPlus } from "lucide-react";
-import { cn, formatPhone } from "@/lib/utils";
+import { cn, formatPhone, normalizeSearchText } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -36,7 +36,7 @@ export const CustomerSelector = ({
             <div className="space-y-3">
                 <div className="flex items-center justify-between px-2">
                     <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] leading-none">MÜŞTERİ SEÇİMİ</Label>
-                    {customerSearch.length > 2 && !customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
+                    {customerSearch.length > 2 && !customers.find(c => normalizeSearchText(c.name) === normalizeSearchText(customerSearch)) && (
                         <button
                             onClick={() => onNewCustomer(customerSearch)}
                             disabled={isProcessing}
@@ -65,7 +65,7 @@ export const CustomerSelector = ({
                     {(customerSearch.length > 0 && !selectedCustomerId) && (
                         <div className="absolute bottom-full left-0 w-full mb-4 bg-background/95 backdrop-blur-xl border-2 border-border/50 rounded-[2rem] shadow-2xl overflow-hidden z-50 animate-in slide-in-from-bottom-4 duration-300">
                             <div className="max-h-72 overflow-y-auto p-3 custom-scrollbar no-scrollbar">
-                                {!customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
+                                {!customers.find(c => normalizeSearchText(c.name) === normalizeSearchText(customerSearch)) && (
                                     <button
                                         onClick={() => onNewCustomer(customerSearch)}
                                         disabled={isProcessing}
@@ -101,7 +101,7 @@ export const CustomerSelector = ({
                                 </button>
 
                                 {customers
-                                    .filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone && c.phone.includes(customerSearch)))
+                                    .filter(c => normalizeSearchText(c.name).includes(normalizeSearchText(customerSearch)) || (c.phone && c.phone.includes(customerSearch)))
                                     .slice(0, 10)
                                     .map(customer => (
                                         <button
@@ -175,7 +175,7 @@ export const CustomerSelector = ({
                         </div>
                     </div>
                     <div className="max-h-[350px] overflow-y-auto p-2 custom-scrollbar">
-                        {customerSearch.length > 2 && !customers.find(c => c.name.toLowerCase() === customerSearch.toLowerCase()) && (
+                        {customerSearch.length > 2 && !customers.find(c => normalizeSearchText(c.name) === normalizeSearchText(customerSearch)) && (
                             <button
                                 onClick={() => onNewCustomer(customerSearch)}
                                 className="w-full text-left flex items-center gap-4 p-4 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all mb-2 shadow-xl shadow-primary/10"
@@ -202,7 +202,7 @@ export const CustomerSelector = ({
                         </button>
 
                         {customers
-                            .filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.phone && c.phone.includes(customerSearch)))
+                            .filter(c => normalizeSearchText(c.name).includes(normalizeSearchText(customerSearch)) || (c.phone && c.phone.includes(customerSearch)))
                             .slice(0, 50)
                             .map(customer => (
                                 <button

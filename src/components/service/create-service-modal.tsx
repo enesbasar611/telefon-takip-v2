@@ -14,7 +14,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Loader2, User, AlertCircle, Sparkles, Wrench, Lock, Smartphone, MonitorSmartphone, Tag, Cpu } from "lucide-react";
+import {
+  PlusCircle,
+  Loader2,
+  User,
+  AlertCircle,
+  Sparkles,
+  Wrench,
+  Lock,
+  Smartphone,
+  MonitorSmartphone,
+  Tag,
+  Cpu,
+  Trash,
+  CheckCircle2,
+  Grid,
+  Zap,
+  Printer,
+  FileText,
+  X,
+  ExternalLink,
+  Copy,
+  Check
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createServiceTicket } from "@/lib/actions/service-actions";
 import { useToast } from "@/hooks/use-toast";
@@ -22,12 +44,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PriceInput } from "@/components/ui/price-input";
 import { cn, formatCurrency } from "@/lib/utils";
-import { ServiceTicketLabelPrintArea, type ServiceTicketLabelData } from "@/components/service/service-ticket-label-print";
+import {
+  ServiceTicketLabelPrintArea,
+  buildServiceTicketLabelData,
+  type ServiceTicketLabelData
+} from "@/components/service/service-ticket-label-print";
+import { ServiceReceiptModal } from "@/components/service/service-receipt-modal";
 import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-lookup-actions";
 import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 import { PatternLock } from "@/components/ui/pattern-lock";
-import { Trash, CheckCircle2, Grid, Zap } from "lucide-react";
 
 interface CreateServiceModalProps {
   trigger?: ReactNode;
@@ -55,6 +81,9 @@ export function CreateServiceModal({
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
   const [isLookingUpName, setIsLookingUpName] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdTicketInfo, setCreatedTicketInfo] = useState<any | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [isCopiedTicketNo, setIsCopiedTicketNo] = useState(false);
   const [serviceLabel, setServiceLabel] = useState<ServiceTicketLabelData | null>(null);
   const [showMissingRequired, setShowMissingRequired] = useState(false);
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
@@ -148,21 +177,8 @@ export function CreateServiceModal({
 
         if (result?.success) {
           const ticket = result.data;
+          setCreatedTicketInfo(ticket);
           setShowSuccessModal(true);
-          setServiceLabel({
-            ticketNumber: ticket.ticketNumber,
-            customerName: data.customerName,
-            customerPhone: data.customerPhone,
-            deviceBrand: deviceBrand || "GENEL",
-            deviceModel: deviceModel || "HIZLI İŞLEM",
-            estimatedCost: Number(data.estimatedCost || 0),
-            createdAt: ticket.createdAt || new Date().toISOString(),
-            shopName: shop?.name || "BAŞAR TEKNİK",
-            shopPhone: shop?.phone || shop?.gsm || "",
-            shopAddress: shop?.address || "",
-            problemDesc: data.problemDesc || "",
-            showPrice: true,
-          });
           setOpen(false);
           reset({
             estimatedCost: "0",
@@ -606,40 +622,162 @@ export function CreateServiceModal({
         onPrinted={() => setServiceLabel(null)}
       />
 
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-[min(92vw,420px)] overflow-hidden rounded-[2rem] border border-emerald-400/25 bg-slate-950/95 p-8 text-center shadow-[0_30px_90px_rgba(16,185,129,0.28)]">
-            <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent" />
-            <div className="relative mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-400/25">
-              <div className="absolute inset-2 rounded-full border border-dashed border-emerald-300/40 animate-spin [animation-duration:2s]" />
-              <div className="absolute -right-1 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30 animate-bounce">
-                <Wrench className="h-4 w-4" strokeWidth={2.4} />
-              </div>
-              <CheckCircle2 className="h-12 w-12 text-emerald-300 animate-in zoom-in duration-500" strokeWidth={2.4} />
+      <ServiceReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        ticket={createdTicketInfo}
+      />
+
+      {showSuccessModal && createdTicketInfo && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md overflow-hidden rounded-[2.5rem] border border-emerald-500/30 bg-slate-950/95 p-6 md:p-8 text-center shadow-[0_30px_90px_rgba(16,185,129,0.25)] animate-in zoom-in-95 duration-200">
+            {/* Ambient Top Glow */}
+            <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
+
+            {/* Close Button top-right */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowSuccessModal(false);
+              }}
+              className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+              title="Kapat"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Success Icon */}
+            <div className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-400/25">
+              <CheckCircle2 className="h-10 w-10 text-emerald-400 animate-in zoom-in duration-300" strokeWidth={2.4} />
             </div>
-            <div className="relative space-y-3">
-              <div className="mx-auto flex w-fit items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-200">
-                <Sparkles className="h-3.5 w-3.5" />
-                Servis Kaydı Hazır
+
+            {/* Header info */}
+            <div className="space-y-1 mb-5">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-300">
+                <Sparkles className="h-3 w-3" />
+                Hızlı Kayıt Başarılı
               </div>
-              <h2 className="text-2xl font-black tracking-tight text-white">Kayıt tamamlandı</h2>
-              <p className="text-sm font-medium text-slate-300">Servis kaydı işlendi.</p>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <h3 className="text-xl font-bold tracking-tight text-white">
+                  {createdTicketInfo.ticketNumber}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (createdTicketInfo?.ticketNumber) {
+                      navigator.clipboard.writeText(createdTicketInfo.ticketNumber);
+                      setIsCopiedTicketNo(true);
+                      toast({ title: "Kopyalandı", description: `${createdTicketInfo.ticketNumber} panoya kopyalandı.` });
+                      setTimeout(() => setIsCopiedTicketNo(false), 2000);
+                    }
+                  }}
+                  className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                  title="Numarayı Kopyala"
+                >
+                  {isCopiedTicketNo ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              <p className="text-xs font-medium text-slate-300">
+                {createdTicketInfo.customer?.name || createdTicketInfo.customerName}
+              </p>
             </div>
-            <div className="relative mt-7 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-blue-400 to-emerald-300 animate-[progress_2s_ease-out_forwards]"
-                onAnimationEnd={() => {
-                  setShowSuccessModal(false);
-                  setShowMissingRequired(false);
-                  setFoundCustomer(null);
-                  setPhoneValue("");
-                  setDiagnosticResult(null);
-                  if (pathname === "/servis") {
-                    router.refresh();
-                  } else {
+
+            {/* Summary card */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 mb-5 text-left space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-300">
+                <span className="text-slate-400 font-medium">Cihaz:</span>
+                <span className="font-semibold text-white">
+                  {createdTicketInfo.deviceBrand} {createdTicketInfo.deviceModel}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-300">
+                <span className="text-slate-400 font-medium">Telefon:</span>
+                <span className="font-medium text-slate-200">
+                  {createdTicketInfo.customer?.phone || createdTicketInfo.customerPhone || "-"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-300 pt-1.5 border-t border-white/5">
+                <span className="text-slate-400 font-medium">Tahmini Tutar:</span>
+                <span className="font-bold text-emerald-400 text-sm">
+                  {formatCurrency(createdTicketInfo.estimatedCost || 0)} ₺
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setServiceLabel(buildServiceTicketLabelData(createdTicketInfo, shop));
+                    toast({ title: "Barkod Etiketi", description: "Yazdırma penceresi hazırlanıyor..." });
+                  }}
+                  className="h-11 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300 font-semibold text-xs gap-2 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Tag className="h-4 w-4" />
+                  Barkod Etiketi
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setShowReceiptModal(true);
+                  }}
+                  className="h-11 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-300 font-semibold text-xs gap-2 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <FileText className="h-4 w-4" />
+                  Servis Fişi
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setOpen(true);
+                  }}
+                  className="h-11 rounded-xl bg-white/5 hover:bg-white/10 border-white/10 text-slate-200 font-semibold text-xs gap-2 transition-all active:scale-95"
+                >
+                  <PlusCircle className="h-4 w-4 text-emerald-400" />
+                  Yeni Kayıt
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setShowSuccessModal(false)}
+                  className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
+                >
+                  Tamam
+                </Button>
+              </div>
+            </div>
+
+            {/* Subtle link to ticket list if on another page */}
+            {pathname !== "/servis" && (
+              <div className="mt-4 pt-3 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuccessModal(false);
                     router.push("/servis");
-                  }
-                }}
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors"
+                >
+                  <span>Servis listesine git</span>
+                  <ExternalLink className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
+            {/* Auto-close Progress Bar (5 seconds) */}
+            <div className="relative mt-5 h-1 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-300 animate-[progress_5s_linear_forwards]"
+                onAnimationEnd={() => setShowSuccessModal(false)}
               />
             </div>
           </div>

@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
 
 interface SupplierOrderListsPanelProps {
     isOpen?: boolean;
@@ -80,7 +81,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose, isInline }: SupplierO
         setSelectedSupplier({
             id: supplierId,
             name: list.supplierName,
-            phone: list.supplierPhone,
+            phone: sanitizeWhatsAppPhone(list.supplierPhone),
             message: initialMessage
         });
         setWhatsappModalOpen(true);

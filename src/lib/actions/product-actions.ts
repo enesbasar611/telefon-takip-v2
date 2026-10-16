@@ -158,25 +158,43 @@ export const getProducts = cache(async function getProducts(options: {
 
 export const searchProducts = cache(async function searchProducts(query: string) {
   try {
-    if (!query || query.length < 2) return [];
+    if (!query || query.trim().length < 2) return [];
     const shopId = await getShopId();
     if (!shopId) return [];
+
+    const rawTrimmed = query.trim();
+    const queryVariants = Array.from(new Set([
+      rawTrimmed,
+      rawTrimmed.toLowerCase(),
+      rawTrimmed.toUpperCase(),
+      rawTrimmed.toLocaleLowerCase('tr-TR'),
+      rawTrimmed.toLocaleUpperCase('tr-TR'),
+      rawTrimmed.replace(/i/g, "ı").replace(/İ/g, "I"),
+      rawTrimmed.replace(/ı/g, "i").replace(/I/g, "İ"),
+      rawTrimmed.replace(/i/g, "İ"),
+      rawTrimmed.replace(/ı/g, "I"),
+    ])).filter(v => v.length >= 2);
+
+    const orConditions: any[] = [];
+    for (const q of queryVariants) {
+      orConditions.push(
+        { name: { contains: q, mode: 'insensitive' } },
+        { sku: { contains: q, mode: 'insensitive' } },
+        { barcode: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+        { category: { name: { contains: q, mode: 'insensitive' } } },
+        { deviceInfo: { color: { contains: q, mode: 'insensitive' } } },
+        { deviceInfo: { capacity: { contains: q, mode: 'insensitive' } } },
+        { deviceInfo: { serialNumber: { contains: q, mode: 'insensitive' } } },
+        { deviceInfo: { imei: { contains: q, mode: 'insensitive' } } }
+      );
+    }
 
     const products = await prisma.product.findMany({
       where: {
         shopId,
         isDeleted: false,
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { sku: { contains: query, mode: 'insensitive' } },
-          { barcode: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-          { category: { name: { contains: query, mode: 'insensitive' } } },
-          { deviceInfo: { color: { contains: query, mode: 'insensitive' } } },
-          { deviceInfo: { capacity: { contains: query, mode: 'insensitive' } } },
-          { deviceInfo: { serialNumber: { contains: query, mode: 'insensitive' } } },
-          { deviceInfo: { imei: { contains: query, mode: 'insensitive' } } }
-        ]
+        OR: orConditions
       },
       select: {
         id: true,
@@ -185,12 +203,14 @@ export const searchProducts = cache(async function searchProducts(query: string)
         criticalStock: true,
         sku: true,
         barcode: true,
+        buyPrice: true,
+        buyPriceUsd: true,
         sellPrice: true,
         category: {
-          select: { name: true }
+          select: { id: true, name: true }
         }
       },
-      take: 8
+      take: 12
     });
 
     return serializePrisma(products);

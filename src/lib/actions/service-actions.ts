@@ -119,6 +119,9 @@ export async function createServiceTicket(rawData: any) {
               }
             }
           } as any,
+          include: {
+            customer: true,
+          }
         });
 
         break; // Successfully created
