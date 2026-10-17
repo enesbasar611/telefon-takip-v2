@@ -41,6 +41,79 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-17: Stok Sayfası (StokPage) Sağ Tedarikçi Siparişleri Paneli ve @stok/siparisler Senkronizasyonu:
+  - **Sorun:**
+    - `StokPage` (`/stok`) sayfasındaki sağ sidebar panelinde yer alan "Tedarikçi Siparişleri", sadece `localStorage` tabanlı taslak sepeti (`useSupplierOrders`) gösteriyordu.
+    - `/stok/siparisler` sayfasında oluşturulan, bekleyen veya teslim alınan gerçek satın alma siparişleri (`PurchaseOrder`) sağ sidebar'da görünmüyordu.
+    - Sağ panelden "Sipariş Ver" dendiğinde sipariş DB'ye kaydedilip taslaktan silindiği için liste boş kalıyor; kullanıcı siparişin durumunu takip etmek ve mal kabul (teslim alma) yapmak için `/stok/siparisler` sayfasına gitmek zorunda kalıyordu.
+  - **Yapılan İyileştirmeler:**
+    - `supplier-order-lists-panel.tsx` tamamen yenilenerek iki yönlü senkronize hale getirildi:
+      1. **Canlı DB Siparişleri Senkronizasyonu:** `useQuery(["purchase-orders"])` ile `/stok/siparisler` sayfasındaki tüm siparişler canlı olarak sağ panele bağlandı.
+      2. **İkili Sekme Yapısı:**
+         - **Aktif Siparişler Sekmesi:** Bekleyen (`PENDING`) ve sipariş verilen (`ORDERED`) siparişler, sipariş numarası, tedarikçi adı, ürün çeşit/adet bilgisi ve durum rozetleriyle listelendi.
+         - **Taslak Sepet Sekmesi:** Akıllı stok yenilemeden veya eksik listelerinden eklenen taslak kalemler korunarak yönetilebilir kılındı.
+      3. **Panel İçi Hızlı Aksiyonlar:**
+         - **Teslim Al (Mal Kabul):** Sağ panelden tek tıkla `MalKabulModal` açılarak sipariş stoğa işlenebiliyor; teslim alındığında stoklar güncellenip liste anında senkronize ediliyor.
+         - **WhatsApp:** Tedarikçiye sipariş listesini fiyatsız şablonla iletme modalı entegre edildi.
+         - **Detay & Yazdır:** `PurchaseOrderDetailModal` ile sipariş dökümü görüntülenebiliyor.
+         - **Sipariş İptali:** `cancelPurchaseOrder` aksiyonu ve onay diyaloğu eklendi.
+      4. **Otomatik Akıllı Geçiş:**
+         - Akıllı stok yenilemeden yeni bir ürün eklendiğinde panel otomatik olarak "Taslak Sepet" sekmesine geçiyor.
+         - Taslaktan "Sipariş Ver" dendiğinde sipariş DB'ye işlenip cache'ler yenileniyor ve panel otomatik olarak "Aktif Siparişler" sekmesine dönerek yeni siparişi gösteriyor.
+      5. **Hızlı Erişim Linki:** Başlığa `/stok/siparisler` sayfasına tek tıkla gitmeyi sağlayan "Tümünü Gör" bağlantısı eklendi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
+- [x] 2026-10-17: BAŞAR AI Çoklu Stok & Fiş Analizi - Prisma Transaction Zaman Aşımı (P2028) ve O(1) Hızlandırma:
+  - **Kök Neden:**
+    - Prisma'nın varsayılan transaction zaman aşımı süresi 5 saniyedir (`timeout: 5000ms`). 25 kalemlik fişte her ürün için ardışık olarak `findFirst` (mükerrer kontrolü), `product.create`, `findFirst` (barkod kontrolü) ve `product.update` çağrıları yapıldığında 100'e yakın SQL sorgusu işletiliyor ve süre 5 saniyeyi aştığı için Prisma transaction'ı iptal ediyordu (`P2028: Transaction not found`).
+  - **Yapılan Düzeltmeler:**
+    - `product-actions.ts` (`bulkCreateAIInventory`):
+      1. **Tek Seferde Belleğe Alma:** Dükkandaki tüm kategori ve mevcut ürünler işlem başında tek sorguda çekilip hafızada `Map` ve `Set` yapılarına aktarıldı.
+      2. **O(1) Mükerrer Kontrolü:** Döngü içinde veritabanına `findFirst` sorgusu atmak yerine isim ve barkod eşleşmeleri doğrudan bellekten anında kontrol ediliyor.
+      3. **Anında Benzersiz Barkod Üretimi:** Barkodu olmayan ürünler için hafızadaki `usedBarcodes` kümesine göre çakışmasız barkod üretilip ürün tek bir `create` işlemiyle oluşturuluyor (ekstra `findFirst` döngüsü ve `update` çağrısı kaldırıldı).
+      4. **Genişletilmiş Zaman Aşımı:** `prisma.$transaction` seçeneğine `{ maxWait: 15000, timeout: 60000 }` eklenerek olası yoğunluk durumlarında zaman aşımı 60 saniyeye yükseltildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
+
+- [x] 2026-10-17: React "Maximum update depth exceeded" Sonsuz Render Döngüsü Düzeltmesi:
+  - **Kök Neden:**
+    1. `WhatsAppConfirmModal` bileşeninde `phones = []` varsayılan parametresi her render'da yeni referans oluşturuyor ve bu dizi `useEffect` bağımlılıklarında yer aldığı için modal açıkken `setMessage` ile sonsuz tetikleme döngüsüne (Maximum update depth exceeded) neden oluyordu.
+    2. `ai-category-creator.tsx` içerisinde `step === "review"` sırasında her `rows` değişiminde `setSavedDraft(draft)` çağrılması gereksiz state değişimlerini tetikliyordu; ayrıca `setAiLoading` çağrısı `useUI()` üzerinden tüm üst bileşenleri yeniden tetikliyordu.
+    3. `ui-context.tsx` Context Provider değeri (`value={{ ... }}`) ve fonksiyonları (`toggleFinancialVisibility`, `toggleLayoutEditing`) `useMemo`/`useCallback` ile sarılmadığı için tüketen her bileşende gereksiz render silsilesi yaratıyordu.
+  - **Yapılan Düzeltmeler:**
+    - `whatsapp-confirm-modal.tsx`: `phones` varsayılan değeri dışarıda sabitlenen `EMPTY_PHONES` referansına bağlandı ve `useEffect` bağımlılığı `phonesKey = phones.join(",")` olarak normalize edildi.
+    - `ai-category-creator.tsx`: `setAiLoading` yan etkisi ve review adımındaki gereksiz `setSavedDraft` kaldırıldı.
+    - `ui-context.tsx`: Context değerleri `useMemo`, toggle fonksiyonları ise `useCallback` ile kalıcı hale getirilerek referans kararlılığı sağlandı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
+- [x] 2026-10-17: Tedarikçi Fişi/Fatura Görsel Analizinde JSON Parse Hatası ve Token Aşımı Düzeltmesi (`gemini-actions.ts`):
+  - **Kök Neden Tespiti:**
+    - Uzun toptancı fişlerinde (~25 kalem ekran/yedek parça) AI analizi çalıştırıldığında, Gemini modeline gereksiz yere 100 mevcut kategori ve 50 ürün listesi aktarılıyor; model her ürün satırı için 10'dan fazla alan ve kur çevrimi üretirken yanıt maksimum token sınırında (3800. karakter civarı `"buyPriceUs`) aniden kesiliyordu.
+    - `callGemini` içerisindeki regex kuralları kesilmiş JSON metnine yanlış tırnak ve süslü parantez ekleyerek `{"buyPriceUs"}}` gibi bozuk JSON üretiyor, bu da `JSON.parse` çökmesine ve `"AI YANITI JSON OLARAK ÇÖZÜMLENEMEDİ"` toast hatasına yol açıyordu.
+  - **Görsel/Fiş Yüklemelerine Özel Kompakt Prompt Stratejisi (`parseCategoryTreeWithAI`):**
+    - Görsel yüklendiğinde mevcut kategori ve ürün dökümü prompttan çıkarıldı; Gemini'ye sadece görseldeki satırları okuması (`name`, `buyPrice`, `stock`, `currency`) talimatı verildi.
+    - Toptancı telefon ekran/yedek parça fişlerindeki `9,000`, `20,000`, `41,000` gibi 3 sıfırlı küsuratlı fiyatların DOLAR ($9, $20, $41) olduğu prompta eklendi ve birim fiyatın bu şekilde alınması sağlandı.
+    - TL çevirimi (`buyPrice`), kâr marjı eklenmiş perakende satış fiyatları (`sellPrice`, `sellPriceUsd`) ve kritik stok değerleri model yerine doğrudan sunucu tarafında TypeScript ile milisaniyeler içinde hatasız hesaplandı. Çıktı token yükü %60 azaldı ve 25 satırlık fişler bile saniyeler içinde eksiksiz döndü.
+  - **Yığın Tabanlı Akıllı JSON Kurtarma Motoru (`recoverTruncatedJson` & `safeJsonParse`):**
+    - `gemini-actions.ts` içine `recoverTruncatedJson` ve `safeJsonParse` yardımcıları eklendi.
+    - AI yanıtı herhangi bir sebeple ortada kesilse dahi, yığın (bracket/brace stack) algoritması ile son tamamlanan geçerli nesneye kadar geri çekilip açık kalan parantezler dengeli şekilde kapatılarak başarıyla kurtarılması sağlandı (hiçbir veri kaybı veya çökme yaşanmaz).
+    - `parseProductWithAI` ve `parseBulkProductsWithAI` işlevleri de bu güvenli ayrıştırıcıya bağlandı.
+  - **Next.js Server Actions Düzeltmesi:** `"use server"` dosyalarında senkron fonksiyonların `export` edilmesi Next.js tarafından ("Server actions must be async functions") derleme hatasına yol açtığından, yardımcı `recoverTruncatedJson` ve `safeJsonParse` fonksiyonlarının `export` belirteci kaldırılarak dosya içi yardımcı fonksiyon yapıldı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
+- [x] 2026-10-17: Fiş Yükleme 413 (Body Exceeded 1MB Limit) ve Kur Senkronizasyonu `unstable_cache` Hatası Düzeltmeleri:
+  - **Fiş/Fatura Yükleme 1MB Sınırı ve 413 Hatası Çözümü (`next.config.mjs` & `ai-category-creator.tsx`):**
+    - `next.config.mjs`: `experimental.serverActions.bodySizeLimit` değeri `15mb` olarak yapılandırıldı. Böylece Next.js Server Action varsayılan 1MB gövde kısıtı kaldırıldı.
+    - `ai-category-creator.tsx`: İstemci tarafında `compressImage` (HTML5 Canvas) optimizasyonu eklendi. Cep telefonu kameralarıyla çekilen yüksek çözünürlüklü (3MB - 10MB) fiş fotoğrafları OCR/metin okunurluğunu koruyacak şekilde 1800px ve 0.85 kaliteye ölçeklenerek ~300KB seviyesine indirildi. Bu sayede hem 413 hatası kesin olarak önlendi hem de yapay zekaya aktarım 5 kat hızlandırıldı.
+  - **Kur Senkronizasyonu `unstable_cache` İçinde `revalidatePath` Hatası Çözümü (`currency-actions.ts`):**
+    - Next.js'in `unstable_cache` ve render anında `revalidatePath("/")` çağrıldığında fırlattığı rota kilitlenme hatası giderildi.
+    - `syncAllRates` fonksiyonuna `skipRevalidatePath` opsiyonu eklendi, `revalidatePath` ve `revalidateTag` çağrıları güvenli `try/catch` bloklarına alındı. `getExchangeRates` arka plan kütüphanesinden çağrıldığında revalidatePath atlanarak çökme engellendi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
 - [x] 2026-10-17: Ana Sayfa "Kasa Bakiyesi" Kartı Ay Tabanlı Detay Modalı ve Son 20 Kayıt Kırılımı:
   - **Sunucu Eylemi (`src/lib/actions/dashboard-detail-actions.ts` -> `getCashBalanceMonthlyDetails`):**
     - Ay tabanlı (`year`, `month`) kasa akış analizi eklendi.

@@ -85,7 +85,7 @@ export function AICategoryCreator({
     className
 }: AICategoryCreatorProps) {
     const router = useRouter();
-    const { setAiLoading, setAiInputFocused } = useUI();
+    const { setAiInputFocused } = useUI();
     const { data: liveRates } = useQuery({
         queryKey: ["rates"],
         queryFn: () => getCurrentExchangeRates(),
@@ -123,7 +123,19 @@ export function AICategoryCreator({
             if (raw) {
                 const parsed = JSON.parse(raw) as SavedDraft;
                 if (parsed && Array.isArray(parsed.rows) && parsed.rows.length > 0) {
-                    setSavedDraft(parsed);
+                    // Önceki denemede kalan "error" veya "saving" durumlarını temizle, kaydedilmemişleri tekrar aktif et
+                    const sanitizedRows = parsed.rows.map(r => ({
+                        ...r,
+                        _catStatus: (r._catStatus === "saved" ? "saved" : "pending") as any,
+                        _prodStatuses: (r.products || []).map((_, pi) => {
+                            const s = r._prodStatuses?.[pi];
+                            return s === "saved" ? "saved" : "pending";
+                        }) as any
+                    }));
+                    setSavedDraft({
+                        ...parsed,
+                        rows: sanitizedRows
+                    });
                 }
             }
         } catch (err) {
@@ -143,26 +155,29 @@ export function AICategoryCreator({
                     updatedAt: new Date().toISOString()
                 };
                 localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-                setSavedDraft(draft);
             } catch (err) {
                 // localStorage kota aşımı koruması
             }
         }
-    }, [rows, activeCurrency, step, description, receiptFile]);
-
-    useEffect(() => {
-        const loading = isAIPending || isSavePending;
-        setAiLoading(loading);
-    }, [isAIPending, isSavePending, setAiLoading]);
+    }, [rows, activeCurrency, step, description, receiptFile?.name]);
 
     // Taslaktan Geri Yükle
     const handleRestoreDraft = () => {
         if (!savedDraft) return;
-        setRows(savedDraft.rows);
+        // Taslaktan yüklerken kaydedilmemiş olanları temiz bir "pending" durumuna çek
+        const restoredRows = (savedDraft.rows || []).map(r => ({
+            ...r,
+            _catStatus: (r._catStatus === "saved" ? "saved" : "pending") as any,
+            _prodStatuses: (r.products || []).map((_, pi) => {
+                const s = r._prodStatuses?.[pi];
+                return s === "saved" ? "saved" : "pending";
+            }) as any
+        }));
+        setRows(restoredRows);
         setActiveCurrency(savedDraft.activeCurrency || "TRY");
         setDescription(savedDraft.description || "");
         setStep("review");
-        toast.success(`Hafızadaki ${savedDraft.rows.length} kategorili taslak yüklendi. Token harcamadan devam ediyorsunuz.`);
+        toast.success(`Hafızadaki ${restoredRows.length} kategorili taslak yüklendi. Token harcamadan devam ediyorsunuz.`);
     };
 
     // Taslağı Temizle
@@ -172,10 +187,41 @@ export function AICategoryCreator({
         toast.info("Kaydedilmiş taslak temizlendi.");
     };
 
+    // Görsel boyutlandırma ve optimize etme (1MB Server Action sınırını koruma ve hızlı yükleme)
+    const compressImage = (dataUrl: string, maxDimension = 1800, quality = 0.85): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = Math.round((height * maxDimension) / width);
+                        width = maxDimension;
+                    } else {
+                        width = Math.round((width * maxDimension) / height);
+                        height = maxDimension;
+                    }
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL("image/jpeg", quality));
+                } else {
+                    resolve(dataUrl);
+                }
+            };
+            img.onerror = () => resolve(dataUrl);
+            img.src = dataUrl;
+        });
+    };
+
     // Dosya okuma (Görsel veya PDF)
     const processFile = (file: File) => {
-        if (file.size > 15 * 1024 * 1024) {
-            toast.error("Dosya boyutu 15MB'den büyük olamaz.");
+        if (file.size > 25 * 1024 * 1024) {
+            toast.error("Dosya boyutu 25MB'den büyük olamaz.");
             return;
         }
 
@@ -186,17 +232,31 @@ export function AICategoryCreator({
         }
 
         const reader = new FileReader();
-        reader.onload = () => {
-            const base64 = reader.result as string;
+        reader.onload = async () => {
+            let base64 = reader.result as string;
+            let mimeType = file.type || "image/jpeg";
+
+            // Eğer görsel ise 1800px ve 0.85 kalite ile optimize et (boyut 3-8MB'den ~300KB'a iner, OCR kalitesi korunur)
+            if (file.type.startsWith("image/") || file.name.match(/\.(jpg|jpeg|png|webp|heic)$/i)) {
+                try {
+                    base64 = await compressImage(base64, 1800, 0.85);
+                    mimeType = "image/jpeg";
+                } catch (e) {
+                    // Fallback to original if canvas fails
+                }
+            }
+
+            const estimatedSize = Math.round((base64.length * 3) / 4);
+
             setReceiptFile({
                 name: file.name,
-                size: file.size,
+                size: estimatedSize,
                 base64,
-                mimeType: file.type || "image/jpeg",
-                previewUrl: file.type.startsWith("image/") ? base64 : ""
+                mimeType,
+                previewUrl: mimeType.startsWith("image/") ? base64 : ""
             });
             setActiveInputTab("receipt");
-            toast.success(`"${file.name}" fişi yüklendi. "Fişi Analiz Et" butonuna tıklayabilirsiniz.`);
+            toast.success(`"${file.name}" fişi yüklendi ve optimize edildi.`);
         };
         reader.readAsDataURL(file);
     };
@@ -221,9 +281,15 @@ export function AICategoryCreator({
                 ...updatedProducts[productIndex],
                 [field]: value
             };
+            const updatedStatuses = [...r._prodStatuses];
+            if (updatedStatuses[productIndex] === "error") {
+                updatedStatuses[productIndex] = "pending";
+            }
             return {
                 ...r,
-                products: updatedProducts
+                _catStatus: r._catStatus === "error" ? "pending" : r._catStatus,
+                products: updatedProducts,
+                _prodStatuses: updatedStatuses
             };
         }));
     };
@@ -402,7 +468,11 @@ export function AICategoryCreator({
     };
 
     const updateRow = (id: string, field: keyof AICategoryNode, value: any) => {
-        setRows(prev => prev.map(r => r._id === id ? { ...r, [field]: value } : r));
+        setRows(prev => prev.map(r => r._id === id ? {
+            ...r,
+            [field]: value,
+            _catStatus: r._catStatus === "error" ? "pending" : r._catStatus
+        } : r));
     };
 
     // Tümünü Kaydet
@@ -410,8 +480,8 @@ export function AICategoryCreator({
         startSave(async () => {
             setRows(prev => prev.map(r => ({
                 ...r,
-                _catStatus: r._catStatus === "pending" ? "saving" : r._catStatus,
-                _prodStatuses: r._prodStatuses.map(ps => ps === "pending" ? "saving" : ps)
+                _catStatus: r._catStatus !== "saved" ? "saving" : r._catStatus,
+                _prodStatuses: r._prodStatuses.map(ps => ps !== "saved" ? "saving" : ps)
             })));
 
             const res = await bulkCreateAIInventory(rows);
@@ -420,8 +490,8 @@ export function AICategoryCreator({
                 toast.error(res.error || "Kayıt sırasında hata oluştu.");
                 setRows(prev => prev.map(r => ({
                     ...r,
-                    _catStatus: "error",
-                    _prodStatuses: r.products.map(() => "error" as const)
+                    _catStatus: r._catStatus === "saving" ? "error" : r._catStatus,
+                    _prodStatuses: r._prodStatuses.map(ps => ps === "saving" ? "error" : ps)
                 })));
                 return;
             }
@@ -475,8 +545,8 @@ export function AICategoryCreator({
         });
     };
 
-    const totalPendingCats = rows.filter(r => r._catStatus === "pending").length;
-    const totalPendingProds = rows.reduce((a, r) => a + r._prodStatuses.filter(ps => ps === "pending").length, 0);
+    const totalPendingCats = rows.filter(r => r._catStatus !== "saved" && r._catStatus !== "skipped").length;
+    const totalPendingProds = rows.reduce((a, r) => a + r._prodStatuses.filter(ps => ps !== "saved").length, 0);
     const totalProds = rows.reduce((a, r) => a + r.products.length, 0);
 
     return (
@@ -502,8 +572,8 @@ export function AICategoryCreator({
                 )}
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[1150px] w-[96vw] bg-white/95 dark:bg-[#111111]/95 backdrop-blur-xl border-zinc-200 dark:border-[#333333] text-foreground dark:text-white p-0 shadow-2xl gemini-aura-modal">
-                <DialogHeader className="p-6 pb-3 border-b border-zinc-100 dark:border-zinc-800/50">
+            <DialogContent className="sm:max-w-[1150px] w-[96vw] max-h-[92vh] flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-xl border-zinc-200 dark:border-[#333333] text-foreground dark:text-white p-0 shadow-2xl gemini-aura-modal overflow-hidden">
+                <DialogHeader className="p-6 pb-3 border-b border-zinc-100 dark:border-zinc-800/50 shrink-0">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3.5">
                             <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
@@ -563,7 +633,7 @@ export function AICategoryCreator({
                     </div>
                 </DialogHeader>
 
-                <div className="p-6 space-y-5 max-h-[76vh] overflow-y-auto custom-scrollbar">
+                <div className="p-6 space-y-5 flex-1 overflow-y-auto custom-scrollbar">
 
                     {step === "input" && (
                         <div className="space-y-6">
@@ -1097,33 +1167,36 @@ export function AICategoryCreator({
                                 ))}
                             </div>
 
-                            {/* Alt Kaydet Aksiyonu */}
-                            <div className="flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                                <div className="text-xs text-zinc-500">
-                                    Toplam <strong className="text-foreground">{rows.length}</strong> Kategori ve <strong className="text-foreground">{totalProds}</strong> Ürün envantere eklenecektir.
-                                </div>
-
-                                <Button
-                                    onClick={handleSaveAll}
-                                    disabled={isSavePending || (totalPendingCats === 0 && totalPendingProds === 0)}
-                                    className="h-12 px-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold uppercase tracking-wider gap-2.5 disabled:opacity-40 shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all"
-                                >
-                                    {isSavePending ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Envantere Ekleniyor...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ArrowRight className="h-4 w-4" />
-                                            Hepsini Envantere Ekle ({totalProds} Ürün)
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
                         </div>
                     )}
                 </div>
+
+                {/* Alt Sabit Kaydet Aksiyonu (Review adımında ekranın altına sabitlenir) */}
+                {step === "review" && (
+                    <div className="p-4 px-6 border-t border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/90 dark:bg-[#151518]/90 backdrop-blur-md flex items-center justify-between shrink-0 shadow-lg">
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            Toplam <strong className="text-foreground dark:text-white font-bold">{rows.length}</strong> Kategori ve <strong className="text-foreground dark:text-white font-bold">{totalProds}</strong> Ürün envantere eklenecektir.
+                        </div>
+
+                        <Button
+                            onClick={handleSaveAll}
+                            disabled={isSavePending || totalProds === 0 || rows.every(r => r._catStatus === "saved")}
+                            className="h-11 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold uppercase tracking-wider gap-2.5 disabled:opacity-40 shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition-all"
+                        >
+                            {isSavePending ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Envantere Ekleniyor...
+                                </>
+                            ) : (
+                                <>
+                                    <ArrowRight className="h-4 w-4" />
+                                    Hepsini Envantere Ekle ({totalProds} Ürün)
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     );

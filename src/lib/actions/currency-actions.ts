@@ -3,9 +3,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { getShopId } from "@/lib/auth";
 
-
-// 1. syncAllRates fonksiyonu olduğu gibi kalabilir (içindeki getShopId dışarıdan shopId gelirse çalışmıyor zaten)
-export async function syncAllRates(providedShopId?: string) {
+export async function syncAllRates(providedShopId?: string, skipRevalidatePath: boolean = false) {
   try {
     const shopId = providedShopId || await getShopId();
     const shop = await prisma.shop.findUnique({ where: { id: shopId } });
@@ -51,9 +49,19 @@ export async function syncAllRates(providedShopId?: string) {
       prisma.setting.upsert({ where: { shopId_key: { shopId, key: "currency_last_update" } }, update: { value: new Date().toISOString() }, create: { shopId, key: "currency_last_update", value: new Date().toISOString() } })
     ]);
 
-    revalidatePath("/");
-    revalidateTag(`rates-${shopId}`);
-    revalidateTag("rates");
+    if (!skipRevalidatePath) {
+      try {
+        revalidatePath("/");
+      } catch {
+        // Next.js unstable_cache or SSR render context
+      }
+    }
+    try {
+      revalidateTag(`rates-${shopId}`);
+      revalidateTag("rates");
+    } catch {
+      // Ignored if called during unsupported render phase
+    }
     return { success: true };
   } catch (error) {
     console.error("Kur senkronizasyon hatası:", error);
@@ -85,8 +93,8 @@ export const getExchangeRates = async (shopId: string | null) => {
       // Eğer veri eksikse veya 2 saat geçmişse arka planda sync başlat
       const isStale = settings.length < 3 || (now.getTime() - lastUpdate.getTime() > 2 * 60 * 60 * 1000);
       if (isStale) {
-        // Fire-and-forget: revalidateTag çağrısı syncAllRates içinde yapılır
-        syncAllRates(shopId).catch(() => { });
+        // Fire-and-forget: pass skipRevalidatePath=true to avoid unsupported revalidatePath inside unstable_cache
+        syncAllRates(shopId, true).catch(() => { });
       }
 
       return {

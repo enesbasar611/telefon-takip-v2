@@ -17,6 +17,9 @@ const nextConfig = {
     },
     experimental: {
         serverComponentsExternalPackages: ["puppeteer-extra", "puppeteer-extra-plugin-stealth", "puppeteer", "whatsapp-web.js", "unzipper"],
+        serverActions: {
+            bodySizeLimit: '15mb',
+        },
     },
     webpack: (config, { isServer }) => {
         // Watchpack hatalarını ve gereksiz dosya taramalarını engeller

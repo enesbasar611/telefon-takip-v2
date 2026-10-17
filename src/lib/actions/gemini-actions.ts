@@ -146,6 +146,96 @@ function sanitizeProduct(parsed: any): AIProductResult {
     };
 }
 
+// ── ROBUST JSON PARSER & RECOVERY ────────────────────────────
+function recoverTruncatedJson<T = any>(str: string): T | null {
+    if (!str || typeof str !== "string") return null;
+
+    // Find the last valid closing brace or bracket
+    const lastCloseBrace = str.lastIndexOf("}");
+    const lastCloseBracket = str.lastIndexOf("]");
+    const cutPoint = Math.max(lastCloseBrace, lastCloseBracket);
+    if (cutPoint === -1) return null;
+
+    let clean = str.substring(0, cutPoint + 1);
+    const stack: string[] = [];
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < clean.length; i++) {
+        const ch = clean[i];
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+        if (ch === "\\") {
+            escaped = true;
+            continue;
+        }
+        if (ch === '"') {
+            inString = !inString;
+            continue;
+        }
+        if (!inString) {
+            if (ch === "{" || ch === "[") {
+                stack.push(ch);
+            } else if (ch === "}" || ch === "]") {
+                stack.pop();
+            }
+        }
+    }
+
+    let closing = "";
+    while (stack.length > 0) {
+        const top = stack.pop();
+        if (top === "{") closing += "}";
+        else if (top === "[") closing += "]";
+    }
+
+    try {
+        return JSON.parse(clean + closing) as T;
+    } catch {
+        return null;
+    }
+}
+
+function safeJsonParse<T = any>(str: string): T | null {
+    if (!str || typeof str !== "string") return null;
+    let clean = str.trim();
+
+    // Strip markdown code fences if present
+    clean = clean.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+
+    // Find first { or [
+    const firstBrace = clean.indexOf("{");
+    const firstBracket = clean.indexOf("[");
+    let startIdx = -1;
+    if (firstBrace !== -1 && firstBracket !== -1) {
+        startIdx = Math.min(firstBrace, firstBracket);
+    } else if (firstBrace !== -1) {
+        startIdx = firstBrace;
+    } else if (firstBracket !== -1) {
+        startIdx = firstBracket;
+    }
+
+    if (startIdx !== -1) {
+        clean = clean.substring(startIdx);
+    }
+
+    // 1. Direct parse attempt
+    try {
+        return JSON.parse(clean) as T;
+    } catch {
+        // 2. Trailing comma fix attempt
+        try {
+            const noTrailing = clean.replace(/,\s*([\]}])/g, "$1");
+            return JSON.parse(noTrailing) as T;
+        } catch {
+            // 3. Stack-based truncation recovery
+            return recoverTruncatedJson<T>(clean);
+        }
+    }
+}
+
 // ── CORE GEMINI CALLER with official SDK ─────────────────────
 export type GeminiPart = string | {
     inlineData: {
@@ -178,9 +268,6 @@ async function callGemini(
             }
         );
 
-
-
-
         const result = await model.generateContent(promptParts);
         const response = await result.response;
         let text = response.text();
@@ -192,7 +279,7 @@ async function callGemini(
         if (responseType === "json") {
             let rawText = text.trim();
             // Remove markdown code blocks if present
-            rawText = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+            rawText = rawText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
 
             // If it's still not plain JSON, try to find the first { and last }
             if (!rawText.startsWith("{") && !rawText.startsWith("[")) {
@@ -201,29 +288,6 @@ async function callGemini(
                 if (start !== -1 && end !== -1) {
                     rawText = rawText.substring(start, end + 1);
                 }
-            }
-
-            // Basic fix for unterminated strings or common AI JSON errors
-            // (Only for simple cases, JSON.parse will still be the final judge)
-            rawText = rawText
-                .replace(/,\s*([\]}])/g, '$1') // Remove trailing commas
-                .replace(/("[^"]*":\s*(?:"[^"]*"|true|false|null|[0-9.-]+))\s*(")/g, '$1,$2') // Add missing commas after values
-                .replace(/([}\]])\s*(")/g, '$1,$2'); // Add missing commas after objects/arrays
-
-            // Handle cutoff JSON (unterminated strings/braces)
-            const openQuotes = (rawText.match(/"/g) || []).length;
-            if (openQuotes % 2 !== 0) rawText += '"';
-
-            const openBraces = (rawText.match(/{/g) || []).length;
-            const closeBraces = (rawText.match(/}/g) || []).length;
-            if (openBraces > closeBraces) {
-                for (let i = 0; i < openBraces - closeBraces; i++) rawText += '}';
-            }
-
-            const openBrackets = (rawText.match(/\[/g) || []).length;
-            const closeBrackets = (rawText.match(/\]/g) || []).length;
-            if (openBrackets > closeBrackets) {
-                for (let i = 0; i < openBrackets - closeBrackets; i++) rawText += ']';
             }
 
             text = rawText;
@@ -261,7 +325,6 @@ export async function parseProductWithAI(
         where: { shopId_key: { shopId, key: "defaultCurrency" } }
     });
     const defaultCurrency = setting?.value || "TRY";
-
     const categoryList = await buildCategoryContext();
     const productList = await buildProductContext();
     const systemPrompt = buildSystemPrompt(categoryList, productList, usdRate, defaultCurrency);
@@ -270,11 +333,11 @@ export async function parseProductWithAI(
     const result = await callGemini(shopId, [systemPrompt, userPrompt]);
     if ("error" in result) return { success: false, error: result.error };
 
-    try {
-        return { success: true, data: sanitizeProduct(JSON.parse(result.text)) };
-    } catch {
+    const parsed = safeJsonParse(result.text);
+    if (!parsed) {
         return { success: false, error: "AI yanıtı JSON olarak çözümlenemedi. Açıklamayı farklı ifade edip tekrar deneyin." };
     }
+    return { success: true, data: sanitizeProduct(parsed) };
 }
 
 // ── BULK PRODUCT PARSER ────────────────────────────────────────────────────
@@ -315,14 +378,15 @@ Kullanıcı BİRDEN FAZLA ürün tanımlamış olabilir. Şu kurallara uy:
     const result = await callGemini(shopId, [systemPrompt, userPrompt]);
     if ("error" in result) return { success: false, error: result.error };
 
-    try {
-        const parsed = JSON.parse(result.text);
-        const products: AIProductResult[] = (parsed.products || []).map(sanitizeProduct);
-        if (products.length === 0) return { success: false, error: "Hiç ürün tespit edilemedi. Açıklamayı daha net yazın." };
-        return { success: true, data: products };
-    } catch {
+    const parsed = safeJsonParse(result.text);
+    if (!parsed) {
         return { success: false, error: "AI yanıtı JSON olarak çözümlenemedi. Açıklamayı farklı ifade edip tekrar deneyin." };
     }
+
+    const rawList = Array.isArray(parsed) ? parsed : (parsed.products || []);
+    const products: AIProductResult[] = rawList.map(sanitizeProduct);
+    if (products.length === 0) return { success: false, error: "Hiç ürün tespit edilemedi. Açıklamayı daha net yazın." };
+    return { success: true, data: products };
 }
 
 // ── CATEGORY TREE + PRODUCT PARSER ────────────────────────────────────────
@@ -360,9 +424,81 @@ export async function parseCategoryTreeWithAI(
     const description = typeof input === "string" ? input : (input.description || "");
     const image = typeof input === "object" ? input.image : undefined;
 
-    if (!description.trim() && (!image || !image.base64)) return { success: false, error: "Lütfen bir açıklama yazın veya tedarikçi fişi yükleyin." };
+    if (!description.trim() && (!image || !image.base64)) {
+        return { success: false, error: "Lütfen bir açıklama yazın veya tedarikçi fişi yükleyin." };
+    }
 
-    const schema = `{
+    const { getExchangeRates } = await import("@/lib/actions/currency-actions");
+    const rates = await getExchangeRates(shopId);
+    const usdRate = rates.usd > 1 ? rates.usd : 35;
+
+    const setting = await prisma.setting.findUnique({
+        where: { shopId_key: { shopId, key: "defaultCurrency" } }
+    });
+    const defaultCurrency = setting?.value || "TRY";
+
+    const promptParts: GeminiPart[] = [];
+    const isReceiptImage = Boolean(image?.base64 && image?.mimeType);
+
+    if (isReceiptImage) {
+        // Streamlined prompt optimized specifically for physical receipt/invoice OCR
+        const receiptPrompt = `Sen bir telefon teknik servis dükkanı için toptancı fiş/fatura ve irsaliye analiz uzmanısın.
+Görseldeki fiş veya belgeyi satır satır tara ve tüm ürünleri eksiksiz tespit et.
+
+ÖNEMLİ KURALLAR:
+1. FİYAT VE PARA BİRİMİ:
+   - Toptancı telefon yedek parça (ekran, batarya vb.) fişlerinde '9,000', '20,000', '41,000' gibi 3 sıfırlı küsuratlı yazılmış fiyatlar toptan DOLAR ($9, $20, $41) birimidir.
+   - Bu nedenle birim fiyat 9,000 ise buyPrice: 9; 20,000 ise buyPrice: 20; 41,000 ise buyPrice: 41 yaz ve currency: "USD" yap.
+   - Fişte açıkça TL / ₺ belirtilmedikçe telefon ekranı ve yedek parça toptancı fişlerini USD olarak kabul et.
+   - TL dönüşümünü veya satış fiyatlarını hesaplamana gerek YOK, sistemimiz kur üzerinden otomatik hesaplayacaktır.
+
+2. SATIRLARI BİREBİR AL:
+   - Fişteki her ürün satırını olduğu gibi model adı olarak al.
+   - Fişteki "Miktarı" veya "Adet" sütunundaki sayıyı stock alanına yaz (örn: 1, 2, 3, 5).
+   - Seri telefon modellerini gereksiz yere yüzlerce alt modele bölme; fişte hangi satır varsa o ürünü ekle.
+
+3. KATEGORİLEME:
+   - Ürünleri mantıklı markalara/kategorilere grupla (örn: 'Ekranlar > Apple', 'Ekranlar > Samsung', 'Ekranlar > Xiaomi', 'Ekranlar > Oppo', 'Ekranlar > Diğer').
+
+4. ÇIKTI ŞEMASI (SADECE GEÇERLİ JSON, BAŞKA METİN YAZMA):
+{
+  "categories": [
+    {
+      "name": "Kategori Adı (örn: Ekranlar > Samsung)",
+      "products": [
+        {
+          "name": "Ürün tam adı",
+          "buyPrice": 9,
+          "stock": 2,
+          "currency": "USD"
+        }
+      ]
+    }
+  ]
+}`;
+        promptParts.push(receiptPrompt);
+
+        if (image?.base64 && image?.mimeType) {
+            const cleanBase64 = image.base64.replace(/^data:[^;]+;base64,/, "");
+            promptParts.push({
+                inlineData: {
+                    data: cleanBase64,
+                    mimeType: image.mimeType
+                }
+            });
+        }
+
+        const userNote = description.trim()
+            ? `KULLANICI AÇIKLAMASI VEYA NOTLARI:\n${description}`
+            : "Lütfen ekteki tedarikçi fişi/belgesindeki tüm ürünleri, fiyatları ve adetleri kategorilerine ayırarak tam JSON formatında listele.";
+        promptParts.push(userNote);
+
+    } else {
+        // Text-based category & product generation
+        const categoryList = await buildCategoryContext();
+        const productList = await buildProductContext();
+
+        const schema = `{
   "categories": [
     {
       "name": "string (kategori adı)",
@@ -385,134 +521,123 @@ export async function parseCategoryTreeWithAI(
   ]
 }`;
 
-    const { getExchangeRates } = await import("@/lib/actions/currency-actions");
-    const rates = await getExchangeRates(shopId);
-    const usdRate = rates.usd > 1 ? rates.usd : 35;
+        const systemPrompt = `Sen bir telefon & teknik servis dükkanı yazılımının süper akıllı envanter asistanısın.
+Kullanıcı serbest komut metni giriyor.
 
-    const categoryList = await buildCategoryContext();
-    const productList = await buildProductContext();
-    const setting = await prisma.setting.findUnique({
-        where: { shopId_key: { shopId, key: "defaultCurrency" } }
-    });
-    const defaultCurrency = setting?.value || "TRY";
-
-    const systemPrompt = `Sen bir telefon & teknik servis dükkanı yazılımının süper akıllı envanter ve fiş/fatura analiz asistanısın.
-Kullanıcı serbest komut metni ve/veya tedarikçiden aldığı fiş / fatura / irsaliye görseli/belgesi yüklüyor.
 MAĞAZA VARSAYILAN PARA BİRİMİ: ${defaultCurrency}
 
 MEVCUT KATEGORİLER:
-${JSON.stringify(categoryList.slice(0, 100), null, 2)}
+${JSON.stringify(categoryList.slice(0, 80), null, 2)}
 
 MEVCUT ÜRÜNLER (Mükerrer eklememek için kontrol et): 
 ${JSON.stringify(productList.slice(0, 50))}
 
 TEMEL GÖREVLER VE KURALLAR:
-1. TEDARİKÇİ FİŞİ / FATURA / GÖRSEL ANALİZİ:
-   - Eğer bir görsel veya belge yüklendiyse, bu tedarikçiden gelen fiş, fatura, irsaliye veya sipariş listesidir.
-   - Görseldeki tüm satırları oku: ürün adı, marka, model, adet ve birim alış fiyatı.
-   - Ürünleri dükkanın envanter hiyerarşisine göre uygun kategorilere grupla:
-     * Örneğin: 'Ekranlar > Apple', 'Ekranlar > Samsung', 'Bataryalar > Apple', 'Şarj Aletleri > Type-C', 'Aksesuarlar > Kılıflar' vb.
-   - Fişte alış fiyatı varsa bunu 'buyPrice' veya 'buyPriceUsd' olarak ata.
-   - Satış fiyatı belirtilmemişse veya 0 ise, perakende satış için mantıklı bir kâr marjı ekleyerek (~1.5x - 2x) öneri satış fiyatı belirle (örn: alış 100 TL ise satış ~180-200 TL, alış $10 ise satış ~$18-20).
+1. SERİ TELEFON MODELİ GENİŞLETME KURALI:
+   - Kullanıcı "iPhone 11'den 15 Pro Max'e kadar", "11 - 15 serisi", "Samsung S20 - S24" gibi seri model aralığı belirttiğinde, bu aralıktaki TÜM ara modelleri eksiksiz tek tek aç:
+     * iPhone 11, iPhone 11 Pro, iPhone 11 Pro Max...
+   - Her bir modele ortak alış, satış, adet veya kullanıcı tarafından belirtilmiş değerleri ver.
 
-2. SERİ TELEFON MODELİ GENİŞLETME KURALI:
-   - Kullanıcı veya fişte "iPhone 11'den 15 Pro Max'e kadar", "11 - 15 serisi", "Samsung S20 - S24" gibi seri model aralığı belirtildiğinde, bu aralıktaki TÜM ara modelleri eksiksiz tek tek aç:
-     * iPhone 11, iPhone 11 Pro, iPhone 11 Pro Max
-     * iPhone 12, iPhone 12 Mini, iPhone 12 Pro, iPhone 12 Pro Max
-     * iPhone 13, iPhone 13 Mini, iPhone 13 Pro, iPhone 13 Pro Max
-     * iPhone 14, iPhone 14 Plus, iPhone 14 Pro, iPhone 14 Pro Max
-     * iPhone 15, iPhone 15 Plus, iPhone 15 Pro, iPhone 15 Pro Max
-   - Her bir modele ortak alış, satış, adet veya kullanıcı tarafından belirtilmiş değerleri ver (örn: 'iPhone 11 Ekran', 'iPhone 11 Pro Ekran'...).
-
-3. METİN GİRDİ FORMATI ANALİZİ:
+2. METİN GİRDİ FORMATI ANALİZİ:
    - 'Kategori > Alt Kategori [> ...] > Ürün Adı/Özelliği [— veya ,] Adet, Alış, Satış, Raf'
    - '>' ile ayrılmış hiyerarşideki en son eleman ürün adıdır; öncekiler kategorilerdir.
-   - ÇOKLU VARYASYONLAR: virgülle veya tireyle ayrılmış varyasyonların her biri için ayrı ürün satırı üret.
 
-4. FİYAT VE PARA BİRİMİ DÖNÜŞÜMÜ (GÜNCEL KUR: 1 USD = ${usdRate} TRY): 
-   - Fiyat Dolar / USD / "$" olarak algılandıysa veya promptta/fişte dolar belirtildiyse:
+3. FİYAT VE PARA BİRİMİ DÖNÜŞÜMÜ (GÜNCEL KUR: 1 USD = ${usdRate} TRY): 
+   - Fiyat Dolar / USD / "$" olarak algılandıysa veya promptta dolar belirtildiyse:
      * 'currency' alanını 'USD' yap.
      * 'buyPriceUsd' / 'sellPriceUsd' alanına dolar tutarını yaz (örn: 10).
-     * 'buyPrice' / 'sellPrice' alanına kurla (${usdRate}) çarpılmış TL tutarını yaz (örn: 10 * ${usdRate} = ${10 * usdRate}).
+     * 'buyPrice' / 'sellPrice' alanına kurla (${usdRate}) çarpılmış TL tutarını yaz.
    - Fiyat TL veya "₺" olarak algılandıysa veya para birimi belirtilmediyse:
      * 'currency' alanını 'TRY' yap.
      * 'buyPrice' / 'sellPrice' alanına TL tutarını yaz.
-     * 'buyPriceUsd' / 'sellPriceUsd' alanına ise kur (${usdRate}) ile bölünmüş dolar karşılığını yaz (örn: 350 / ${usdRate} = 10).
-   - ÖNEMLİ: Her iki alan da (hem TL hem USD) daima sayısal olarak hesaplanmış ve dolu olmalıdır, asla null bırakma.
+     * 'buyPriceUsd' / 'sellPriceUsd' alanına ise kur (${usdRate}) ile bölünmüş dolar karşılığını yaz.
 
 SADECE GEÇERLİ JSON DÖNDÜR:\n${schema}`;
 
-    const promptParts: GeminiPart[] = [systemPrompt];
-
-    if (image?.base64 && image?.mimeType) {
-        const cleanBase64 = image.base64.replace(/^data:[^;]+;base64,/, "");
-        promptParts.push({
-            inlineData: {
-                data: cleanBase64,
-                mimeType: image.mimeType
-            }
-        });
+        promptParts.push(systemPrompt);
+        promptParts.push(`KULLANICI AÇIKLAMASI:\n${description}`);
     }
-
-    const userNote = description.trim()
-        ? `KULLANICI AÇIKLAMASI VEYA NOTLARI:\n${description}`
-        : "Lütfen ekteki tedarikçi fişi/belgesindeki tüm ürünleri, fiyatları ve adetleri kategorilerine ayırarak tam JSON formatında listele.";
-
-    promptParts.push(userNote);
 
     const result = await callGemini(shopId, promptParts);
     if ("error" in result) return { success: false, error: result.error };
 
-    try {
-        const parsed = JSON.parse(result.text);
-        const lowerDesc = description.toLowerCase();
-        const promptMentionsDollar = lowerDesc.includes("dolar") || lowerDesc.includes("usd") || description.includes("$");
-
-        const cats: AICategoryNode[] = (parsed.categories || []).map((c: any) => ({
-            name: c.name || "",
-            parentName: c.parentName || null,
-            products: (c.products || []).map((p: any) => {
-                let buyPrice = Number(p.buyPrice) || 0;
-                let buyPriceUsd = p.buyPriceUsd !== null && p.buyPriceUsd !== undefined ? Number(p.buyPriceUsd) : null;
-                let sellPrice = Number(p.sellPrice) || 0;
-                let sellPriceUsd = p.sellPriceUsd !== null && p.sellPriceUsd !== undefined ? Number(p.sellPriceUsd) : null;
-
-                // Para birimi tespiti: Modelin çıktısı veya kullanıcı komutundaki dolar ifadeleri
-                const isDollar = p.currency === "USD" || (buyPriceUsd !== null && buyPriceUsd > 0 && buyPrice === 0) || promptMentionsDollar;
-                const currency: "TRY" | "USD" = isDollar ? "USD" : (p.currency === "USD" ? "USD" : "TRY");
-
-                // Fiyatların her ikisinin de dolu ve senkronize olmasını sağla
-                if (buyPriceUsd !== null && buyPriceUsd > 0 && (!buyPrice || buyPrice === 0 || buyPrice === buyPriceUsd)) {
-                    buyPrice = Math.round(buyPriceUsd * usdRate * 100) / 100;
-                } else if (buyPrice > 0 && (!buyPriceUsd || buyPriceUsd === 0 || buyPriceUsd === buyPrice)) {
-                    buyPriceUsd = Math.round((buyPrice / usdRate) * 100) / 100;
-                }
-
-                if (sellPriceUsd !== null && sellPriceUsd > 0 && (!sellPrice || sellPrice === 0 || sellPrice === sellPriceUsd)) {
-                    sellPrice = Math.round(sellPriceUsd * usdRate * 100) / 100;
-                } else if (sellPrice > 0 && (!sellPriceUsd || sellPriceUsd === 0 || sellPriceUsd === sellPrice)) {
-                    sellPriceUsd = Math.round((sellPrice / usdRate) * 100) / 100;
-                }
-
-                return {
-                    name: p.name || "",
-                    currency,
-                    buyPrice,
-                    buyPriceUsd,
-                    sellPrice,
-                    sellPriceUsd,
-                    stock: Number(p.stock) || 1,
-                    criticalStock: Number(p.criticalStock) || 3,
-                    barcode: p.barcode && p.barcode !== "null" ? p.barcode : undefined,
-                    location: p.location && p.location !== "null" ? p.location : undefined,
-                };
-            })
-        }));
-        if (cats.length === 0) return { success: false, error: "Hiç kategori tespit edilemedi. Açıklamayı daha net yazın." };
-        return { success: true, data: cats };
-    } catch {
+    const parsed = safeJsonParse<{ categories?: any[]; products?: any[] }>(result.text);
+    if (!parsed) {
         return { success: false, error: "AI yanıtı JSON olarak çözümlenemedi. Açıklamayı farklı ifade edip tekrar deneyin." };
     }
+
+    const lowerDesc = description.toLowerCase();
+    const promptMentionsDollar = lowerDesc.includes("dolar") || lowerDesc.includes("usd") || description.includes("$");
+
+    let rawCategories: any[] = [];
+    if (Array.isArray(parsed)) {
+        rawCategories = [{ name: "Genel", products: parsed }];
+    } else if (Array.isArray(parsed.categories)) {
+        rawCategories = parsed.categories;
+    } else if (Array.isArray(parsed.products)) {
+        rawCategories = [{ name: "Genel", products: parsed.products }];
+    }
+
+    const cats: AICategoryNode[] = rawCategories.map((c: any) => ({
+        name: c.name || "Genel",
+        parentName: c.parentName || null,
+        products: (c.products || []).map((p: any) => {
+            let rawBuyPrice = Number(p.buyPrice) || 0;
+            let rawBuyPriceUsd = p.buyPriceUsd !== null && p.buyPriceUsd !== undefined ? Number(p.buyPriceUsd) : null;
+            let rawSellPrice = Number(p.sellPrice) || 0;
+            let rawSellPriceUsd = p.sellPriceUsd !== null && p.sellPriceUsd !== undefined ? Number(p.sellPriceUsd) : null;
+
+            // Para birimi tespiti:
+            const isDollar = p.currency === "USD" || (rawBuyPriceUsd !== null && rawBuyPriceUsd > 0 && rawBuyPrice === 0) || promptMentionsDollar;
+            const currency: "TRY" | "USD" = isDollar ? "USD" : "TRY";
+
+            let buyPrice = rawBuyPrice;
+            let buyPriceUsd = rawBuyPriceUsd;
+            let sellPrice = rawSellPrice;
+            let sellPriceUsd = rawSellPriceUsd;
+
+            if (currency === "USD") {
+                if (buyPriceUsd === null || buyPriceUsd === 0) {
+                    buyPriceUsd = buyPrice > 0 ? buyPrice : 0;
+                }
+                buyPrice = Math.round(buyPriceUsd * usdRate * 100) / 100;
+
+                if (sellPriceUsd === null || sellPriceUsd === 0) {
+                    sellPriceUsd = Math.round(buyPriceUsd * 1.5 * 100) / 100;
+                }
+                sellPrice = Math.round(sellPriceUsd * usdRate * 100) / 100;
+            } else {
+                if (buyPrice === 0 && buyPriceUsd && buyPriceUsd > 0) {
+                    buyPrice = Math.round(buyPriceUsd * usdRate * 100) / 100;
+                }
+                buyPriceUsd = Math.round((buyPrice / usdRate) * 100) / 100;
+
+                if (sellPrice === 0) {
+                    sellPrice = Math.round(buyPrice * 1.5 * 100) / 100;
+                }
+                sellPriceUsd = Math.round((sellPrice / usdRate) * 100) / 100;
+            }
+
+            return {
+                name: p.name || "",
+                currency,
+                buyPrice,
+                buyPriceUsd,
+                sellPrice,
+                sellPriceUsd,
+                stock: Number(p.stock) || 1,
+                criticalStock: Number(p.criticalStock) || 3,
+                barcode: p.barcode && p.barcode !== "null" ? p.barcode : undefined,
+                location: p.location && p.location !== "null" ? p.location : undefined,
+            };
+        })
+    }));
+
+    if (cats.length === 0 || cats.every(c => c.products.length === 0)) {
+        return { success: false, error: "Hiç ürün tespit edilemedi. Belgeyi veya açıklamayı kontrol edip tekrar deneyin." };
+    }
+
+    return { success: true, data: cats };
 }
 // ── SEMANTIC SEARCH ──────────────────────────────────────────────────────────
 

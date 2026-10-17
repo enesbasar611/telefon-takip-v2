@@ -24,11 +24,13 @@ interface WhatsAppConfirmModalProps {
     onBeforeSend?: () => void | Promise<void>;
 }
 
+const EMPTY_PHONES: string[] = [];
+
 export function WhatsAppConfirmModal({
     isOpen,
     onClose,
     phone,
-    phones = [],
+    phones = EMPTY_PHONES,
     customerName,
     initialMessage,
     mode = "single",
@@ -73,6 +75,7 @@ export function WhatsAppConfirmModal({
         }
     };
 
+    const phonesKey = phones.join(",");
     useEffect(() => {
         if (isOpen) {
             setMessage(initialMessage);
@@ -80,7 +83,7 @@ export function WhatsAppConfirmModal({
                 setSelectedPhone(phone || phones[0] || "");
             }
         }
-    }, [isOpen, initialMessage, phone, phones, mode]);
+    }, [isOpen, initialMessage, phone, phonesKey, mode]);
 
     const targetPhones = mode === "bulk" ? phones : [selectedPhone].filter(Boolean) as string[];
 

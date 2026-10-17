@@ -1409,6 +1409,35 @@ export async function getProductByBarcode(barcode: string) {
   }
 }
 
+function getProductInitials(name: string): string {
+  if (!name) return "PRD";
+  const words = name
+    .trim()
+    .replace(/[çÇ]/g, "C")
+    .replace(/[ğĞ]/g, "G")
+    .replace(/[ıİ]/g, "I")
+    .replace(/[öÖ]/g, "O")
+    .replace(/[şŞ]/g, "S")
+    .replace(/[üÜ]/g, "U")
+    .split(/[\s-]+/)
+    .filter(word => word.length > 0);
+
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  return words.map(w => w[0]).join("").slice(0, 3).toUpperCase();
+}
+
+function generateUniqueBarcodeFast(productName: string, usedBarcodes: Set<string>): string {
+  const prefix = "BST-";
+  const initials = getProductInitials(productName);
+  let candidate = "";
+  do {
+    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+    candidate = `${prefix}${initials}-${randomHex}`;
+  } while (usedBarcodes.has(candidate));
+  usedBarcodes.add(candidate);
+  return candidate;
+}
+
 export async function bulkCreateAIInventory(nodes: any[]) {
   try {
     const shopId = await getShopId();
@@ -1417,10 +1446,31 @@ export async function bulkCreateAIInventory(nodes: any[]) {
     if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
 
     const result = await prisma.$transaction(async (tx) => {
+      // 1. Dükkandaki mevcut kategori ve ürünleri tek sorguda hafızaya al
+      const [existingCats, existingProds] = await Promise.all([
+        tx.category.findMany({ where: { shopId } }),
+        tx.product.findMany({
+          where: { shopId, isDeleted: false },
+          select: { id: true, name: true, barcode: true }
+        })
+      ]);
+
       const createdMap: Record<string, string> = {};
-      const existingCats = await tx.category.findMany({ where: { shopId } });
       existingCats.forEach(c => {
         createdMap[c.name.toLowerCase()] = c.id;
+      });
+
+      const usedBarcodes = new Set<string>();
+      const existingByName = new Map<string, string>();
+      const existingByBarcode = new Map<string, string>();
+
+      existingProds.forEach(p => {
+        existingByName.set(p.name.trim().toLowerCase(), p.id);
+        if (p.barcode) {
+          const upper = p.barcode.trim().toUpperCase();
+          usedBarcodes.add(upper);
+          existingByBarcode.set(upper, p.id);
+        }
       });
 
       const updatedCats: any[] = [];
@@ -1461,29 +1511,23 @@ export async function bulkCreateAIInventory(nodes: any[]) {
         // Process products
         for (const p of node.products) {
           const formattedProdName = formatTitleCase(p.name);
+          const lowerName = formattedProdName.trim().toLowerCase();
+          const upperBarcode = p.barcode ? formatUppercase(p.barcode).trim() : null;
 
-          // Check duplicate
-          const existingProd = await tx.product.findFirst({
-            where: {
-              shopId,
-              OR: [
-                { name: { equals: formattedProdName, mode: 'insensitive' } },
-                ...(p.barcode ? [{ barcode: formatUppercase(p.barcode) }] : [])
-              ]
-            }
-          });
+          // Check duplicate from memory (O(1) hızında kontrol)
+          const existingProdId = (upperBarcode && existingByBarcode.get(upperBarcode)) || existingByName.get(lowerName);
 
-          if (existingProd) {
+          if (existingProdId) {
             // Add stock if duplicate
             if (p.stock > 0) {
               const updated = await tx.product.update({
-                where: { id: existingProd.id },
+                where: { id: existingProdId },
                 data: { stock: { increment: p.stock } }
               });
 
               await tx.inventoryMovement.create({
                 data: {
-                  productId: existingProd.id,
+                  productId: existingProdId,
                   quantity: p.stock,
                   type: "PURCHASE",
                   notes: "AI Çoklu Ekle (Mevcut Ürün)",
@@ -1493,7 +1537,7 @@ export async function bulkCreateAIInventory(nodes: any[]) {
 
               await tx.inventoryLog.create({
                 data: {
-                  productId: existingProd.id,
+                  productId: existingProdId,
                   userId,
                   quantity: p.stock,
                   type: "PURCHASE",
@@ -1502,9 +1546,15 @@ export async function bulkCreateAIInventory(nodes: any[]) {
                 }
               });
               updatedProds.push(updated);
+            } else {
+              const existingRecord = await tx.product.findUnique({ where: { id: existingProdId } });
+              if (existingRecord) updatedProds.push(existingRecord);
             }
           } else {
-            // Create new product
+            // Çakışmasız benzersiz barkodu hafızada anında üret (ekstra sorgu olmadan)
+            const finalBarcode = upperBarcode || generateUniqueBarcodeFast(formattedProdName, usedBarcodes);
+
+            // Create new product tek seferde barkodu ile oluşturulur
             const newProd = await tx.product.create({
               data: {
                 name: formattedProdName,
@@ -1515,11 +1565,7 @@ export async function bulkCreateAIInventory(nodes: any[]) {
                 sellPriceUsd: p.sellPriceUsd ?? null,
                 stock: p.stock,
                 criticalStock: p.criticalStock || 1,
-                barcode: p.barcode ? formatUppercase(p.barcode) : generateProductBarcode({
-                  shopId,
-                  productId: `temp-${Date.now()}`,
-                  productName: formattedProdName,
-                }),
+                barcode: finalBarcode,
                 location: p.location,
                 shopId,
                 attributes: {
@@ -1545,27 +1591,21 @@ export async function bulkCreateAIInventory(nodes: any[]) {
               }
             });
 
-            // Fix barcode if it was temp
-            if (newProd.barcode?.startsWith("BAR-temp-")) {
-              const fixedBarcode = generateProductBarcode({
-                shopId,
-                productId: newProd.id,
-                productName: newProd.name,
-                createdAtMs: newProd.createdAt.getTime()
-              });
-              const fixedProd = await tx.product.update({
-                where: { id: newProd.id },
-                data: { barcode: fixedBarcode }
-              });
-              updatedProds.push(fixedProd);
-            } else {
-              updatedProds.push(newProd);
+            existingByName.set(lowerName, newProd.id);
+            if (newProd.barcode) {
+              const bUpper = newProd.barcode.trim().toUpperCase();
+              existingByBarcode.set(bUpper, newProd.id);
+              usedBarcodes.add(bUpper);
             }
+            updatedProds.push(newProd);
           }
         }
       }
 
       return { categories: updatedCats, products: updatedProds };
+    }, {
+      maxWait: 15000,
+      timeout: 60000
     });
 
     revalidatePath("/stok");
@@ -1580,7 +1620,7 @@ export async function bulkCreateAIInventory(nodes: any[]) {
     };
   } catch (error: any) {
     console.error("bulkCreateAIInventory error:", error);
-    return { success: false, error: "Toplu kayıt işlemi sırasında hata oluştu." };
+    return { success: false, error: error?.message || "Toplu kayıt işlemi sırasında hata oluştu." };
   }
 }
 

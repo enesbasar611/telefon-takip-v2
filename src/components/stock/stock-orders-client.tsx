@@ -622,7 +622,7 @@ export function StockOrdersClient({ initialOrders = [], initialSuppliers = [] }:
                     </div>
 
                     <div className="max-w-4xl mx-auto w-full">
-                        <SupplierOrderListsPanel isInline={true} />
+                        <SupplierOrderListsPanel isInline={true} defaultTab="drafts" />
                     </div>
                 </div>
             )}

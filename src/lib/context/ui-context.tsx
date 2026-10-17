@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 
 interface UIContextType {
   isFinancialVisible: boolean;
@@ -33,33 +33,42 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const toggleFinancialVisibility = () => {
+  const toggleFinancialVisibility = useCallback(() => {
     setIsFinancialVisible((prev) => {
       const newState = !prev;
       localStorage.setItem("isFinancialVisible", JSON.stringify(newState));
       return newState;
     });
-  };
+  }, []);
 
-  const toggleLayoutEditing = () => {
+  const toggleLayoutEditing = useCallback(() => {
     setIsLayoutEditing((prev) => {
       const newState = !prev;
       localStorage.setItem("isLayoutEditing", JSON.stringify(newState));
       return newState;
     });
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    isFinancialVisible,
+    toggleFinancialVisibility,
+    isLayoutEditing,
+    toggleLayoutEditing,
+    isAiLoading,
+    setAiLoading,
+    isAiInputFocused,
+    setAiInputFocused
+  }), [
+    isFinancialVisible,
+    toggleFinancialVisibility,
+    isLayoutEditing,
+    toggleLayoutEditing,
+    isAiLoading,
+    isAiInputFocused
+  ]);
 
   return (
-    <UIContext.Provider value={{
-      isFinancialVisible,
-      toggleFinancialVisibility,
-      isLayoutEditing,
-      toggleLayoutEditing,
-      isAiLoading,
-      setAiLoading,
-      isAiInputFocused,
-      setAiInputFocused
-    }}>
+    <UIContext.Provider value={value}>
       {children}
     </UIContext.Provider>
   );
