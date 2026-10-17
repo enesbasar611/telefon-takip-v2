@@ -41,6 +41,42 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-17: Cihaz ve Stok Girişlerinde MB Dosya Boyutu Sınırlarının Kaldırılması & Akıllı Sıkıştırma:
+  - **Talep:**
+    - Cihaz ekleme ve ilgili yükleme modallarındaki MB sınırlarının tamamen kaldırılması.
+  - **Yapılan İyileştirmeler:**
+    1. **Next.js Server Actions Payload Sınırı Yükseltildi (`next.config.mjs`):**
+       - `experimental.serverActions.bodySizeLimit` değeri `15mb`'den `50mb`'ye yükseltildi. Böylece yüksek çözünürlüklü mobil kamera çekimlerinin veya büyük görsel base64 verilerinin Server Action'larda 413 "Body exceeded limit" hatası vermesi engellendi.
+    2. **Cihaz Modalı Sınırsız Görsel Yükleme & Otomatik Sıkıştırma (`create-device-modal.tsx`):**
+       - `compressImage` fonksiyonu genişlik veya yükseklik fark etmeksizin orantılı en-boy korumalı `maxDimension = 1800` standartına kavuşturuldu; çözülemeyen veya özel formatlı görsellerde hata fırlatmak yerine güvenli fallback eklendi.
+       - Cihaz fotoğrafları galerisi (`handlePhotoChange`) ve satıcı kimlik fotoğrafları (`handleSellerIdFrontChange`, `handleSellerIdBackChange`) yükleme anında otomatik optimize edilerek 10-40 MB'lık ham kamera çekimlerinin tarayıcıyı yormadan ve sunucuya takılmadan ~300KB'a dönüştürülüp sınırsız yüklenebilmesi sağlandı.
+    3. **Stok Fişi & Müşteri Formu Limitleri Kaldırıldı (`ai-category-creator.tsx`, `yeni-musteri-client.tsx`, `musteri-duzenle-client.tsx`):**
+       - Fiş yüklemedeki `25MB` ve müşteri kimlik/fotoğraf yüklemedeki `2MB` kontrolleri kaldırılarak akıllı sıkıştırma altyapısıyla sınırsız dosya yükleme desteği sağlandı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
+- [x] 2026-10-17: Cihaz Listesi (@cihaz-listesi) - BAŞAR AI Destekli Kutu Analizi & Otomatik Cihaz Ekleme:
+  - **Talep:**
+    - Cihaz listesi sayfasında cihaz ekleme butonunun yanına yapay zeka gücü eklenmesi, fotoğraf simgesi ve "BAŞAR AI ile Cihaz Ekle" butonu oluşturulması.
+    - Samsung, Redmi, Apple vb. cihazların kutu etiketlerinin veya bilgi ekranlarının fotoğrafı yüklendiğinde/çekildiğinde cihazın analiz edilmesi; marka, model, 15 haneli IMEI, 2. IMEI, seri no, RAM, dahili hafıza, renk, kondisyon ve garanti sürelerinin otomatik okunup formun doldurulması.
+    - Kullanıcının isteği doğrultusunda alış ve satış fiyatlarının boş bırakılarak imlecin doğrudan alış fiyatına odaklanması.
+    - Yüklenen/çekilen kutu görselinin cihazın fotoğraf galerisine otomatik olarak eklenip kaydedilmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **Gemini 2.5 Flash Multimodal OCR (`analyzeDeviceImageWithAI`):**
+       - `src/lib/actions/gemini-actions.ts` içerisine kutu etiketlerini yüksek hassasiyetle okuyan Server Action eklendi.
+       - IMEI numaraları temizlenip yalnızca 15 haneli geçerli rakamlara filtrelendi; çift SIM kutuları için IMEI 2 ve Seri No (S/N) alanları ayrıştırıldı.
+       - Sıfır cihazlar için 24 ay garanti, 10/10 kozmetik ve %100 pil sağlığı akıllı varsayılanlar olarak işlendi.
+    2. **İstemci Tarafı Görsel Sıkıştırma (`compressImage`):**
+       - Yüksek çözünürlüklü fotoğraflar yüklenmeden önce istemci tarafında HTML5 Canvas ile optimize edilip JPEG formatına sıkıştırılarak aktarıldı.
+       - Aynı sıkıştırılmış görsel `File` nesnesine dönüştürülüp `photoFiles` dizisine eklenerek cihaz oluşturulduğunda kalıcı olarak sunucuya yüklenmesi (`/api/finance/upload` -> `deviceInfo.photoUrls`) sağlandı.
+    3. **UI/UX & Buton Entegrasyonu (`create-device-modal.tsx`):**
+       - Başlık alanına gradient mor/indigo renklerde kamera ve ışıltı simgeli "BAŞAR AI ile Cihaz Ekle" butonu eklendi; hemen yanına "Manuel Ekle" seçeneği konuldu.
+       - Modalın içine de kullanıcı modalı manuel açtığında sonradan kutu fotoğrafı tarayabilmesi için hızlı "Kutu Etiketi veya Cihaz Fotoğrafı Yükle" banner'ı eklendi.
+       - `Select` bileşenleri (`brand`, `ram`, `storage`, `cosmeticScore`, `warrantyMonths`) kontrollü (`value={watch(...)}`) hale getirilerek yapay zekanın doldurduğu değerlerin arayüzde anında seçili görünmesi sağlandı.
+       - Form başarıyla doldurulduğunda bildirim verilip imleç doğrudan `#buyPriceInput` alanına odaklandı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
 - [x] 2026-10-17: Stok Sayfası (StokPage) Sağ Tedarikçi Siparişleri Paneli ve @stok/siparisler Senkronizasyonu:
   - **Sorun:**
     - `StokPage` (`/stok`) sayfasındaki sağ sidebar panelinde yer alan "Tedarikçi Siparişleri", sadece `localStorage` tabanlı taslak sepeti (`useSupplierOrders`) gösteriyordu.

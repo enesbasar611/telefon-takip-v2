@@ -136,10 +136,6 @@ export function MusteriDuzenleClient({ id }: { id: string }) {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("Dosya boyutu 2MB'dan büyük olamaz");
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;

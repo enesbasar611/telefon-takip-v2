@@ -17,10 +17,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2, Search, Info, ShieldCheck, AlertCircle, Wallet, Banknote,
+  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2, Search, Info, ShieldCheck, AlertCircle, Wallet, Banknote, Sparkles, ScanLine,
 } from "lucide-react";
 import { createDeviceEntry } from "@/lib/actions/device-hub-actions";
 import { getAccounts, createAccount } from "@/lib/actions/finance-actions";
+import { analyzeDeviceImageWithAI } from "@/lib/actions/gemini-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
 import { cleanFormData } from "@/lib/formatters";
@@ -38,9 +39,77 @@ function parseCurrencyInput(val: string): string {
   return val.replace(/\D/g, "");
 }
 
+function normalizeRam(val?: string): string {
+  if (!val) return "";
+  const cleaned = val.toUpperCase().replace(/\s+/g, "");
+  const numMatch = cleaned.match(/(\d+)(GB|G)?/);
+  if (numMatch) {
+    const num = numMatch[1];
+    return `${num} GB`;
+  }
+  return val;
+}
+
+function normalizeStorage(val?: string): string {
+  if (!val) return "";
+  const cleaned = val.toUpperCase().replace(/\s+/g, "");
+  if (cleaned.includes("1TB")) return "1 TB";
+  if (cleaned.includes("2TB")) return "2 TB";
+  const numMatch = cleaned.match(/(\d+)(GB|G|ROM)?/);
+  if (numMatch) {
+    const num = numMatch[1];
+    return `${num} GB`;
+  }
+  return val;
+}
+
+async function compressImage(file: File, maxDimension = 1800, quality = 0.85): Promise<{ base64: string; mimeType: string; file: File }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve({ base64: e.target?.result as string, mimeType: file.type || "image/jpeg", file });
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const mimeType = "image/jpeg";
+        const base64 = canvas.toDataURL(mimeType, quality);
+        
+        canvas.toBlob((blob) => {
+          const finalFile = blob ? new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: mimeType }) : file;
+          resolve({ base64, mimeType, file: finalFile });
+        }, mimeType, quality);
+      };
+      img.onerror = () => {
+        // Fallback if image tag cannot decode (never block user)
+        resolve({ base64: e.target?.result as string, mimeType: file.type || "image/jpeg", file });
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("Dosya okunamadı."));
+    reader.readAsDataURL(file);
+  });
+}
+
 const POPULAR_BRANDS = [
-  "Apple", "Samsung", "Xiaomi", "Huawei", "Google",
-  "OnePlus", "Oppo", "Realme",
+  "Apple", "Samsung", "Xiaomi", "Redmi", "Poco", "Huawei", "Honor",
+  "Oppo", "Realme", "Vivo", "Google", "OnePlus", "Infinix", "Tecno",
 ];
 
 const WARRANTY_MONTHS_OPTIONS = [1, 2, 3, 6, 9, 12, 15, 18, 24];
@@ -50,6 +119,7 @@ const deviceSchema = z.object({
   brand: z.string().min(1, "Marka gereklidir"),
   model: z.string().min(1, "Model gereklidir"),
   imei: z.string().length(15, "IMEI 15 haneli olmalıdır"),
+  serialNumber: z.string().optional().or(z.literal("")),
   color: z.string().optional().or(z.literal("")),
   ram: z.string().optional().or(z.literal("")),
   storage: z.string().optional().or(z.literal("")),
@@ -88,6 +158,7 @@ interface DeviceFormValues {
   brand: string;
   model: string;
   imei: string;
+  serialNumber?: string;
   color?: string;
   ram?: string;
   storage?: string;
@@ -115,6 +186,7 @@ interface DeviceFormValues {
 export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [sellerIdFront, setSellerIdFront] = useState<File | null>(null);
@@ -128,6 +200,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const queryClient = useQueryClient();
 
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const aiPhotoInputRef = useRef<HTMLInputElement>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
   const sellerIdFrontInputRef = useRef<HTMLInputElement>(null);
   const sellerIdBackInputRef = useRef<HTMLInputElement>(null);
@@ -146,6 +219,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
       brand: "",
       model: "",
       imei: "",
+      serialNumber: "",
       buyPrice: "",
       sellPrice: "",
       cosmeticScore: "10",
@@ -166,11 +240,158 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const isNew = condition === "NEW";
   const isIntl = condition === "INTERNATIONAL";
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setPhotoFiles(prev => [...prev, ...files]);
+  // BAŞAR AI Cihaz Kutusu / Görsel Analiz Tetikleyicisi
+  const handleAiImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAiAnalyzing(true);
+    const toastId = toast.loading("Görsel taranıyor, BAŞAR AI kutu etiketini ve IMEI bilgilerini okuyor...");
+
+    try {
+      const compressed = await compressImage(file);
+      const res = await analyzeDeviceImageWithAI({
+        base64: compressed.base64,
+        mimeType: compressed.mimeType,
+      });
+
+      if (!res.success) {
+        toast.error(res.error || "Görselden cihaz bilgisi okunamadı. Lütfen etiketin net bir fotoğrafını yükleyin.", { id: toastId });
+        return;
+      }
+
+      const d = res.data;
+
+      // Otomatik olarak kayıt modalını aç
+      setOpen(true);
+
+      // Kutu görselini cihazın fotoğraf galerisine ekle ("ve görseli kaydetsin")
+      setPhotoFiles((prev) => [compressed.file, ...prev.filter(f => f.name !== compressed.file.name)]);
+
+      // Marka eşleştirme
+      let matchedBrand = d.brand;
+      const foundBrand = POPULAR_BRANDS.find(b => b.toLowerCase() === d.brand.toLowerCase());
+      if (foundBrand) {
+        matchedBrand = foundBrand;
+      } else if (d.brand.toLowerCase().includes("redmi") || d.brand.toLowerCase().includes("xiaomi")) {
+        matchedBrand = "Xiaomi";
+      }
+
+      setValue("brand", matchedBrand, { shouldValidate: true });
+      setValue("model", d.model, { shouldValidate: true });
+      setValue("imei", d.imei, { shouldValidate: true });
+
+      if (d.serialNumber) {
+        setValue("serialNumber", d.serialNumber);
+      }
+
+      if (d.color) {
+        setValue("color", d.color);
+      }
+
+      const normRam = normalizeRam(d.ram);
+      if (normRam) {
+        setValue("ram", normRam, { shouldValidate: true });
+      }
+
+      const normStorage = normalizeStorage(d.storage);
+      if (normStorage) {
+        setValue("storage", normStorage, { shouldValidate: true });
+      }
+
+      if (d.condition) {
+        setValue("condition", d.condition);
+      }
+
+      if (d.cosmeticScore) {
+        setValue("cosmeticScore", d.cosmeticScore);
+      }
+
+      if (d.batteryHealth) {
+        setValue("batteryHealth", d.batteryHealth);
+      }
+
+      if (d.warrantyMonths) {
+        setValue("warrantyMonths", d.warrantyMonths);
+      }
+
+      // Notlar / Çift SIM / S/N
+      let noteParts: string[] = [];
+      if (d.imei2) noteParts.push(`Dual SIM / 2. IMEI: ${d.imei2}`);
+      if (d.serialNumber) noteParts.push(`Seri No: ${d.serialNumber}`);
+      if (d.notes) noteParts.push(d.notes);
+      if (noteParts.length > 0) {
+        setValue("replacedParts", noteParts.join(" · "));
+      }
+
+      // Kullanıcı kuralı: Alış ve satış fiyatı boş bırakılır
+      setValue("buyPrice", "");
+      setValue("sellPrice", "");
+
+      toast.success("✅ Cihaz bilgileri ve IMEI başarıyla okundu! Lütfen alış ve satış fiyatını girin.", { id: toastId });
+
+      // İmleci doğrudan Alış Fiyatı kutusuna odakla
+      setTimeout(() => {
+        const input = document.getElementById("buyPriceInput") as HTMLElement;
+        if (input) {
+          input.focus();
+          input.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 400);
+
+    } catch (err: any) {
+      console.error("AI Scan Error:", err);
+      toast.error(err.message || "Görsel işlenirken beklenmeyen bir hata oluştu.", { id: toastId });
+    } finally {
+      setIsAiAnalyzing(false);
+      if (e.target) e.target.value = "";
     }
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const rawFiles = Array.from(e.target.files);
+      const processed: File[] = [];
+      for (const f of rawFiles) {
+        if (f.type.startsWith("image/") || f.name.match(/\.(jpg|jpeg|png|webp|heic)$/i)) {
+          try {
+            const comp = await compressImage(f);
+            processed.push(comp.file);
+          } catch {
+            processed.push(f);
+          }
+        } else {
+          processed.push(f);
+        }
+      }
+      setPhotoFiles(prev => [...prev, ...processed]);
+    }
+  };
+
+  const handleSellerIdFrontChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.type.startsWith("image/") || f.name.match(/\.(jpg|jpeg|png|webp|heic)$/i)) {
+      try {
+        const comp = await compressImage(f);
+        setSellerIdFront(comp.file);
+        return;
+      } catch {}
+    }
+    setSellerIdFront(f);
+  };
+
+  const handleSellerIdBackChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.type.startsWith("image/") || f.name.match(/\.(jpg|jpeg|png|webp|heic)$/i)) {
+      try {
+        const comp = await compressImage(f);
+        setSellerIdBack(comp.file);
+        return;
+      } catch {}
+    }
+    setSellerIdBack(f);
   };
 
   const removePhoto = (index: number) => {
@@ -266,6 +487,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         model: "title",
         color: "title",
         imei: "upper",
+        serialNumber: "upper",
         sellerName: "proper",
         replacedParts: "sentence"
       });
@@ -274,6 +496,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         brand: cleaned.brand,
         model: cleaned.model,
         imei: cleaned.imei,
+        serialNumber: cleaned.serialNumber || null,
         color: cleaned.color || null,
         ram: cleaned.ram || null,
         storage: cleaned.storage || null,
@@ -352,22 +575,86 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const sectionCls = "p-5 rounded-2xl bg-card border border-border/60 space-y-4";
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-500 text-white gap-2 h-12 px-8 rounded-2xl transition-all shadow-xl shadow-blue-500/20 text-[13px] font-bold uppercase tracking-wide group flex items-center">
-          <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
-          <span className="hidden sm:inline">Cihaz Ekle</span>
-        </Button>
-      </DialogTrigger>
+    <>
+      <input
+        ref={aiPhotoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleAiImageUpload}
+      />
 
-      <DialogContent className="sm:max-w-[820px] max-w-full w-full h-full sm:h-auto sm:max-h-[95vh] p-0 bg-background text-foreground border border-border shadow-2xl rounded-none sm:rounded-2xl overflow-y-auto">
-        {/* Header */}
-        <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-border/60">
-          <div>
-            <DialogTitle className="font-medium text-[21px] text-foreground leading-tight">Yeni Cihaz Kaydı</DialogTitle>
-            <p className="text-[12px] text-muted-foreground/80 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
-          </div>
-        </div>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          onClick={() => aiPhotoInputRef.current?.click()}
+          disabled={isAiAnalyzing}
+          className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white gap-2.5 h-12 px-5 sm:px-6 rounded-2xl transition-all shadow-xl shadow-indigo-500/25 text-[13px] font-bold tracking-wide group flex items-center border border-indigo-400/30 active:scale-[0.98]"
+        >
+          {isAiAnalyzing ? (
+            <Loader2 className="h-5 w-5 animate-spin text-white" />
+          ) : (
+            <div className="relative flex items-center justify-center">
+              <Camera className="h-5 w-5 group-hover:scale-110 transition-transform text-white" />
+              <Sparkles className="h-3 w-3 text-amber-300 absolute -top-1.5 -right-2 animate-pulse" />
+            </div>
+          )}
+          <span className="font-extrabold tracking-normal">
+            {isAiAnalyzing ? "Kutu Okunuyor..." : "BAŞAR AI ile Cihaz Ekle"}
+          </span>
+        </Button>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              className="bg-card hover:bg-muted text-foreground gap-1.5 h-12 px-4 sm:px-5 rounded-2xl transition-all border border-border/80 text-[13px] font-semibold flex items-center shadow-sm"
+            >
+              <Plus className="h-4 w-4 text-blue-500" />
+              <span className="hidden sm:inline">Manuel Ekle</span>
+            </Button>
+          </DialogTrigger>
+
+          <DialogContent className="sm:max-w-[820px] max-w-full w-full h-full sm:h-auto sm:max-h-[95vh] p-0 bg-background text-foreground border border-border shadow-2xl rounded-none sm:rounded-2xl overflow-y-auto">
+            {/* Header */}
+            <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-border/60">
+              <div>
+                <DialogTitle className="font-medium text-[21px] text-foreground leading-tight flex items-center gap-2">
+                  <span>Yeni Cihaz Kaydı</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <Sparkles className="h-3 w-3" /> BAŞAR AI Destekli
+                  </span>
+                </DialogTitle>
+                <p className="text-[12px] text-muted-foreground/80 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
+              </div>
+            </div>
+
+            {/* Quick in-modal AI Scan Banner */}
+            <div className="mx-7 mt-5 p-3.5 rounded-2xl bg-gradient-to-r from-violet-950/40 via-indigo-950/30 to-purple-950/40 border border-indigo-500/30 flex items-center justify-between gap-3 shadow-inner">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0">
+                  <Camera className="h-5 w-5 text-indigo-300" />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-indigo-100 flex items-center gap-1.5">
+                    Kutu Etiketi veya Cihaz Fotoğrafı Yükle
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-300 font-normal">Hızlı Doldur</span>
+                  </p>
+                  <p className="text-[10px] text-indigo-300/80">Kutudaki barkodları ve IMEI'yi BAŞAR AI okuyup formu otomatik doldursun</p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={isAiAnalyzing}
+                onClick={() => aiPhotoInputRef.current?.click()}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl gap-1.5 shrink-0 px-3.5 h-8 shadow-md shadow-indigo-600/30 transition-all"
+              >
+                {isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                {isAiAnalyzing ? "Okunuyor..." : "Fotoğraf Seç"}
+              </Button>
+            </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="overflow-y-auto flex-1 px-7 py-5 space-y-5">
@@ -389,7 +676,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 {/* Brand Dropdown */}
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Marka</Label>
-                  <Select onValueChange={(v) => setValue("brand", v)}>
+                  <Select
+                    value={watch("brand") || ""}
+                    onValueChange={(v) => setValue("brand", v, { shouldValidate: true })}
+                  >
                     <SelectTrigger className={inputCls}>
                       <SelectValue placeholder="Marka Seçin" />
                     </SelectTrigger>
@@ -397,6 +687,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       {POPULAR_BRANDS.map((b) => (
                         <SelectItem key={b} value={b} className="">{b}</SelectItem>
                       ))}
+                      {watch("brand") && !POPULAR_BRANDS.includes(watch("brand")) && watch("brand") !== "Diğer" && (
+                        <SelectItem value={watch("brand")} className="">{watch("brand")}</SelectItem>
+                      )}
                       <SelectItem value="Diğer" className=" text-muted-foreground">Diğer</SelectItem>
                     </SelectContent>
                   </Select>
@@ -412,7 +705,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Input {...register("imei")} maxLength={15} placeholder="352000000000000" className={`${inputCls} font-mono tracking-widest`} />
                   {errors.imei && <p className="text-[10px] text-rose-500">{errors.imei.message}</p>}
                 </div>
-
+                <div className="space-y-1.5">
+                  <Label className={labelCls}>Seri No (S/N) (Opsiyonel)</Label>
+                  <Input {...register("serialNumber")} placeholder="SN / EID / Seri Numarası" className={inputCls} />
+                </div>
 
                 <div className="col-span-2 space-y-1.5">
                   <Label className={labelCls}>Renk Seçimi</Label>
@@ -459,23 +755,35 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 </div>
                 <div className="space-y-1.5">
                   <Label className={labelCls}>RAM</Label>
-                  <Select onValueChange={(v) => setValue("ram", v)}>
+                  <Select
+                    value={watch("ram") || ""}
+                    onValueChange={(v) => setValue("ram", v, { shouldValidate: true })}
+                  >
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 8 GB" /></SelectTrigger>
                     <SelectContent className="bg-card border-border">
-                      {["2 GB", "3 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB"].map((v) => (
+                      {["2 GB", "3 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB", "24 GB", "32 GB"].map((v) => (
                         <SelectItem key={v} value={v} className="">{v}</SelectItem>
                       ))}
+                      {watch("ram") && !["2 GB", "3 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB", "24 GB", "32 GB"].includes(watch("ram")!) && (
+                        <SelectItem value={watch("ram")!}>{watch("ram")}</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Dahili Depolama</Label>
-                  <Select onValueChange={(v) => setValue("storage", v)}>
+                  <Select
+                    value={watch("storage") || ""}
+                    onValueChange={(v) => setValue("storage", v, { shouldValidate: true })}
+                  >
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Örn: 256 GB" /></SelectTrigger>
                     <SelectContent className="bg-card border-border">
-                      {["64 GB", "128 GB", "256 GB", "512 GB", "1 TB", "2 TB"].map((v) => (
+                      {["32 GB", "64 GB", "128 GB", "256 GB", "512 GB", "1 TB", "2 TB"].map((v) => (
                         <SelectItem key={v} value={v} className="">{v}</SelectItem>
                       ))}
+                      {watch("storage") && !["32 GB", "64 GB", "128 GB", "256 GB", "512 GB", "1 TB", "2 TB"].includes(watch("storage")!) && (
+                        <SelectItem value={watch("storage")!}>{watch("storage")}</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -508,7 +816,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                         {isNew ? "Garanti Süresi (24 Ay)" : "Kalan Garanti Süresi"}
                       </Label>
                       <Select
-                        defaultValue={isNew ? "24" : undefined}
+                        value={isNew ? "24" : (watch("warrantyMonths") || "")}
                         onValueChange={(v) => setValue("warrantyMonths", v)}
                         disabled={isNew}
                       >
@@ -593,7 +901,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 </div>
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Kozmetik Durum</Label>
-                  <Select onValueChange={(v) => setValue("cosmeticScore", v)} defaultValue="10">
+                  <Select
+                    value={watch("cosmeticScore") || "10"}
+                    onValueChange={(v) => setValue("cosmeticScore", v)}
+                  >
                     <SelectTrigger className={inputCls}><SelectValue placeholder="Seç" /></SelectTrigger>
                     <SelectContent className="bg-card border-border ">
                       <SelectItem value="10">Kusursuz (10/10)</SelectItem>
@@ -635,8 +946,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <div className="col-span-3 space-y-3">
                   <Label className={labelCls}>Kimlik Fotoğrafları (Ön & Arka)</Label>
                   <div className="grid grid-cols-2 gap-3">
-                    <input ref={sellerIdFrontInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setSellerIdFront(e.target.files?.[0] ?? null)} />
-                    <input ref={sellerIdBackInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setSellerIdBack(e.target.files?.[0] ?? null)} />
+                    <input ref={sellerIdFrontInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSellerIdFrontChange} />
+                    <input ref={sellerIdBackInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSellerIdBackChange} />
 
                     <button
                       type="button"
@@ -827,6 +1138,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]  text-blue-500">₺</span>
                   <Input
                     {...register("buyPrice")}
+                    id="buyPriceInput"
                     placeholder="0"
                     className="bg-background border-border rounded-xl h-11 text-[15px] pl-8 text-foreground"
                     onChange={(e) => {
@@ -913,6 +1225,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         </form>
       </DialogContent>
     </Dialog>
+      </div>
+    </>
   );
 }
 

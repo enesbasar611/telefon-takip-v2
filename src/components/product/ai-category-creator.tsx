@@ -220,11 +220,6 @@ export function AICategoryCreator({
 
     // Dosya okuma (Görsel veya PDF)
     const processFile = (file: File) => {
-        if (file.size > 25 * 1024 * 1024) {
-            toast.error("Dosya boyutu 25MB'den büyük olamaz.");
-            return;
-        }
-
         const validTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
         if (!validTypes.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|webp|heic|pdf)$/i)) {
             toast.error("Lütfen geçerli bir fiş görseli (JPG, PNG, WEBP) veya PDF yükleyin.");

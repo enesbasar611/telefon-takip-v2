@@ -1511,5 +1511,124 @@ CANONICAL SLUG: ${canonicalSlug}
     }
 }
 
+// ── CİHAZ KUTUSU & ETİKETİ GÖRSEL ANALİZİ (BAŞAR AI) ─────────
+export interface AIDeviceAnalysisResult {
+    brand: string;
+    model: string;
+    imei: string;
+    imei2?: string;
+    serialNumber?: string;
+    ram?: string;
+    storage?: string;
+    color?: string;
+    condition: "NEW" | "USED" | "INTERNATIONAL";
+    batteryHealth?: string;
+    cosmeticScore?: string;
+    warrantyMonths?: string;
+    notes?: string;
+    confidence: "high" | "medium" | "low";
+}
+
+export async function analyzeDeviceImageWithAI(payload: {
+    base64: string;
+    mimeType: string;
+}): Promise<{ success: true; data: AIDeviceAnalysisResult } | { success: false; error: string }> {
+    try {
+        const { getShopId } = await import("@/lib/auth");
+        const shopId = await getShopId();
+        if (!shopId) return { success: false, error: "Oturum veya dükkan bulunamadı." };
+
+        const base64Data = payload.base64.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, "");
+
+        const promptText = `Sen uzman bir mobil teknoloji ve cihaz kayıt asistanısın. 
+Görseldeki telefon kutusu etiketini, barkodlarını veya cihaz bilgi ekranını son derece yüksek doğruluk ve hassasiyetle oku ve cihaz bilgilerini JSON olarak döndür.
+
+KURALLAR:
+1. "brand": Marka adı (örn: "Samsung", "Xiaomi", "Apple", "Redmi", "Huawei", "Oppo", "Realme", "Honor", "Poco", "Google", "OnePlus"). Eğer kutuda REDMI veya POCO yazıyorsa marka olarak "Xiaomi" veya "Redmi" yazabilirsin.
+2. "model": Pazarlama model adı (örn: "Galaxy A35 5G", "Galaxy A36 5G (SM-A376B/DS)", "Redmi Note 15 Pro+ 5G", "iPhone 15 Pro Max"). SM-A376B gibi fabrika kodlarını da model adının yanına ekleyebilirsin.
+3. "imei": Birincil 15 haneli IMEI numarası (IMEI 1 / IMEI1). SADECE 15 haneli rakam olmalıdır. Boşluk veya harf içermemelidir.
+4. "imei2": İkincil IMEI numarası (IMEI 2 / IMEI2 / Dual SIM) varsa SADECE 15 haneli rakam. Yoksa boş bırak.
+5. "serialNumber": Seri numarası (SN / S/N / EID) varsa aynen yaz.
+6. "ram": RAM boyutu (örn: "8 GB", "6 GB", "12 GB", "4 GB").
+7. "storage": Dahili hafıza / ROM boyutu (örn: "256 GB", "128 GB", "512 GB", "1 TB").
+8. "color": Etikette yazan renk adı (örn: "Awesome Charcoal", "Mocha Brown", "Siyah", "Beyaz", "Titanyum Doğal", "Mavi").
+9. "condition": Kutu sıfır fabrika kutusu ise "NEW", 2. el ise "USED", yurtdışı/ithalat ise "INTERNATIONAL". Etikette Türkçe açıklamalar ve CE varsa veya orijinal jelatinli kutuysa "NEW" yap.
+10. "batteryHealth": Sıfır kutu ise "100", 2. el ise tahmin edilen değer.
+11. "cosmeticScore": Sıfır kutu ise "10", 2. el ise tahmin edilen değer.
+12. "warrantyMonths": Sıfır Türkiye cihazı ise "24", 2. el ise "3" veya "6".
+13. "notes": Görselden okunan ek detaylar (Made in Türkiye, EID vb.).
+
+Aşağıdaki JSON şemasında yanıt ver:
+{
+  "brand": "string",
+  "model": "string",
+  "imei": "string (15 haneli rakam)",
+  "imei2": "string (15 haneli rakam) | null",
+  "serialNumber": "string | null",
+  "ram": "string",
+  "storage": "string",
+  "color": "string",
+  "condition": "NEW | USED | INTERNATIONAL",
+  "batteryHealth": "100",
+  "cosmeticScore": "10",
+  "warrantyMonths": "24",
+  "notes": "string",
+  "confidence": "high | medium | low"
+}`;
+
+        const promptParts: GeminiPart[] = [
+            promptText,
+            {
+                inlineData: {
+                    data: base64Data,
+                    mimeType: payload.mimeType || "image/jpeg"
+                }
+            }
+        ];
+
+        const res = await callGemini(shopId, promptParts, "json");
+        if ("error" in res) {
+            return { success: false, error: res.error };
+        }
+
+        const parsed = safeJsonParse<AIDeviceAnalysisResult>(res.text);
+        if (!parsed || !parsed.brand) {
+            return { success: false, error: "Görselden cihaz bilgileri okunamadı. Lütfen etiketin net bir fotoğrafını yükleyin." };
+        }
+
+        // IMEI temizliği (yalnızca 15 haneli rakamlar)
+        if (parsed.imei) {
+            parsed.imei = parsed.imei.replace(/\D/g, "").slice(0, 15);
+        }
+        if (parsed.imei2) {
+            parsed.imei2 = parsed.imei2.replace(/\D/g, "").slice(0, 15);
+        }
+
+        return {
+            success: true,
+            data: {
+                brand: parsed.brand || "",
+                model: parsed.model || "",
+                imei: parsed.imei || "",
+                imei2: parsed.imei2 || "",
+                serialNumber: parsed.serialNumber || "",
+                ram: parsed.ram || "",
+                storage: parsed.storage || "",
+                color: parsed.color || "",
+                condition: parsed.condition === "USED" || parsed.condition === "INTERNATIONAL" ? parsed.condition : "NEW",
+                batteryHealth: parsed.batteryHealth || "100",
+                cosmeticScore: parsed.cosmeticScore || "10",
+                warrantyMonths: parsed.warrantyMonths || "24",
+                notes: parsed.notes || "",
+                confidence: parsed.confidence || "high"
+            }
+        };
+    } catch (error: any) {
+        console.error("analyzeDeviceImageWithAI error:", error);
+        return { success: false, error: error?.message || "Cihaz analiz edilirken beklenmeyen bir hata oluştu." };
+    }
+}
+
+
 
 
