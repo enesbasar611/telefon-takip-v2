@@ -5,24 +5,26 @@ import { semanticSearchWithAI } from "@/lib/actions/gemini-actions";
 import { serializePrisma } from "@/lib/utils";
 
 export async function StockTableStream({ searchParams, shop }: { searchParams?: any, shop?: any }) {
+    const sp = await searchParams;
     let aiFilters = {};
-    if (searchParams?.ai_search) {
-        const result = await semanticSearchWithAI(searchParams.ai_search);
+    if (sp?.ai_search) {
+        const result = await semanticSearchWithAI(sp.ai_search);
         if (result.success) {
             aiFilters = result.filters;
         }
     }
 
-    const currentPage = Number(searchParams?.page) || 1;
+    const currentPage = Number(sp?.page) || 1;
     const pageSize = 50;
 
     const [data, categoriesRaw, suppliersRaw] = await Promise.all([
         getProducts({
-            id: searchParams?.highlight,
+            id: sp?.highlight,
             page: currentPage,
             pageSize: pageSize,
-            search: searchParams?.q,
-            isCritical: searchParams?.isCritical === "true",
+            search: sp?.q,
+            isCritical: sp?.isCritical === "true",
+            outOfStock: sp?.outOfStock === "true",
             ...aiFilters
         }),
         getCategories(),

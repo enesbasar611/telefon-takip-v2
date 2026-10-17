@@ -44,7 +44,7 @@ interface SupplierOrderListsPanelProps {
 }
 
 export function SupplierOrderListsPanel({ isOpen, onClose, isInline }: SupplierOrderListsPanelProps) {
-    const { orders, updateQty, removeProduct, clearSupplier, totalItemCount } = useSupplierOrders();
+    const { orders, updateQty, removeProduct, clearSupplier, totalItemCount, markSeen } = useSupplierOrders();
     const [expandedSuppliers, setExpandedSuppliers] = useState<Set<string>>(new Set(Object.keys(orders)));
     const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
@@ -61,6 +61,7 @@ export function SupplierOrderListsPanel({ isOpen, onClose, isInline }: SupplierO
     const supplierIds = Object.keys(orders);
 
     const toggleExpand = (id: string) => {
+        markSeen(id);
         setExpandedSuppliers((prev) => {
             const next = new Set(prev);
             next.has(id) ? next.delete(id) : next.add(id);
@@ -204,13 +205,24 @@ export function SupplierOrderListsPanel({ isOpen, onClose, isInline }: SupplierO
                                         <Truck className="h-4 w-4 text-blue-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className=" text-sm text-foreground truncate">{list.supplierName}</p>
-                                        <p className="text-[10px] font-medium text-muted-foreground">
-                                            {list.items.length} çeşit · {totalQty} adet
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-bold text-sm text-foreground truncate">{list.supplierName}</p>
+                                            {list.hasNewItems && (
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] font-medium text-muted-foreground flex items-center gap-1.5">
+                                            <span>{list.items.length} çeşit · {totalQty} adet</span>
+                                            {list.hasNewItems && (
+                                                <span className="text-emerald-500 font-semibold animate-pulse">Yeni Eklendi</span>
+                                            )}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Badge className="bg-blue-500/10 text-blue-400 border-none text-[9px]  px-2">
+                                        <Badge className={cn("border-none text-[9px] px-2", list.hasNewItems ? "bg-emerald-500/20 text-emerald-400 font-bold" : "bg-blue-500/10 text-blue-400")}>
                                             {list.items.length}
                                         </Badge>
                                         {isExpanded ? (

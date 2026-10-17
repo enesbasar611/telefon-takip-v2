@@ -41,6 +41,123 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-17: Ana Sayfa "Kasa Bakiyesi" Kartı Ay Tabanlı Detay Modalı ve Son 20 Kayıt Kırılımı:
+  - **Sunucu Eylemi (`src/lib/actions/dashboard-detail-actions.ts` -> `getCashBalanceMonthlyDetails`):**
+    - Ay tabanlı (`year`, `month`) kasa akış analizi eklendi.
+    - Tüm aktif nakit kasaların (`type: "CASH"`) bakiyeleri toplanarak güncel bakiye belirlendi.
+    - Seçili ayın başından (`startOfMonth`) sonuna (`endOfMonth`) kadar olan kasaya giren (`INCOME`) ve kasadan çıkan (`EXPENSE`) tüm nakit tutarlar ve işlem sayıları hesaplandı.
+    - Matematiksel kesinlik ile ayın başındaki devir bakiye formülü uygulandı: `Ay Başı Kasa = Güncel Kasa - Ayın Başından Beri Girenler + Ayın Başından Beri Çıkanlar`.
+    - Son 20 kasa hareketi kronolojik sıralı (`createdAt: "desc"`, take: 20) olarak getirildi; müşteri, tedarikçi, personel, satış kalemleri ve bakiye ilişkileri dahil edildi.
+    - Son 20 kayıt içerisindeki giriş toplamı, çıkış toplamı ve net fark otomatik hesaplandı.
+  - **Yeni `CashBalanceDetailModal` Bileşeni (`src/components/dashboard/modals/cash-balance-detail-modal.tsx`):**
+    - **Ay Navigasyonu:** Önceki Ay / Sonraki Ay butonları, ay etiketi ve hızlı "Bu Ay" kısayolu.
+    - **4 Temel Ay Tabanlı KPI Kartı:**
+      1. Ay Başı Kasa Bakiyesi (Devir)
+      2. Kasaya Giren Para (İşlem adedi ve +₺ tutarı)
+      3. Kasadan Çıkan Para (İşlem adedi ve -₺ tutarı)
+      4. Güncel Kasa Bakiyesi (Aylık net fark göstergesiyle)
+    - **Son 20 Kayıt ve Giriş / Çıkış Ayrı Gösterimi:**
+      - Sekmeler: `Tümü (20)`, `Girişler (X)`, `Çıkışlar (Y)`.
+      - Özet bandı: Son 20 kaydın giriş toplamı, çıkış toplamı ve net fark rozeti.
+      - Her hareket kartında: Giriş/Çıkış renk kodlu yön ikonu, açıklama/satış no, kategori rozeti, tarih-saat, ilgili müşteri/tedarikçi/personel, işlem tutarı ve işlem anındaki kasa bakiyesi (`runningBalance`).
+    - **Aksiyonlar:** "Yeni Kasa Hareketi Ekle" butonu (tek tıkla modal içi işlem kaydı) ve "Yazdır" butonu.
+  - **Ana Sayfa Tetikleme Entegrasyonu (`stat-widget-wrapper.tsx` & `stat-detail-modal.tsx`):**
+    - Ana sayfadaki "Kasa Bakiyesi" kartına tıklandığında veya detay istendiğinde doğrudan bu yeni `CashBalanceDetailModal` açılacak şekilde entegre edildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-17: Eksik Ürün Listesi Revizyonu, Kurye & Tedarikçi Ayrımı, Kesintisiz Sipariş Birleştirme ve Otomatik Temizleme:
+  - **Kuryeye Ata ve Tedarikçiye Ata Ayrımı (`src/components/navbar/shortage-list.tsx`):**
+    - Her eksik ürün kartında "Kuryeye Ata" (Mavi/Kurye ikonu) ve "Tedarikçiye Ata" (Zümrüt Yeşili/Dükkan ikonu) şeklinde iki ayrı, belirgin ve tam genişlikli eylem butonu eklendi.
+    - Mobilde ve masaüstünde kolay tıklanabilir ergonomik popover menüler; atanan kurye/tedarikçi adı, hızlı değişim ve tek tıkla atamayı kaldırma seçeneği sunuldu.
+  - **Ferah Mobil Arayüz ve Görünür Adet Kontrolü (`src/components/navbar/shortage-list.tsx`):**
+    - Sağ üst köşeye sıkışmış, mobil cihazlarda basılması imkansız küçük `+ -` butonları ve gizlenen adet yazısı tamamen kaldırıldı.
+    - Kart yapısı 3 ferah alana ayrıldı:
+      1. Üst kısım: Ürün Adı, Akıllı Stok rozeti, Mevcut Stok ve SKU bilgisi, silme çöp kutusu.
+      2. Orta kısım: Rahat dokunmatik hedefli (36px yükseklik, `h-9 w-9`) `+` ve `-` butonları, ortada iri puntolu **Adet** göstergesi ve hemen yanında tek tıkla "Tamamla / Çözüldü" butonu.
+      3. Alt kısım: 2 sütunlu "Kuryeye Ata" ve "Tedarikçiye Ata" butonları.
+  - **Atanan Ürünlerin Teslim Alınana veya Stok Girilene Kadar Listede Kalması:**
+    - `src/lib/actions/shortage-actions.ts`: `getShortageItems` sorgusundan `assignedToId: null` kısıtı kaldırılarak kuryeye veya tedarikçiye atanan ürünlerin listeden kaybolması engellendi; ürünler teslim alınana veya stoğu tamamlanana kadar listede görünür kalıyor.
+    - `src/lib/actions/shortage-actions.ts`: Yeni `assignShortageToSupplier` sunucu eylemi yazıldı.
+    - Tedarikçiye atanan ürünler önceki gibi anında `removeShortage` ile silinmiyor; teslimat / mal kabul gerçekleştiğinde otomatik temizleniyor.
+  - **Tedarikçiye Atanan Ürünlerin Aynı Açık Sipariş Listesinde Birikmesi (`src/lib/context/supplier-order-context.tsx` & `src/lib/actions/purchase-actions.ts`):**
+    - `SupplierOrderContext`: Aynı tedarikçiye daha sonra atanan ürünler parça parça yeni liste açmak yerine mevcut açık sepete ekleniyor; aynı ürün varsa miktarı artırılıyor (`quantity += count`), yeni ürünse listeye dahil ediliyor.
+    - `createPurchaseOrderAction`: Veritabanında tedarikçiye ait `PENDING` (açık) bir satın alma siparişi varsa, yeni sipariş açmak yerine bu açık siparişin içine kalemler eklenip toplam tutarları güncelleniyor.
+  - **Yeni Eklenen Ürün Bildirim Işığı (Yanıp Sönen Nabız / Blink Dot):**
+    - `SupplierOrderContext`: Sipariş listesine yeni ürün atandığında `hasNewItems: true` ve `lastAddedAt` bayrağı aktifleşiyor. Kullanıcı listeyi incelediğinde `markSeen(supplierId)` ile sıfırlanıyor.
+    - `shortage-list.tsx` ve `supplier-order-lists-panel.tsx`: Tedarikçi sekmelerinde ve sipariş kartlarında zümrüt yeşili yanıp sönen animasyonlu nabız ışığı (`animate-ping` / `animate-pulse`) ve "Yeni Eklendi" rozeti görüntülendi.
+  - **Teslim Alınan veya Stoğu Eklenen Ürünlerin Eksik Listesinden Otomatik Silinmesi:**
+    - `src/lib/actions/purchase-actions.ts` (`receivePurchaseOrderAction`): Satın alma siparişi mal kabul yapıldığında (`COMPLETED`), sipariş edilen tüm ürünler hem `productId` hem de küçük/büyük harf duyarsız ürün adına göre eksik ürün listesinden (`shortageItem`) otomatik olarak silinir.
+    - `src/lib/actions/product-actions.ts` (`adjustStockById`): Ürün stoğuna manuel veya hareketle ekleme yapıldığında (stok > 0), o ürüne ait bekleyen eksik ürün kayıtları otomatik temizlenir.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-17: Stok Sayfası (`/stok`) Ürün Arama Türkçe Harf ("i - İ - ı - I") ve Büyük/Küçük Harf Duyarsızlaştırma:
+  - **İstemci Tarafı Filtreleme (`src/components/product/stock-list-table.tsx`):**
+    - `StockListTable` içerisindeki `filteredProducts` filtresi standart JS `toLowerCase()` yerine `normalizeSearchText` fonksiyonuyla güncellendi.
+    - Kullanıcı arama kutusuna küçük `i`, büyük `İ`, noktasız `ı` veya büyük `I` yazdığında; ürün adı, SKU, barkod, kategori adı ve açıklama alanlarında büyük/küçük harf ve Türkçe karakter toleransıyla tam eşleşme sağlandı.
+  - **Sunucu Tarafı Sorgusu (`src/lib/actions/product-actions.ts` -> `getProducts`):**
+    - PostgreSQL ve Prisma `mode: 'insensitive'` sorgularının Türkçe `i/İ/ı/I` karakterlerinde yaşadığı eşleşme problemi için arama teriminin tüm Türkçe büyük/küçük varyasyonları (`queryVariants`) üretildi.
+    - Sayfalama (SSR pagination) ve gecikmeli (debounced) URL sorgularında da `iphone`, `İphone`, `IPHONE`, `şarj`, `SARJ` vb. tüm aramaların eksiksiz ve anında bulunması garanti altına alındı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-17: Tedarikçi Siparişleri Sayfası (`/stok/siparisler`) Satın Alma Yönetim Merkezi ve Mal Kabul Entegrasyonu:
+  - **Sayfa Amacı ve Mimari Analiz:**
+    - Sidebar'daki `Stok > Tedarikçi Siparişleri` sayfasının amacı, mağazanın toptancılardan verdiği tüm satın alma siparişlerini (`PurchaseOrder`), teslim alımlarını (mal kabul) ve eksik stok taslaklarını yönetmektir.
+    - Daha önce bu sayfada yalnızca geçici eksik sepeti (`SupplierOrderListsPanel`) gösteriliyor, `/tedarikciler` sayfasında verilen kesinleşmiş siparişler listelenmiyordu.
+  - **Yeni `StockOrdersClient` Bileşeni (`stock-orders-client.tsx` & `stok/siparisler/page.tsx`):**
+    - `/tedarikciler` sayfasında veya `/stok/siparisler` üzerinden oluşturulan tüm siparişler (`PurchaseOrder`) eşzamanlı olarak burada listelendi.
+    - KPI İstatistik Kartları eklendi: Toplam Sipariş, Açık / Bekleyen (Mal Kabul Bekliyor), Teslim Alınanlar (Stoğa Eklendi), Toplam Satın Alma Hacmi (₺).
+    - İki sekmeli profesyonel görünüm:
+      1. **Tedarikçi Siparişleri & Satın Almalar:** Sipariş No (`#PO-...`), Tedarikçi, Kalem/Adet Özeti, Tutar, Durum ve Ödeme Rozetleri, Tarih.
+      2. **Eksik Stok Sipariş Sepeti / Taslaklar:** Kurye ve tedarikçiye atanmayı bekleyen eksik listeleri (`SupplierOrderListsPanel`).
+    - Hızlı Aksiyon Butonları:
+      - **Teslim Al (Mal Kabul):** `MalKabulModal` açılarak siparişteki ürünlerin adet ve alış fiyatları güncellenerek tek tıkla doğrudan mağaza stoklarına aktarılır.
+      - **WhatsApp ile Sipariş Gönder:** Tedarikçiye sade formatta (sadece ürün adı + adet, fiyatsız) hazır mesaj gönderimi.
+      - **İncele / Yazdır:** `PurchaseOrderDetailModal` ile A4/termal sipariş fişi görüntüleme ve yazdırma.
+      - **İptal Et:** Açık siparişi iptal edip parçaları otomatik ihtiyaç havuzuna geri döndürme (`cancelPurchaseOrder`).
+      - **Sil:** Sipariş kaydını silme (`deletePurchaseOrdersAction`).
+      - **Yeni Sipariş Formu:** Sayfa başlığındaki butonla doğrudan `PurchaseForm` üzerinden yeni sipariş oluşturabilme.
+    - Arama ve Filtreleme: Türkçe karakter duyarsız arama (`normalizeSearchText`), Durum filtresi (Tümü, Açık, Teslim Alınanlar, İptaller) ve Tedarikçi filtresi.
+  - **Revalidation Senkronizasyonu (`purchase-actions.ts` & `supplier-actions.ts`):**
+    - `createPurchaseOrderAction`, `receivePurchaseOrderAction`, `deletePurchaseOrdersAction` ve `cancelPurchaseOrder` işlemlerine `revalidatePath("/stok/siparisler")` eklenerek iki sayfanın anlık eşitliği sağlandı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-17: Stok Sayfası (`/stok`) BAŞAR AI Stok Ekle, Tedarikçi Fişi / Fatura Yükleme (Multimodal AI), Telefon Serisi Genişletme, Taslak Saklama (Token Koruma) ve Kategoriye Taşıma Revizyonu:
+  - **Stok Sayfasına AI Entegrasyonu (`src/app/(dashboard)/stok/page.tsx`):**
+    - `/stok` sayfasındaki eski ve sınırlı `BulkAddProductModal` kaldırılarak kategoriler sayfasındaki zengin, USD/TL döviz destekli `AICategoryCreator` (`"BAŞAR AI Stok Ekle"`) ana buton olarak eklendi.
+    - Hem `/stok` hem de `/stok/kategoriler` sayfaları aynı modern AI envanter altyapısına bağlandı.
+  - **Tedarikçi Fişi / Fatura / Makbuz Yükleme & Multimodal Analiz (`gemini-actions.ts` & `ai-category-creator.tsx`):**
+    - Kamera ile çekilmiş fiş fotoğrafları, ekran görüntüleri (JPG, PNG, WEBP, HEIC) veya PDF faturaları için sürükle-bırak / dosya seçici alanı eklendi.
+    - `callGemini` fonksiyonu resim/belge inlineData (Base64) ve 8192 token çıktısını destekleyecek şekilde genişletildi.
+    - Yapay zeka fişteki satırları, birim alış fiyatlarını, adetleri ve modelleri okuyup mağazanın hiyerarşisine göre mantıklı kategorilere ('Ekranlar > Apple', 'Ekranlar > Samsung', 'Bataryalar > Apple' vb.) otomatik gruplar.
+    - Fişteki alış fiyatına göre perakende satış fiyatı önerisi (~1.5x - 2x kâr marjı) otomatik atanır.
+  - **Seri Telefon Modelleri Otomatik Açma (iPhone 11'den 15 Pro Max'e kadar vb.):**
+    - Prompt veya fişte "iPhone 11'den 15 Pro Max'e kadar" gibi model serisi belirtildiğinde AI tüm modelleri (11, 11 Pro, 11 Pro Max, 12, 12 Mini, 12 Pro, 12 Pro Max, 13, 13 Mini, 13 Pro, 13 Pro Max, 14, 14 Plus, 14 Pro, 14 Pro Max, 15, 15 Plus, 15 Pro, 15 Pro Max) tek tek bağımsız ürün kartı olarak açar.
+  - **Kayıtlı Taslak (Sekme Kapanması / Sayfa Yenilenmesinde Token Koruması):**
+    - Düzenleme sırasında yapılan tüm değişiklikler `basar_ai_stock_draft_v2` anahtarıyla `localStorage` üzerinde anlık saklanır.
+    - Sayfa yenilense veya sekme kapansa bile modal yeniden açıldığında *"Son Analiz Edilen Stok Taslağınız Saklanıyor"* kartı belirir.
+    - Kullanıcı tek tıkla **"Taslaktan Devam Et"** diyerek sıfır token harcayarak kaldığı yerden düzenlemeye devam edebilir; istenirse "Temizle" ile sıfırlanabilir.
+  - **Ürünleri Kategoriler Arasında Taşıma & Yeni Kategori Ekleme:**
+    - Önizleme tablosundaki her ürün satırına açılır kategori taşıma seçicisi (`select`) eklendi.
+    - Kullanıcı herhangi bir ürünü tek hamlede mevcut kategoriler arasında taşıyabilir veya doğrudan yeni kategori oluşturarak ürünü oraya aktarabilir.
+    - Önizleme çubuğuna `+ Yeni Kategori Ekle` butonu eklenerek serbest kategori açma sağlandı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-17: AI Çoklu Stok Ekleme (`/stok/kategoriler` -> `AICategoryCreator`) USD / TL Dinamik Seçici ve Fiyat Önizleme Entegrasyonu:
+  - **Gemini AI Prompt & Para Birimi Ayrıştırma (`gemini-actions.ts`):**
+    - Kullanıcı prompt metninde alış veya satış fiyatını dolar/USD ($) olarak belirttiğinde (örn. "10 dolar", "$15", "10 usd") AI çıktısının bunu `currency: "USD"` olarak etiketlemesi sağlandı.
+    - AI yanıtında hem TL hem USD fiyatlarının (`buyPrice`, `buyPriceUsd`, `sellPrice`, `sellPriceUsd`) güncel mağaza döviz kuru (`usdRate`) ile otomatik hesaplanarak eksiksiz dönmesi sağlandı.
+    - Daha önce varsayılan para birimi USD olmadığında `buyPriceUsd = null` atanarak sıfırlanan kritik mantık hatası giderildi; her iki döviz değeri de korundu ve senkronize edildi.
+  - **Modal Sağ Üst TL / DOLAR Segmented Switcher (`ai-category-creator.tsx`):**
+    - AI önizleme modalının sağ üst başlık alanına anlık para birimi değiştirici (`[ ₺ TL | $ DOLAR ]`) ve güncel canlı kur rozeti (`1 USD ≈ ₺{usdRate}`) eklendi.
+    - Kullanıcı promptunda dolar terimleri geçtiğinde veya ürünler dolar algılandığında önizleme otomatik olarak "USD" modunda başlatılır; istenirse tek tıkla TL moduna dönüştürülebilir.
+  - **Dinamik Fiyat Düzenleme ve Değiştirilemez Karşılık Gösterimi:**
+    - Tablo içerisindeki Alış ve Satış fiyatı girişleri aktif para birimine göre dinamik olarak düzenlenebilir hale getirildi (Dolar seçiliyse $ bazında düzenlenir, TL seçiliyse ₺ bazında düzenlenir).
+    - Fiyat alanı güncellendiğinde arka planda karşı para birimi de otomatik olarak kur oranında güncellenir.
+    - Fiyat giriş alanının hemen altına sadece okunabilir (değiştirilemez) karşı döviz karşılığı eklendi:
+      - Dolar seçiliyken: Üstte düzenlenebilir `$ Alış Fiyatı`, altında değiştirilemeyen gri `≈ ₺{TL Karşılığı}`.
+      - TL seçiliyken: Üstte düzenlenebilir `₺ Alış Fiyatı`, altında değiştirilemeyen gri `≈ ${USD Karşılığı}`.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
 - [x] 2026-10-16: Teknik Servis Hızlı İşlem Kaydı Donma ve Stabilite İyileştirmesi (`create-service-modal.tsx` & `service-actions.ts`):
   - **Donma Sebeplerinin Tespiti ve Giderilmesi:**
     - `create-service-modal.tsx` içerisinde kayıt tamamlandığında `setServiceLabel` otomatik tetikleniyor ve 350ms sonra arka planda `window.print()` çalıştırılıyordu. `window.print()` tarayıcı ana thread'ini (UI döngüsünü) senkron olarak dondurduğu için animasyonlar kilitleniyor, kullanıcı tepkisizlik ve donma yaşıyordu. Otomatik etiket yazdırma zorunluluğu kaldırılarak buton kontrollü hale getirildi.
@@ -808,3 +925,14 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
            - Hızlı çipler eklendi: `[Bugün]`, `[Dün]`, `[Bu Hafta]`, `[🎯 Ay Başından Bugüne (MTD)]`, `[🔄 Geçen Ay Eşdeğer Gün]`, `[Geçen Ay (Tam)]`.
            - `[Excel'e Aktar]` ve `[Gün Sonu PDF]` butonları responsive üst bara entegre edildi.
     - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
+- [x] 2026-10-17: Stok Sayfası "Bitenler" (Stoğu Biten Ürünler) Filtreleme Düzeltmesi:
+    - **Dosyalar**: `src/lib/actions/product-actions.ts`, `src/components/product/streamed/stock-table-stream.tsx`, `src/components/product/stock-list-table.tsx`, `src/components/product/stock-dashboard-metrics.tsx`, `JOURNAL.md`.
+    - **Neden**: `/stok` sayfasında üstteki metrik kartındaki "Bitenler" veya tablodaki "Stoğu Bitenler" butonuna basıldığında stoğu 0 olan ürünler listelenmiyordu. Backend (`getProducts`) `outOfStock` filtresini desteklemiyor ve `StockTableStream` URL'deki `outOfStock` parametresini sorguya iletmiyordu; tablo ise yalnızca mevcut ilk 50 ürünlük sayfayı istemci tarafında filtrelemeye çalışıyordu.
+    - **Yapılanlar**:
+        1. **Backend Filtreleme (`getProducts`)**: `outOfStock?: boolean` parametresi eklendi. `outOfStock === true` olduğunda Prisma seviyesinde `where.stock = { lte: 0 }` filtresi uygulandı. Arama veya kategori filtreleri ile birlikte çalışması sağlandı.
+        2. **Stream Bileşeni (`StockTableStream`)**: `searchParams` asenkron çözümlendi ve `outOfStock: sp?.outOfStock === "true"` parametresi `getProducts` fonksiyonuna aktarıldı.
+        3. **Tablo Arayüzü (`StockListTable`)**: `showOutOfStockOnly` durumu `searchParams` ile senkronize edildi. Butona tıklandığında `outOfStock=true` URL parametresi güncellenip sayfa 1'e sıfırlanacak ve tekrar tıklandığında filtre temizlenecek şekilde iki yönlü toggle bağlandı. Aktifken gerçek toplam sıfır stoklu ürün sayısı `(${totalCount})` dinamik gösterildi.
+        4. **Metrik Kartı (`StockDashboardMetrics`)**: "Bitenler" kartı aktif filtre durumunda belirgin vurgulu (rose outline ve glow) yapıldı, tekrar tıklandığında filtreyi kapatacak toggle URL mantığı eklendi.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+

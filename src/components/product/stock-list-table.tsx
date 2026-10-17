@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, normalizeSearchText } from "@/lib/utils";
 import { useTransition } from "react";
 import {
   Search,
@@ -114,7 +114,29 @@ export function StockListTable({
 
   const [scannerRoomId, setScannerRoomId] = useState<string>("");
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
-  const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
+  const isOutOfStockInUrl = searchParams.get("outOfStock") === "true";
+  const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(isOutOfStockInUrl);
+
+  useEffect(() => {
+    setShowOutOfStockOnly(searchParams.get("outOfStock") === "true");
+  }, [searchParams]);
+
+  const handleToggleOutOfStock = () => {
+    const nextVal = !showOutOfStockOnly;
+    setShowOutOfStockOnly(nextVal);
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextVal) {
+      params.set("outOfStock", "true");
+      params.delete("isCritical");
+    } else {
+      params.delete("outOfStock");
+    }
+    params.set("page", "1");
+    startTransition(() => {
+      router.replace(`?${params.toString()}`, { scroll: false });
+    });
+  };
+
   const [selectedCourierId, setSelectedCourierId] = useState<string>("");
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
@@ -136,12 +158,16 @@ export function StockListTable({
   }, [initializeScannerRoom, shop?.id]);
 
   const filteredProducts = useMemo(() => {
+    const normSearch = normalizeSearchText(searchTerm.trim());
+
     return products.filter((p) => {
       const matchesSearch =
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.barcode && p.barcode.includes(searchTerm)) ||
-        (p.category?.name && p.category.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        !normSearch ||
+        normalizeSearchText(p.name).includes(normSearch) ||
+        (p.sku && normalizeSearchText(p.sku).includes(normSearch)) ||
+        (p.barcode && normalizeSearchText(p.barcode).includes(normSearch)) ||
+        (p.category?.name && normalizeSearchText(p.category.name).includes(normSearch)) ||
+        (p.description && normalizeSearchText(p.description).includes(normSearch));
 
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
       const matchesStockFilter = !showOutOfStockOnly || p.stock <= 0;
@@ -494,15 +520,15 @@ export function StockListTable({
 
           <Button
             variant="ghost"
-            onClick={() => setShowOutOfStockOnly(!showOutOfStockOnly)}
+            onClick={handleToggleOutOfStock}
             className={cn(
               "h-10 px-4 text-[12px] font-medium rounded-xl transition-all",
               showOutOfStockOnly
-                ? "bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border border-rose-500/20"
+                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-500/25 border border-rose-500/30 font-bold shadow-sm"
                 : "bg-muted/30 text-muted-foreground hover:bg-muted border border-border"
             )}
           >
-            Stoğu Bitenler ({products.filter(p => p.stock <= 0).length})
+            {showOutOfStockOnly ? `Stoğu Bitenler (${totalCount})` : "Stoğu Bitenler"}
           </Button>
         </div>
       </div>

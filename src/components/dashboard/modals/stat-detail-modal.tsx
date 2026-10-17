@@ -33,6 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { CashBalanceDetailModal } from "./cash-balance-detail-modal";
 
 export type StatType =
     | "DAILY_SALES"
@@ -52,6 +53,10 @@ interface StatDetailModalProps {
 }
 
 export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetailModalProps) {
+    if (type === "DAILY_SALES") {
+        return <CashBalanceDetailModal isOpen={isOpen} onClose={onClose} />;
+    }
+
     const { addShortage, refresh } = useShortage();
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
@@ -70,7 +75,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
             switch (type) {
                 case "TOTAL_DEBTS": return getDebtDetails();
                 case "COLLECTIONS": return getCollectionDetails();
-                case "DAILY_SALES": return getDailySalesDetails();
                 case "REPAIR_INCOME": return getRepairIncomeDetails();
                 case "PENDING_SERVICES": return getPendingServicesDetails();
                 case "READY_DEVICES": return getReadyDevicesDetails();
@@ -182,7 +186,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
 
     const getModalConfig = () => {
         switch (type) {
-            case "DAILY_SALES": return { title: "KASA HAREKETLERİ", icon: ShoppingCart, color: "text-primary", route: "/satis/gecmis" };
             case "REPAIR_INCOME": return { title: "TAMİR GELİRLERİ", icon: Wrench, color: "text-secondary", route: "/servis/liste" };
             case "COLLECTIONS": return { title: "TAHSİLATLAR", icon: Banknote, color: "text-amber-500", route: "/satis/kasa" };
             case "PENDING_SERVICES": return { title: "BEKLEYEN SERVİSLER", icon: Clock, color: "text-blue-500", route: "/servis/liste" };
@@ -573,38 +576,13 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                         </div>
                                     )}
 
-                                    {/* DAILY SALES specific header stats */}
-                                    {type === "DAILY_SALES" && statsData && (
-                                        <div className="grid grid-cols-3 gap-3 mb-6">
-                                            <div className="bg-muted/10 border border-border/40 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                                                <span className="text-[9px]  text-muted-foreground uppercase tracking-widest mb-1 opacity-70">KASA AÇILIŞ</span>
-                                                <span className="text-sm  text-foreground">{statsData.kasaOpeningBalance || "₺0"}</span>
-                                            </div>
-                                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                                                <span className="text-[9px]  text-emerald-600/70 uppercase tracking-widest mb-1">GÜNLÜK SATIŞ</span>
-                                                <span className="text-sm  text-emerald-500">+{statsData.todaySales || "₺0"}</span>
-                                            </div>
-                                            <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
-                                                <span className="text-[9px]  text-primary/70 uppercase tracking-widest mb-1">GÜNCEL KASA</span>
-                                                <span className="text-sm  text-primary">{statsData.kasaBalance || "₺0"}</span>
-                                            </div>
-                                        </div>
-                                    )}
-
                                     {/* General purpose list for other types */}
-                                    {["DAILY_SALES", "REPAIR_INCOME", "PENDING_SERVICES", "READY_DEVICES", "CASH_BALANCE"].includes(type || "") && (
+                                    {["REPAIR_INCOME", "PENDING_SERVICES", "READY_DEVICES", "CASH_BALANCE"].includes(type || "") && (
                                         <div className="space-y-3">
                                             {data.map((item: any, idx: number) => {
                                                 let title = item.customer?.name || item.name || (item.deviceBrand ? item.deviceBrand + " " + item.deviceModel : "Kayıt " + (idx + 1));
                                                 let subtitle = item.ticketNumber ? "#" + item.ticketNumber : item.description || (item.type ? item.type : "Detaylar");
                                                 const value = item.amount || item.finalAmount || item.actualCost || (item.balance !== undefined ? item.balance : null);
-
-                                                if (type === "DAILY_SALES") {
-                                                    title = item.sale?.saleNumber || item.description || `İşlem #${idx + 1}`;
-                                                    const productNames = item.sale?.items?.map((i: any) => i.product?.name).join(', ');
-                                                    subtitle = productNames ? `Ürünler: ${productNames}` : (item.category || "Hızlı Satış/Ödeme");
-                                                    if (item.customer?.name) subtitle = `${item.customer.name} - ${subtitle}`;
-                                                }
 
                                                 return (
                                                     <Link
@@ -620,8 +598,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                                     item.type === 'BANK' ? <Landmark className="h-5 w-5 text-emerald-500" /> :
                                                                         (item.type === 'POS' || item.type === 'CREDIT_CARD') ? <CreditCard className="h-5 w-5 text-purple-500" /> :
                                                                             <Wallet className="h-5 w-5 text-blue-500" />
-                                                                ) : type === "DAILY_SALES" ? (
-                                                                    <ShoppingCart className="h-5 w-5 text-foreground/40" />
                                                                 ) : (
                                                                     <ChevronRight className="h-5 w-5 opacity-40" />
                                                                 )}
@@ -638,9 +614,9 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                                 <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
                                                                 <p className={cn(
                                                                     "text-base  tracking-tight",
-                                                                    type === "DAILY_SALES" || type === "REPAIR_INCOME" || type === "CASH_BALANCE" ? "text-emerald-500" : "text-foreground"
+                                                                    type === "REPAIR_INCOME" || type === "CASH_BALANCE" ? "text-emerald-500" : "text-foreground"
                                                                 )}>
-                                                                    {type === "DAILY_SALES" || type === "REPAIR_INCOME" ? "+" : ""}
+                                                                    {type === "REPAIR_INCOME" ? "+" : ""}
                                                                     ₺{Number(value).toLocaleString('tr-TR')}
                                                                 </p>
                                                             </div>

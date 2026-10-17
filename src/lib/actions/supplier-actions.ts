@@ -479,6 +479,7 @@ export async function cancelPurchaseOrder(id: string) {
 
     revalidatePath("/stok");
     revalidatePath("/tedarikciler");
+    revalidatePath("/stok/siparisler");
     revalidateSmartReplenishment(shopId);
 
     return { success: true };

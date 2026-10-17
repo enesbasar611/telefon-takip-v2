@@ -150,7 +150,6 @@ export async function getShortageItems() {
       shopId,
       isResolved: false,
       isTaken: false,
-      assignedToId: null // Hide courier-assigned items from navbar list
     },
     include: {
       product: true,
@@ -405,6 +404,49 @@ export async function assignShortageToCourier(id: string, courierId: string | nu
   } catch (error) {
     console.error("Assignment error:", error);
     return { success: false, error: "Atama başarısız." };
+  }
+}
+
+export async function assignShortageToSupplier(id: string, supplierId: string | null, customQuantity?: number) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Shop ID not found" };
+
+    let targetId = id;
+    if (id.startsWith("alert-")) {
+      const productId = id.replace("alert-", "");
+      const product = await prisma.product.findUnique({ where: { id: productId } });
+      if (!product) throw new Error("Ürün bulunamadı.");
+
+      const newItem = await prisma.shortageItem.create({
+        data: {
+          name: product.name,
+          productId: product.id,
+          quantity: customQuantity || 1,
+          shopId: product.shopId,
+          supplierId: supplierId,
+          requesterName: "Dükkan",
+          notes: "STOK ANALİZİNDEN OTOMATİKE EKLENDİ"
+        }
+      });
+      targetId = newItem.id;
+    } else {
+      await prisma.shortageItem.update({
+        where: { id },
+        data: {
+          supplierId: supplierId,
+          quantity: customQuantity || undefined
+        }
+      });
+    }
+
+    revalidateTag(`shortage-${shopId}`);
+    revalidateTag(`dashboard-${shopId}`);
+    revalidateSmartReplenishment(shopId);
+    return { success: true };
+  } catch (error) {
+    console.error("Supplier assignment error:", error);
+    return { success: false, error: "Tedarikçi ataması başarısız." };
   }
 }
 

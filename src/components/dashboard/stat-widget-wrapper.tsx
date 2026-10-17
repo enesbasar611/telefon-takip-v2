@@ -8,11 +8,11 @@ import { StatDetailModal, StatType } from "./modals/stat-detail-modal";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardInit } from "@/lib/actions/dashboard-actions";
 
-// Action modals are lazy-loaded: only fetched when the user actually triggers them
 const CreateProductModal = dynamic(() => import("@/components/product/create-product-modal").then(m => m.CreateProductModal), { ssr: false });
 const CreateServiceModal = dynamic(() => import("@/components/service/create-service-modal").then(m => m.CreateServiceModal), { ssr: false });
 const CreateTransactionModal = dynamic(() => import("@/components/finance/create-transaction-modal").then(m => m.CreateTransactionModal), { ssr: false });
 const AddDebtModal = dynamic(() => import("@/components/finance/add-debt-modal").then(m => m.AddDebtModal), { ssr: false });
+const CashBalanceDetailModal = dynamic(() => import("./modals/cash-balance-detail-modal").then(m => m.CashBalanceDetailModal), { ssr: false });
 
 type QuickAction =
     | { kind: "modal"; modal: "PRODUCT" | "SERVICE" | "TX" | "INCOME" | "DEBT"; label: string }
@@ -103,13 +103,26 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
         }
     }
 
+    const [isCashDetailOpen, setIsCashDetailOpen] = useState(false);
+
     const runAction = useCallback(() => {
+        if (type === "DAILY_SALES") {
+            setIsCashDetailOpen(true);
+            return;
+        }
         if (!action) return setIsDetailOpen(true);
         if (action.kind === "route") router.push(action.href);
         else setActiveModal(action.modal);
-    }, [action, router]);
+    }, [action, router, type]);
 
-    const openDetail = useCallback(() => setIsDetailOpen(true), []);
+    const openDetail = useCallback(() => {
+        if (type === "DAILY_SALES") {
+            setIsCashDetailOpen(true);
+            return;
+        }
+        setIsDetailOpen(true);
+    }, [type]);
+
     const closeModal = (v: boolean) => { if (!v) setActiveModal(null); };
 
     return (
@@ -122,16 +135,26 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
                 outOfStockCount={outOfStockCount}
                 defaultCurrency={defaultCurrency}
                 isLoading={isLoading}
-                actionLabel={action?.label}
+                actionLabel={type === "DAILY_SALES" ? "Kasa Detayı" : action?.label}
                 onAction={runAction}
                 onDetail={openDetail}
             />
-            <StatDetailModal
-                type={type}
-                isOpen={isDetailOpen}
-                onClose={() => setIsDetailOpen(false)}
-                statsData={statsData}
-            />
+            {type === "DAILY_SALES" ? (
+                <CashBalanceDetailModal
+                    isOpen={isCashDetailOpen || isDetailOpen}
+                    onClose={() => {
+                        setIsCashDetailOpen(false);
+                        setIsDetailOpen(false);
+                    }}
+                />
+            ) : (
+                <StatDetailModal
+                    type={type}
+                    isOpen={isDetailOpen}
+                    onClose={() => setIsDetailOpen(false)}
+                    statsData={statsData}
+                />
+            )}
 
             {activeModal === "PRODUCT" && (
                 <CreateProductModal open onOpenChange={closeModal} categories={categories} suppliers={suppliers} shop={shop} />

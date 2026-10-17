@@ -15,6 +15,8 @@ export interface SupplierOrderList {
     supplierName: string;
     supplierPhone?: string;
     items: SupplierOrderItem[];
+    hasNewItems?: boolean;
+    lastAddedAt?: number;
 }
 
 export type SupplierOrders = Record<string, SupplierOrderList>;
@@ -38,6 +40,7 @@ interface SupplierOrderContextType {
     ) => boolean;
     removeProduct: (supplierId: string, productId: string | null, productName: string, moveBackToShortage?: boolean) => void;
     updateQty: (supplierId: string, productId: string | null, productName: string, qty: number) => void;
+    markSeen: (supplierId: string) => void;
     clearSupplier: (supplierId: string) => void;
     clearAll: () => void;
 }
@@ -183,6 +186,20 @@ export function SupplierOrderProvider({ children }: { children: React.ReactNode 
 
     const clearAll = useCallback(() => setOrders({}), []);
 
+    const markSeen = useCallback((supplierId: string) => {
+        setOrders((prev) => {
+            const existing = prev[supplierId];
+            if (!existing || !existing.hasNewItems) return prev;
+            return {
+                ...prev,
+                [supplierId]: {
+                    ...existing,
+                    hasNewItems: false
+                }
+            };
+        });
+    }, []);
+
     const assignProductToSupplier = useCallback(
         (
             supplierId: string,
@@ -191,63 +208,50 @@ export function SupplierOrderProvider({ children }: { children: React.ReactNode 
             product: { productId: string | null; name: string },
             quantity = 1
         ) => {
-            let existingSupplierName: string | null = null;
-            let isSameSupplier = false;
-
-            // 1. Check if product exists in ANY supplier list
-            for (const sId in orders) {
-                const hasProduct = orders[sId].items.some((i) =>
-                    product.productId ? i.productId === product.productId : i.name === product.name
-                );
-                if (hasProduct) {
-                    if (sId === supplierId) {
-                        isSameSupplier = true;
-                    } else {
-                        existingSupplierName = orders[sId].supplierName;
-                    }
-                    break;
-                }
-            }
-
-            if (isSameSupplier) {
-                toast.warning(`${product.name} zaten bu tedarikçinin listesinde mevcut.`);
-                return false;
-            }
-
-            if (existingSupplierName) {
-                toast.info(`${product.name} ayrıca ${existingSupplierName} listesinde de bulunuyor.`);
-            }
-
-            // If not found elsewhere, add to new
             setOrders((prev) => {
                 const next = { ...prev };
-                const newList = next[supplierId] ?? {
+                const existing = next[supplierId] ?? {
                     supplierName,
                     supplierPhone,
                     items: [],
                 };
 
+                const itemIndex = existing.items.findIndex((i) =>
+                    product.productId ? i.productId === product.productId : i.name === product.name
+                );
+
+                let updatedItems;
+                if (itemIndex > -1) {
+                    updatedItems = existing.items.map((i, idx) =>
+                        idx === itemIndex ? { ...i, quantity: i.quantity + quantity } : i
+                    );
+                } else {
+                    updatedItems = [
+                        ...existing.items,
+                        { productId: product.productId, name: product.name, quantity }
+                    ];
+                }
+
                 next[supplierId] = {
-                    ...newList,
-                    supplierPhone: supplierPhone ?? newList.supplierPhone,
-                    items: [
-                        ...newList.items,
-                        { productId: product.productId, name: product.name, quantity },
-                    ],
+                    ...existing,
+                    supplierPhone: supplierPhone ?? existing.supplierPhone,
+                    items: updatedItems,
+                    hasNewItems: true,
+                    lastAddedAt: Date.now()
                 };
 
                 return next;
             });
 
-            toast.success(`${product.name} → ${supplierName} listesine eklendi.`);
+            toast.success(`${product.name} → ${supplierName} sipariş listesine eklendi.`);
             return true;
         },
-        [orders]
+        []
     );
 
     return (
         <SupplierOrderContext.Provider
-            value={{ orders, totalItemCount, addProductToSupplier, assignProductToSupplier, removeProduct, updateQty, clearSupplier, clearAll }}
+            value={{ orders, totalItemCount, addProductToSupplier, assignProductToSupplier, removeProduct, updateQty, markSeen, clearSupplier, clearAll }}
         >
             {children}
         </SupplierOrderContext.Provider>

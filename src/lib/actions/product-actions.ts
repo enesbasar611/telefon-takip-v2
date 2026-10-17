@@ -69,11 +69,12 @@ export const getProducts = cache(async function getProducts(options: {
   minStock?: number,
   maxStock?: number,
   isCritical?: boolean,
+  outOfStock?: boolean,
   currency?: "TL" | "USD",
   page?: number,
   pageSize?: number
 } = {}) {
-  const { id, categoryId, categoryName, page, pageSize, search, minPrice, maxPrice, minStock, maxStock, isCritical, currency } = options;
+  const { id, categoryId, categoryName, page, pageSize, search, minPrice, maxPrice, minStock, maxStock, isCritical, outOfStock, currency } = options;
 
   try {
     const shopId = await getShopId();
@@ -90,18 +91,35 @@ export const getProducts = cache(async function getProducts(options: {
         };
       }
 
-      if (search) {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { sku: { contains: search, mode: 'insensitive' } },
-          { barcode: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-          { category: { name: { contains: search, mode: 'insensitive' } } },
-          { deviceInfo: { color: { contains: search, mode: 'insensitive' } } },
-          { deviceInfo: { capacity: { contains: search, mode: 'insensitive' } } },
-          { deviceInfo: { serialNumber: { contains: search, mode: 'insensitive' } } },
-          { deviceInfo: { imei: { contains: search, mode: 'insensitive' } } }
-        ];
+      if (search && search.trim()) {
+        const rawTrimmed = search.trim();
+        const queryVariants = Array.from(new Set([
+          rawTrimmed,
+          rawTrimmed.toLowerCase(),
+          rawTrimmed.toUpperCase(),
+          rawTrimmed.toLocaleLowerCase('tr-TR'),
+          rawTrimmed.toLocaleUpperCase('tr-TR'),
+          rawTrimmed.replace(/i/g, "ı").replace(/İ/g, "I"),
+          rawTrimmed.replace(/ı/g, "i").replace(/I/g, "İ"),
+          rawTrimmed.replace(/i/g, "İ"),
+          rawTrimmed.replace(/ı/g, "I"),
+        ])).filter(v => v.length >= 1);
+
+        const orConditions: any[] = [];
+        for (const q of queryVariants) {
+          orConditions.push(
+            { name: { contains: q, mode: 'insensitive' } },
+            { sku: { contains: q, mode: 'insensitive' } },
+            { barcode: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+            { category: { name: { contains: q, mode: 'insensitive' } } },
+            { deviceInfo: { color: { contains: q, mode: 'insensitive' } } },
+            { deviceInfo: { capacity: { contains: q, mode: 'insensitive' } } },
+            { deviceInfo: { serialNumber: { contains: q, mode: 'insensitive' } } },
+            { deviceInfo: { imei: { contains: q, mode: 'insensitive' } } }
+          );
+        }
+        where.OR = orConditions;
       }
     }
 
@@ -114,18 +132,31 @@ export const getProducts = cache(async function getProducts(options: {
     }
 
     // Stock filters
-    if (minStock !== undefined || maxStock !== undefined) {
+    if (outOfStock) {
+      where.stock = { lte: 0 };
+    } else if (minStock !== undefined || maxStock !== undefined) {
       where.stock = {};
       if (minStock !== undefined) where.stock.gte = minStock;
       if (maxStock !== undefined) where.stock.lte = maxStock;
     }
 
     // Critical stock filter
-    if (isCritical) {
-      where.OR = [
-        { stock: { lte: prisma.product.fields.criticalStock } },
-        { stock: 0 }
-      ];
+    if (isCritical && !outOfStock) {
+      const criticalCondition = {
+        OR: [
+          { stock: { lte: prisma.product.fields.criticalStock } },
+          { stock: 0 }
+        ]
+      };
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          criticalCondition
+        ];
+        delete where.OR;
+      } else {
+        where.OR = criticalCondition.OR;
+      }
     }
 
     // Fetch products and total count in parallel
@@ -1594,6 +1625,18 @@ export async function adjustStockById(id: string, quantity: number, notes?: stri
           shopId
         }
       });
+
+      if (quantity > 0 && updated.stock > 0) {
+        await tx.shortageItem.deleteMany({
+          where: {
+            shopId,
+            OR: [
+              { productId: product.id },
+              { name: { equals: product.name, mode: "insensitive" } }
+            ]
+          }
+        });
+      }
 
       return updated;
     });

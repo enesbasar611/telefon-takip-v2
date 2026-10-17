@@ -32,7 +32,8 @@ import { Separator } from "@/components/ui/separator";
 import {
   approveShortageItem,
   getCouriers,
-  assignShortageToCourier
+  assignShortageToCourier,
+  assignShortageToSupplier
 } from "@/lib/actions/shortage-actions";
 import { searchProducts } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
@@ -72,7 +73,7 @@ export function ShortageList() {
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const { orders, assignProductToSupplier, removeProduct, updateQty: updateSupplierQty, totalItemCount, clearSupplier } = useSupplierOrders();
+  const { orders, assignProductToSupplier, removeProduct, updateQty: updateSupplierQty, totalItemCount, clearSupplier, markSeen } = useSupplierOrders();
   const supplierIds = Object.keys(orders);
 
   const [orderingStatus, setOrderingStatus] = useState<Record<string, "idle" | "loading" | "success">>({});
@@ -238,9 +239,28 @@ export function ShortageList() {
     }
   };
 
-  const handleSendToSupplier = async (supplier: any, item: any) => {
-    assignProductToSupplier(supplier.id, supplier.name, supplier.phone, { productId: item.productId, name: item.name }, item.quantity);
-    await removeShortage(item.id, true);
+  const handleAssignToSupplier = async (supplier: any, item: any) => {
+    assignProductToSupplier(supplier.id, supplier.name, supplier.phone, { productId: item.productId, name: item.name }, item.quantity || 1);
+    const res = await assignShortageToSupplier(item.id, supplier.id);
+    if (res.success) {
+      toast.success(`${item.name} → ${supplier.name} tedarikçisine atandı.`);
+      refresh();
+    } else {
+      toast.error(res.error || "Tedarikçi ataması başarısız.");
+    }
+  };
+
+  const handleRemoveSupplierAssignment = async (item: any) => {
+    if (item.supplierId) {
+      removeProduct(item.supplierId, item.productId, item.name, false);
+      const res = await assignShortageToSupplier(item.id, null);
+      if (res.success) {
+        toast.success("Tedarikçi ataması kaldırıldı.");
+        refresh();
+      } else {
+        toast.error(res.error || "Atama kaldırılamadı.");
+      }
+    }
   };
 
   const handleWhatsAppClick = (supplierId: string) => {
@@ -339,19 +359,19 @@ export function ShortageList() {
             </div>
           </DialogHeader>
           {/* Tabs */}
-          <div className="flex overflow-x-auto border-b border-border/50 bg-white/[0.01]">
+          <div className="flex overflow-x-auto border-b border-border/50 bg-muted/10 px-2 py-1 gap-1">
             <button
               onClick={() => setActiveTab("main")}
               className={cn(
-                "flex-shrink-0 px-4 py-3 text-[10px]  uppercase tracking-widest transition-all border-b-2",
+                "flex-shrink-0 px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-xl border flex items-center gap-1.5",
                 activeTab === "main"
-                  ? "text-blue-400 border-blue-400 bg-blue-500/5"
-                  : "text-muted-foreground border-transparent hover:text-foreground"
+                  ? "text-blue-500 border-blue-500/30 bg-blue-500/10 shadow-sm"
+                  : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/30"
               )}
             >
-              Ana Liste
+              <span>Ana Liste</span>
               {items.length > 0 && (
-                <span className="ml-1.5 bg-red-600/20 text-red-400 rounded-full px-1.5 py-0.5 text-[8px]">
+                <span className="bg-rose-500/20 text-rose-500 rounded-full px-1.5 py-0.2 text-[9px] font-black">
                   {items.length}
                 </span>
               )}
@@ -361,17 +381,26 @@ export function ShortageList() {
               return (
                 <button
                   key={id}
-                  onClick={() => setActiveTab(id)}
+                  onClick={() => {
+                    markSeen(id);
+                    setActiveTab(id);
+                  }}
                   className={cn(
-                    "flex-shrink-0 px-3 py-3 text-[10px]  uppercase tracking-widest transition-all border-b-2 max-w-[120px] truncate",
+                    "flex-shrink-0 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-xl border max-w-[160px] truncate flex items-center gap-1.5",
                     activeTab === id
-                      ? "text-emerald-400 border-emerald-400 bg-emerald-500/5"
-                      : "text-muted-foreground border-transparent hover:text-foreground"
+                      ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/10 shadow-sm"
+                      : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/30"
                   )}
                   title={list.supplierName}
                 >
-                  {list.supplierName.split(" ")[0]}
-                  <span className="ml-1 bg-emerald-600/20 text-emerald-400 rounded-full px-1.5 py-0.5 text-[8px]">
+                  {list.hasNewItems && (
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                  )}
+                  <span className="truncate">{list.supplierName.split(" ")[0]}</span>
+                  <span className={cn("rounded-full px-1.5 py-0.2 text-[9px] font-black", list.hasNewItems ? "bg-emerald-500 text-slate-950" : "bg-emerald-600/20 text-emerald-400")}>
                     {list.items.length}
                   </span>
                 </button>
@@ -381,29 +410,30 @@ export function ShortageList() {
 
           {/* Tab: Main Shortage List */}
           {activeTab === "main" && (
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-              <div className="space-y-3 bg-white/[0.02] border border-white/[0.05] p-3 rounded-xl mb-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <UserPlus className="h-3 w-3 text-blue-400" /> Sipariş Veren
-                  </p>
-                  <div className="flex bg-card/60 p-1 rounded-lg border border-border/50">
-                    <button onClick={() => setRequesterType("SHOP")} className={cn("px-2 py-1 text-[9px] font-bold rounded-md transition-all", requesterType === "SHOP" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}>DÜKKAN</button>
-                    <button onClick={() => setRequesterType("CUSTOMER")} className={cn("px-2 py-1 text-[9px] font-bold rounded-md transition-all", requesterType === "CUSTOMER" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}>KAYITLI</button>
-                    <button onClick={() => setRequesterType("NEW")} className={cn("px-2 py-1 text-[9px] font-bold rounded-md transition-all", requesterType === "NEW" ? "bg-blue-500 text-black" : "text-muted-foreground hover:text-foreground")}>YENİ</button>
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 custom-scrollbar">
+              {/* Compact Requester Selector */}
+              <div className="bg-muted/20 border border-border/40 p-2 sm:p-2.5 rounded-xl space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <UserPlus className="h-3.5 w-3.5 text-blue-400" /> Sipariş Veren
+                  </span>
+                  <div className="flex bg-background/80 p-0.5 rounded-lg border border-border/40">
+                    <button onClick={() => setRequesterType("SHOP")} className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md transition-all", requesterType === "SHOP" ? "bg-blue-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground")}>DÜKKAN</button>
+                    <button onClick={() => setRequesterType("CUSTOMER")} className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md transition-all", requesterType === "CUSTOMER" ? "bg-blue-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground")}>KAYITLI</button>
+                    <button onClick={() => setRequesterType("NEW")} className={cn("px-2.5 py-1 text-[10px] font-bold rounded-md transition-all", requesterType === "NEW" ? "bg-blue-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground")}>YENİ</button>
                   </div>
                 </div>
 
                 {requesterType === "CUSTOMER" && (
-                  <div className="relative" ref={customerSearchRef}>
+                  <div className="relative pt-1" ref={customerSearchRef}>
                     {selectedCustomer ? (
                       <div className="flex items-center justify-between p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-blue-400">{selectedCustomer.name}</span>
-                          <span className="text-[8px] text-muted-foreground">{selectedCustomer.phone || "Telefon Yok"}</span>
+                          <span className="text-xs font-bold text-blue-400">{selectedCustomer.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{selectedCustomer.phone || "Telefon Yok"}</span>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(null)} className="h-6 w-6 hover:bg-rose-500 hover:text-slate-950">
-                          <Trash2 className="h-3 w-3" />
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(null)} className="h-6 w-6 hover:bg-rose-500 hover:text-white">
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
@@ -413,21 +443,21 @@ export function ShortageList() {
                           value={customerSearch}
                           onChange={(e) => setCustomerSearch(e.target.value)}
                           onFocus={() => customerSearch.length >= 2 && setShowCustomerResults(true)}
-                          className="h-8 text-[10px] bg-card border-border/50 pl-8"
+                          className="h-8 text-xs bg-background/80 border-border/50 pl-8"
                         />
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         {isSearchingCustomer && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />}
                       </div>
                     )}
                     {showCustomerResults && customerResults.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-40 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden max-h-40 overflow-y-auto">
                         {customerResults.map(c => (
-                          <button key={c.id} onClick={() => { setSelectedCustomer(c); setShowCustomerResults(false); setCustomerSearch(""); }} className="w-full flex items-center justify-between p-2 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0">
+                          <button key={c.id} onClick={() => { setSelectedCustomer(c); setShowCustomerResults(false); setCustomerSearch(""); }} className="w-full flex items-center justify-between p-2 hover:bg-muted/50 transition-colors text-left border-b border-border/40 last:border-0">
                             <div className="flex flex-col">
-                              <span className="text-[10px] font-bold text-gray-200">{c.name}</span>
-                              <span className="text-[9px] text-gray-500">{c.phone}</span>
+                              <span className="text-xs font-bold text-foreground">{c.name}</span>
+                              <span className="text-[10px] text-muted-foreground">{c.phone}</span>
                             </div>
-                            {c.debts?.length > 0 && <Badge className="bg-rose-500/10 text-rose-500 text-[8px] scale-75">BORÇLU</Badge>}
+                            {c.debts?.length > 0 && <Badge className="bg-rose-500/10 text-rose-500 text-[9px]">BORÇLU</Badge>}
                           </button>
                         ))}
                       </div>
@@ -436,64 +466,69 @@ export function ShortageList() {
                 )}
 
                 {requesterType === "NEW" && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="İsim..." value={newRequesterName} onChange={(e) => setNewRequesterName(e.target.value)} className="h-8 text-[10px] bg-card border-border/50" />
-                    <Input placeholder="Telefon..." value={newRequesterPhone} onChange={(e) => setNewRequesterPhone(e.target.value)} className="h-8 text-[10px] bg-card border-border/50" />
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <Input placeholder="İsim..." value={newRequesterName} onChange={(e) => setNewRequesterName(e.target.value)} className="h-8 text-xs bg-background/80 border-border/50" />
+                    <Input placeholder="Telefon..." value={newRequesterPhone} onChange={(e) => setNewRequesterPhone(e.target.value)} className="h-8 text-xs bg-background/80 border-border/50" />
                   </div>
                 )}
               </div>
 
+              {/* Add Product Search Bar */}
               <div className="relative" ref={searchRef}>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
-                      placeholder="Eksik ürün yaz..."
+                      placeholder="Eksik ürün adı veya barkod..."
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onFocus={() => newName.length >= 2 && setShowResults(true)}
-                      className="h-9 bg-white/[0.03] border-border/50 text-sm rounded-lg pl-8"
+                      className="h-9 bg-background/80 border-border/60 text-sm rounded-xl pl-9"
                     />
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
-                    {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-blue-500" />}
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-blue-500" />}
                   </div>
                   <Button
                     onClick={handleManualAdd}
                     size="icon"
                     disabled={adding || !newName.trim()}
-                    className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-slate-950 shrink-0 rounded-lg"
+                    className="h-9 w-9 bg-blue-600 hover:bg-blue-700 text-white shrink-0 rounded-xl"
                   >
                     <PackagePlus className="h-4 w-4" />
                   </Button>
                 </div>
                 {showResults && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto">
                     {searchResults.length > 0 ? (
                       searchResults.map((p) => (
-                        <button key={p.id} onMouseDown={(e) => { e.preventDefault(); handleSelectProduct(p); }} className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors text-left border-b border-white/[0.03] last:border-0">
+                        <button key={p.id} onMouseDown={(e) => { e.preventDefault(); handleSelectProduct(p); }} className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left border-b border-border/40 last:border-0">
                           <div className="flex flex-col">
-                            <span className="text-[10px]  text-blue-400">{p.name}</span>
-                            <span className="text-[8px] text-gray-500 ">{p.sku || 'SKU YOK'}</span>
+                            <span className="text-xs font-bold text-foreground">{p.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{p.sku || 'SKU YOK'}</span>
                           </div>
-                          <span className={cn("text-[10px]  bg-card/50 px-3 py-1 rounded-lg border border-border/50", p.stock <= 0 ? "text-rose-500" : "text-emerald-500")}>
+                          <span className={cn("text-xs font-black px-2.5 py-1 rounded-lg border", p.stock <= 0 ? "text-rose-500 bg-rose-500/10 border-rose-500/20" : "text-emerald-500 bg-emerald-500/10 border-emerald-500/20")}>
                             {p.stock}
                           </span>
                         </button>
                       ))
                     ) : (
-                      <div className="p-3 text-center text-[10px] text-gray-500">Ürün bulunamadı.</div>
+                      <div className="p-3 text-center text-xs text-muted-foreground">Ürün bulunamadı.</div>
                     )}
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); handleManualAdd(); }} className="w-full p-2 bg-blue-500/5 text-blue-400 text-[9px]  hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); handleManualAdd(); }} className="w-full p-2.5 bg-blue-500/10 text-blue-500 text-xs font-bold hover:bg-blue-500/20 transition-colors">
                       + "{newName}" OLARAK MANUEL EKLE
                     </button>
                   </div>
                 )}
               </div>
 
+              {/* Items List */}
               <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
                 {loading ? (
-                  <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-gray-600" /></div>
+                  <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
                 ) : items.length === 0 ? (
-                  <p className="text-[10px] text-center text-gray-600 py-4">Şu an eksik ürün bulunmuyor.</p>
+                  <div className="text-center py-8 space-y-2">
+                    <ClipboardList className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                    <p className="text-xs text-muted-foreground font-medium">Şu an eksik ürün bulunmuyor.</p>
+                  </div>
                 ) : (() => {
                   const grouped = items.reduce((acc: any, item: any) => {
                     const key = item.customerId || item.requesterName || "Dükkan";
@@ -503,112 +538,127 @@ export function ShortageList() {
                   }, {});
 
                   return Object.entries(grouped).map(([key, group]: any) => (
-                    <div key={key} className="space-y-2 pb-1 border-b border-white/[0.03] last:border-0">
-                      <div className="flex items-center gap-2 px-1 sticky top-0 bg-card z-10 py-1">
+                    <div key={key} className="space-y-2.5">
+                      <div className="flex items-center gap-2 px-1 sticky top-0 bg-card/95 backdrop-blur z-10 py-1">
                         <div className={cn(
-                          "h-6 w-6 rounded-full flex items-center justify-center border text-white font-black text-[8px] shadow-sm uppercase shrink-0",
+                          "h-6 w-6 rounded-full flex items-center justify-center border text-white font-black text-[9px] shadow-sm uppercase shrink-0",
                           getDeterministicColor(group.label)
                         )}>
                           {getInitials(group.label)}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-black text-blue-400 uppercase tracking-tighter">{group.label}</span>
-                          {group.phone && <span className="text-[8px] text-muted-foreground">{group.phone}</span>}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-foreground uppercase tracking-tight">{group.label}</span>
+                          {group.phone && <span className="text-[10px] text-muted-foreground font-medium">({group.phone})</span>}
+                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4">
+                            {group.items.length} ürün
+                          </Badge>
                         </div>
                       </div>
 
-                      <div className="space-y-2 ml-2">
+                      <div className="space-y-2.5">
                         {group.items.map((item: any) => (
-                          <div key={item.id} className="group relative flex flex-col p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-red-500/20 transition-all gap-2 shadow-sm">
-                            {/* Top Action Buttons */}
-                            <div className="absolute top-2 right-2 flex items-center gap-1">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-slate-950 rounded-lg transition-all" title="Tedarikçiye Gönder">
-                                    <UserPlus2 className="h-4 w-4" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent side="left" align="start" className="w-48 p-1 bg-card border-border shadow-2xl">
-                                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                                    <p className="text-[8px]  text-muted-foreground/80 uppercase px-2 py-1.5 tracking-tighter">Tedarikçi Seç</p>
-                                    {suppliers.length === 0 ? (
-                                      <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Tedarikçi bulunamadı</p>
-                                    ) : (
-                                      suppliers.map((s: any) => (
-                                        <button
-                                          key={s.id}
-                                          onClick={() => handleSendToSupplier(s, item)}
-                                          className="w-full text-left px-2 py-1.5 text-[10px]  text-gray-300 hover:bg-blue-500 hover:text-slate-950 rounded transition-colors"
-                                        >
-                                          {s.name}
-                                        </button>
-                                      ))
-                                    )}
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-
-                              {/* Qty adjuster + Approve inline */}
-                              <div className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center gap-0.5 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md">
-                                  <span className="text-sm font-black text-blue-400 leading-none">{item.quantity || 1}</span>
-                                  <span className="text-[8px] font-black text-blue-400/70 uppercase leading-none">adet</span>
-                                </span>
-                                <div className="flex items-center bg-card border border-border/50 rounded-lg overflow-hidden h-7">
-                                  <button
-                                    onClick={() => handleQtyChange(item.id, String(Math.max(1, (item.quantity || 1) - 1)))}
-                                    className="h-7 w-6 flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors font-black text-sm"
-                                  >−</button>
-                                  <button
-                                    onClick={() => handleQtyChange(item.id, String((item.quantity || 1) + 1))}
-                                    className="h-7 w-6 flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors font-black text-sm"
-                                  >+</button>
+                          <div key={item.id} className="p-3 sm:p-3.5 rounded-2xl bg-card border border-border/70 hover:border-border transition-all space-y-3 shadow-sm">
+                            {/* Product Header & Delete */}
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-bold text-foreground leading-snug break-words">
+                                    {item.name}
+                                  </span>
+                                  {item.isFromReplenishment && (
+                                    <Badge className="bg-sky-500/10 text-sky-500 border-sky-500/20 text-[9px] px-1.5 py-0">Akıllı Stok</Badge>
+                                  )}
                                 </div>
-                                <Button onClick={() => handleApprove(item.id, item.quantity || 1)} variant="ghost" size="icon" className="h-7 w-7 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-slate-950 rounded-lg transition-all" title="Stok Tamamla">
-                                  <CheckCircle2 className="h-4 w-4" />
+                                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                                  <span>Mevcut Stok: <strong className={cn((item.product?.stock ?? 0) <= 0 ? "text-rose-500 font-bold" : "text-emerald-500 font-bold")}>{item.product?.stock ?? 0}</strong></span>
+                                  {item.product?.sku && <span className="text-muted-foreground/70">SKU: {item.product.sku}</span>}
+                                </div>
+                              </div>
+
+                              <Button
+                                onClick={() => handleDelete(item.id)}
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground/70 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl shrink-0"
+                                title="Listeden Kaldır"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {/* Touch-friendly Quantity Adjuster & Quick Complete */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
+                              <div className="flex items-center bg-muted/40 p-0.5 rounded-xl border border-border/50">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleQtyChange(item.id, String(Math.max(1, (item.quantity || 1) - 1)))}
+                                  className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 text-muted-foreground font-black shrink-0 active:scale-95 transition-transform"
+                                >
+                                  <Minus className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button onClick={() => handleDelete(item.id)} variant="ghost" size="icon" className="h-7 w-7 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-slate-950 rounded-lg transition-all" title="Kaldır">
-                                  <Trash2 className="h-3.5 w-3.5" />
+
+                                <div className="px-3 min-w-[60px] text-center">
+                                  <span className="text-sm font-black text-foreground">
+                                    {item.quantity || 1}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground ml-1 font-semibold uppercase">adet</span>
+                                </div>
+
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleQtyChange(item.id, String((item.quantity || 1) + 1))}
+                                  className="h-8 w-8 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 text-muted-foreground font-black shrink-0 active:scale-95 transition-transform"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
+
+                              <Button
+                                onClick={() => handleApprove(item.id, item.quantity || 1)}
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-3 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white border-emerald-500/30 bg-emerald-500/5 rounded-xl gap-1.5 transition-all"
+                                title="Stok Tamamla"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span>Stok Tamamla</span>
+                              </Button>
                             </div>
 
-                            <div className="flex items-center justify-between gap-2 overflow-hidden pr-28">
-                              <span className="text-sm font-bold text-foreground leading-tight truncate flex-1">{item.name}</span>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-[8px] font-bold text-muted-foreground/80 uppercase">Mevcut Stok</span>
-                              <span className={cn("text-[11px] font-black", (item.product?.stock || 0) <= 0 ? "text-rose-500" : "text-emerald-500")}>{item.product?.stock || 0}</span>
-                            </div>
-
-                            {/* Courier Slot */}
-                            <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/[0.03]">
-                              <div className="flex items-center gap-2">
-                                <Truck className={cn("h-3.5 w-3.5", item.assignedToId ? "text-orange-500" : "text-muted-foreground/30")} />
-                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">
-                                  {item.assignedTo ? `${item.assignedTo.name} ${item.assignedTo.surname}` : "ATANMADI"}
-                                </span>
-                                {item.isTaken && (
-                                  <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-1.5 py-0 text-[8px] font-black scale-90">ALINDI</Badge>
-                                )}
-                              </div>
+                            {/* Dedicated Assignment Buttons: Kuryeye Ata & Tedarikçiye Ata */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-border/40">
+                              {/* Kuryeye Ata */}
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button variant="ghost" size="sm" className={cn(
-                                    "h-7 px-3 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all",
-                                    item.assignedToId
-                                      ? "text-orange-400 bg-orange-500/5 border border-orange-500/20 hover:bg-orange-500 hover:text-slate-950"
-                                      : "text-blue-400 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500 hover:text-slate-950"
-                                  )}>
-                                    {item.assignedToId ? "DEĞİŞTİR" : "ATA"}
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "h-9 w-full justify-between px-3 text-xs font-semibold rounded-xl transition-all border",
+                                      item.assignedToId
+                                        ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/20"
+                                        : "bg-muted/20 text-muted-foreground hover:text-foreground border-border/60"
+                                    )}
+                                  >
+                                    <span className="flex items-center gap-1.5 truncate">
+                                      <Truck className={cn("h-4 w-4 shrink-0", item.assignedToId ? "text-orange-500" : "text-muted-foreground")} />
+                                      <span className="truncate">
+                                        {item.assignedTo ? `${item.assignedTo.name} ${item.assignedTo.surname}` : "Kuryeye Ata"}
+                                      </span>
+                                    </span>
+                                    <Badge variant="outline" className="text-[9px] ml-1 shrink-0 bg-background/50 border-border">
+                                      {item.assignedToId ? "Değiştir" : "Ata"}
+                                    </Badge>
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent side="top" align="end" className="w-48 p-1 bg-card border-border shadow-2xl">
+                                <PopoverContent side="bottom" align="start" className="w-56 p-1.5 bg-card border-border shadow-2xl rounded-2xl">
                                   <div className="space-y-1">
-                                    <p className="text-[8px] text-muted-foreground uppercase px-2 py-1 tracking-tighter">Kurye Seç</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase px-2 py-1 tracking-wider">Kurye Seç</p>
                                     {couriers.length === 0 ? (
-                                      <p className="px-2 py-2 text-[10px] text-muted-foreground Italics">Kurye bulunamadı</p>
+                                      <p className="px-2 py-2 text-xs text-muted-foreground italic">Kurye bulunamadı</p>
                                     ) : (
                                       <>
                                         {couriers.map((c: any) => (
@@ -616,26 +666,86 @@ export function ShortageList() {
                                             key={c.id}
                                             onClick={() => handleAssignToCourier(item.id, c.id)}
                                             className={cn(
-                                              "w-full text-left px-2 py-1.5 text-[10px] rounded transition-colors flex items-center justify-between",
-                                              item.assignedToId === c.id ? "bg-orange-500/10 text-orange-400" : "text-gray-300 hover:bg-blue-500 hover:text-slate-950"
+                                              "w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between",
+                                              item.assignedToId === c.id ? "bg-orange-500/10 text-orange-400 font-bold" : "text-foreground hover:bg-muted"
                                             )}
                                           >
-                                            {c.name} {c.surname}
-                                            {item.assignedToId === c.id && <CheckCircle2 className="h-3 w-3" />}
+                                            <span>{c.name} {c.surname}</span>
+                                            {item.assignedToId === c.id && <CheckCircle2 className="h-3.5 w-3.5 text-orange-500" />}
                                           </button>
                                         ))}
                                         {item.assignedToId && (
                                           <>
-                                            <Separator className="my-1 bg-white/5" />
+                                            <Separator className="my-1 bg-border/50" />
                                             <button
                                               onClick={() => handleAssignToCourier(item.id, null)}
-                                              className="w-full text-left px-2 py-1.5 text-[10px] text-rose-500 hover:bg-rose-500 hover:text-white rounded transition-colors"
+                                              className="w-full text-left px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors font-medium"
                                             >
-                                              Atamayı Kaldır
+                                              Kurye Atamasını Kaldır
                                             </button>
                                           </>
                                         )}
                                       </>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+
+                              {/* Tedarikçiye Ata */}
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "h-9 w-full justify-between px-3 text-xs font-semibold rounded-xl transition-all border",
+                                      item.supplierId
+                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                                        : "bg-muted/20 text-muted-foreground hover:text-foreground border-border/60"
+                                    )}
+                                  >
+                                    <span className="flex items-center gap-1.5 truncate">
+                                      <Store className={cn("h-4 w-4 shrink-0", item.supplierId ? "text-emerald-500" : "text-muted-foreground")} />
+                                      <span className="truncate">
+                                        {item.supplier?.name || "Tedarikçiye Ata"}
+                                      </span>
+                                    </span>
+                                    <Badge variant="outline" className="text-[9px] ml-1 shrink-0 bg-background/50 border-border">
+                                      {item.supplierId ? "Değiştir" : "Ata"}
+                                    </Badge>
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent side="bottom" align="end" className="w-56 p-1.5 bg-card border-border shadow-2xl rounded-2xl">
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase px-2 py-1 tracking-wider">Tedarikçi Seç</p>
+                                    {suppliers.length === 0 ? (
+                                      <p className="px-2 py-2 text-xs text-muted-foreground italic">Tedarikçi bulunamadı</p>
+                                    ) : (
+                                      <div className="max-h-48 overflow-y-auto space-y-0.5 custom-scrollbar">
+                                        {suppliers.map((s: any) => (
+                                          <button
+                                            key={s.id}
+                                            onClick={() => handleAssignToSupplier(s, item)}
+                                            className={cn(
+                                              "w-full text-left px-2.5 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between",
+                                              item.supplierId === s.id ? "bg-emerald-500/10 text-emerald-400 font-bold" : "text-foreground hover:bg-muted"
+                                            )}
+                                          >
+                                            <span className="truncate">{s.name}</span>
+                                            {item.supplierId === s.id && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+                                          </button>
+                                        ))}
+                                        {item.supplierId && (
+                                          <>
+                                            <Separator className="my-1 bg-border/50" />
+                                            <button
+                                              onClick={() => handleRemoveSupplierAssignment(item)}
+                                              className="w-full text-left px-2.5 py-1.5 text-xs text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors font-medium"
+                                            >
+                                              Tedarikçi Atamasını Kaldır
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 </PopoverContent>
@@ -651,8 +761,8 @@ export function ShortageList() {
 
               {items.length > 0 && (
                 <>
-                  <Separator className="my-2 bg-white/5" />
-                  <Button onClick={() => setShowPrintModal(true)} className="w-full bg-blue-500 hover:bg-blue-600 text-slate-950 text-[10px] h-10 rounded-xl">
+                  <Separator className="my-2 bg-border/40" />
+                  <Button onClick={() => setShowPrintModal(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold h-10 rounded-xl">
                     <Printer className="h-4 w-4 mr-2" /> LİSTEYİ YAZDIR
                   </Button>
                 </>
@@ -666,44 +776,62 @@ export function ShortageList() {
             const supplierId = activeTab;
             return (
               <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between bg-muted/20 p-3 rounded-2xl border border-border/40">
                   <div>
-                    <h3 className="font-medium text-xs  text-emerald-400">{list.supplierName}</h3>
-                    <p className="text-[9px] text-muted-foreground font-medium">{list.items.length} ürün · {list.items.reduce((s, i) => s + i.quantity, 0)} adet</p>
+                    <h3 className="font-bold text-sm text-emerald-500 flex items-center gap-2">
+                      <Store className="h-4 w-4" /> {list.supplierName}
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                      {list.items.length} çeşit · {list.items.reduce((s, i) => s + i.quantity, 0)} adet
+                    </p>
                   </div>
+                  {list.hasNewItems && (
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border-none text-[10px] animate-pulse">
+                      Yeni Ürün Eklendi
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="space-y-2 flex-1">
                   {list.items.length === 0 ? (
-                    <p className="text-[10px] text-center text-gray-600 py-4">Bu tedarikçiye ürün eklenmedi.</p>
+                    <p className="text-xs text-center text-muted-foreground py-6">Bu tedarikçiye ürün eklenmedi.</p>
                   ) : (
                     list.items.map((item, idx) => (
-                      <div key={`${item.productId ?? item.name}-${idx}`} className="group flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/[0.03] hover:border-emerald-500/20 transition-all">
-                        <div className="h-7 w-7 rounded-lg bg-white/5 border border-border flex items-center justify-center shrink-0">
-                          <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div key={`${item.productId ?? item.name}-${idx}`} className="group flex items-center gap-3 p-3 rounded-xl bg-card border border-border/60 hover:border-border transition-all">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                          <Package className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="flex-1 text-[10px]  text-foreground truncate">{item.name}</span>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
+                        <span className="flex-1 text-xs font-bold text-foreground truncate">{item.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0 bg-muted/40 p-0.5 rounded-xl border border-border/50">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => updateSupplierQty(supplierId, item.productId, item.name, item.quantity - 1)}
-                            className="h-5 w-5 rounded bg-white/5 border border-border flex items-center justify-center text-muted-foreground hover:bg-white/10"
+                            className="h-7 w-7 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 text-muted-foreground font-black active:scale-95 transition-transform"
                           >
-                            <Minus className="h-2.5 w-2.5" />
-                          </button>
-                          <span className="text-[11px]  text-blue-400 w-5 text-center">{item.quantity}</span>
-                          <button
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="text-xs font-black text-foreground min-w-[28px] text-center">{item.quantity}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => updateSupplierQty(supplierId, item.productId, item.name, item.quantity + 1)}
-                            className="h-5 w-5 rounded bg-white/5 border border-border flex items-center justify-center text-muted-foreground hover:bg-white/10"
+                            className="h-7 w-7 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 text-muted-foreground font-black active:scale-95 transition-transform"
                           >
-                            <Plus className="h-2.5 w-2.5" />
-                          </button>
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => removeProduct(supplierId, item.productId, item.name)}
-                          className="h-5 w-5 rounded text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                          className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg shrink-0"
+                          title="Kaldır"
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))
                   )}
@@ -714,7 +842,7 @@ export function ShortageList() {
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={() => handleWhatsAppClick(supplierId)}
-                        className="flex-1 bg-[#25D366] hover:bg-[#22c55e] text-white  text-[10px] h-10 rounded-xl gap-2"
+                        className="flex-1 bg-[#25D366] hover:bg-[#22c55e] text-white text-xs font-bold h-10 rounded-xl gap-2"
                       >
                         <MessageCircle className="h-4 w-4 shrink-0" />
                         <span className="truncate">WhatsApp Gönder</span>
@@ -723,7 +851,7 @@ export function ShortageList() {
                         onClick={() => handleCreateOrder(supplierId, list.items, list.supplierName)}
                         disabled={orderingStatus[supplierId] !== undefined && orderingStatus[supplierId] !== "idle"}
                         className={cn(
-                          "flex-1 text-white  text-[10px] h-10 rounded-xl gap-2 transition-all",
+                          "flex-1 text-white text-xs font-bold h-10 rounded-xl gap-2 transition-all",
                           orderingStatus[supplierId] === "success"
                             ? "bg-emerald-500 hover:bg-emerald-600"
                             : "bg-blue-600 hover:bg-blue-500"
@@ -737,7 +865,7 @@ export function ShortageList() {
                           </>
                         ) : (
                           <>
-                            <ClipboardList className="h-4 w-4 shrink-0" /> <span className="truncate">Sipariş Ver</span>
+                            <ClipboardList className="h-4 w-4 shrink-0" /> <span className="truncate">Sipariş Oluştur</span>
                           </>
                         )}
                       </Button>

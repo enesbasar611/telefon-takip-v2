@@ -11,6 +11,7 @@ import {
     ArrowDownRight
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
 import { Card } from "@/components/ui/card";
 
@@ -23,6 +24,35 @@ interface StockStats {
 }
 
 export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
+    const searchParams = useSearchParams();
+    const isOutOfStockActive = searchParams.get("outOfStock") === "true";
+    const isCriticalActive = searchParams.get("isCritical") === "true";
+
+    const getOutOfStockUrl = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (isOutOfStockActive) {
+            params.delete("outOfStock");
+        } else {
+            params.set("outOfStock", "true");
+            params.delete("isCritical");
+        }
+        params.set("page", "1");
+        const qs = params.toString();
+        return qs ? `/stok?${qs}` : "/stok";
+    };
+
+    const getCriticalStockUrl = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (isCriticalActive) {
+            params.delete("isCritical");
+        } else {
+            params.set("isCritical", "true");
+            params.delete("outOfStock");
+        }
+        params.set("page", "1");
+        const qs = params.toString();
+        return qs ? `/stok?${qs}` : "/stok";
+    };
     return (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-6 sm:mb-8">
             {/* Total Inventory Value - Large Card */}
@@ -84,14 +114,20 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
             {/* Stock Alerts Column */}
             <div className="col-span-1 flex flex-col gap-2.5 sm:gap-4">
                 {/* Out of Stock (Bitenler) */}
-                <Link href="/stok?outOfStock=true" className="flex-1">
-                    <Card className={`h-full p-4 matte-card border transition-all hover:border-rose-500/50 hover:bg-rose-500/10 cursor-pointer ${stats.outOfStockCount > 0 ? 'bg-rose-500/5 border-rose-500/20' : 'bg-card/40 border-border/50'}`}>
+                <Link href={getOutOfStockUrl()} className="flex-1">
+                    <Card className={`h-full p-4 matte-card border transition-all hover:border-rose-500/50 hover:bg-rose-500/10 cursor-pointer ${
+                        isOutOfStockActive
+                            ? 'bg-rose-500/20 border-rose-500 ring-2 ring-rose-500/40 shadow-sm'
+                            : stats.outOfStockCount > 0
+                                ? 'bg-rose-500/5 border-rose-500/20'
+                                : 'bg-card/40 border-border/50'
+                    }`}>
                         <div className="flex items-center justify-between h-full">
                             <div className="flex items-center gap-2">
-                                <AlertCircle className={`h-4 w-4 ${stats.outOfStockCount > 0 ? 'text-rose-500' : 'text-muted-foreground/80'}`} />
-                                <span className="text-[10px]  text-muted-foreground/80  uppercase">Bitenler</span>
+                                <AlertCircle className={`h-4 w-4 ${isOutOfStockActive || stats.outOfStockCount > 0 ? 'text-rose-500' : 'text-muted-foreground/80'}`} />
+                                <span className={`text-[10px] uppercase ${isOutOfStockActive ? 'text-rose-500 font-bold' : 'text-muted-foreground/80'}`}>Bitenler</span>
                             </div>
-                            <span className={`text-xl font-black ${stats.outOfStockCount > 0 ? 'text-rose-500' : 'text-foreground'}`}>
+                            <span className={`text-xl font-black ${isOutOfStockActive || stats.outOfStockCount > 0 ? 'text-rose-500' : 'text-foreground'}`}>
                                 {stats.outOfStockCount}
                             </span>
                         </div>
@@ -99,14 +135,20 @@ export function StockDashboardMetrics({ stats }: { stats: StockStats }) {
                 </Link>
 
                 {/* Critical Stock */}
-                <Link href="/stok?isCritical=true" className="flex-1">
-                    <Card className={`h-full p-4 matte-card border transition-all hover:border-orange-500/50 hover:bg-orange-500/10 cursor-pointer ${stats.criticalCount > 0 ? 'bg-orange-500/5 border-orange-500/20' : 'bg-card/40 border-border/50'}`}>
+                <Link href={getCriticalStockUrl()} className="flex-1">
+                    <Card className={`h-full p-4 matte-card border transition-all hover:border-orange-500/50 hover:bg-orange-500/10 cursor-pointer ${
+                        isCriticalActive
+                            ? 'bg-orange-500/20 border-orange-500 ring-2 ring-orange-500/40 shadow-sm'
+                            : stats.criticalCount > 0
+                                ? 'bg-orange-500/5 border-orange-500/20'
+                                : 'bg-card/40 border-border/50'
+                    }`}>
                         <div className="flex items-center justify-between h-full">
                             <div className="flex items-center gap-2">
-                                <AlertTriangle className={`h-4 w-4 ${stats.criticalCount > 0 ? 'text-orange-500' : 'text-muted-foreground/80'}`} />
-                                <span className="text-[10px]  text-muted-foreground/80  uppercase">Kritik Stok</span>
+                                <AlertTriangle className={`h-4 w-4 ${isCriticalActive || stats.criticalCount > 0 ? 'text-orange-500' : 'text-muted-foreground/80'}`} />
+                                <span className={`text-[10px] uppercase ${isCriticalActive ? 'text-orange-500 font-bold' : 'text-muted-foreground/80'}`}>Kritik Stok</span>
                             </div>
-                            <span className={`text-xl font-black ${stats.criticalCount > 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                            <span className={`text-xl font-black ${isCriticalActive || stats.criticalCount > 0 ? 'text-orange-500' : 'text-foreground'}`}>
                                 {stats.criticalCount}
                             </span>
                         </div>

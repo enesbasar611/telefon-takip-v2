@@ -26,6 +26,73 @@ export async function createPurchaseOrderAction(data: {
         const userId = await getUserId();
 
         const order = await prisma.$transaction(async (tx: any) => {
+            // Check if there is already an active PENDING purchase order for this supplier
+            const existingPending = await tx.purchaseOrder.findFirst({
+                where: {
+                    shopId,
+                    supplierId: data.supplierId,
+                    status: "PENDING"
+                },
+                include: { items: true, supplier: true }
+            });
+
+            if (existingPending) {
+                // Merge items into existing order
+                for (const newItem of data.items) {
+                    const match = existingPending.items.find((i: any) =>
+                        newItem.productId ? i.productId === newItem.productId : i.name.toLowerCase() === newItem.name.toLowerCase()
+                    );
+                    if (match) {
+                        await tx.purchaseOrderItem.update({
+                            where: { id: match.id },
+                            data: {
+                                quantity: { increment: newItem.quantity },
+                                buyPrice: newItem.buyPrice > 0 ? newItem.buyPrice : match.buyPrice,
+                                buyPriceUsd: newItem.buyPriceUsd || match.buyPriceUsd
+                            }
+                        });
+                    } else {
+                        await tx.purchaseOrderItem.create({
+                            data: {
+                                purchaseOrderId: existingPending.id,
+                                productId: newItem.productId,
+                                name: newItem.name,
+                                quantity: newItem.quantity,
+                                buyPrice: newItem.buyPrice,
+                                buyPriceUsd: newItem.buyPriceUsd,
+                                vatRate: newItem.vatRate || 20,
+                                shopId
+                            }
+                        });
+                    }
+                }
+
+                // Recalculate totals
+                const allItems = await tx.purchaseOrderItem.findMany({
+                    where: { purchaseOrderId: existingPending.id }
+                });
+                const totalAmount = allItems.reduce((acc: number, it: any) => acc + (Number(it.buyPrice) * it.quantity), 0);
+                const vatAmount = Math.round(totalAmount * 0.2);
+                const netAmount = totalAmount - vatAmount;
+
+                const updatedOrder = await tx.purchaseOrder.update({
+                    where: { id: existingPending.id },
+                    data: {
+                        totalAmount,
+                        vatAmount,
+                        netAmount,
+                        remainingAmount: existingPending.paymentStatus === "UNPAID" ? totalAmount : existingPending.remainingAmount,
+                        updatedAt: new Date()
+                    },
+                    include: {
+                        items: true,
+                        supplier: true
+                    }
+                });
+
+                return updatedOrder;
+            }
+
             const o = await tx.purchaseOrder.create({
                 data: {
                     shopId,
@@ -95,6 +162,7 @@ export async function createPurchaseOrderAction(data: {
 
         revalidatePath("/tedarikciler");
         revalidatePath("/stok");
+        revalidatePath("/stok/siparisler");
         revalidateSmartReplenishment(shopId);
         return { success: true, order: serializePrisma(order) };
 
@@ -380,9 +448,15 @@ export async function receivePurchaseOrderAction(
                             },
                         });
 
-                        // Auto-remove from Shortage List as some stock arrived?
+                        // Auto-remove from Shortage List as stock arrived
                         await tx.shortageItem.deleteMany({
-                            where: { productId: productId, shopId }
+                            where: {
+                                shopId,
+                                OR: [
+                                    { productId: productId },
+                                    { name: { equals: item.name, mode: "insensitive" } }
+                                ]
+                            }
                         });
                     }
 
@@ -436,6 +510,7 @@ export async function receivePurchaseOrderAction(
 
         revalidatePath("/tedarikciler");
         revalidatePath("/stok");
+        revalidatePath("/stok/siparisler");
         revalidateSmartReplenishment(shopId);
         return { success: true, order: serializePrisma(result) };
     } catch (error) {
@@ -533,6 +608,7 @@ export async function deletePurchaseOrdersAction(orderIds: string[]) {
         });
 
         revalidatePath("/tedarikciler");
+        revalidatePath("/stok/siparisler");
         return { success: true, count: orders.length };
     } catch (error) {
         console.error("Delete purchase orders error:", error);

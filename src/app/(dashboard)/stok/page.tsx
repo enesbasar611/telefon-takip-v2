@@ -2,7 +2,7 @@ import { Package } from "lucide-react";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { CreateProductModal } from "@/components/product/create-product-modal";
-import { BulkAddProductModal } from "@/components/product/bulk-add-product-modal";
+import { AICategoryCreator } from "@/components/product/ai-category-creator";
 import { StockMetricsStream } from "@/components/product/streamed/stock-metrics-stream";
 import { CategorySummaryStream } from "@/components/product/streamed/category-summary-stream";
 import { StockTableStream } from "@/components/product/streamed/stock-table-stream";
@@ -59,7 +59,7 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         iconBgColor="bg-primary/10"
         actions={
           <>
-            <BulkAddProductModal categories={categories} shop={shop} />
+            <AICategoryCreator categories={categories} triggerText="BAŞAR AI Stok Ekle" />
             <CreateProductModal
               categories={categories}
               suppliers={suppliers}
