@@ -41,28 +41,25 @@
 
 ## Degisiklik Gunlugu
 
-- [x] 2026-10-21: J.A.R.V.I.S. // Executive Forecast Cockpit & Ay Sonu Ciro Tahmin Motoru (@stok/stok-ai):
+- [x] 2026-10-21: B.A.Ş.A.R. // Komuta ve Tahmin Kokpiti & Ay Sonu Ciro Tahmin Motoru (@stok/stok-ai):
   - **Talep:**
-    - AI / Stok Önerileri sayfasının (`stok-ai`) yönetici seviyesinde "Ironman / J.A.R.V.I.S. Command Center & Forecast Cockpit" arayüzüne dönüştürülmesi.
+    - AI / Stok Önerileri sayfasının (`stok-ai`) yönetici seviyesinde "B.A.Ş.A.R. Komuta ve Tahmin Kokpiti" arayüzüne dönüştürülmesi.
+    - Tüm arayüz ve raporlama çıktılarındaki İngilizce terimlerin temizlenmesi, "J.A.R.V.I.S." yerine "B.A.Ş.A.R." adının kullanılması.
     - `prisma/schema.prisma` içerisine `AIReportHistory` modeli eklenerek üretilen raporların veritabanında saklanması ve mükerrer sayfa ziyaretlerinde sıfır (0) token harcanması.
-    - Ay sonu net ciro tahmini motoru (`getMonthEndForecastMetrics`) geliştirilmesi: Ayın N. gününe kadarki net ciro (satış + servis - gider), günlük run-rate ortalaması ve ay sonu kapanış tahmini hesaplanması; geçen ayın aynı gün aralığıyla (Time-to-Date MoM) kıyaslanarak büyüme/gerileme yüzdesinin sunulması.
-    - 4 Temel Yönetici Komut Butonu: `[ 🚀 Ay Sonu Tahmini ]`, `[ 📊 Finansal Snapshot ]`, `[ 📦 Kritik Stok & İkmal ]`, `[ 💸 Veresiye Alarmı ]`.
-    - Sayfa açılışında sıfır token ile en son kaydedilen raporun otomatik gösterilmesi ve geçmiş raporları incelemek/yüklemek için Rapor Kasası (History Vault) drawer'ı eklenmesi.
+    - Ay sonu net ciro tahmini motoru (`getMonthEndForecastMetrics`) geliştirilmesi: Ayın N. gününe kadarki net ciro (satış + servis - gider), günlük run-rate ortalaması ve ay sonu kapanış tahmini hesaplanması; geçen ayın aynı gün aralığıyla (Time-to-Date) kıyaslanarak dönemsel büyüme yüzdesinin sunulması.
+    - 4 Temel Yönetici Komut Butonu: `[ 🚀 Ay Sonu Tahmini ]`, `[ 📊 Gelir-Gider & Kâr ]`, `[ 📦 Stok & İkmal ]`, `[ 💸 Veresiye Alarmı ]`.
+    - Sayfa açılışında sıfır token ile en son kaydedilen raporun otomatik gösterilmesi ve geçmiş raporları incelemek/yüklemek için Rapor Kasası drawer'ı eklenmesi.
   - **Yapılan İyileştirmeler:**
     1. **Veritabanı Modeli & Senkronizasyon (`prisma/schema.prisma`):**
        - `AIReportHistory` modeli oluşturuldu (`id`, `shopId`, `reportType`, `title`, `content`, `metricsJson`, `createdAt`, `Shop` ilişkisi ve `[shopId, reportType]`, `[shopId, createdAt]` indeksleri).
-       - `npx prisma db push` ile veritabanı başarıyla senkronize edildi ve Prisma Client üretildi.
+       - `npx prisma db push` ile veritabanı senkronize edildi ve Prisma Client üretildi.
     2. **Sıfır-Token Tahmin Motoru (`src/lib/actions/ai-forecast-actions.ts`):**
-       - `getMonthEndForecastMetrics()` fonksiyonu:
-         - Güncel ay satışları (`Sale`), tamamlanan servisler (`ServiceTicket`), giderler (`Transaction`), geçen ay Time-to-Date eşdeğer dönemi ve açık veresiyeleri tek işlemde toplayıp run-rate projeksiyonunu ve MoM büyüme yüzdesini hesaplar.
-       - `generateExecutiveAIReport()`: Gemini 2.5 Flash ile stratejik J.A.R.V.I.S. yönetici raporunu oluşturup DB kasasına kaydeder.
-       - `getLatestAIReport()`, `getAIReportHistory()`, `deleteAIReport()` fonksiyonları eklendi.
+       - `getMonthEndForecastMetrics()`: Net ciro, günlük run-rate hızı ve ay sonu net ciro tahmini hesaplar; geçen ayın aynı dönemine kıyasla büyüme oranını verir.
+       - `generateExecutiveAIReport()`: Gemini 2.5 Flash ile tamamen Türkçe, B.A.Ş.A.R. stratejik yönetici raporu oluşturup DB kasasına kaydeder.
+       - `getLatestAIReport()`, `getAIReportHistory()`, `deleteAIReport()` fonksiyonları entegre edildi.
     3. **Executive Cockpit Arayüzü (`stok-ai-client.tsx`, `page.tsx`):**
-       - Holografik neon-cyan ve dark cockpit teması, canlı telemetri rozetleri ve HUD göstergeleri.
-       - 4 Üst Komut Butonu: Projeksiyon, Finans, Stok, Veresiye.
-       - 4 Gerçek Zamanlı Telemetri Kartı: Ay Sonu Ciro Tahmini dial/barı, MoM Dönemsel Büyüme Rozeti, Gelir Dağılımı ve Risk Radarı.
-       - Rapor Kasası (Slide-Over Drawer): Tüm geçmiş analizleri 0 token ile anında yükleme veya temizleme.
-       - Operasyonel Stok Algoritmaları sekmesi: Hızlı ikmal ve eksik listesi aksiyonları korundu.
+       - Tüm İngilizce ibareler ("Forecast Cockpit", "Telemetry // Online", "Run-rate", "MoM", "Snapshot", "0-Token Cache") Türkçeleştirildi ("B.A.Ş.A.R. Komuta ve Tahmin Kokpiti", "Sistem Telemetrisi // Çevrimiçi", "Güncel Hız Ortalaması", "Dönemsel Büyüme (Geçen Aya Göre)", "Sıfır Token (Veri Tabanı Kaydı)").
+       - 4 Üst Komut Butonu, 4 Canlı Telemetri Kartı, Sıfır-Token Rapor Kasası ve Operasyonel Stok Algoritmaları sekmesi eksiksiz çalışır hale getirildi.
   - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
 
 - [x] 2026-10-21: Anasayfa "Veresiyeler" Kartı & "Alacak Ekle" ve Detaylı Müşteri Veresiye Modalı Entegrasyonu:

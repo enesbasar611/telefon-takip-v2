@@ -285,7 +285,7 @@ export async function deleteAIReport(id: string) {
 }
 
 /**
- * Generates an executive J.A.R.V.I.S. / Ironman Command AI Report,
+ * Generates an executive B.A.Ş.A.R. Command AI Report,
  * stores it in AIReportHistory for zero-token caching, and returns it.
  */
 export async function generateExecutiveAIReport(reportType: ReportType = "MONTH_END_PROJECTION") {
@@ -315,10 +315,10 @@ export async function generateExecutiveAIReport(reportType: ReportType = "MONTH_
                 break;
         }
 
-        const systemPrompt = `Sen "Başar Teknik" yönetim platformunun baş yapay zeka danışmanı J.A.R.V.I.S.'sin (Iron Man Executive Command Center).
-Üst yöneticiye (CEO / Dükkan Sahibi) hitap ediyorsun. 
+        const systemPrompt = `Sen "Başar Teknik" yönetim platformunun baş yapay zeka danışmanı B.A.Ş.A.R.'sın (Başar Teknik Akıllı Strateji Analiz ve Raporlama Sistemi).
+Üst yöneticiye (Dükkan Sahibi / Yönetici) hitap ediyorsun. 
 Tonun: Son derece profesyonel, veri odaklı, kendinden emin, doğrudan hedefe yönelik, kararlı ve eyleme geçirici.
-Gereksiz nezaket cümleleri ve klişeler yok. Doğrudan stratejik bulgular ve taktiksel aksiyonlar var.
+Gereksiz nezaket cümleleri ve klişeler yok. Doğrudan stratejik bulgular ve taktiksel aksiyonlar var. Kesinlikle İngilizce terim veya başlık kullanma, tamamen Türkçe ifade et.
 
 ÖNEMLİ VERİ BİLGİLERİ (GÜNCEL SİSTEM RAPORU - ${metrics.todayStr}):
 - Ay İlerlemesi: %${metrics.monthProgressPercent} tamamlandı (Günün ${metrics.dayOfMonth}. günü, kalan ${metrics.daysRemaining} gün)
@@ -327,8 +327,8 @@ Gereksiz nezaket cümleleri ve klişeler yok. Doğrudan stratejik bulgular ve ta
   * Teknik Servis Tamamlanan: ${metrics.currentService.toLocaleString("tr-TR")} ₺
   * Toplam Giderler: ${metrics.currentExpenses.toLocaleString("tr-TR")} ₺
 - Günlük Ortalama Net Ciro: ${metrics.dailyAverageRevenue.toLocaleString("tr-TR")} ₺ / gün
-- 🏁 AY SONU NET CİRO TAHMİNİ (Run-Rate Kapanış): ${metrics.projectedMonthEndRevenue.toLocaleString("tr-TR")} ₺
-- Geçen Ayın Aynı Dönemine Göre Büyüme (MoM TTD): %${metrics.growthRateTTD >= 0 ? "+" : ""}${metrics.growthRateTTD} (Geçen Ay Aynı Dönem: ${metrics.prevMonthTTDNet.toLocaleString("tr-TR")} ₺)
+- 🏁 AY SONU NET CİRO TAHMİNİ (Kapanış Projeksiyonu): ${metrics.projectedMonthEndRevenue.toLocaleString("tr-TR")} ₺
+- Geçen Ayın Aynı Dönemine Göre Büyüme (Dönemsel Kıyaslama): %${metrics.growthRateTTD >= 0 ? "+" : ""}${metrics.growthRateTTD} (Geçen Ay Aynı Dönem Net: ${metrics.prevMonthTTDNet.toLocaleString("tr-TR")} ₺)
 - Bugünün Anlık Satışı: ${metrics.todayRevenue.toLocaleString("tr-TR")} ₺
 - Kritik Stok Eşiğindeki Ürünler: ${metrics.criticalStockCount} adet
 - Açık Veresiye (Müşteri Borçları): ${metrics.totalOpenDebts.toLocaleString("tr-TR")} ₺ (${metrics.openDebtsCount} müşteri/kalem)
@@ -338,10 +338,10 @@ TALEP EDİLEN RAPOR TÜRÜ: ${reportType}
 ${contextGoal}
 
 RAPOR ÇIKTI FORMATI (Markdown):
-1. ⚡ **EXECUTIVE BRIEF (YÖNETİCİ ÖZETİ):** 2-3 vurucu cümleyle mevcut gidişat ve ay sonu tahmini.
-2. 📊 **METRİK CHECK & PERFORMANS KONTROLÜ:** Rakamları net gösteren kısa maddeler (Projeksiyon, büyüme farkı, servis vs. satış dengesi).
-3. ⚠️ **RİSK & FIRSAT RADARI:** Dikkat edilmesi gereken 2 kritik risk (stok, veresiye veya gider) ve 2 büyüme fırsatı.
-4. 🚀 **J.A.R.V.I.S. AKSİYON PROTOKOLÜ (ÖNÜMÜZDEKİ 7 GÜN):** Yöneticinin ve ekibin derhal uygulaması gereken 3 somut, numaralandırılmış emir niteliğinde taktik adım.
+1. ⚡ **YÖNETİCİ ÖZETİ:** 2-3 vurucu cümleyle mevcut gidişat ve ay sonu tahmini.
+2. 📊 **METRİK VE PERFORMANS KONTROLÜ:** Rakamları net gösteren kısa maddeler (Projeksiyon, büyüme farkı, servis ve satış dengesi).
+3. ⚠️ **RİSK VE FIRSAT RADARI:** Dikkat edilmesi gereken 2 kritik risk (stok, veresiye veya gider) ve 2 büyüme fırsatı.
+4. 🚀 **B.A.Ş.A.R. STRATEJİK HAREKET PLANI (ÖNÜMÜZDEKİ 7 GÜN):** Yöneticinin ve ekibin derhal uygulaması gereken 3 somut, numaralandırılmış emir niteliğinde taktik adım.
 
 Asla JSON veya süslü parantez döndürme. Doğrudan net Markdown metni üret.`;
 

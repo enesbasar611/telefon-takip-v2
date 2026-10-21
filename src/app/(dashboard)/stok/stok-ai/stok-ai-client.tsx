@@ -55,28 +55,28 @@ interface StockAIClientProps {
 
 const REPORT_TYPE_CONFIG: Record<ReportType, { label: string; icon: any; color: string; bg: string; border: string }> = {
     MONTH_END_PROJECTION: {
-        label: "AY SONU PROJEKSİYONU",
+        label: "AY SONU CİRO PROJEKSİYONU",
         icon: TrendingUp,
         color: "text-cyan-400",
         bg: "bg-cyan-500/10",
         border: "border-cyan-500/30",
     },
     FINANCIAL_SNAPSHOT: {
-        label: "FİNANSAL SNAPSHOT",
+        label: "GELİR-GİDER & FİNANSAL GÖRÜNÜM",
         icon: BarChart3,
         color: "text-emerald-400",
         bg: "bg-emerald-500/10",
         border: "border-emerald-500/30",
     },
     STOCK_FORECAST: {
-        label: "KRİTİK STOK & İKMAL",
+        label: "KRİTİK STOK & İKMAL ANALİZİ",
         icon: Package,
         color: "text-amber-400",
         bg: "bg-amber-500/10",
         border: "border-amber-500/30",
     },
     RECEIVABLES_ALERT: {
-        label: "VERESİYE & RİSK ALARMI",
+        label: "VERESİYE & TAHSİLAT RİSKİ",
         icon: ShieldAlert,
         color: "text-rose-400",
         bg: "bg-rose-500/10",
@@ -117,7 +117,7 @@ export function StockAIClient({
                 if (res.report.metrics) {
                     setMetrics(res.report.metrics);
                 }
-                toast.success("J.A.R.V.I.S. Raporu başarıyla oluşturuldu ve kasaya kaydedildi.");
+                toast.success("B.A.Ş.A.R. Raporu başarıyla oluşturuldu ve kasaya kaydedildi.");
             } else {
                 toast.error(res.error || "Rapor oluşturulamadı.");
             }
@@ -135,7 +135,7 @@ export function StockAIClient({
         try {
             const fresh = await getMonthEndForecastMetrics();
             setMetrics(fresh);
-            toast.success("Telemetri verileri güncellendi (0 Token).");
+            toast.success("Telemetri verileri güncellendi (Sıfır Token).");
         } catch (error) {
             toast.error("Veriler yenilenirken hata oluştu.");
         } finally {
@@ -150,7 +150,7 @@ export function StockAIClient({
             setMetrics(report.metrics);
         }
         setIsVaultOpen(false);
-        toast.info("Kayıtlı rapor yüklendi (0 Token).");
+        toast.info("Kayıtlı rapor yüklendi (Sıfır Token).");
     };
 
     // Delete a report from vault
@@ -200,7 +200,7 @@ export function StockAIClient({
 
     return (
         <div className="space-y-8 pb-24 animate-in fade-in duration-500 max-w-full overflow-x-hidden">
-            {/* ── 1. IRONMAN / J.A.R.V.I.S. COMMAND HUD HEADER ────────────────────── */}
+            {/* ── 1. B.A.Ş.A.R. KOMUTA PANELİ BAŞLIĞI ────────────────────── */}
             <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/40 border border-cyan-500/20 p-6 md:p-10 shadow-2xl shadow-cyan-950/30">
                 {/* Holographic grid and glow background */}
                 <div className="absolute inset-0 bg-[radial-gradient(#06b6d4_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
@@ -221,11 +221,11 @@ export function StockAIClient({
 
                             <Badge className="bg-cyan-500/10 text-cyan-300 border-cyan-500/30 px-3 py-1 text-[10px] uppercase font-mono tracking-widest gap-1.5">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                J.A.R.V.I.S. TELEMETRY // ONLINE
+                                B.A.Ş.A.R. SİSTEM TELEMETRİSİ // ÇEVRİMİÇİ
                             </Badge>
 
                             <Badge className="bg-slate-800/80 text-muted-foreground border-slate-700 px-3 py-1 text-[10px] uppercase font-mono tracking-wider">
-                                GEMINI 2.5 FLASH ENGINE
+                                GEMINI 2.5 FLASH YAPAY ZEKA MOTORU
                             </Badge>
 
                             {metrics?.todayStr && (
@@ -237,10 +237,10 @@ export function StockAIClient({
 
                         <div>
                             <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-tight uppercase flex items-center gap-2">
-                                J.A.R.V.I.S. <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Forecast Cockpit</span>
+                                B.A.Ş.A.R. <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Komuta ve Tahmin Kokpiti</span>
                             </h1>
                             <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl mt-1">
-                                Ay sonu net ciro projeksiyonu, kâr/zarar koşusu ve yapay zeka destekli operasyonel karar masası.
+                                Ay sonu net ciro projeksiyonu, kâr/zarar analizi ve yapay zeka destekli operasyonel karar masası.
                             </p>
                         </div>
                     </div>
@@ -254,7 +254,7 @@ export function StockAIClient({
                             className="h-11 px-4 rounded-xl border-cyan-500/20 bg-slate-900/60 hover:bg-cyan-500/10 text-cyan-300 text-xs font-mono tracking-wider gap-2 shadow-sm"
                         >
                             <RefreshCw className={cn("h-3.5 w-3.5", isRefreshingTelemetry && "animate-spin text-cyan-400")} />
-                            <span>0-TOKEN YENİLE</span>
+                            <span>SIFIR TOKEN İLE YENİLE</span>
                         </Button>
 
                         <Button
@@ -314,7 +314,7 @@ export function StockAIClient({
                                 )}
                             </div>
                             <div className="text-left min-w-0">
-                                <p className="text-[11px] font-black uppercase tracking-wider truncate">P&L & Kâr Marjı</p>
+                                <p className="text-[11px] font-black uppercase tracking-wider truncate">Gelir-Gider & Kâr</p>
                                 <p className="text-[9px] text-emerald-400/70 font-mono">Satış / Servis / Gider</p>
                             </div>
                         </div>
@@ -367,7 +367,7 @@ export function StockAIClient({
                             </div>
                             <div className="text-left min-w-0">
                                 <p className="text-[11px] font-black uppercase tracking-wider truncate">Veresiye Alarmı</p>
-                                <p className="text-[9px] text-rose-400/70 font-mono">Tahsilat Riski & Nakit</p>
+                                <p className="text-[9px] text-rose-400/70 font-mono">Tahsilat Riski & Nakit Akışı</p>
                             </div>
                         </div>
                         <ArrowUpRight className="h-4 w-4 text-rose-400/60 shrink-0 ml-2" />
@@ -383,7 +383,7 @@ export function StockAIClient({
                         <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-all" />
                         <div className="flex items-center justify-between text-muted-foreground text-[10px] uppercase font-mono tracking-widest mb-2">
                             <span>AY SONU TAHMİNİ</span>
-                            <span className="text-cyan-400">RUN-RATE</span>
+                            <span className="text-cyan-400">GÜNCEL HIZ</span>
                         </div>
                         <div className="text-2xl sm:text-3xl font-black text-cyan-400 tracking-tight">
                             ₺{metrics.projectedMonthEndRevenue.toLocaleString("tr-TR")}
@@ -409,7 +409,7 @@ export function StockAIClient({
                     <Card className="rounded-3xl bg-card/80 border-emerald-500/20 hover:border-emerald-500/40 transition-all p-5 shadow-lg relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all" />
                         <div className="flex items-center justify-between text-muted-foreground text-[10px] uppercase font-mono tracking-widest mb-2">
-                            <span>DÖNEMSEL BÜYÜME (MoM)</span>
+                            <span>DÖNEMSEL BÜYÜME (GEÇEN AYA GÖRE)</span>
                             <Badge className={cn(
                                 "text-[9px] font-mono font-bold px-2 py-0.5 border",
                                 metrics.growthRateTTD >= 0
@@ -547,7 +547,7 @@ export function StockAIClient({
                                                 </Badge>
                                             )}
                                             <Badge variant="outline" className="text-[10px] font-mono border-slate-700 text-muted-foreground">
-                                                ⚡ 0-TOKEN ÖNBELLEK
+                                                ⚡ SIFIR TOKEN (VERİ TABANI KAYDI)
                                             </Badge>
                                             <span className="text-[11px] font-mono text-muted-foreground">
                                                 {format(new Date(activeReport.createdAt), "dd MMMM yyyy, HH:mm", { locale: tr })}
@@ -600,7 +600,7 @@ export function StockAIClient({
                                     Henüz Kayıtlı Bir Yönetici Raporu Bulunmuyor
                                 </h3>
                                 <p className="text-xs text-muted-foreground max-w-md mt-1 mb-6">
-                                    Yukarıdaki butonlardan birine basarak ilk Ay Sonu Net Ciro veya Finansal Snapshot raporunuzu oluşturabilirsiniz.
+                                    Yukarıdaki butonlardan birine basarak ilk Ay Sonu Net Ciro veya Finansal Görünüm raporunuzu oluşturabilirsiniz.
                                 </p>
                                 <Button
                                     onClick={() => handleRunExecutiveReport("MONTH_END_PROJECTION")}
@@ -624,7 +624,7 @@ export function StockAIClient({
                                         <History className="h-4 w-4 text-cyan-400" /> RAPOR KASASI
                                     </CardTitle>
                                     <CardDescription className="text-[10px] mt-0.5">
-                                        0-Token ile geçmiş stratejileri inceleyin
+                                        Sıfır token ile geçmiş stratejileri inceleyin
                                     </CardDescription>
                                 </div>
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -862,7 +862,7 @@ export function StockAIClient({
                             </div>
 
                             <div className="pt-4 border-t border-border/40 text-[10px] font-mono text-muted-foreground text-center">
-                                Tüm raporlar yerel veritabanında saklanır (0 token tüketimi).
+                                Tüm raporlar yerel veritabanında saklanır (Sıfır token tüketimi).
                             </div>
                         </motion.div>
                     </div>

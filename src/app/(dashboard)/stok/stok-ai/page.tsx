@@ -8,7 +8,7 @@ import {
 import { getAIAlerts } from "@/lib/actions/stock-ai-actions";
 
 export const metadata: Metadata = {
-    title: "J.A.R.V.I.S. Komuta Merkezi & Ciro Projeksiyonu | Başar Teknik",
+    title: "B.A.Ş.A.R. Komuta Merkezi & Ciro Projeksiyonu | Başar Teknik",
     description: "Yapay zeka destekli ay sonu net ciro tahmini, finansal sağlık analizi ve envanter komuta merkezi.",
 };
 
