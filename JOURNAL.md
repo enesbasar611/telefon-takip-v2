@@ -41,6 +41,52 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-21: Anasayfa "Veresiyeler" Kartı & "Alacak Ekle" ve Detaylı Müşteri Veresiye Modalı Entegrasyonu:
+  - **Talep:**
+    - Anasayfadaki istatistik kartlarında "Toplam Borçlar" yerine "Veresiyeler" yazılması.
+    - Karta tıklandığında veresiye sayfasındaki "Alacak Ekle" (`AddDebtModal`) modalının açılması.
+    - Kartın sağ üstündeki `Info` (bilgi) butonuna basıldığında veresiye sayfasındaki müşterilerin ve borç bakiyelerinin kalem detaylarıyla listelendiği şık ve kapsamlı bir detay modalının açılması.
+  - **Yapılan İyileştirmeler:**
+    1. **Veresiye Detay Server Action (`src/lib/actions/dashboard-detail-actions.ts`):**
+       - `getDebtDetails()` fonksiyonu veresiye (`prisma.debt`) tablosuyla tam entegre edildi (`shopId`, `isPaid: false`, `remainingAmount > 0`).
+       - Müşteri bilgileri, açık kalan TL ve USD tutarları, borç adetleri ve her borcun satış/ürün/not ayrıntıları gruplanarak azalan bakiye sırasıyla istemciye sunuldu.
+    2. **Kapsamlı Müşteri Veresiye Modalı (`src/components/dashboard/modals/veresiye-detail-modal.tsx`):**
+       - Toplam açık TL ve USD tutarı, borçlu müşteri adedi ve açık borç sayısı KPI şeritleri eklendi.
+       - Müşteri adı veya telefonuna göre anında filtreleyen arama çubuğu entegre edildi.
+       - Her müşteri için bakiye kartı, doğrudan müşteri veresiye ekstresine yönlendiren buton ve borcun kalemlerini (tarih, kalan tutar, ürün/açıklama, vade durumu) gösteren genişletilebilir detay alanı sağlandı.
+       - Modal içerisinden tek tıkla doğrudan "Alacak Ekle" modalına geçiş imkanı eklendi.
+    3. **Anasayfa Kart Etiketleri ve Tetikleyicileri (`admin-dashboard.tsx`, `dashboard-core.tsx`, `stats-grid-stream.tsx`, `stat-widget-wrapper.tsx`):**
+       - Kart adı tüm anasayfa bileşenlerinde `"Veresiyeler"` olarak güncellendi.
+       - Hızlı aksiyon butonu `"Alacak Ekle"` olarak değiştirildi ve tıklandığında `activeModal("DEBT")` açılarak `AddDebtModal` tetiklendi.
+       - Kartın bilgi (info) butonuna tıklandığında `isVeresiyeDetailOpen` açılarak `VeresiyeDetailModal` devreye sokuldu.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-21: Satış Geçmişi (@satis/gecmis) İşlem Arşivinde Gösterilen İşlemlerin Toplam Tutarının Eklenmesi:
+  - **Talep:**
+    - `@satis/gecmis` sayfasında işlem arşivinde tutar kısmında gösterilen işlemlerin toplam tutarının yazması.
+  - **Yapılan İyileştirmeler:**
+    1. **Dinamik Toplam Tutar Hesaplayıcı (`src/components/satis/sales-history-client.tsx`):**
+       - Mevcut filtreler (tarih, tür, ödeme tipi, personel, arama) ve sayfa içeriği doğrultusunda görüntülenen işlemlerin (`historyData.items`) para birimi dönüşümlerini (`defaultCurrency` ve `rates`) ve işlem türü bazında gelir/gider ayrımını (`SALE`, `PAYMENT`, `DEBT_DIRECT` pozitif; `EXPENSE` negatif) yapan `displayedTotals` kancası (`useMemo`) tanımlandı.
+    2. **Tablo Başlığına Tutar Gösterimi (`TUTAR` Sütunu):**
+       - Tablo başlığındaki `Tutar` sütununa gösterilen işlemlerin anlık net toplamı eklendi (`Toplam: +₺X.XXX,XX` veya `-₺...`).
+    3. **Tablo Altına (tfoot) Özet Satırı:**
+       - Tablo altına `<tfoot>` eklenerek tüm gösterilen işlemlerin genel toplamı ve hem gelir hem gider varsa alt kırılımı (`+Gelir / -Gider`) şık bir şekilde konumlandırıldı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-20: Veresiye WhatsApp Şablonunun Sadeleştirilmesi (Tahsilat Detaylarının Gizlenmesi, Sadece Açık Borç Kalemleri):
+  - **Talep:**
+    - Veresiye sayfasından atılan WhatsApp şablonunda müşterinin ödemelerinin görünmemesi, sadece açık borç kalemlerinin yer alması ve tahsilat detaylarının kaldırılması.
+  - **Yapılan İyileştirmeler:**
+    1. **WhatsApp Şablon Üreticisi Güncellendi (`src/lib/debt-statement-calculator.ts`):**
+       - `UnifiedWhatsAppStatementOptions` arayüzüne `includePayments?: boolean` opsiyonu eklendi ve varsayılan olarak `false` yapıldı.
+       - `*🟢 SON TAHSİLATLAR & ÖDEMELER:*` blok yapısı `includePayments` bayrağına bağlandı; açık borç ekstresi gönderilirken müşterinin geçmiş tahsilat ve ödeme dökümü mesajdan tamamen çıkarıldı.
+       - Açık borç listesinde (`*📋 AÇIK BORÇ KALEMLERİ:*`) kalan açık tutar net olarak formatlanarak borcun oluşturulma tarihi (`[DD.MM.YYYY]`) ve açıklamasıyla birlikte listelendi; ödenmiş borçlar filtre dışı bırakıldı.
+    2. **Veresiye Ekranı Entegrasyonu (`src/components/finance/veresiye-client.tsx`):**
+       - Müşteri geçmişi modalındaki "WhatsApp Ekstre" butonu kullanıcıya ödenenleri dahil edip etmeme sorusu sormadan doğrudan açık borç şablonunu oluşturacak şekilde bağlandı (`includePaid: false`, `includePayments: false`).
+       - Tekli ve toplu WhatsApp hatırlatma işlevlerine (`handleSingleWhatsAppReminder`, `handleConfirmBulkWhatsApp`) açıkça `includePaid: false, includePayments: false` parametreleri geçildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+
 - [x] 2026-10-17: Cihaz ve Stok Girişlerinde MB Dosya Boyutu Sınırlarının Kaldırılması & Akıllı Sıkıştırma:
   - **Talep:**
     - Cihaz ekleme ve ilgili yükleme modallarındaki MB sınırlarının tamamen kaldırılması.

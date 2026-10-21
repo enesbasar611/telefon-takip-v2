@@ -1209,6 +1209,7 @@ export function VeresiyeClient({
                 balanceTRY: Number(customer.balance || 0),
                 balanceUSD: Number(customer.balanceUsd || 0),
                 includePaid: false,
+                includePayments: false,
                 shopName: shop?.name || "Başar Teknik"
             });
 
@@ -1280,6 +1281,7 @@ export function VeresiyeClient({
                     balanceTRY: Number(customer.balance || 0),
                     balanceUSD: Number(customer.balanceUsd || 0),
                     includePaid: false,
+                    includePayments: false,
                     shopName: shop?.name || "Başar Teknik"
                 });
 
@@ -1997,7 +1999,6 @@ export function VeresiyeClient({
                                 title="WhatsApp Ekstre"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-                                    const includePaidItems = await requestIncludePaidItemsInOutput();
                                     const message = buildUnifiedWhatsAppStatement({
                                         customerName: historyCustomer?.name || "Müşteri",
                                         debts: statementData.debts || [],
@@ -2006,7 +2007,8 @@ export function VeresiyeClient({
                                         defaultCurrency,
                                         balanceTRY: Number(historyCustomer?.balance || 0),
                                         balanceUSD: Number(historyCustomer?.balanceUsd || 0),
-                                        includePaid: includePaidItems,
+                                        includePaid: false,
+                                        includePayments: false,
                                         shopName: shop?.name || "Başar Teknik"
                                     });
                                     setWhatsappMessageContent(message);

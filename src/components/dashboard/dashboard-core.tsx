@@ -84,7 +84,7 @@ export function DashboardCore({
     { label: "Bekleyen servisler", value: statsData?.pendingServices || "0", icon: Clock, accent: "primary", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil" },
     { label: "Hazır cihazlar", value: statsData?.readyDevices || "0", icon: CheckCircle2, accent: "secondary", colorClass: "text-emerald-500", bgClass: "bg-emerald-500/10" },
     { label: "Kritik stok", value: statsData?.criticalStock || "0", icon: AlertTriangle, accent: "destructive", colorClass: "text-rose-500", bgClass: "bg-rose-500/10", badge: "Kritik", type: "CRITICAL_STOCK", outOfStockCount: statsData?.outOfStockCount || "0" },
-    { label: "Toplam borçlar", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, accent: "primary", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10", type: "TOTAL_DEBTS" },
+    { label: "Veresiyeler", value: statsData?.totalDebts || "₺0", icon: ArrowDownCircle, accent: "primary", colorClass: "text-indigo-500", bgClass: "bg-indigo-500/10", type: "TOTAL_DEBTS" },
     { label: "Kasa & Hesaplar", value: statsData?.cashBalance || "₺0", icon: Wallet, accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10", type: "CASH_BALANCE" },
   ];
 
@@ -95,6 +95,7 @@ export function DashboardCore({
     "Bekleyen servisler": "PENDING_SERVICES",
     "Hazır cihazlar": "READY_DEVICES",
     "Kritik stok": "CRITICAL_STOCK",
+    "Veresiyeler": "TOTAL_DEBTS",
     "Toplam borçlar": "TOTAL_DEBTS",
     "Kasa & Hesaplar": "CASH_BALANCE",
   };

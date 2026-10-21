@@ -13,6 +13,7 @@ const CreateServiceModal = dynamic(() => import("@/components/service/create-ser
 const CreateTransactionModal = dynamic(() => import("@/components/finance/create-transaction-modal").then(m => m.CreateTransactionModal), { ssr: false });
 const AddDebtModal = dynamic(() => import("@/components/finance/add-debt-modal").then(m => m.AddDebtModal), { ssr: false });
 const CashBalanceDetailModal = dynamic(() => import("./modals/cash-balance-detail-modal").then(m => m.CashBalanceDetailModal), { ssr: false });
+const VeresiyeDetailModal = dynamic(() => import("./modals/veresiye-detail-modal").then(m => m.VeresiyeDetailModal), { ssr: false });
 
 type QuickAction =
     | { kind: "modal"; modal: "PRODUCT" | "SERVICE" | "TX" | "INCOME" | "DEBT"; label: string }
@@ -27,7 +28,7 @@ const QUICK_ACTIONS: Record<StatType, QuickAction> = {
     COLLECTIONS: { kind: "modal", modal: "INCOME", label: "Tahsilat Al" },
     READY_DEVICES: { kind: "route", href: "/servis", label: "Teslim Et" },
     CRITICAL_STOCK: { kind: "modal", modal: "PRODUCT", label: "Ürün Ekle" },
-    TOTAL_DEBTS: { kind: "modal", modal: "DEBT", label: "Borç Ekle" },
+    TOTAL_DEBTS: { kind: "modal", modal: "DEBT", label: "Alacak Ekle" },
 } as Record<StatType, QuickAction>;
 
 interface StatWidgetWrapperProps {
@@ -104,10 +105,15 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
     }
 
     const [isCashDetailOpen, setIsCashDetailOpen] = useState(false);
+    const [isVeresiyeDetailOpen, setIsVeresiyeDetailOpen] = useState(false);
 
     const runAction = useCallback(() => {
         if (type === "DAILY_SALES") {
             setIsCashDetailOpen(true);
+            return;
+        }
+        if (type === "TOTAL_DEBTS") {
+            setActiveModal("DEBT");
             return;
         }
         if (!action) return setIsDetailOpen(true);
@@ -118,6 +124,10 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
     const openDetail = useCallback(() => {
         if (type === "DAILY_SALES") {
             setIsCashDetailOpen(true);
+            return;
+        }
+        if (type === "TOTAL_DEBTS") {
+            setIsVeresiyeDetailOpen(true);
             return;
         }
         setIsDetailOpen(true);
@@ -146,6 +156,16 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
                         setIsCashDetailOpen(false);
                         setIsDetailOpen(false);
                     }}
+                />
+            ) : type === "TOTAL_DEBTS" ? (
+                <VeresiyeDetailModal
+                    isOpen={isVeresiyeDetailOpen || isDetailOpen}
+                    onClose={() => {
+                        setIsVeresiyeDetailOpen(false);
+                        setIsDetailOpen(false);
+                    }}
+                    rates={rates}
+                    defaultCurrency={defaultCurrency}
                 />
             ) : (
                 <StatDetailModal

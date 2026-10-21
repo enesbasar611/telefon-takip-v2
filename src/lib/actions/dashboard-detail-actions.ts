@@ -9,25 +9,95 @@ import { getShopId } from "@/lib/auth";
 export async function getDebtDetails() {
     try {
         const shopId = await getShopId();
-        const suppliers = await prisma.supplier.findMany({
+        const debts = await prisma.debt.findMany({
             where: {
                 shopId,
-                balance: { gt: 0 }
+                isPaid: false,
+                remainingAmount: { gt: 0 }
             },
             include: {
-                purchases: {
-                    where: {
-                        paymentStatus: { in: ["UNPAID", "PARTIAL"] },
-                        remainingAmount: { gt: 0 }
-                    },
-                    orderBy: { createdAt: 'asc' }
+                customer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        photo: true,
+                        balance: true,
+                        balanceUsd: true,
+                    }
+                },
+                sale: {
+                    select: {
+                        saleNumber: true,
+                        items: {
+                            select: {
+                                quantity: true,
+                                unitPrice: true,
+                                product: { select: { name: true } }
+                            }
+                        }
+                    }
                 }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // Group debts by customer
+        const customerMap: Record<string, any> = {};
+
+        debts.forEach((debt) => {
+            const cust = debt.customer;
+            if (!cust) return;
+
+            if (!customerMap[cust.id]) {
+                customerMap[cust.id] = {
+                    id: cust.id,
+                    name: cust.name,
+                    phone: cust.phone || "",
+                    photo: cust.photo || null,
+                    balance: Number(cust.balance || 0),
+                    balanceUsd: Number(cust.balanceUsd || 0),
+                    totalRemainingTRY: 0,
+                    totalRemainingUSD: 0,
+                    lastDebtDate: debt.createdAt,
+                    debtCount: 0,
+                    debts: []
+                };
+            }
+
+            const remaining = Number(debt.remainingAmount || debt.amount || 0);
+            if (debt.currency === "USD") {
+                customerMap[cust.id].totalRemainingUSD += remaining;
+            } else {
+                customerMap[cust.id].totalRemainingTRY += remaining;
+            }
+
+            customerMap[cust.id].debtCount += 1;
+            customerMap[cust.id].debts.push({
+                id: debt.id,
+                amount: Number(debt.amount),
+                remainingAmount: remaining,
+                currency: debt.currency || "TRY",
+                notes: debt.notes || debt.description || "",
+                createdAt: debt.createdAt,
+                dueDate: debt.dueDate,
+                saleNumber: debt.sale?.saleNumber,
+                items: debt.sale?.items?.map((item: any) => ({
+                    productName: item.product?.name || "Ürün",
+                    quantity: item.quantity,
+                    price: Number(item.unitPrice)
+                })) || []
+            });
+
+            if (new Date(debt.createdAt) > new Date(customerMap[cust.id].lastDebtDate)) {
+                customerMap[cust.id].lastDebtDate = debt.createdAt;
             }
         });
 
-        return serializePrisma(suppliers);
+        const list = Object.values(customerMap).sort((a, b) => b.totalRemainingTRY - a.totalRemainingTRY);
+        return serializePrisma(list);
     } catch (error) {
-        console.error("Error fetching debt details:", error);
+        console.error("Error fetching customer debt details:", error);
         return [];
     }
 }

@@ -201,6 +201,7 @@ export interface UnifiedWhatsAppStatementOptions {
   balanceTRY?: number;
   balanceUSD?: number;
   includePaid?: boolean;
+  includePayments?: boolean;
   shopName?: string;
 }
 
@@ -214,6 +215,7 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
     balanceTRY = 0,
     balanceUSD = 0,
     includePaid = false,
+    includePayments = false,
     shopName = "Başar Teknik",
   } = options;
 
@@ -244,16 +246,18 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
   totalRemainingUSD = money(totalRemainingUSD);
 
   // Relevant payments:
-  // If includePaid is true, show all payments. If false, show recent payments from the last 60 days
+  // Only process if includePayments is true
   const now = Date.now();
   const paymentCutoff = includePaid ? 0 : now - 45 * 24 * 60 * 60 * 1000;
-  const validPayments = transactions
-    .filter((t: any) => {
-      if (t.paymentMethod === "DEBT") return false;
-      const tTime = new Date(t.createdAt || t.date).getTime();
-      return !Number.isNaN(tTime) && tTime >= paymentCutoff;
-    })
-    .sort((a, b) => new Date(a.createdAt || a.date).getTime() - new Date(b.createdAt || b.date).getTime());
+  const validPayments = includePayments
+    ? transactions
+        .filter((t: any) => {
+          if (t.paymentMethod === "DEBT") return false;
+          const tTime = new Date(t.createdAt || t.date).getTime();
+          return !Number.isNaN(tTime) && tTime >= paymentCutoff;
+        })
+        .sort((a, b) => new Date(a.createdAt || a.date).getTime() - new Date(b.createdAt || b.date).getTime())
+    : [];
 
   let message = `*${shopName}* - Hesap Ekstresi\n`;
   message += `👤 *Müşteri:* ${customerName.trim().toUpperCase()}\n\n`;
@@ -261,24 +265,33 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
   if (openDebts.length > 0) {
     message += includePaid ? `*📋 BORÇ / İŞLEM HAREKETLERİ:*\n` : `*📋 AÇIK BORÇ KALEMLERİ:*\n`;
     openDebts.forEach((debt: any) => {
-      const isUSD = debt.currency === "USD";
       const totalAmount = money(debt.amount || 0);
       const remainingAmount = money(debt.remainingAmount ?? totalAmount);
       const title = debt.notes || debt.description || (debt.sale?.items?.map((i: any) => i.product?.name || "Ürün").join(", ")) || "Hizmet / Ürün";
       const isPaid = debt.isPaid || remainingAmount <= 0.01;
 
-      let line = `• ${title}: ${formatDebtMoney(totalAmount, debt.currency)}`;
+      // Açık borç listesinde ödenmiş kalemler istenmiyorsa atla
+      if (isPaid && !includePaid) return;
+
+      const dDate = new Date(debt.createdAt || debt.date);
+      const dateStr = !Number.isNaN(dDate.getTime())
+        ? `${dDate.getDate().toString().padStart(2, "0")}.${(dDate.getMonth() + 1).toString().padStart(2, "0")}.${dDate.getFullYear()}`
+        : "";
+
+      // Açık borç kaleminin güncel borç tutarını göster
+      const currentDebt = remainingAmount > 0.01 ? remainingAmount : totalAmount;
+      let line = `• ${dateStr ? `[${dateStr}] ` : ""}${title}: ${formatDebtMoney(currentDebt, debt.currency)}`;
       if (isPaid) {
         line += ` ✅ (Ödendi)`;
       } else if (remainingAmount < totalAmount - 0.01) {
-        line += ` ⚠️ (Kalan: ${formatDebtMoney(remainingAmount, debt.currency)})`;
+        line += ` _(Kalan)_`;
       }
       message += `${line}\n`;
     });
     message += `\n`;
   }
 
-  if (validPayments.length > 0) {
+  if (includePayments && validPayments.length > 0) {
     message += `*🟢 SON TAHSİLATLAR & ÖDEMELER:*\n`;
     validPayments.forEach((p: any) => {
       const amount = money(p.amount || 0);

@@ -34,6 +34,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { CashBalanceDetailModal } from "./cash-balance-detail-modal";
+import { VeresiyeDetailModal } from "./veresiye-detail-modal";
 
 export type StatType =
     | "DAILY_SALES"
@@ -57,11 +58,11 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         return <CashBalanceDetailModal isOpen={isOpen} onClose={onClose} />;
     }
 
+    if (type === "TOTAL_DEBTS") {
+        return <VeresiyeDetailModal isOpen={isOpen} onClose={onClose} />;
+    }
+
     const { addShortage, refresh } = useShortage();
-    const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-    const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-    const [paymentAmount, setPaymentAmount] = useState<string>("");
-    const [paymentDescription, setPaymentDescription] = useState<string>("");
     const [addingToShortage, setAddingToShortage] = useState<string | null>(null);
     const [showZeroOnly, setShowZeroOnly] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -73,7 +74,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         queryKey: ["dashboard-stat-detail", type],
         queryFn: async () => {
             switch (type) {
-                case "TOTAL_DEBTS": return getDebtDetails();
                 case "COLLECTIONS": return getCollectionDetails();
                 case "REPAIR_INCOME": return getRepairIncomeDetails();
                 case "PENDING_SERVICES": return getPendingServicesDetails();
@@ -89,16 +89,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         placeholderData: keepPreviousData
     });
 
-    const accountsQuery = useQuery<any[]>({
-        queryKey: ["finance-accounts", "dashboard-stat-detail"],
-        queryFn: getAccountBalanceDetails,
-        enabled: type === "TOTAL_DEBTS" && isOpen,
-        placeholderData: keepPreviousData,
-        staleTime: 1000 * 60 * 5,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-    });
-
     const couriersQuery = useQuery<any[]>({
         queryKey: ["couriers-list"],
         queryFn: getCouriers,
@@ -106,47 +96,10 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         refetchOnMount: true,
         staleTime: 0,
     });
-    const payDebtMutation = useMutation({
-        mutationFn: async () => {
-            if (!selectedSupplier || !activeAccountId || !paymentAmount) {
-                throw new Error("LÃ¼tfen tÃ¼m alanlarÄ± doldurun.");
-            }
-            const { paySupplierDebt } = await import("@/lib/actions/finance-actions");
-            return paySupplierDebt({
-                supplierId: selectedSupplier.id,
-                accountId: activeAccountId,
-                amount: Number(paymentAmount),
-                description: paymentDescription || "HÄ±zlÄ± Ã–deme (Dashboard)"
-            });
-        },
-        onSuccess: async (res) => {
-            if (!res.success) {
-                toast.error(res.error || "Ã–deme sÄ±rasÄ±nda hata oluÅŸtu.");
-                return;
-            }
-            toast.success("Ã–deme baÅŸarÄ±yla gerÃ§ekleÅŸtirildi.");
-            setSelectedSupplier(null);
-            setPaymentAmount("");
-            setPaymentDescription("");
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
-                queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
-                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
-                queryClient.invalidateQueries({ queryKey: ["transactions"] }),
-                queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),
-            ]);
-        },
-        onError: (error) => {
-            toast.error(error instanceof Error ? error.message : "Ä°ÅŸlem baÅŸarÄ±sÄ±z oldu.");
-        },
-    });
 
     const data = detailQuery.data || [];
-    const accounts = accountsQuery.data || [];
-    const activeAccountId = selectedAccountId || accounts[0]?.id || "";
     const isInitialLoading = detailQuery.isPending && !detailQuery.data;
     const isBackgroundFetching = detailQuery.isFetching && !!detailQuery.data;
-    const paying = payDebtMutation.isPending;
 
     const handleAddShortage = async (product: any) => {
         setAddingToShortage(product.id);
@@ -159,9 +112,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
         } finally {
             setAddingToShortage(null);
         }
-    };
-    const handlePayDebt = async () => {
-        payDebtMutation.mutate();
     };
 
     const handleBulkAction = async (courierId: string | null) => {
@@ -191,7 +141,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
             case "PENDING_SERVICES": return { title: "BEKLEYEN SERVİSLER", icon: Clock, color: "text-blue-500", route: "/servis/liste" };
             case "READY_DEVICES": return { title: "HAZIR CİHAZLAR", icon: CheckCircle2, color: "text-emerald-500", route: "/servis/liste?status=READY" };
             case "CRITICAL_STOCK": return { title: "KRİTİK STOK", icon: AlertTriangle, color: "text-rose-500", route: "/stok" };
-            case "TOTAL_DEBTS": return { title: "TOPLAM BORÇLAR", icon: ArrowDownCircle, color: "text-indigo-500", route: "/tedarikciler" };
             case "CASH_BALANCE": return { title: "KASA & HESAPLAR", icon: Wallet, color: "text-primary", route: "/satis/kasa" };
             default: return { title: "DETAY", icon: LayoutDashboard, color: "text-primary", route: "/" };
         }
@@ -217,10 +166,9 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                 type === "CRITICAL_STOCK" ? "sm:max-w-4xl" : "sm:max-w-2xl"
             )}>
                 <div className={cn("absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r",
-                    type === "TOTAL_DEBTS" ? "from-indigo-500 to-violet-600" :
-                        type === "COLLECTIONS" ? "from-amber-500 to-orange-500" :
-                            type === "CRITICAL_STOCK" ? "from-rose-500 to-red-600" :
-                                "from-emerald-500 to-teal-600"
+                    type === "COLLECTIONS" ? "from-amber-500 to-orange-500" :
+                        type === "CRITICAL_STOCK" ? "from-rose-500 to-red-600" :
+                            "from-emerald-500 to-teal-600"
                 )} />
 
                 <div className="p-0">
@@ -234,116 +182,22 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                 </div>
                                 <div className="space-y-1">
                                     <DialogTitle className="font-bold text-2xl tracking-tight uppercase text-foreground">
-                                        {selectedSupplier ? "BORÇ ÖDEMESİ: " + selectedSupplier.name : config.title}
+                                        {config.title}
                                     </DialogTitle>
                                     <DialogDescription className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] opacity-60">
-                                        {selectedSupplier ? "Finansal İÅŸlem Kaydı" : "Sistem Analizleri ve Raporlama"}
+                                        Sistem Analizleri ve Raporlama
                                     </DialogDescription>
                                 </div>
                             </div>
-                            {!selectedSupplier ? (
-                                <Link href={config.route}>
-                                    <Button variant="outline" className="rounded-2xl h-10 text-[9px] font-black uppercase tracking-widest px-6 border-border/40 hover:bg-muted/50 transition-all shadow-sm">
-                                        TÜM KAYITLAR <ChevronRight className="ml-2 h-3 w-3" />
-                                    </Button>
-                                </Link>
-                            ) : (
-                                <Button variant="ghost" onClick={() => setSelectedSupplier(null)} className="rounded-full h-12 w-12 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50">
-                                    <ArrowRight className="h-6 w-6 rotate-180" />
+                            <Link href={config.route}>
+                                <Button variant="outline" className="rounded-2xl h-10 text-[9px] font-black uppercase tracking-widest px-6 border-border/40 hover:bg-muted/50 transition-all shadow-sm">
+                                    TÜM KAYITLAR <ChevronRight className="ml-2 h-3 w-3" />
                                 </Button>
-                            )}
+                            </Link>
                         </div>
                     </DialogHeader>
 
-                    {selectedSupplier ? (
-                        <div className="p-8 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                            <div className="p-8 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 shadow-inner">
-                                <div className="flex justify-between items-end mb-6">
-                                    <div className="space-y-1">
-                                        <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em]">GÜNCEL BAKİYE</span>
-                                        <h2 className="text-3xl font-black text-indigo-500 tracking-tighter">
-                                            ₺{Number(selectedSupplier.balance).toLocaleString('tr-TR')}
-                                        </h2>
-                                    </div>
-                                    <Badge variant="outline" className="rounded-full px-4 py-1 text-[10px] border-indigo-500/30 text-indigo-500 font-bold bg-indigo-500/5">
-                                        VADE: BUGÜN
-                                    </Badge>
-                                </div>
-                                <div className="space-y-6 pt-6 border-t border-indigo-500/10">
-                                    <div className="space-y-3">
-                                        <Label className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] ml-1">ÖDEME KANALI</Label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {accounts.map((acc) => (
-                                                <button
-                                                    key={acc.id}
-                                                    onClick={() => setSelectedAccountId(acc.id)}
-                                                    className={cn(
-                                                        "p-4 rounded-2xl border text-left transition-all relative overflow-hidden group",
-                                                        activeAccountId === acc.id
-                                                            ? "bg-indigo-600 border-indigo-500 shadow-xl shadow-indigo-600/20 text-white"
-                                                            : "bg-background border-border/40 hover:border-indigo-500/30 text-foreground"
-                                                    )}
-                                                >
-                                                    <div className="text-[10px] font-black uppercase tracking-tight mb-1 opacity-80">{acc.name}</div>
-                                                    <div className={cn("text-sm font-black tracking-tight", activeAccountId === acc.id ? "text-white" : "text-emerald-500")}>₺{Number(acc.balance).toLocaleString('tr-TR')}</div>
-                                                    {activeAccountId === acc.id && (
-                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                            <CheckCircle2 className="h-5 w-5 text-white/50" />
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] ml-1">ÖDEME TUTARI (₺)</Label>
-                                            <div className="relative">
-                                                <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/40" />
-                                                <input
-                                                    type="number"
-                                                    value={paymentAmount}
-                                                    onChange={(e) => setPaymentAmount(e.target.value)}
-                                                    placeholder="0.00"
-                                                    className="w-full h-14 bg-background border border-border/40 rounded-2xl pl-12 pr-4 text-lg font-black focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none transition-all placeholder:text-muted-foreground/20"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] ml-1">AÇIKLAMA</Label>
-                                            <input
-                                                type="text"
-                                                value={paymentDescription}
-                                                onChange={(e) => setPaymentDescription(e.target.value)}
-                                                placeholder="İşlem notu..."
-                                                className="w-full h-14 bg-background border border-border/40 rounded-2xl px-5 text-sm font-medium focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none transition-all placeholder:text-muted-foreground/20"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex gap-4">
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => setSelectedSupplier(null)}
-                                    className="h-14 rounded-2xl px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:bg-muted/50"
-                                >
-                                    VAZGEÇ
-                                </Button>
-                                <Button
-                                    onClick={handlePayDebt}
-                                    disabled={paying || !paymentAmount}
-                                    className="flex-1 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-[11px] font-black uppercase tracking-widest shadow-2xl shadow-indigo-600/30 transition-all active:scale-[0.98]"
-                                >
-                                    {paying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CreditCard className="h-5 w-5 mr-2" />}
-                                    ÖDEMEYİ TAMAMLA
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <ScrollArea className="h-[500px] relative">
+                    <ScrollArea className="h-[500px] relative">
                             {isBackgroundFetching && (
                                 <div className="absolute top-0 right-0 z-50 p-2">
                                     <Loader2 className="h-4 w-4 animate-spin text-primary opacity-50" />
@@ -364,39 +218,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                 </div>
                             ) : (
                                 <div className="space-y-4 px-6 pb-6">
-                                    {type === "TOTAL_DEBTS" && (
-                                        <div className="space-y-4">
-                                            {data.map((supplier: any) => (
-                                                <div key={supplier.id} className="p-5 rounded-[1.5rem] bg-muted/20 border border-border/40 group hover:border-indigo-500/30 transition-all">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="h-10 w-10 rounded-xl bg-background border border-border/40 flex items-center justify-center">
-                                                                <User className="h-5 w-5 text-muted-foreground" />
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="font-medium text-sm  uppercase tracking-tight">{supplier.name}</h4>
-                                                                <p className="text-[10px]  text-muted-foreground opacity-60 uppercase">{supplier.phone || "Telefon Yok"}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">BEKLEYEN BORÇ</p>
-                                                            <p className="text-lg  text-indigo-500 tracking-tight">₺{Number(supplier.balance).toLocaleString('tr-TR')}</p>
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        onClick={() => {
-                                                            setSelectedSupplier(supplier);
-                                                            setPaymentAmount(String(supplier.balance));
-                                                        }}
-                                                        className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-[10px]  uppercase tracking-widest shadow-lg shadow-indigo-600/20"
-                                                    >
-                                                        ÖDEME YAP <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
                                     {type === "COLLECTIONS" && (
                                         <div className="space-y-3">
                                             {data.map((item: any) => {
@@ -629,7 +450,6 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                 </div>
                             )}
                         </ScrollArea>
-                    )}
                 </div>
             </DialogContent>
         </Dialog>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -128,6 +128,44 @@ export function SalesHistoryClient({
         queryFn: () => getSalesHistoryReport({ startDate: rangeStart, endDate: rangeEnd, comparisonMode }),
         placeholderData: keepPreviousData,
     });
+
+    const currencySymbol = defaultCurrency === "USD" ? "$" : defaultCurrency === "EUR" ? "€" : "₺";
+
+    const displayedTotals = useMemo(() => {
+        const items = historyData?.items || [];
+        if (items.length === 0) {
+            return { net: 0, income: 0, expense: 0, count: 0 };
+        }
+
+        let income = 0;
+        let expense = 0;
+
+        items.forEach((op: UnifiedOperation) => {
+            let amount = Number(op.amount) || 0;
+            const currency = op.currency || "TRY";
+
+            if (defaultCurrency !== currency && rates) {
+                if (currency === "TRY" && defaultCurrency === "USD") {
+                    amount = amount / (rates.usd || 34.5);
+                } else if (currency === "USD" && defaultCurrency === "TRY") {
+                    amount = amount * (rates.usd || 34.5);
+                }
+            }
+
+            if (op.type === "EXPENSE") {
+                expense += amount;
+            } else {
+                income += amount;
+            }
+        });
+
+        return {
+            net: income - expense,
+            income,
+            expense,
+            count: items.length,
+        };
+    }, [historyData?.items, defaultCurrency, rates]);
 
     const applySearch = () => {
         setPage(1);
@@ -676,7 +714,21 @@ export function SalesHistoryClient({
                                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tarih</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Müşteri</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Açıklama / Ürünler</th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tutar</th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <div className="flex flex-col items-end gap-0.5">
+                                            <span>Tutar</span>
+                                            {historyData.items.length > 0 && (
+                                                <span className={cn(
+                                                    "text-xs font-black tracking-tight normal-case",
+                                                    displayedTotals.net > 0 ? "text-blue-600 dark:text-blue-400" :
+                                                    displayedTotals.net < 0 ? "text-rose-600 dark:text-rose-400" :
+                                                    "text-foreground"
+                                                )}>
+                                                    Toplam: {displayedTotals.net < 0 ? "-" : displayedTotals.net > 0 ? "+" : ""}{currencySymbol}{Math.abs(displayedTotals.net).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </th>
                                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground w-28">İşlem</th>
                                 </tr>
                             </thead>
@@ -739,6 +791,35 @@ export function SalesHistoryClient({
                                     ))
                                 )}
                             </tbody>
+                            {historyData.items.length > 0 && (
+                                <tfoot>
+                                    <tr className="border-t-2 border-border/60 bg-muted/20 font-bold">
+                                        <td colSpan={4} className="px-6 py-3.5 text-right text-xs uppercase tracking-wider text-muted-foreground">
+                                            Gösterilen İşlemlerin Toplamı:
+                                        </td>
+                                        <td className="px-6 py-3.5 text-right">
+                                            <div className="flex flex-col items-end">
+                                                <span className={cn(
+                                                    "text-base font-black tracking-tight",
+                                                    displayedTotals.net > 0 ? "text-blue-600 dark:text-blue-400" :
+                                                    displayedTotals.net < 0 ? "text-rose-600 dark:text-rose-400" :
+                                                    "text-foreground"
+                                                )}>
+                                                    {displayedTotals.net < 0 ? "-" : displayedTotals.net > 0 ? "+" : ""}{currencySymbol}{Math.abs(displayedTotals.net).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                                {displayedTotals.income > 0 && displayedTotals.expense > 0 && (
+                                                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                                                        <span className="text-emerald-600 dark:text-emerald-400">+{currencySymbol}{displayedTotals.income.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</span>
+                                                        <span>/</span>
+                                                        <span className="text-rose-600 dark:text-rose-400">-{currencySymbol}{displayedTotals.expense.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-3.5"></td>
+                                    </tr>
+                                </tfoot>
+                            )}
                         </table>
                     </div>
                 </CardContent>

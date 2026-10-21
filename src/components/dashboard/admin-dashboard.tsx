@@ -159,7 +159,7 @@ export function AdminDashboard({
         },
         {
             id: "stat_debts",
-            label: "Toplam borçlar",
+            label: "Veresiyeler",
             value: s.totalDebts,
             iconId: "ArrowDownCircle",
             colorClass: "text-indigo-500",
