@@ -244,7 +244,7 @@ export type GeminiPart = string | {
     };
 };
 
-async function callGemini(
+export async function callGemini(
     shopId: string, 
     promptParts: GeminiPart[], 
     responseType: "json" | "text" = "json", 
