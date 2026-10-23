@@ -78,7 +78,7 @@ export function ReceiptModalWrapper({
             ? `https://wa.me/90${phoneClean.replace(/^0/, "")}`
             : "https://web.whatsapp.com";
 
-        const waWindow = window.open(waUrl, "_blank");
+        const waWindow = window.open(waUrl, "whatsapp_window");
 
         setIsGenerating(true);
         try {

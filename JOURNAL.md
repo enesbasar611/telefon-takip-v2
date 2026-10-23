@@ -41,6 +41,69 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-23: WhatsApp Sekme Yeniden Kullanımı (Tab Reuse), Hızlı Gönder / Önizleme Switchi ve Bildirim Popup'ı:
+  - **Talep:**
+    - Web seçildiğinde WhatsApp Web sekmesi (`web.whatsapp.com`), Uygulama seçildiğinde masaüstü WhatsApp uygulaması (`whatsapp://`) tetiklenmesi.
+    - Her seferinde yeni sekme açmak yerine, WhatsApp Web sekmesi açıksa mevcut sekme üzerinden açılması (`window.open(link, 'whatsapp_window')`).
+    - Mesaj gönderilmeden önce WhatsApp mesaj önizlemesi sunulması veya "Hızlı Gönder" anahtarı ile önizlemesiz doğrudan WhatsApp'a yönlendirilmesi.
+    - Gönderildiğinde "Mesaj [telefon no] ya gönderildi" şeklinde toast bildirim popup'ı gösterilmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **Sekme Yeniden Kullanımı (`target: 'whatsapp_window'`):**
+       - `src/lib/utils/notifications.ts`, `src/components/pos/unified-sale-modal.tsx`, `src/components/pos/receipt-modal.tsx` ve `src/components/common/receipt-modal-wrapper.tsx` bileşenlerinde `window.open(link, '_blank')` yerine `window.open(link, 'whatsapp_window')` kullanılarak her gönderimde yeni sekme açılması engellendi, var olan WhatsApp Web sekmesinin yeniden kullanılması sağlandı.
+    2. **Hızlı Gönder / Önizleme Modu Switchi (`Zap`):**
+       - Hem `UnifiedSaleModal` hem de `ReceiptModal` başlık/aksiyon paneline `Zap` ikonlu Hızlı Gönder butonu/switchi entegre edildi. Durum `localStorage` (`whatsapp_quick_send`) üzerinde saklanır.
+       - Hızlı Gönder **Açık**: Fiş mesajı doğrudan derlenerek WhatsApp'a yönlendirilir ve `toast.success("Mesaj [telefon no] numarasına gönderildi.")` tetiklenir.
+       - Hızlı Gönder **Kapalı (Önizlemeli)**: `WhatsAppConfirmModal` açılarak gönderilecek mesajın canlı önizlemesi (ve istenirse AI tonlama düzenleyicisi) sunulur; kullanıcı onayladığında bildirim gösterilip yönlendirme yapılır.
+    3. **Telefon Numarası Doğrulama & Bildirim Entegrasyonu:**
+       - Kayıtsız/telefonsuz satışlar için fiş modalına 10 haneli telefon numarası giriş kutusu ve geçerlilik kontrolü eklendi.
+       - Bildirim metni `Mesaj [telefon no] numarasına gönderildi.` formatında standardize edildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-23: Hızlı Satış Ekranı Ürün Seçimi Bildirim Yığını (Stacking Toast Popup):
+  - **Talep:**
+    - `@satis` sayfasındaki hızlı satış ekranında ürün kutucuklarından ürün seçilince sağ altta "Ürün seçildi" şeklinde ufak yeşil popup gösterilmesi.
+    - Mobilde ekranın alt kısmında çıkması.
+    - Peş peşe seçimlerde popupların üst üste binerek gelmesi (sonraki popup alttakinin üstünde yığılacak stack mantığı).
+    - 1-2 saniye ekranda durup kendiliğinden kaybolması.
+  - **Yapılan İyileştirmeler:**
+    1. **Seçim Bildirim Yığını (Toast Stack) State & Tetikleyici (`src/components/pos/pos-interface.tsx`, `src/components/pos/pos-compact.tsx`):**
+       - `selectionToasts` state'i ve `addSelectionToast` fonksiyonu tanımlandı.
+       - Her ürün sepete eklendiğinde anında bir bildirim nesnesi oluşturulup listeye eklenir (`id`, `name`, `price`).
+       - 1.8 saniye süreyle ekranda tutulup otomatik olarak filtrelenerek kaldırılır.
+    2. **Üst Üste Yığılan (Stacking) Yeşil Popup Tasarımı:**
+       - `flex flex-col-reverse items-center sm:items-end gap-1.5` ile sonraki gelen popup alttakinin üstüne binerek sıralanır.
+       - Masaüstünde sağ altta (`sm:bottom-6 sm:right-6`), mobilde ekranın altında (`bottom-20 / bottom-24 left-1/2 -translate-x-1/2`) konumlandırıldı.
+       - Zümrüt yeşili modern cam efekti (`bg-emerald-600/95 backdrop-blur-md border border-emerald-400/30`), beyaz tik ikonu, ürün adı, "Ürün seçildi" etiketi ve ürün fiyat rozeti ile son derece şık ve kompakt bir micro-interaction sağlandı.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-23: Satış Fişi Modalı Geliştirmeleri (Dolar/TL Seçici, Kompakt Termal Fiş Düzeni, WhatsApp Metin & Web/App Gönderimi, Telefon Girişi):
+  - **Talep:**
+    - `@satis` sayfasında ve hızlı satıştan sonra çıkan fişte Dolar / TL seçici kullanılması.
+    - Varsayılan para birimi Dolar ise otomatik olarak fişte fiyatların dolar yazması ve parantez içinde TL olarak görünmesi.
+    - WhatsApp gönderim butonunun veresiye sayfasındaki gibi Web / Uygulama seçicisine sahip olması; Web seçilirse yeni sekmede WhatsApp Web, Uygulama seçilirse masaüstü uygulamasına gönderilmesi.
+    - Fişteki gereksiz boşlukların kaldırılması, termal yazıcı kağıt ölçüsüne uygun ve kompakt fiş çıkartılması.
+    - WhatsApp'tan fişin resim yerine yazı (metin) olarak gönderilmesi; sadece aldığı ürünler ve fiyatı, en altta ise toplam tutar yazması.
+    - Kayıtlı olmayan (veya telefonu bulunmayan) müşteriler için fiş modalında telefon numarası girme alanının yer alması ve numara doğru/geçerli (en az 10 hane) girildiğinde WhatsApp butonunun aktifleşmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **Dolar / TL Seçici ve Para Birimi Formatlaması (`src/components/pos/unified-sale-modal.tsx`, `src/components/pos/receipt-modal.tsx`):**
+       - Modalın sol panelinde ve başlığında modern `[ ₺ TL ]` / `[ $ Dolar ]` switch butonları eklendi.
+       - Varsayılan para birimi `USD` ise otomatik olarak `USD` seçili gelmesi sağlandı.
+       - `selectedCurrency === "USD"` iken hem ürün kalemlerinde (`$X.XX (₺Y.YY)`) hem de genel toplamda dolar ve parantez içinde TL karşılığı dinamik kurla hesaplanarak gösterildi.
+    2. **Kayıtsız Müşteriler İçin Telefon Girişi & Buton Validasyonu:**
+       - Sol panelde "Telefon (WhatsApp)" giriş alanı oluşturuldu (`sale.customer?.phone` varsa otomatik dolar, yoksa kullanıcı girebilir).
+       - En az 10 hane kontrolü (`isPhoneValid`) eklendi; numara doğru girilene kadar WhatsApp butonu pasif (disabled, %40 opaklık), numara tamamlandığında anında aktifleşecek şekilde bağlandı.
+    3. **WhatsApp Web / Masaüstü Uygulama Seçicisi & Doğrudan Metin Fiş Gönderimi:**
+       - Veresiye sayfasında olduğu gibi `localStorage` destekli `[ 🌐 Web ]` / `[ 💻 Uygulama ]` seçici arayüzü eklendi.
+       - Eski html2canvas ile resim indirip gönderme yerine kullanıcının istediği doğrultuda temiz ve sade metin formatı üretildi:
+         `• Ürün Adı (Adet): Fiyat` satırları ve en altta `*Toplam: Tutar*`.
+       - Kullanıcı 'Web' seçtiğinde yeni sekmede `web.whatsapp.com`, 'Uygulama' seçtiğinde `whatsapp://` masaüstü protokolü tetiklendi.
+    4. **Fişteki Gereksiz Boşlukların Kaldırılması & Termal Yazıcı Optimizasyonu (`src/components/common/receipt-template.tsx`, `unified-sale-modal.tsx`, `receipt-modal.tsx`):**
+       - `ReceiptTemplate` içerisindeki `p-6` (24px) kenar boşluğu `p-3 sm:p-4` yapılarak termal kağıt genişliği tam kullanıldı.
+       - Müşteri bilgisi ve Fiş No dikeyde 2 ayrı blok yerine tek satırlık kompakt başlık haline getirildi.
+       - Ürün listesindeki `min-h-[50px]`, `mb-6` ve `space-y-3` fazlalıkları kaldırılarak `space-y-1 mb-2` kompakt düzenine geçildi.
+       - Ödeme yöntemi ve genel toplam kutusu boşluksuz ve derli toplu hale getirilerek kağıt israfı tamamen önlendi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
 - [x] 2026-10-21: B.A.Ş.A.R. // Komuta ve Tahmin Kokpiti & Ay Sonu Ciro Tahmin Motoru (@stok/stok-ai):
   - **Talep:**
     - AI / Stok Önerileri sayfasının (`stok-ai`) yönetici seviyesinde "B.A.Ş.A.R. Komuta ve Tahmin Kokpiti" arayüzüne dönüştürülmesi.

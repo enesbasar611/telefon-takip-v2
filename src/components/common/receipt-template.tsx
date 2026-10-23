@@ -37,7 +37,7 @@ export const ReceiptTemplate = ({
     return (
         <div
             className={cn(
-                "bg-white text-black p-6 font-sans relative border-0",
+                "bg-white text-black p-3 sm:p-4 font-sans relative border-0",
                 paperSizeVal === "58mm" ? "w-[58mm] text-[10px]" :
                     paperSizeVal === "80mm" ? "w-[80mm] text-[13px]" :
                         "w-[72mm] text-[11px]"
@@ -54,20 +54,20 @@ export const ReceiptTemplate = ({
             {/* Header */}
             <div className="text-center border-b-[1.5px] border-black pb-1 mb-2">
                 {(shopLogo || settings?.logoUrl || settings?.logo) && (
-                    <div className="mb-2 flex justify-center">
+                    <div className="mb-1.5 flex justify-center">
                         <img
                             src={shopLogo || settings?.logoUrl || settings?.logo}
                             alt="Logo"
-                            className="h-10 w-auto object-contain max-w-[80%]"
+                            className="h-9 w-auto object-contain max-w-[80%]"
                         />
                     </div>
                 )}
-                <h3 className="font-black text-base uppercase text-black leading-tight tracking-tight">
+                <h3 className="font-black text-sm uppercase text-black leading-tight tracking-tight">
                     {shopName || settings?.title || "TEKNİK SERVİS"}
                 </h3>
                 {subtitle && (
-                    <div className="flex justify-center mt-2 mb-1">
-                        <p className="text-[8px] font-black uppercase text-black leading-tight border border-black inline-block px-2 py-0.5">
+                    <div className="flex justify-center mt-1.5 mb-1">
+                        <p className="text-[8px] font-black uppercase text-black leading-tight border border-black inline-block px-1.5 py-0.5">
                             {subtitle}
                         </p>
                     </div>
@@ -86,14 +86,14 @@ export const ReceiptTemplate = ({
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-3 border-t-[1.5px] border-black border-dashed mt-4">
+            <div className="text-center pt-2 border-t-[1.5px] border-black border-dashed mt-2">
                 {settings?.terms && (
-                    <div className="text-[7px] border-b border-black border-dotted mb-2 pb-1.5 whitespace-pre-wrap leading-tight font-bold text-left italic">
+                    <div className="text-[7px] border-b border-black border-dotted mb-1.5 pb-1 whitespace-pre-wrap leading-tight font-bold text-left italic">
                         {settings.terms}
                     </div>
                 )}
 
-                <p className="font-black text-[9px] uppercase mb-1 text-black leading-tight">
+                <p className="font-black text-[8px] uppercase mb-0.5 text-black leading-tight">
                     {settings?.footer || "Bizi Tercih Ettiğiniz İçin Teşekkürler"}
                 </p>
 

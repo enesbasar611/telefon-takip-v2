@@ -254,6 +254,21 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         });
     }, [localProducts, productSearch, selectedCategory]);
 
+    // Hızlı Seçim Ufak Yeşil Popup Yığını (Toast Stack)
+    const [selectionToasts, setSelectionToasts] = useState<Array<{
+        id: string;
+        name: string;
+        price: string;
+    }>>([]);
+
+    const addSelectionToast = useCallback((name: string, priceFormatted: string) => {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        setSelectionToasts((prev) => [...prev, { id, name, price: priceFormatted }]);
+        setTimeout(() => {
+            setSelectionToasts((prev) => prev.filter((t) => t.id !== id));
+        }, 1800);
+    }, []);
+
     // Add to cart with price in active sale currency
     const addToCart = (product: any, overridePrice?: number) => {
         if (!product) return;
@@ -299,10 +314,8 @@ export function POSCompact({ products: initialProducts, customers, categories }:
             return [...currentCart, cartItem];
         });
 
-        toast({
-            title: "Sepete Eklendi",
-            description: `${product.name} (${currencySymbol}${unitPrice.toFixed(2)}) sepete eklendi.`
-        });
+        // Ufak yeşil seçim popup'ını tetikle
+        addSelectionToast(product.name, `${currencySymbol}${unitPrice.toFixed(2)}`);
     };
 
     // Toggle active sale currency between TRY and USD with auto conversion
@@ -1124,6 +1137,33 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 onOpenChange={setIsScannerModalOpen}
                 shopIdOrUserId={session?.user?.shopId || session?.user?.id || "global"}
             />
+
+            {/* Ürün Seçildi Yeşil Popup Yığını */}
+            {selectionToasts.length > 0 && (
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] flex flex-col-reverse items-center gap-1.5 pointer-events-none select-none">
+                    {selectionToasts.map((toast) => (
+                        <div
+                            key={toast.id}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-emerald-600/95 dark:bg-emerald-700/95 text-white shadow-xl shadow-emerald-950/25 border border-emerald-400/30 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 min-w-[200px] max-w-[280px]"
+                        >
+                            <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                                <Check className="h-3 w-3 text-white stroke-[3]" />
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <span className="text-[10px] font-black uppercase tracking-tight truncate leading-tight">
+                                    {toast.name}
+                                </span>
+                                <span className="text-[8.5px] font-bold text-emerald-100/90 leading-none mt-0.5">
+                                    Ürün seçildi
+                                </span>
+                            </div>
+                            <span className="text-[10px] font-black tabular-nums bg-black/20 text-emerald-100 px-1.5 py-0.5 rounded-md shrink-0">
+                                {toast.price}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

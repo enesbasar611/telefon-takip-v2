@@ -339,6 +339,31 @@ export function POSInterface({ initialSaleId }: {
     }
   }, [saleCurrency, usdRate, exchangeRates]);
 
+  // Hızlı Seçim Ufak Yeşil Popup Yığını (Toast Stack)
+  const [selectionToasts, setSelectionToasts] = useState<Array<{
+    id: string;
+    name: string;
+    price: string;
+  }>>([]);
+
+  const addSelectionToast = useCallback((product: any) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const priceVal = getCartDisplayPrice(product);
+    const priceStr = formatCurrency(priceVal);
+    const symbol = getCartCurrencySymbol();
+    const newToast = {
+      id,
+      name: product.name,
+      price: `${symbol}${priceStr}`
+    };
+
+    setSelectionToasts((prev) => [...prev, newToast]);
+
+    setTimeout(() => {
+      setSelectionToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 1800);
+  }, [getCartDisplayPrice, getCartCurrencySymbol]);
+
   const addToCart = useCallback((product: any, forceAllowZero = false) => {
     if (!product) return;
 
@@ -376,7 +401,10 @@ export function POSInterface({ initialSaleId }: {
       };
       return [...currentCart, cartItem];
     });
-  }, [getCartDisplayPrice, saleCurrency, usdRate]);
+
+    // Ufak yeşil seçim popup'ını tetikle
+    addSelectionToast(product);
+  }, [getCartDisplayPrice, saleCurrency, usdRate, addSelectionToast]);
 
   const addBarcodeMatchToCart = (value: string) => {
     const normalizedValue = value.trim().toUpperCase();
@@ -1045,6 +1073,33 @@ export function POSInterface({ initialSaleId }: {
           addToCart(prod, true);
         }}
       />
+
+      {/* Ürün Seçildi Yeşil Popup Yığını (Sağ alt / Mobilde ekranın altında) */}
+      {selectionToasts.length > 0 && (
+        <div className="fixed bottom-20 sm:bottom-6 right-auto sm:right-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 z-[9999] flex flex-col-reverse items-center sm:items-end gap-1.5 pointer-events-none select-none">
+          {selectionToasts.map((toast) => (
+            <div
+              key={toast.id}
+              className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-emerald-600/95 dark:bg-emerald-700/95 text-white shadow-xl shadow-emerald-950/25 border border-emerald-400/30 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 min-w-[210px] max-w-[280px] sm:max-w-[340px]"
+            >
+              <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+              </div>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-[11px] font-black uppercase tracking-tight truncate leading-tight">
+                  {toast.name}
+                </span>
+                <span className="text-[9px] font-bold text-emerald-100/90 leading-none mt-0.5">
+                  Ürün seçildi
+                </span>
+              </div>
+              <span className="text-[11px] font-black tabular-nums bg-black/20 text-emerald-100 px-2 py-0.5 rounded-lg shrink-0">
+                {toast.price}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 

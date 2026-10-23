@@ -102,7 +102,7 @@ export function WhatsAppConfirmModal({
                 title: "Başarılı",
                 description: mode === "bulk"
                     ? `${targetPhones.length} mesaj için WhatsApp penceresi açıldı.`
-                    : "WhatsApp mesaj penceresi açıldı."
+                    : `Mesaj ${targetPhones[0] || ""} numarasına gönderildi.`
             });
             onClose();
         } catch (err) {

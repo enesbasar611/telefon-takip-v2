@@ -19,7 +19,11 @@ import {
     X,
     User,
     ChevronRight,
-    Search
+    Search,
+    Globe,
+    Monitor,
+    DollarSign,
+    Zap
 } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -29,6 +33,8 @@ import { ReceiptTemplate } from "@/components/common/receipt-template";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { printReceipt, downloadReceiptImage, generateReceiptImage, getReceiptWidthClass } from "@/lib/receipt-print-styles";
+import { formatWhatsAppLink, sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
+import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 
 interface UnifiedSaleModalProps {
     isOpen: boolean;
@@ -41,9 +47,48 @@ interface UnifiedSaleModalProps {
 export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultCurrency }: UnifiedSaleModalProps) {
     const [settings, setSettings] = useState<any>(null);
     const [shop, setShop] = useState<any>(null);
-    const [defaultCurrency, setDefaultCurrency] = useState<string>(initialDefaultCurrency || "TRY");
+    const [selectedCurrency, setSelectedCurrency] = useState<"TRY" | "USD">(
+        (initialDefaultCurrency === "USD" ? "USD" : "TRY")
+    );
     const [activeTab, setActiveTab] = useState("receipt");
     const [printFormat, setPrintFormat] = useState<"a4" | "thermal">("thermal");
+
+    // Phone for WhatsApp
+    const [customPhone, setCustomPhone] = useState(sale?.customer?.phone || "");
+
+    // WhatsApp send type: web or desktop
+    const [sendType, setSendType] = useState<"web" | "desktop">(() => {
+        if (typeof window !== "undefined") {
+            return (localStorage.getItem("whatsapp_send_type") as "web" | "desktop") || "web";
+        }
+        return "web";
+    });
+
+    const handleSendTypeChange = (type: "web" | "desktop") => {
+        setSendType(type);
+        if (typeof window !== "undefined") {
+            localStorage.setItem("whatsapp_send_type", type);
+        }
+    };
+
+    // Hızlı Gönder (Önizlemesiz doğrudan gönderim)
+    const [quickSend, setQuickSend] = useState<boolean>(() => {
+        if (typeof window !== "undefined") {
+            return localStorage.getItem("whatsapp_quick_send") !== "false";
+        }
+        return true;
+    });
+
+    const handleQuickSendToggle = (checked: boolean) => {
+        setQuickSend(checked);
+        if (typeof window !== "undefined") {
+            localStorage.setItem("whatsapp_quick_send", checked ? "true" : "false");
+        }
+    };
+
+    // WhatsApp Önizleme Modalı
+    const [isWhatsAppPreviewOpen, setIsWhatsAppPreviewOpen] = useState(false);
+    const [previewMessage, setPreviewMessage] = useState("");
 
     // Customer info for contract (fallback to sale customer)
     const [customer, setCustomer] = useState({
@@ -78,9 +123,16 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
             if (!initialDefaultCurrency) {
                 getSettings().then(s => {
                     const curr = s.find((a: any) => a.key === "defaultCurrency")?.value || "TRY";
-                    setDefaultCurrency(curr);
+                    if (curr === "USD") {
+                        setSelectedCurrency("USD");
+                    }
                 });
+            } else if (initialDefaultCurrency === "USD") {
+                setSelectedCurrency("USD");
             }
+
+            // Sync custom phone
+            setCustomPhone(sale.customer?.phone || "");
 
             // Sync customer info
             setCustomer({
@@ -93,49 +145,29 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
 
     if (!sale) return null;
 
-    const currencySymbol = defaultCurrency === "USD" ? "$" : (defaultCurrency === "EUR" ? "€" : "₺");
-    const currentPaperSize = settings?.paperSize || "72mm";
+    const usdRate = Number(rates?.usd || (rates as any)?.USD || 34.5);
 
-    const getPrice = (price: number) => {
-        const saleCurrency = sale?.transaction?.currency || "TRY";
-
-        // Current display currency matches original sale currency - return as is
-        if (defaultCurrency === saleCurrency) {
-            return Number(price).toFixed(2);
+    const getPriceTRY = (price: number) => {
+        const saleCurrency = sale?.transaction?.currency || sale?.currency || "TRY";
+        if (saleCurrency === "USD") {
+            return (Number(price) * usdRate).toFixed(2);
         }
-
-        // Need conversion: original was TRY, display is USD
-        if (defaultCurrency === 'USD' && saleCurrency === 'TRY') {
-            const rate = Number(rates?.usd || 34.5);
-            return Number(price / rate).toFixed(2);
-        }
-
-        // Need conversion: original was USD, display is TRY
-        if (defaultCurrency === 'TRY' && saleCurrency === 'USD') {
-            const rate = Number(rates?.usd || 34.5);
-            return Number(price * rate).toFixed(2);
-        }
-
-        // EUR cases
-        if (defaultCurrency === 'EUR' && saleCurrency === 'TRY') {
-            const rate = Number(rates?.eur || 37.0);
-            return Number(price / rate).toFixed(2);
-        }
-
-        if (defaultCurrency === 'TRY' && saleCurrency === 'EUR') {
-            const rate = Number(rates?.eur || 37.0);
-            return Number(price * rate).toFixed(2);
-        }
-
         return Number(price).toFixed(2);
     };
 
-    const getPriceInTRY = (price: number) => {
-        const saleCurrency = sale?.transaction?.currency || "TRY";
-        if (saleCurrency === "TRY") return Number(price).toFixed(2);
-        const rate = saleCurrency === "USD" ? Number(rates?.usd || 34.5) : Number(rates?.eur || 37.0);
-        return Number(price * rate).toFixed(2);
+    const getPriceUSD = (price: number) => {
+        const saleCurrency = sale?.transaction?.currency || sale?.currency || "TRY";
+        if (saleCurrency === "USD") {
+            return Number(price).toFixed(2);
+        }
+        return (Number(price) / usdRate).toFixed(2);
     };
+
+    // Phone validation
+    const cleanPhoneDigits = (customPhone || "").replace(/\D/g, "");
+    const isPhoneValid = cleanPhoneDigits.length >= 10;
+
+    const currentPaperSize = settings?.paperSize || "72mm";
 
     const paymentMethodMap: Record<string, string> = {
         CASH: "NAKİT",
@@ -184,36 +216,57 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
         }
     };
 
-    const handleWhatsApp = async () => {
-        const phoneClean = sale.customer?.phone?.replace(/[^0-9]/g, "") || "";
-        const waUrl = phoneClean
-            ? `https://wa.me/90${phoneClean.replace(/^0/, "")}`
-            : "https://web.whatsapp.com";
 
-        const waWindow = window.open(waUrl, "_blank");
 
-        let ref = receiptRef;
-        if (activeTab === "contract") ref = contractRef;
-        if (activeTab === "warranty") ref = warrantyRef;
-
-        try {
-            const blob = await generateReceiptImage(ref);
-            if (blob) {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${activeTab}-${sale.saleNumber}.png`;
-                a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const buildSaleWhatsAppMessage = () => {
+        const isUSD = selectedCurrency === "USD";
+        const itemLines = sale.items?.map((item: any) => {
+            const qty = item.quantity > 1 ? ` (${item.quantity} Adet)` : "";
+            if (isUSD) {
+                return `• ${item.product?.name}${qty}: $${getPriceUSD(item.totalPrice)} (₺${getPriceTRY(item.totalPrice)})`;
             }
-        } catch (err) {
-            console.error("WhatsApp image error:", err);
+            return `• ${item.product?.name}${qty}: ₺${getPriceTRY(item.totalPrice)}`;
+        }).join("\n") || "";
+
+        const totalText = isUSD
+            ? `*Toplam: $${getPriceUSD(sale.finalAmount)} (₺${getPriceTRY(sale.finalAmount)})*`
+            : `*Toplam: ₺${getPriceTRY(sale.finalAmount)}*`;
+
+        return `${itemLines}\n\n${totalText}`;
+    };
+
+    const sendWhatsAppDirect = (msgToSend?: string) => {
+        const message = msgToSend || buildSaleWhatsAppMessage();
+        const cleanPhone = sanitizeWhatsAppPhone(customPhone);
+        const link = formatWhatsAppLink(cleanPhone, message, sendType);
+
+        if (sendType === "desktop") {
+            window.location.assign(link);
+        } else {
+            // Var olan WhatsApp sekmesini hedefler, her defasında yeni sekme açmaz
+            window.open(link, "whatsapp_window");
+        }
+        toast.success(`Mesaj ${customPhone} numarasına gönderildi.`);
+    };
+
+    const handleWhatsApp = () => {
+        if (!isPhoneValid) {
+            toast.error("Lütfen geçerli bir telefon numarası girin (en az 10 hane).");
+            return;
         }
 
-        if (waWindow) waWindow.focus();
+        const msg = buildSaleWhatsAppMessage();
+        setPreviewMessage(msg);
+
+        if (quickSend) {
+            sendWhatsAppDirect(msg);
+        } else {
+            setIsWhatsAppPreviewOpen(true);
+        }
     };
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-[1100px] p-0 bg-[#0F172A] border border-border/50 shadow-2xl rounded-3xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
 
@@ -230,16 +283,84 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex flex-col gap-1 p-3 rounded-2xl bg-white/5 border border-white/5">
+                        <div className="space-y-3">
+                            {/* Müşteri ve Telefon Bilgisi */}
+                            <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-white/5 border border-white/5">
                                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Müşteri</span>
                                 <span className="text-xs font-bold text-white uppercase">{sale.customer?.name || "Hızlı Satış"}</span>
-                                {sale.customer?.phone && <span className="text-[10px] text-muted-foreground font-medium">{sale.customer.phone}</span>}
+
+                                <div className="mt-1 pt-1.5 border-t border-white/10 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider">Telefon (WhatsApp)</span>
+                                        {!isPhoneValid && customPhone.trim() && (
+                                            <span className="text-[8px] font-bold text-rose-400">10 hane olmalıdır</span>
+                                        )}
+                                        {isPhoneValid && (
+                                            <span className="text-[8px] font-bold text-emerald-400">Hazır</span>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="tel"
+                                        placeholder="05xx xxx xx xx"
+                                        value={customPhone}
+                                        onChange={(e) => setCustomPhone(e.target.value)}
+                                        className={cn(
+                                            "w-full h-8 px-2.5 rounded-xl bg-black/30 border text-white text-xs font-mono placeholder:text-white/30 outline-none transition-colors",
+                                            isPhoneValid ? "border-emerald-500/40 focus:border-emerald-500" : "border-white/10 focus:border-blue-500/50"
+                                        )}
+                                    />
+                                </div>
                             </div>
 
+                            {/* Para Birimi Seçici (Dolar / TL) */}
+                            <div className="space-y-1">
+                                <div className="flex items-center justify-between px-1">
+                                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Para Birimi</span>
+                                    {selectedCurrency === "USD" && (
+                                        <span className="text-[8.5px] font-bold text-emerald-400/90">1$ = {usdRate} ₺</span>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-1 p-1 bg-white/5 rounded-2xl border border-white/10">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedCurrency("TRY")}
+                                        className={cn(
+                                            "h-7 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-1",
+                                            selectedCurrency === "TRY"
+                                                ? "bg-white text-black shadow-md"
+                                                : "text-muted-foreground hover:text-white"
+                                        )}
+                                    >
+                                        ₺ TL
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedCurrency("USD")}
+                                        className={cn(
+                                            "h-7 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-1",
+                                            selectedCurrency === "USD"
+                                                ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                                                : "text-muted-foreground hover:text-white"
+                                        )}
+                                    >
+                                        $ Dolar
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Toplam Tutar */}
                             <div className="flex flex-col gap-1 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                                 <span className="text-[9px] font-black text-emerald-500/70 uppercase tracking-widest">Toplam Tutar</span>
-                                <span className="text-xl font-black text-emerald-500">{currencySymbol}{getPrice(sale.finalAmount)}</span>
+                                <div className="flex flex-wrap items-baseline gap-1.5">
+                                    <span className="text-xl font-black text-emerald-500">
+                                        {selectedCurrency === "USD" ? `$${getPriceUSD(sale.finalAmount)}` : `₺${getPriceTRY(sale.finalAmount)}`}
+                                    </span>
+                                    {selectedCurrency === "USD" && (
+                                        <span className="text-xs font-bold text-emerald-400/80">
+                                            (₺{getPriceTRY(sale.finalAmount)})
+                                        </span>
+                                    )}
+                                </div>
                                 <span className="text-[9px] font-bold text-emerald-500/50 uppercase">{sale.paymentMethod} ÖDEME</span>
                             </div>
                         </div>
@@ -370,12 +491,56 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                         )}
                     </div>
 
-                    <div className="p-6 mt-auto border-t border-border/30 bg-black/30">
+                    <div className="p-5 mt-auto border-t border-border/30 bg-black/30 space-y-2.5">
+                        {/* WhatsApp Gönderim Modu & Hızlı Gönder */}
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between px-1">
+                                <span className="text-[8.5px] font-black text-muted-foreground uppercase tracking-widest">WhatsApp Modu</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleQuickSendToggle(!quickSend)}
+                                    className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                                    title="Hızlı Gönder: Açıkken önizleme modalı açmadan doğrudan WhatsApp'a yönlendirir"
+                                >
+                                    <Zap className={cn("h-3 w-3", quickSend ? "text-amber-400 fill-amber-400" : "text-muted-foreground")} />
+                                    <span className={cn("text-[8.5px] font-black uppercase tracking-tight", quickSend ? "text-amber-400" : "text-muted-foreground")}>
+                                        {quickSend ? "Hızlı Gönder Açık" : "Önizlemeli"}
+                                    </span>
+                                </button>
+                            </div>
+                            <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSendTypeChange('web')}
+                                    className={cn(
+                                        "flex-1 py-1 rounded-lg text-[9px] font-black uppercase transition-all flex items-center justify-center gap-1.5",
+                                        sendType === 'web'
+                                            ? "bg-white text-black shadow-sm"
+                                            : "text-muted-foreground hover:text-white"
+                                    )}
+                                >
+                                    <Globe className="w-3 h-3" /> Web
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSendTypeChange('desktop')}
+                                    className={cn(
+                                        "flex-1 py-1 rounded-lg text-[9px] font-black uppercase transition-all flex items-center justify-center gap-1.5",
+                                        sendType === 'desktop'
+                                            ? "bg-white text-black shadow-sm"
+                                            : "text-muted-foreground hover:text-white"
+                                    )}
+                                >
+                                    <Monitor className="w-3 h-3" /> Uygulama
+                                </button>
+                            </div>
+                        </div>
+
                         <Button
                             onClick={handlePrintAll}
-                            className="w-full h-14 mb-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 text-[11px] font-black uppercase tracking-[0.1em] flex items-center justify-center gap-2"
+                            className="w-full h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 text-[11px] font-black uppercase tracking-[0.1em] flex items-center justify-center gap-2"
                         >
-                            <Printer className="h-5 w-5" />
+                            <Printer className="h-4 w-4" />
                             {hasDevice ? "HEPSİNİ YAZDIR (FİŞ+SÖZLEŞME)" : "FİŞİ YAZDIR"}
                         </Button>
 
@@ -389,8 +554,15 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                             </Button>
                             <Button
                                 variant="outline"
+                                disabled={!isPhoneValid}
                                 onClick={handleWhatsApp}
-                                className="h-10 rounded-xl bg-emerald-500/5 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 text-[10px] font-black uppercase outline-none"
+                                title={!isPhoneValid ? "WhatsApp için geçerli bir telefon numarası girin" : undefined}
+                                className={cn(
+                                    "h-10 rounded-xl text-[10px] font-black uppercase outline-none transition-all",
+                                    isPhoneValid
+                                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 active:scale-95"
+                                        : "bg-white/5 border-white/5 text-muted-foreground opacity-40 cursor-not-allowed"
+                                )}
                             >
                                 <MessageCircle className="h-3.5 w-3.5 mr-2" /> WhatsApp
                             </Button>
@@ -437,59 +609,77 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                                     shopLogo={shop?.logoUrl}
                                     shopWebsite={shop?.website}
                                 >
-                                    <div className="mb-4 border-b-[1.5px] border-black pb-3">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[9px] font-black text-black">MÜŞTERİ</span>
-                                            <span className="text-[13px] font-black uppercase text-black">
+                                    {/* Müşteri & Fiş No Kompakt Başlık */}
+                                    <div className="mb-2 border-b-[1.5px] border-black pb-1.5 flex justify-between items-start gap-2">
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-[7.5px] font-black text-black/60 uppercase leading-none">MÜŞTERİ</span>
+                                            <span className="text-[11px] font-black uppercase text-black leading-tight truncate">
                                                 {sale.customer?.name || "HIZLI SATIŞ"}
                                             </span>
-                                            {sale.customer?.phone && (
-                                                <span className="text-[11px] font-bold text-black">{sale.customer.phone}</span>
+                                            {(customPhone || sale.customer?.phone) && (
+                                                <span className="text-[9.5px] font-bold text-black leading-none mt-0.5">
+                                                    {customPhone || sale.customer.phone}
+                                                </span>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className="mb-4 border-b-[1.5px] border-black pb-3">
-                                        <div className="flex justify-between items-baseline">
-                                            <span className="font-black text-[9px] text-black uppercase">FİŞ NO:</span>
-                                            <span className="font-black text-sm text-black">{sale.saleNumber}</span>
+                                        <div className="text-right shrink-0">
+                                            <span className="text-[7.5px] font-black text-black/60 uppercase block leading-none">FİŞ NO</span>
+                                            <span className="font-black text-xs text-black leading-tight block mt-0.5">
+                                                {sale.saleNumber}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="space-y-3 mb-6 min-h-[50px]">
-                                        {sale.items?.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex justify-between items-start py-1 border-b border-black/5 last:border-0">
-                                                <div className="flex flex-col flex-1 pr-4">
-                                                    <span className="text-[9px] font-black uppercase leading-none block text-black">
-                                                        {item.product?.name}
-                                                    </span>
-                                                    <span className="text-[9px] font-bold text-black/60">
-                                                        {item.quantity} ADET x {currencySymbol}{getPrice(item.unitPrice)}
-                                                    </span>
-                                                </div>
-                                                <div className="text-right whitespace-nowrap">
-                                                    <div className="text-[11px] font-black text-black">
-                                                        {currencySymbol}{getPrice(item.totalPrice)}
+
+                                    {/* Ürün Listesi */}
+                                    <div className="space-y-1 mb-2">
+                                        {sale.items?.map((item: any, idx: number) => {
+                                            const isUSD = selectedCurrency === "USD";
+                                            return (
+                                                <div key={idx} className="flex justify-between items-start py-0.5 border-b border-black/5 last:border-0">
+                                                    <div className="flex flex-col flex-1 pr-2 min-w-0">
+                                                        <span className="text-[9.5px] font-black uppercase leading-tight block text-black truncate">
+                                                            {item.product?.name}
+                                                        </span>
+                                                        <span className="text-[8.5px] font-bold text-black/70 leading-tight">
+                                                            {item.quantity} ADET x {isUSD ? `$${getPriceUSD(item.unitPrice)} (₺${getPriceTRY(item.unitPrice)})` : `₺${getPriceTRY(item.unitPrice)}`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right whitespace-nowrap shrink-0">
+                                                        <div className="text-[10.5px] font-black text-black leading-tight">
+                                                            {isUSD ? `$${getPriceUSD(item.totalPrice)}` : `₺${getPriceTRY(item.totalPrice)}`}
+                                                        </div>
+                                                        {isUSD && (
+                                                            <div className="text-[8px] font-bold text-black/70 leading-tight">
+                                                                (₺{getPriceTRY(item.totalPrice)})
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
-                                    <div className="border-t-[1.5px] border-black pt-4 space-y-2">
-                                        <div className="flex justify-between items-center py-1">
-                                            <span className="text-[10px] font-black text-black uppercase">ÖDEME YÖNTEMİ:</span>
-                                            <span className="text-[11px] font-black text-black uppercase">{paymentMethodMap[sale.paymentMethod || "CASH"] || sale.paymentMethod}</span>
+
+                                    {/* Alt Toplam & Ödeme Yöntemi */}
+                                    <div className="border-t-[1.5px] border-black pt-1.5 space-y-1">
+                                        <div className="flex justify-between items-center py-0.5">
+                                            <span className="text-[9px] font-black text-black uppercase">ÖDEME YÖNTEMİ:</span>
+                                            <span className="text-[10px] font-black text-black uppercase">
+                                                {paymentMethodMap[sale.paymentMethod || "CASH"] || sale.paymentMethod}
+                                            </span>
                                         </div>
-                                        <div className="flex flex-col border-[1.5px] border-black mt-2">
-                                            <div className="flex justify-between items-center p-2">
-                                                <span className="text-[10px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
-                                                <span className="text-lg font-black text-black">
-                                                    {currencySymbol}{getPrice(sale.finalAmount)}
+
+                                        <div className="flex flex-col border-[1.5px] border-black mt-1 p-1.5">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[9.5px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
+                                                <span className="text-base font-black text-black">
+                                                    {selectedCurrency === "USD" ? `$${getPriceUSD(sale.finalAmount)}` : `₺${getPriceTRY(sale.finalAmount)}`}
                                                 </span>
                                             </div>
-                                            {currencySymbol !== "₺" && (
-                                                <div className="flex justify-between items-center px-2 pb-2 bg-gray-50/50">
-                                                    <span className="text-[9px] font-bold text-black uppercase opacity-70 italic">TL KARŞILIĞI:</span>
-                                                    <span className="text-[11px] font-black text-black italic">
-                                                        ₺{getPriceInTRY(sale.finalAmount)}
+                                            {selectedCurrency === "USD" && (
+                                                <div className="flex justify-between items-center pt-1 mt-0.5 border-t border-black/15 text-black">
+                                                    <span className="text-[8px] font-bold uppercase opacity-75">TL KARŞILIĞI:</span>
+                                                    <span className="text-[9.5px] font-black">
+                                                        (₺{getPriceTRY(sale.finalAmount)})
                                                     </span>
                                                 </div>
                                             )}
@@ -578,7 +768,9 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                                             </div>
 
                                             <div className="mt-12 text-center text-[10px]">
-                                                <p className="mb-8 font-bold italic">İşbu sözleşme tarafların hür iradesiyle {currencySymbol}{getPrice(sale.finalAmount)} karşılığında imzalanmıştır.</p>
+                                                <p className="mb-8 font-bold italic">
+                                                    İşbu sözleşme tarafların hür iradesiyle {selectedCurrency === "USD" ? `$${getPriceUSD(sale.finalAmount)} (₺${getPriceTRY(sale.finalAmount)})` : `₺${getPriceTRY(sale.finalAmount)}`} karşılığında imzalanmıştır.
+                                                </p>
                                                 <div className="flex justify-between px-10">
                                                     <div className="text-center w-48">
                                                         <div className="font-black border-b border-black pb-2 mb-12 uppercase">ALICI (MÜŞTERİ)</div>
@@ -606,7 +798,7 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                                                 </div>
                                                 <div className="flex justify-between text-base font-black border-t-2 border-black pt-2 mt-2">
                                                     <span>TUTAR:</span>
-                                                    <span>{currencySymbol}{getPrice(sale.finalAmount)}</span>
+                                                    <span>{selectedCurrency === "USD" ? `$${getPriceUSD(sale.finalAmount)}` : `₺${getPriceTRY(sale.finalAmount)}`}</span>
                                                 </div>
                                                 <p className="text-[8px] text-center italic mt-6 border-t border-dashed border-black pt-2">
                                                     Ayrıntılı sözleşme şartları A4 nüshasındadır.
@@ -723,5 +915,20 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                 </div>
             </DialogContent>
         </Dialog>
+
+        {/* WhatsApp Önizleme Modalı */}
+        {isWhatsAppPreviewOpen && (
+            <WhatsAppConfirmModal
+                isOpen={isWhatsAppPreviewOpen}
+                onClose={() => setIsWhatsAppPreviewOpen(false)}
+                phone={customPhone}
+                customerName={sale.customer?.name || "Hızlı Satış"}
+                initialMessage={previewMessage}
+                onBeforeSend={() => {
+                    toast.success(`Mesaj ${customPhone} numarasına gönderildi.`);
+                }}
+            />
+        )}
+        </>
     );
 }
