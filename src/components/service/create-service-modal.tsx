@@ -110,17 +110,39 @@ export function CreateServiceModal({
   const router = useRouter();
   const pathname = usePathname();
 
+  const industryFields = getServiceFormFields(shop);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+    reset,
+    setValue,
+    control,
+  } = useForm<any>({
+    defaultValues: {
+      estimatedCost: "0",
+      customerEmail: "",
+      technicianId: "",
+    }
+  });
+
   const fetchTechnicians = useCallback(async () => {
     setIsLoadingTechs(true);
     try {
       const staff = await getStaffShell();
       setTechnicians(staff || []);
+      const lastTech = typeof window !== "undefined" ? localStorage.getItem("last_selected_technician_id") : null;
+      if (lastTech && lastTech !== "AUTO" && staff?.some((s: any) => s.id === lastTech)) {
+        setValue("technicianId", lastTech, { shouldValidate: true });
+      }
     } catch (err) {
       console.error("Error fetching staff:", err);
     } finally {
       setIsLoadingTechs(false);
     }
-  }, []);
+  }, [setValue]);
 
   useEffect(() => {
     if (open) {
@@ -155,6 +177,9 @@ export function CreateServiceModal({
         await fetchTechnicians();
         if (res.user?.id) {
           setValue("technicianId", res.user.id, { shouldValidate: true });
+          if (typeof window !== "undefined") {
+            localStorage.setItem("last_selected_technician_id", res.user.id);
+          }
         }
       } else {
         toast({ title: "Hata", description: res?.error || "Teknisyen eklenemedi.", variant: "destructive" });
@@ -165,24 +190,6 @@ export function CreateServiceModal({
       setIsCreatingTech(false);
     }
   };
-
-  const industryFields = getServiceFormFields(shop);
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-    reset,
-    setValue,
-    control,
-  } = useForm<any>({
-    defaultValues: {
-      estimatedCost: "0",
-      customerEmail: "",
-      technicianId: "",
-    }
-  });
 
   const problemDesc = watch("problemDesc");
   const customerName = watch("customerName");
@@ -255,11 +262,12 @@ export function CreateServiceModal({
           setCreatedTicketInfo(ticket);
           setShowSuccessModal(true);
           setOpen(false);
+          const lastTech = typeof window !== "undefined" ? localStorage.getItem("last_selected_technician_id") : null;
           reset({
             estimatedCost: "0",
             customerEmail: "",
             accessories: [],
-            technicianId: "",
+            technicianId: lastTech && lastTech !== "AUTO" ? lastTech : "",
           });
           setDiagnosticResult(null);
           setShowMissingRequired(false);
@@ -379,10 +387,14 @@ export function CreateServiceModal({
             </div>
 
             <div className="p-5 md:p-8 space-y-6 overflow-y-auto flex-1 scrollbar-hide">
-              {/* Müşteri Bilgileri - Daima yan yana */}
+              {/* Müşteri Bilgileri - Daima yan yana ve tam hizalı */}
               <div className="grid grid-cols-2 gap-3 md:gap-6">
                 <div className="space-y-2 relative">
-                  <Label htmlFor="customerName" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Müşteri Ad Soyad <span className="text-red-500">*</span></Label>
+                  <div className="flex items-center h-5">
+                    <Label htmlFor="customerName" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                      Müşteri Ad Soyad <span className="text-red-500">*</span>
+                    </Label>
+                  </div>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -426,12 +438,16 @@ export function CreateServiceModal({
                   {errors.customerName && <p className="text-[10px] text-red-500 ml-1">{errors.customerName.message as string}</p>}
                 </div>
                 <div className="space-y-2">
+                  <div className="flex items-center h-5">
+                    <Label htmlFor="customerPhone" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                      Telefon Numarası <span className="text-red-500">*</span>
+                    </Label>
+                  </div>
                   <PhoneInput
-                    label="TELEFON NUMARASI"
-                    required
                     value={phoneValue}
                     isLookingUp={isLookingUp}
                     error={errors.customerPhone?.message as string}
+                    className="h-12 md:h-14 rounded-xl md:rounded-2xl border border-border/60 bg-muted/30"
                     onChange={(val: string) => {
                       setPhoneValue(val);
                       setValue("customerPhone", val, { shouldValidate: true });
@@ -613,12 +629,14 @@ export function CreateServiceModal({
                 </div>
               )}
 
-              {/* Tahmini Maliyet & Görevli Teknisyen */}
+              {/* Tahmini Maliyet & Görevli Teknisyen - Tam Hizalı */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="estimatedCost" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
-                    Tahmini Ücret <span className="text-red-500">*</span>
-                  </Label>
+                  <div className="flex items-center justify-between h-5">
+                    <Label htmlFor="estimatedCost" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1 flex items-center">
+                      Tahmini Ücret <span className="text-red-500 ml-0.5">*</span>
+                    </Label>
+                  </div>
                   <PriceInput
                     id="estimatedCost"
                     value={watch("estimatedCost")}
@@ -629,8 +647,8 @@ export function CreateServiceModal({
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <Label htmlFor="technicianSelect" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                  <div className="flex items-center justify-between h-5">
+                    <Label htmlFor="technicianSelect" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1 flex items-center">
                       Görevli Teknisyen
                     </Label>
                     <button
@@ -646,7 +664,13 @@ export function CreateServiceModal({
                   <div className="relative">
                     <Select
                       value={watch("technicianId") || "AUTO"}
-                      onValueChange={(val) => setValue("technicianId", val === "AUTO" ? "" : val, { shouldValidate: true })}
+                      onValueChange={(val) => {
+                        const finalVal = val === "AUTO" ? "" : val;
+                        setValue("technicianId", finalVal, { shouldValidate: true });
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("last_selected_technician_id", val);
+                        }
+                      }}
                     >
                       <SelectTrigger id="technicianSelect" className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl text-sm px-4">
                         <div className="flex items-center gap-2.5 truncate">

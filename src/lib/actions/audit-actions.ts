@@ -51,6 +51,58 @@ export async function getActivityLogs(filters: LogFilter = {}) {
         const shopId = await getShopId();
         if (!shopId) throw new Error("Mağaza ID bulunamadı.");
 
+        // Otomatik senkronizasyon: AuditLog tablosunda kaydı bulunmayan geçmiş iadeleri kontrol et ve ekle
+        try {
+            const existingReturnAudits = await prisma.auditLog.findMany({
+                where: { shopId, action: "RETURN" },
+                select: { entityId: true },
+            });
+            const loggedEntityIds = new Set(existingReturnAudits.map(a => a.entityId).filter(Boolean));
+
+            const unloggedReturns = await prisma.returnTicket.findMany({
+                where: { shopId },
+                include: {
+                    customer: { select: { name: true } },
+                    product: { select: { name: true } },
+                },
+                take: 100,
+            });
+
+            const toCreate = unloggedReturns.filter(r => !loggedEntityIds.has(r.id));
+            if (toCreate.length > 0) {
+                await prisma.auditLog.createMany({
+                    data: toCreate.map(r => {
+                        const custName = r.customer?.name || "";
+                        const pName = r.productName || r.product?.name || "Ürün";
+                        const refundVal = Number(r.refundAmount || 0);
+                        const amountStr = refundVal > 0 ? ` (${refundVal} ${r.refundCurrency || 'TRY'})` : '';
+                        const debtNote = r.debtId ? " [Veresiye İadesi]" : "";
+
+                        return {
+                            shopId,
+                            userId: r.userId,
+                            action: "RETURN",
+                            entityType: r.debtId ? "FINANCE" : (r.saleId ? "SALE" : "PRODUCT"),
+                            entityId: r.id,
+                            entityName: custName || pName || r.ticketNumber,
+                            message: `${custName ? `${custName} için ` : ''}${r.ticketNumber} nolu ${pName} iadesi yapıldı.${amountStr}${debtNote}`,
+                            details: {
+                                ticketNumber: r.ticketNumber,
+                                quantity: r.quantity,
+                                refundAmount: refundVal,
+                                currency: r.refundCurrency,
+                                debtId: r.debtId,
+                                saleId: r.saleId,
+                            },
+                            createdAt: r.createdAt,
+                        };
+                    })
+                });
+            }
+        } catch (syncErr) {
+            console.error("Return audit sync warning:", syncErr);
+        }
+
         const {
             page = 1,
             limit = 20,
@@ -91,7 +143,7 @@ export async function getActivityLogs(filters: LogFilter = {}) {
             }
         }
 
-        const [total, logs] = await Promise.all([
+        const [total, logs, allTimeTotal] = await Promise.all([
             prisma.auditLog.count({ where }),
             prisma.auditLog.findMany({
                 where,
@@ -108,16 +160,19 @@ export async function getActivityLogs(filters: LogFilter = {}) {
                 orderBy: { createdAt: 'desc' },
                 skip,
                 take: limit
-            })
+            }),
+            prisma.auditLog.count({ where: { shopId } })
         ]);
 
         return {
             success: true,
             logs,
+            totalAllLogs: allTimeTotal,
             pagination: {
                 total,
                 pages: Math.ceil(total / limit),
-                currentPage: page
+                currentPage: page,
+                limit
             }
         };
     } catch (error: any) {

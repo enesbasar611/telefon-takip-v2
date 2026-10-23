@@ -41,6 +41,47 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-23: POS Sayfası Ürün Seçim Popup'ı, Hızlı Servis Input Hizalama ve Varsayılan Teknisyen Hatırlama:
+  - **Talep:**
+    - `/satis` sayfasındayken ürün seçildiğinde yan paneldeki (sidebar/drawer) gibi yeşil mini popup uyarısının görünmesi.
+    - Hızlı İşlem Kaydı modalındaki inputların dikey kayma/hizasızlık sorununun giderilmesi.
+    - Teknisyen seçiminde en son seçilen teknisyenin varsayılan olarak seçili gelmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **POS Ürün Seçim Popup'ı Portallama (`src/components/pos/pos-interface.tsx`):**
+       - `/satis` sayfasında kapsayıcı div'in `backdrop-blur-3xl` ve `overflow-hidden` stillerinden dolayı `position: fixed` olan seçim popup yığınının kırpılması ve görünmemesi engellendi.
+       - Seçim popup yığını `createPortal(..., document.body)` kullanılarak doğrudan `document.body` üzerine `z-[99999]` ile bağlandı. Masaüstünde sağ alt, mobilde ise alt orta konumda üst üste yığılarak 1.8 saniyede kaybolan yeşil popup animasyonu kusursuz çalışır hale getirildi.
+    2. **Hızlı İşlem Kaydı Input Dikey Hizalama (`src/components/service/create-service-modal.tsx`):**
+       - Müşteri Ad Soyad ve Telefon Numarası kutularındaki kayma düzeltildi: İki kolonun da label satırı `h-5` (20px) ile sabitlendi, `PhoneInput`'a `h-12 md:h-14 rounded-xl md:rounded-2xl border border-border/60 bg-muted/30` verilerek sol kutuyla tam piksel eşleşmesi sağlandı.
+       - Tahmini Ücret ve Görevli Teknisyen kolonlarındaki yükseklik farkı giderildi: Sol ve sağ başlık `flex items-center justify-between h-5` ile eşitlendi; PriceInput ve SelectTrigger'ın başlangıç ve bitiş yükseklikleri tam hizaya getirildi.
+    3. **En Son Seçilen Teknisyenin Otomatik Hatırlanması (Persistent Default Technician):**
+       - Teknisyen seçildiğinde (`Select onValueChange`) veya hızlı yeni teknisyen eklendiğinde seçilen teknisyenin ID'si `localStorage.setItem("last_selected_technician_id", id)` ile tarayıcıya kaydedildi.
+       - Modal açıldığında (`fetchTechnicians`) ve yeni kayıt sonrası form temizlendiğinde (`reset`), kayıtlı son teknisyen otomatik olarak seçili getirildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-23: Sistem İşlem Logları (`/ayarlar/loglar`) İade Entegrasyonu, Akıllı Sayfalama, Tarihsel Filtreler ve Log Sayacı:
+  - **Talep:**
+    - Veresiye ve diğer bölümlerdeki iadelerin işlem loglarında görünmesi.
+    - 114 sayfayı tek satıra basarak ekranı taşıran pagination'ın (sayfalama) düzeltilmesi.
+    - Tarihsel filtreleme eklenmesi (başlangıç/bitiş tarihleri ve hızlı hazır filtreler).
+    - "Tüm Logları Temizle" butonunun yanında sistemde ne kadar log tutulduğunun gösterilmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **İade Logları & Otomatik Geçmiş Senkronizasyonu (`src/lib/actions/audit-actions.ts`, `return-actions.ts`):**
+       - `getActivityLogs` eylemine otomatik geçmiş senkronizasyonu eklendi: Önceden logu oluşmamış `ReturnTicket` kayıtları tespit edilip `RETURN` aksiyonu ile geriye dönük loglandı.
+       - `createReturnTicket`, `createMultipleReturnTickets` ve `processReturn` eylemlerine `recordAuditLog` tetikleyicileri eklendi.
+       - Filtre seçeneklerine `RETURN` ("İade") işlem tipi ve `CUSTOMER` ("Müşteri / Veresiye") bölümleri eklendi; amber renkli şık `İADE` rozeti tanımlandı.
+    2. **Akıllı Pencerelemeli Sayfalama (Smart Windowed Pagination) (`src/components/settings/activity-logs-client.tsx`):**
+       - 114 sayfanın tamamını yan yana buton olarak dizen döngü kaldırıldı; `getVisiblePages(currentPage, totalPages)` fonksiyonu ile `[1, ..., 78, 79, 80, ..., 114]` şeklinde maksimum 7 butonlu pencereleme algoritması uygulandı.
+       - "İlk Sayfa" (`ChevronsLeft`), "Önceki Sayfa" (`ChevronLeft`), "Sonraki Sayfa" (`ChevronRight`), "Son Sayfa" (`ChevronsRight`) kontrolleri ve sayfa boyutu seçici (20 / 50 / 100) eklendi.
+       - Sayfa ve toplam kayıt adedi bilgisi eklendi.
+    3. **Tarihsel Filtreleme ve Hızlı Seçimler:**
+       - Başlangıç ve Bitiş tarihleri için native date picker alanları eklendi.
+       - "Tümü", "Bugün", "Dün", "Son 7 Gün", "Bu Ay" tek tıkla çalışan hazır tarih butonları entegre edildi.
+       - Tarih seçildiğinde anında listeyi yenileyen ve filtreleri sıfırlayan "Temizle" butonu eklendi.
+    4. **Tutulan Toplam Log Sayacı:**
+       - `getActivityLogs` sorgusuna filtreden bağımsız `prisma.auditLog.count({ where: { shopId } })` eklendi (`totalAllLogs`).
+       - Başlıkta "Tüm Logları Temizle" butonunun hemen solunda `Database` ikonlu "TUTULAN LOG" kartı eklendi (örneğin: `2.280 Kayıt`). Filtre uygulandığında kaç kaydın filtrelendiği de rozet olarak sunuldu.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
 - [x] 2026-10-23: Teknik Servis Hızlı Kaydında Teknisyen Atama ve Hızlı Teknisyen Ekleme:
   - **Talep:**
     - Teknik servis hızlı kaydında (`CreateServiceModal` / "Hızlı İşlem Kaydı") teknisyen seçme/ekleme kısmı olması.

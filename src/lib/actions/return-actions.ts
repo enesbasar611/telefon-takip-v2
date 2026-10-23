@@ -8,6 +8,7 @@ import { Prisma, ReturnStatus, ReturnReason } from "@prisma/client";
 import { pickReturnProductName } from "@/lib/returns/return-product-name";
 import { getReturnProcessingPlan, type ReturnProcessingAction } from "@/lib/returns/return-processing";
 import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
+import { recordAuditLog } from "@/lib/actions/audit-actions";
 
 const ACTIVE_RETURN_STATUSES: ReturnStatus[] = ["PENDING", "APPROVED", "SENT_TO_SUPPLIER"];
 
@@ -377,6 +378,24 @@ export async function createReturnTicket(data: {
     });
     await setReturnTicketProductName(prisma, ticket.id, data.productName);
 
+    recordAuditLog({
+      action: "RETURN",
+      entityType: normalizedRelations.debtId ? "FINANCE" : (normalizedRelations.saleId ? "SALE" : "PRODUCT"),
+      entityId: ticket.id,
+      entityName: ticket.ticketNumber,
+      message: `${ticket.ticketNumber} numaralı iade kaydı oluşturuldu.${data.refundAmount ? ` Tutar: ${data.refundAmount} ${data.refundCurrency || "TRY"}` : ""}`,
+      details: {
+        ticketNumber: ticket.ticketNumber,
+        productName: data.productName,
+        quantity: data.quantity,
+        refundAmount: data.refundAmount,
+        currency: data.refundCurrency || "TRY",
+        debtId: normalizedRelations.debtId,
+        saleId: normalizedRelations.saleId,
+        customerId: normalizedRelations.customerId,
+      },
+    }).catch(console.error);
+
     revalidatePath("/stok/iade");
     revalidatePath("/veresiye");
     return { success: true, ticket: serializePrisma(ticket) };
@@ -498,6 +517,14 @@ export async function processReturn(id: string, action: any, extraNotes?: string
         }
       }
     });
+
+    recordAuditLog({
+      action: "RETURN",
+      entityType: "FINANCE",
+      entityId: id,
+      message: `İade işlemi (${action}) tamamlandı.`,
+      details: { ticketId: id, action, extraNotes, supplierId },
+    }).catch(console.error);
 
     revalidatePath("/stok/iade");
     revalidatePath("/veresiye");
@@ -750,6 +777,28 @@ export async function createMultipleReturnTickets(tickets: {
       }
       return createdTickets;
     });
+
+    if (Array.isArray(result)) {
+      for (const t of (result as any[])) {
+        recordAuditLog({
+          action: "RETURN",
+          entityType: t.debtId ? "FINANCE" : (t.saleId ? "SALE" : "PRODUCT"),
+          entityId: t.id,
+          entityName: t.ticketNumber,
+          message: `${t.ticketNumber} numaralı iade işlemi oluşturuldu.${t.refundAmount ? ` Tutar: ${t.refundAmount} ${t.refundCurrency || "TRY"}` : ""}`,
+          details: {
+            ticketNumber: t.ticketNumber,
+            productId: t.productId,
+            quantity: t.quantity,
+            refundAmount: t.refundAmount,
+            currency: t.refundCurrency,
+            debtId: t.debtId,
+            saleId: t.saleId,
+            customerId: t.customerId,
+          },
+        }).catch(console.error);
+      }
+    }
 
     revalidatePath("/stok/iade");
     revalidatePath("/veresiye");
