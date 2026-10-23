@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, ReactNode, useEffect } from "react";
+import { useState, useTransition, ReactNode, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import {
   Dialog,
@@ -35,10 +35,21 @@ import {
   X,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  UserCog,
+  UserCheck,
+  UserPlus
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createServiceTicket } from "@/lib/actions/service-actions";
+import { getStaffShell, createStaff } from "@/lib/actions/staff-actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { usePathname, useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -89,9 +100,71 @@ export function CreateServiceModal({
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
   const [tempPattern, setTempPattern] = useState<number[]>([]);
   const [isSimpleMode, setIsSimpleMode] = useState(true);
+  const [technicians, setTechnicians] = useState<any[]>([]);
+  const [isLoadingTechs, setIsLoadingTechs] = useState(false);
+  const [isQuickAddTechOpen, setIsQuickAddTechOpen] = useState(false);
+  const [newTechName, setNewTechName] = useState("");
+  const [newTechPhone, setNewTechPhone] = useState("");
+  const [isCreatingTech, setIsCreatingTech] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
+
+  const fetchTechnicians = useCallback(async () => {
+    setIsLoadingTechs(true);
+    try {
+      const staff = await getStaffShell();
+      setTechnicians(staff || []);
+    } catch (err) {
+      console.error("Error fetching staff:", err);
+    } finally {
+      setIsLoadingTechs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      fetchTechnicians();
+    }
+  }, [open, fetchTechnicians]);
+
+  const handleQuickAddTech = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTechName.trim()) {
+      toast({ title: "Hata", description: "Lütfen teknisyen adını girin.", variant: "destructive" });
+      return;
+    }
+
+    setIsCreatingTech(true);
+    try {
+      const autoEmail = `teknisyen_${Date.now()}@dukkan.local`;
+      const res = await createStaff({
+        name: newTechName.trim(),
+        phone: newTechPhone.replace(/\D/g, "") || undefined,
+        email: autoEmail,
+        password: "password123",
+        role: "TECHNICIAN",
+        canService: true,
+      });
+
+      if (res?.success) {
+        toast({ title: "Başarılı", description: `${newTechName} teknisyen olarak eklendi ve seçildi.` });
+        setNewTechName("");
+        setNewTechPhone("");
+        setIsQuickAddTechOpen(false);
+        await fetchTechnicians();
+        if (res.user?.id) {
+          setValue("technicianId", res.user.id, { shouldValidate: true });
+        }
+      } else {
+        toast({ title: "Hata", description: res?.error || "Teknisyen eklenemedi.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Hata", description: "Bir sorun oluştu.", variant: "destructive" });
+    } finally {
+      setIsCreatingTech(false);
+    }
+  };
 
   const industryFields = getServiceFormFields(shop);
 
@@ -107,6 +180,7 @@ export function CreateServiceModal({
     defaultValues: {
       estimatedCost: "0",
       customerEmail: "",
+      technicianId: "",
     }
   });
 
@@ -173,6 +247,7 @@ export function CreateServiceModal({
           estimatedCost: Number(data.estimatedCost),
           devicePassword: data.devicePassword,
           attributes,
+          technicianId: data.technicianId || undefined,
         });
 
         if (result?.success) {
@@ -184,6 +259,7 @@ export function CreateServiceModal({
             estimatedCost: "0",
             customerEmail: "",
             accessories: [],
+            technicianId: "",
           });
           setDiagnosticResult(null);
           setShowMissingRequired(false);
@@ -537,16 +613,65 @@ export function CreateServiceModal({
                 </div>
               )}
 
-              {/* Tahmini Maliyet */}
-              <div className="space-y-2">
-                <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Tahmini Ücret</Label>
-                <PriceInput
-                  id="estimatedCost"
-                  value={watch("estimatedCost")}
-                  onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
-                  placeholder="0,00"
-                  className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-10 text-sm transition-all tabular-nums text-emerald-500 font-bold"
-                />
+              {/* Tahmini Maliyet & Görevli Teknisyen */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedCost" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                    Tahmini Ücret <span className="text-red-500">*</span>
+                  </Label>
+                  <PriceInput
+                    id="estimatedCost"
+                    value={watch("estimatedCost")}
+                    onChange={(v) => setValue("estimatedCost", String(v), { shouldValidate: true })}
+                    placeholder="0,00"
+                    className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl pl-10 text-sm transition-all tabular-nums text-emerald-500 font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <Label htmlFor="technicianSelect" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
+                      Görevli Teknisyen
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setIsQuickAddTechOpen(true)}
+                      className="text-[10px] font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1 transition-colors px-1"
+                      title="Yeni teknisyen personeli ekle"
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      <span>+ Yeni Teknisyen</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Select
+                      value={watch("technicianId") || "AUTO"}
+                      onValueChange={(val) => setValue("technicianId", val === "AUTO" ? "" : val, { shouldValidate: true })}
+                    >
+                      <SelectTrigger id="technicianSelect" className="h-12 md:h-14 bg-card border-border/50 rounded-xl md:rounded-2xl text-sm px-4">
+                        <div className="flex items-center gap-2.5 truncate">
+                          <UserCog className="h-4 w-4 text-blue-500 shrink-0" />
+                          <SelectValue placeholder="Teknisyen Seçin (Otomatik)" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-border bg-card shadow-2xl z-[150] max-h-60">
+                        <SelectItem value="AUTO" className="text-xs font-semibold py-2.5">
+                          ⚡ Otomatik Atama (Varsayılan Yönetici)
+                        </SelectItem>
+                        {technicians.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id} className="text-xs font-medium py-2.5">
+                            <div className="flex items-center justify-between gap-3 w-full">
+                              <span className="font-bold">{t.name} {t.surname || ""}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+                                {t.role === "TECHNICIAN" ? "Teknisyen" : t.role === "ADMIN" ? "Yönetici" : t.role === "MANAGER" ? "Müdür" : t.role}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               {showMissingRequired && !canCompleteService && (
@@ -613,6 +738,72 @@ export function CreateServiceModal({
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Hızlı Teknisyen Ekleme Modalı */}
+        <Dialog open={isQuickAddTechOpen} onOpenChange={setIsQuickAddTechOpen}>
+          <DialogContent className="sm:max-w-md p-6 bg-card border-border rounded-3xl shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2.5 text-base font-bold">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                  <UserPlus className="h-4 w-4" />
+                </div>
+                <span>Hızlı Teknisyen Ekle</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Yeni bir teknik servis personeli ekleyin. Kaydedildiğinde otomatik olarak bu kayda seçilecektir.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleQuickAddTech} className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Teknisyen Adı Soyadı <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={newTechName}
+                  onChange={(e) => setNewTechName(e.target.value)}
+                  placeholder="Örn: Ahmet Usta"
+                  autoFocus
+                  required
+                  className="h-11 bg-muted/40 border-border/60 rounded-xl text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Telefon Numarası (İsteğe Bağlı)
+                </Label>
+                <Input
+                  type="tel"
+                  value={newTechPhone}
+                  onChange={(e) => setNewTechPhone(e.target.value)}
+                  placeholder="05xx xxx xx xx"
+                  className="h-11 bg-muted/40 border-border/60 rounded-xl text-sm"
+                />
+              </div>
+
+              <DialogFooter className="pt-2 flex-row gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsQuickAddTechOpen(false)}
+                  disabled={isCreatingTech}
+                  className="h-10 rounded-xl text-xs font-bold"
+                >
+                  İptal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreatingTech || !newTechName.trim()}
+                  className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold gap-2"
+                >
+                  {isCreatingTech ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  <span>Kaydet ve Seç</span>
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </Dialog>
@@ -696,6 +887,14 @@ export function CreateServiceModal({
                   {createdTicketInfo.customer?.phone || createdTicketInfo.customerPhone || "-"}
                 </span>
               </div>
+              {createdTicketInfo.technician && (
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="text-slate-400 font-medium">Teknisyen:</span>
+                  <span className="font-semibold text-blue-400">
+                    {createdTicketInfo.technician.name} {createdTicketInfo.technician.surname || ""}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-slate-300 pt-1.5 border-t border-white/5">
                 <span className="text-slate-400 font-medium">Tahmini Tutar:</span>
                 <span className="font-bold text-emerald-400 text-sm">

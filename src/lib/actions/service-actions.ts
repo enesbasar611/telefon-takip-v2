@@ -121,6 +121,14 @@ export async function createServiceTicket(rawData: any) {
           } as any,
           include: {
             customer: true,
+            technician: {
+              select: {
+                id: true,
+                name: true,
+                surname: true,
+                role: true,
+              }
+            }
           }
         });
 

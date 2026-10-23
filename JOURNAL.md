@@ -41,6 +41,23 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-23: Teknik Servis Hızlı Kaydında Teknisyen Atama ve Hızlı Teknisyen Ekleme:
+  - **Talep:**
+    - Teknik servis hızlı kaydında (`CreateServiceModal` / "Hızlı İşlem Kaydı") teknisyen seçme/ekleme kısmı olması.
+  - **Yapılan İyileştirmeler:**
+    1. **Görevli Teknisyen Seçici (`src/components/service/create-service-modal.tsx`):**
+       - Formda "Tahmini Ücret" alanının yanına "Görevli Teknisyen" seçici kutusu eklendi (`Select`).
+       - Dükkandaki tüm personel/teknisyen listesi `getStaffShell()` ile çekilerek unvanları (`Teknisyen`, `Yönetici`, vb.) ile listelendi.
+       - Varsayılan olarak "⚡ Otomatik Atama (Varsayılan Yönetici)" seçeneği sunuldu.
+    2. **Hızlı Teknisyen Ekleme Modalı (`isQuickAddTechOpen`):**
+       - Teknisyen seçici başlığında `+ Yeni Teknisyen` butonu eklendi.
+       - Tıklandığında kayıt formundan ayrılmadan teknisyenin Ad Soyad ve Telefonunu alarak anında yeni teknisyen hesabı oluşturan (`createStaff`), ardından bu teknisyeni formda otomatik seçen mikro-modal entegre edildi.
+    3. **Servis Kaydı & Başarı Ekranı Entegrasyonu:**
+       - `createServiceTicket` çağrısına `technicianId` parametresi bağlandı.
+       - `src/lib/actions/service-actions.ts` dosyasında `createServiceTicket` çıktısına `technician` bilgileri dahil edildi.
+       - Başarılı kayıt özet kartında atanan görevli teknisyen ismi gösterildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
 - [x] 2026-10-23: WhatsApp Sekme Yeniden Kullanımı (Tab Reuse), Hızlı Gönder / Önizleme Switchi ve Bildirim Popup'ı:
   - **Talep:**
     - Web seçildiğinde WhatsApp Web sekmesi (`web.whatsapp.com`), Uygulama seçildiğinde masaüstü WhatsApp uygulaması (`whatsapp://`) tetiklenmesi.
