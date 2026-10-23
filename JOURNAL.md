@@ -41,6 +41,24 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-23: Hızlı Satış Yan Panelde (Sidebar POS) Dinamik Stok Düşümü ve Akıllı Göz (0 Stok) Entegrasyonu:
+  - **Talep:**
+    - Yan paneldeki hızlı satışta (POSCompact) ürün sepete eklendikçe anlık olarak listeden stok düşmesi (satış öncesi sepetteki adet kadar azalması).
+    - Ürün sepetten çıkarıldığında veya sepet temizlendiğinde stoğun geri yükselmesi.
+    - Stoğu bitmiş (veya sepete eklenerek tükenmiş) bir ürüne tıklandığında / `+` basıldığında "Akıllı Göz • Stok Koruması" (0 Stok Uyarısı) modalının çalıştırılması.
+  - **Yapılan İyileştirmeler:**
+    1. **Anlık Efektif Stok Hesaplama (`src/components/pos/pos-compact.tsx`):**
+       - Her ürün satırında `effectiveStock = (product.stock || 0) - (inCartQty || 0)` formülü uygulandı.
+       - Ürün sepete eklendikçe anlık olarak listedeki adet (örn. `2 Adet` -> `1 Adet` -> `Tükendi`) güncellendi.
+       - Sepetten ürün silindiğinde, adet azaltıldığında veya sepet temizlendiğinde stok anında listeye geri yansıtıldı.
+       - Satış tamamlandığında veritabanı ile birlikte `localProducts` ve React Query önbellekleri (`pos-initial-data`, `products`) invalidate edilerek gerçek stok güncellendi.
+    2. **Akıllı Göz (SmartStockGuardrailModal) Entegrasyonu:**
+       - `SmartStockGuardrailModal` bileşeni yan panel hızlı satış ekranına bağlandı.
+       - `addToCart` ve `updateQuantity` fonksiyonlarında ürünün stoğu kalmadığında (`effectiveStock <= 0` veya `inCartQty >= stock`) Akıllı Göz modalı açıldı.
+       - "Tükendi" durumundaki ürün satırına veya `+` butonuna tıklandığında Akıllı Göz Stok Uyarısı tetiklendi.
+       - Modaldan "Hızlı Stok Girişi Yap" yapıldığında yeni stok anında ürüne eklenip sepete aktarıldı; "Rafta Var, Satışa Ekle" seçildiğinde ise fiziki mevcut kabul edilerek sepete eklendi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
 - [x] 2026-10-23: POS Sayfası Ürün Seçim Popup'ı, Hızlı Servis Input Hizalama ve Varsayılan Teknisyen Hatırlama:
   - **Talep:**
     - `/satis` sayfasındayken ürün seçildiğinde yan paneldeki (sidebar/drawer) gibi yeşil mini popup uyarısının görünmesi.

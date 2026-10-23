@@ -41,7 +41,8 @@ import { CheckoutSummary } from "./parts/checkout-summary";
 import { getAccounts } from "@/lib/actions/finance-actions";
 import { useRouter } from "next/navigation";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { SmartStockGuardrailModal } from "./parts/smart-stock-guardrail-modal";
 import {
     Dialog,
     DialogContent,
@@ -128,6 +129,14 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>(undefined);
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
     const [localProducts, setLocalProducts] = useState(initialProducts);
+    const [guardrailOpen, setGuardrailOpen] = useState(false);
+    const [guardrailProduct, setGuardrailProduct] = useState<any | null>(null);
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        setLocalProducts(initialProducts);
+    }, [initialProducts]);
+
     const [isLoaded, setIsLoaded] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -269,9 +278,23 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         }, 1800);
     }, []);
 
-    // Add to cart with price in active sale currency
-    const addToCart = (product: any, overridePrice?: number) => {
+    // Add to cart with price in active sale currency and Akıllı Göz guardrail
+    const addToCart = (product: any, overridePrice?: number, forceAllowZero = false) => {
         if (!product) return;
+
+        const isService = product.category?.name?.toLowerCase().includes("hizmet");
+        const currentRealStock = Number(product.stock || 0);
+        const inCartItem = cart.find(item => item.id === product.id);
+        const inCartQty = inCartItem?.quantity || 0;
+
+        // Akıllı Göz Stok Koruması: Stok tükenmişse veya sepetteki adet mevcut stoğu aşacaksa modalı aç
+        if (!forceAllowZero && !isService && !product.isCustom) {
+            if (currentRealStock <= 0 || inCartQty >= currentRealStock) {
+                setGuardrailProduct(product);
+                setGuardrailOpen(true);
+                return;
+            }
+        }
 
         const now = Date.now();
         const lastAdd = lastAddRef.current;
@@ -288,18 +311,9 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         setCart((currentCart) => {
             const existing = currentCart.find((item) => item.id === product.id);
 
-            if (!existing && product.stock <= 0 && !product.isCustom) {
-                toast({ title: "Stokta Yok", description: "Bu ürünün stoğu tükenmiş.", variant: "destructive" });
-                return currentCart;
-            }
-
             if (existing && overridePrice === undefined) {
-                if (existing.quantity >= product.stock && !product.isCustom) {
-                    toast({ title: "Stok Yetersiz", description: "Daha fazla ekleyemezsiniz.", variant: "destructive" });
-                    return currentCart;
-                }
                 return currentCart.map((item) =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                    item.id === product.id ? { ...item, quantity: item.quantity + 1, forceAllowZero: forceAllowZero || item.forceAllowZero } : item
                 );
             }
 
@@ -309,6 +323,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 unitPrice: Number(unitPrice.toFixed(2)),
                 sellPrice: saleCurrency === "TRY" ? unitPrice : Number((unitPrice * usdRate).toFixed(2)),
                 sellPriceUsd: saleCurrency === "USD" ? unitPrice : Number((unitPrice / usdRate).toFixed(2)),
+                forceAllowZero,
             };
 
             return [...currentCart, cartItem];
@@ -467,8 +482,9 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 const newQty = Math.max(1, item.quantity + change);
                 const originalProduct = localProducts.find((p) => p.id === id);
 
-                if (change > 0 && originalProduct && !originalProduct.isCustom && newQty > originalProduct.stock) {
-                    toast({ title: "Stok Yetersiz", variant: "destructive" });
+                if (change > 0 && originalProduct && !originalProduct.isCustom && newQty > originalProduct.stock && !item.forceAllowZero) {
+                    setGuardrailProduct(originalProduct);
+                    setGuardrailOpen(true);
                     return item;
                 }
                 return { ...item, quantity: newQty };
@@ -564,6 +580,8 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                     }
                     return p;
                 }));
+                queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
+                queryClient.invalidateQueries({ queryKey: ["products"] });
                 setCustomerSearch("");
                 setSelectedCustomerId(undefined);
                 toast({ title: "Satış Başarılı" });
@@ -772,14 +790,18 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                             filteredProducts.map((product) => {
                                 const displayPrice = getProductDisplayPrice(product, saleCurrency);
                                 const equivalentText = getProductEquivalentDisplay(product, saleCurrency);
-                                const isOutOfStock = (product.stock || 0) <= 0;
+                                const isService = product.category?.name?.toLowerCase().includes("hizmet");
+                                const inCartItem = cart.find((item) => item.id === product.id);
+                                const inCartQty = inCartItem?.quantity || 0;
+                                const effectiveStock = isService ? (product.stock || 0) : Math.max(0, (product.stock || 0) - inCartQty);
+                                const isOutOfStock = !isService && effectiveStock <= 0;
 
                                 return (
                                     <div
                                         key={product.id}
                                         className={cn(
                                             "group flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-card p-3 hover:border-blue-500/30 transition-all",
-                                            isOutOfStock && "opacity-60"
+                                            isOutOfStock && "opacity-75 bg-muted/20 border-rose-500/20"
                                         )}
                                     >
                                         {/* Product Details */}
@@ -788,7 +810,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                             onClick={() => addToCart(product)}
                                         >
                                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
-                                                {product.category?.name?.toLowerCase().includes("hizmet") ? (
+                                                {isService ? (
                                                     <Wrench className="h-4 w-4" />
                                                 ) : (
                                                     <Package className="h-4 w-4" />
@@ -803,9 +825,9 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                                     <span className="text-[9px] text-muted-foreground">•</span>
                                                     <span className={cn(
                                                         "text-[9px] font-bold",
-                                                        isOutOfStock ? "text-rose-500" : (product.stock <= 5 ? "text-amber-500" : "text-emerald-500")
+                                                        isOutOfStock ? "text-rose-500 font-black animate-pulse" : (effectiveStock <= 5 ? "text-amber-500" : "text-emerald-500")
                                                     )}>
-                                                        {isOutOfStock ? "Tükendi" : `${product.stock} Adet`}
+                                                        {isOutOfStock ? "Tükendi" : `${effectiveStock} Adet`}
                                                     </span>
                                                     <span className="text-[9px] text-muted-foreground/70 font-mono ml-1">
                                                         {equivalentText}
@@ -832,9 +854,14 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                             {/* Quick Add Button */}
                                             <Button
                                                 size="icon"
-                                                className="h-8 w-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
+                                                className={cn(
+                                                    "h-8 w-8 rounded-lg text-white shadow-sm transition-all",
+                                                    isOutOfStock
+                                                        ? "bg-amber-600/90 hover:bg-amber-500"
+                                                        : "bg-blue-600 hover:bg-blue-500"
+                                                )}
                                                 onClick={() => addToCart(product)}
-                                                title="Sepete Ekle"
+                                                title={isOutOfStock ? "Stok Bitti (Akıllı Göz Stok Uyarısını Aç)" : "Sepete Ekle"}
                                             >
                                                 <Plus className="h-4 w-4" />
                                             </Button>
@@ -1136,6 +1163,24 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 open={isScannerModalOpen}
                 onOpenChange={setIsScannerModalOpen}
                 shopIdOrUserId={session?.user?.shopId || session?.user?.id || "global"}
+            />
+
+            {/* Smart Eye Stock Guardrail (Akıllı Göz Stok Koruması) */}
+            <SmartStockGuardrailModal
+                open={guardrailOpen}
+                onOpenChange={setGuardrailOpen}
+                product={guardrailProduct}
+                onStockAddedAndAddToCart={(updatedProduct) => {
+                    setLocalProducts((prev) =>
+                        prev.map((p) => p.id === updatedProduct.id ? { ...p, stock: updatedProduct.stock } : p)
+                    );
+                    queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
+                    queryClient.invalidateQueries({ queryKey: ["products"] });
+                    addToCart(updatedProduct, undefined, true);
+                }}
+                onAllowZeroStockSale={(prod) => {
+                    addToCart(prod, undefined, true);
+                }}
             />
 
             {/* Ürün Seçildi Yeşil Popup Yığını */}
