@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useMemo } from "react";
+import { Fragment, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -18,7 +18,8 @@ import {
     Package,
     Search,
     Download,
-    Printer
+    Printer,
+    X
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -88,7 +89,7 @@ export function SalesHistoryClient({
     const [typeFilter, setTypeFilter] = useState(propType || "ALL");
     const [paymentMethodFilter, setPaymentMethodFilter] = useState("ALL");
     const [staffFilter, setStaffFilter] = useState("ALL");
-    const [activeQuickFilter, setActiveQuickFilter] = useState<string>("today");
+    const [activeQuickFilter, setActiveQuickFilter] = useState<string>("thisMonthTTD");
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: new Date(startDate),
         to: new Date(endDate),
@@ -175,6 +176,18 @@ export function SalesHistoryClient({
         }
     };
 
+    // Otomatik arama (debounce 400ms) - kullanıcı her yazdığında veya sildiğinde çalışır
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const trimmed = searchTerm.trim();
+            if (trimmed !== appliedSearch) {
+                setPage(1);
+                setAppliedSearch(trimmed);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchTerm, appliedSearch]);
+
     const applyDateRange = () => {
         if (!dateRange?.from) {
             toast.error("Başlangıç tarihi seçin.");
@@ -193,7 +206,7 @@ export function SalesHistoryClient({
         setPaymentMethodFilter("ALL");
         setStaffFilter("ALL");
         setPage(1);
-        setQuickRange("today");
+        setQuickRange("thisMonthTTD");
     };
 
     const setQuickRange = (type: "today" | "yesterday" | "thisWeek" | "thisMonth" | "thisMonthTTD" | "lastMonthTTD" | "lastMonth") => {
@@ -608,12 +621,26 @@ export function SalesHistoryClient({
                                     <div className="relative">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input
-                                            placeholder="Müşteri, fiş, ürün veya telefon ara..."
-                                            className="pl-12 h-11 rounded-xl bg-background border-border/60 text-sm"
+                                            placeholder="Ürün adı, barkod, müşteri, açıklama veya telefon ara..."
+                                            className="pl-12 pr-10 h-11 rounded-xl bg-background border-border/60 text-sm"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             onKeyDown={(e) => e.key === "Enter" && applySearch()}
                                         />
+                                        {searchTerm && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSearchTerm("");
+                                                    setAppliedSearch("");
+                                                    setPage(1);
+                                                }}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 transition-colors"
+                                                title="Aramayı temizle"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2">

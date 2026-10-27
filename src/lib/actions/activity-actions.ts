@@ -32,6 +32,22 @@ export interface UnifiedOperation {
     transactionType: "INCOME" | "EXPENSE";
 }
 
+function getSearchVariants(term: string): string[] {
+    const rawTrimmed = term.trim();
+    if (!rawTrimmed) return [];
+    return Array.from(new Set([
+        rawTrimmed,
+        rawTrimmed.toLowerCase(),
+        rawTrimmed.toUpperCase(),
+        rawTrimmed.toLocaleLowerCase('tr-TR'),
+        rawTrimmed.toLocaleUpperCase('tr-TR'),
+        rawTrimmed.replace(/i/g, "ı").replace(/İ/g, "I"),
+        rawTrimmed.replace(/ı/g, "i").replace(/I/g, "İ"),
+        rawTrimmed.replace(/i/g, "İ"),
+        rawTrimmed.replace(/ı/g, "I"),
+    ])).filter(v => v.length >= 1);
+}
+
 export async function getUnifiedHistory(options: {
     page?: number;
     pageSize?: number;
@@ -80,13 +96,24 @@ export async function getUnifiedHistory(options: {
                 saleWhere.createdAt = dateWhere;
             }
 
-            if (searchTerm) {
-                saleWhere.OR = [
-                    { saleNumber: { contains: searchTerm, mode: "insensitive" } },
-                    { customer: { name: { contains: searchTerm, mode: "insensitive" } } },
-                    { customer: { phone: { contains: searchTerm, mode: "insensitive" } } },
-                    { items: { some: { product: { name: { contains: searchTerm, mode: "insensitive" } } } } },
-                ];
+            if (searchTerm && searchTerm.trim()) {
+                const variants = getSearchVariants(searchTerm);
+                const saleOrConditions: Prisma.SaleWhereInput[] = [];
+                for (const q of variants) {
+                    saleOrConditions.push(
+                        { saleNumber: { contains: q, mode: "insensitive" } },
+                        { customer: { name: { contains: q, mode: "insensitive" } } },
+                        { customer: { phone: { contains: q, mode: "insensitive" } } },
+                        { items: { some: { product: { name: { contains: q, mode: "insensitive" } } } } },
+                        { items: { some: { product: { barcode: { contains: q, mode: "insensitive" } } } } },
+                        { items: { some: { product: { sku: { contains: q, mode: "insensitive" } } } } },
+                        { items: { some: { product: { description: { contains: q, mode: "insensitive" } } } } },
+                        { transaction: { description: { contains: q, mode: "insensitive" } } },
+                        { transaction: { category: { contains: q, mode: "insensitive" } } },
+                        { user: { name: { contains: q, mode: "insensitive" } } }
+                    );
+                }
+                saleWhere.OR = saleOrConditions;
             }
 
             if (paymentMethod && paymentMethod !== "ALL") {
@@ -164,15 +191,32 @@ export async function getUnifiedHistory(options: {
             };
         }
 
+        let txOrConditions: Prisma.TransactionWhereInput[] | undefined = undefined;
+        if (searchTerm && searchTerm.trim()) {
+            const variants = getSearchVariants(searchTerm);
+            txOrConditions = [];
+            for (const q of variants) {
+                txOrConditions.push(
+                    { description: { contains: q, mode: "insensitive" } },
+                    { category: { contains: q, mode: "insensitive" } },
+                    { customer: { name: { contains: q, mode: "insensitive" } } },
+                    { customer: { phone: { contains: q, mode: "insensitive" } } },
+                    { supplier: { name: { contains: q, mode: "insensitive" } } },
+                    { user: { name: { contains: q, mode: "insensitive" } } },
+                    { sale: { saleNumber: { contains: q, mode: "insensitive" } } },
+                    { sale: { items: { some: { product: { name: { contains: q, mode: "insensitive" } } } } } },
+                    { sale: { items: { some: { product: { barcode: { contains: q, mode: "insensitive" } } } } } },
+                    { sale: { items: { some: { product: { sku: { contains: q, mode: "insensitive" } } } } } },
+                    { sale: { items: { some: { product: { description: { contains: q, mode: "insensitive" } } } } } },
+                    { debt: { notes: { contains: q, mode: "insensitive" } } },
+                    { debt: { description: { contains: q, mode: "insensitive" } } }
+                );
+            }
+        }
+
         const where: Prisma.TransactionWhereInput = {
             shopId,
-            OR: searchTerm ? [
-                { description: { contains: searchTerm, mode: "insensitive" } },
-                { customer: { name: { contains: searchTerm, mode: "insensitive" } } },
-                { sale: { saleNumber: { contains: searchTerm, mode: "insensitive" } } },
-                { customer: { phone: { contains: searchTerm, mode: "insensitive" } } },
-                { supplier: { name: { contains: searchTerm, mode: "insensitive" } } },
-            ] : undefined,
+            OR: txOrConditions,
         };
 
         if (Object.keys(dateWhere).length > 0) {

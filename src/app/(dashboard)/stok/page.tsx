@@ -3,6 +3,7 @@ import { getCategories } from "@/lib/actions/product-actions";
 import { getSuppliers } from "@/lib/actions/supplier-actions";
 import { CreateProductModal } from "@/components/product/create-product-modal";
 import { AICategoryCreator } from "@/components/product/ai-category-creator";
+import { WholesalerImportModal } from "@/components/stock/wholesaler-import-modal";
 import { StockMetricsStream } from "@/components/product/streamed/stock-metrics-stream";
 import { CategorySummaryStream } from "@/components/product/streamed/category-summary-stream";
 import { StockTableStream } from "@/components/product/streamed/stock-table-stream";
@@ -59,6 +60,7 @@ export default async function StokPage({ searchParams }: { searchParams: any }) 
         iconBgColor="bg-primary/10"
         actions={
           <>
+            <WholesalerImportModal suppliers={suppliers} />
             <AICategoryCreator categories={categories} triggerText="BAŞAR AI Stok Ekle" />
             <CreateProductModal
               categories={categories}

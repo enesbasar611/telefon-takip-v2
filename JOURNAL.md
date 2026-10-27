@@ -41,6 +41,84 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-27: Toptancı İçe Aktarma - Akıllı Stok Kodu (SKU) Üretimi, "Stokta Var" Uyarı Rozetleri & Toplu Stok Eleme Sihirbazı:
+  - **Talep:**
+    - Her ürüne, ürünün kategorisi ve model adıyla uyumlu, takibi kolaylaştıran düzenli/rastgele bir stok kodu (SKU) atanması.
+    - Önizleme ekranının üstünde mağaza stoğunda zaten mevcut olan ürünlerin ("Stokta Var" uyarısı verenler) rozetler (badges) halinde belirgin olarak gösterilmesi.
+    - Kullanıcının bu rozet üzerinden tek tıkla "Stoktakileri Ekleme (Seçimi Kaldır)" diyerek mükerrer ürünleri seçimden çıkarabilmesi ve sadece yeni ürünleri stoğa ekleyebilmesi.
+    - Önizleme ekranındayken fiyatların satır bazında el ile de değiştirilebilmesi, kategorilere göre toplu seçim/kaldırma yapılabilmesi ve Çıtalı (WF) / Çıtasız ekran ayrımlarının sağlanması.
+  - **Yapılan İyileştirmeler:**
+    1. **Akıllı Stok Kodu (SKU) Motoru (`src/lib/stock/wholesaler-parser.ts` & `src/lib/actions/stock-import-actions.ts`):**
+       - `generateProductSku()` fonksiyonu geliştirildi. Kategoriye özel ön ekler (`EKR-WF`, `EKR`, `KPK`, `BAT`, `SOK`, `KAM`, `KAS`, `SARJ-B`, `KBL-TC` vb.), temizlenmiş model kodu (örn: `IPH11`, `SAM-A50`, `RN12P`) ve 3 haneli rastgele sayı (`100-999`) birleştirilerek temiz, standart kodlar üretilir (örn: `KPK-IPH11-482`, `EKR-WF-IP13P-814`).
+       - Sunucu tarafında `getUniqueSku()` collision önleyici eklenerek Prisma'nın `@@unique([shopId, sku])` kısıtıyla %100 uyumlu, çakışmasız benzersiz kayıt garanti edildi.
+    2. **Üst Bilgi ve Stok Durumu Rozetleri (Badges Banner):**
+       - Önizleme ekranının tepesine iki ayrı durum rozeti ve hızlı işlem çubuğu yerleştirildi:
+         - **Sarı Rozet (`⚠️ X Kalem Stoğunuzda Mevcut`):** Mağazada daha önceden bulunan ürünlerin sayısını ve mevcut stoklarını gösterir.
+           - `🚫 Stoktakileri Ekleme (Seçimi Kaldır)` butonu: Tek tıkla mağazada mevcut olan tüm parçaların seçim tikini kapatır.
+           - `✓ Stoktakileri de Ekle` butonu: Mevcut parçaları tekrar seçili hale getirir.
+         - **Yeşil Rozet (`✨ Y Kalem Yeni Ürün`):** Stoğa ilk defa eklenecek parçaları listeler.
+           - `✨ Sadece Yenileri Seç` butonu: Mevcut olanları kaldırıp yalnızca yeni ürünleri seçer.
+       - Görünüm filtreleri eklendi: `Hepsi`, `⚠️ Sadece Stoktakiler`, `✨ Sadece Yeniler` butonları ile tablo anında filtrelenebilir.
+    3. **Önizleme Tablosunda SKU Rozeti ve Canlı Arama:**
+       - Ürün adı altında `SKU: KPK-IPH11-482` şeklinde şık bir rozet gösterimi eklendi.
+       - Arama kutusu ürün adı ve markanın yanı sıra oluşturulan `SKU` koduna göre de arama yapacak şekilde genişletildi.
+       - Renk ayrıştırma (Splitter) yapıldığında alt ürünlere renk uzantılı SKU'lar (örn: `...-SYH`, `...-BYZ`) otomatik türetildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-27: Toptancı Yedek Parça İçe Aktarma, Renk Ayrıştırma & Toplu Fiyatlandırma Sihirbazı (CSV / PDF / Excel / Metin):
+  - **Talep:**
+    - Toptancıdan alınan yedek parça listelerinin (CSV, Excel veya kopyalanan metin) dolar alış fiyatları ve adetleriyle doğrudan sisteme aktarılabilmesi.
+    - Satış fiyatlarının tüm ürünlere istenilen dolar miktarı kadar (örn: ürün başına +$5) toplu olarak artırılabilmesi ve satır bazında düzenlenebilmesi.
+    - Ürün kategorileri (Kapak, LCD / Ekran vb.) ve model isimlerinin belirgin olması, marka kalabalığının elenmesi.
+    - Özellikle arka kapaklarda (ve ekranlarda) renk ayrımlarının yapılabilmesi (örn: 2 adet iPhone 11 Arka Kapak satırının 1 Siyah + 1 Beyaz şeklinde ayrı ayrı kaydedilebilmesi).
+    - Tedarikçi eklemenin opsiyonel olması; tedarikçi seçilirse ödeme durumuna göre ("Ödeme Peşin/Önceden Yapıldı" ise cariden hiçbir şey düşmemesi; "Açık Hesap / Veresiye" ise tedarikçi cari borcuna eklenmesi).
+  - **Yapılan İyileştirmeler:**
+    1. **Toptancı Liste Ayrıştırıcı Motoru & Akıllı Kategorizasyon (`src/lib/stock/wholesaler-parser.ts`):**
+       - CSV (noktalı virgül, virgül, sekme), Excel ve çok satırlı metinleri parse eder; başlık satırlarını, ara bölümleri (`--- APPLE...`) ve ara toplamları (`Ara Toplam`, `GENEL TOPLAM`) filtreler.
+       - **Akıllı Kategorizasyon Motoru (`smartDetectCategory`):** Ürün adını ve toptancı başlığını analiz ederek ürünün bir **Yedek Parça** mı (`Kapak`, `LCD / Ekran`, `Batarya`, `Şarj Soketi`, `Kasa`, `Kamera`, `Flex / Entegre`, `Hoparlör / Ahize`) yoksa bir **Aksesuar** mı (`Şarj Başlığı`, `Set Şarj`, `Type-C Kablo`, `Lightning Kablo`, `Kablo`, `Kılıf`, `Ekran Koruyucu`, `Kulaklık`, `Powerbank`, `Araç Aksesuarı`) olduğunu anahtar kelimeler ve watt/tip analizleriyle otomatik ayırt eder.
+       - Model adı, temiz kategori, adet, dolar alış birim fiyatı ve model adındaki renkleri otomatik ayıklar.
+    2. **Sunucu Tarafı Toplu İçe Aktarma Motoru & P2028 Çözümü (`src/lib/actions/stock-import-actions.ts`):**
+       - **P2028 Transaction Timeout Giderildi:** Prisma etkileşimli transaction'larında varsayılan 5 saniyelik zaman aşımı nedeniyle oluşan `P2028: Transaction not found` hatası giderildi. Döngü içindeki 200+ sıralı tekil `findFirst` ve kategori sorgusu yerine kategoriler ve mağaza ürünleri döngü öncesinde tek seferde (batch) çekilerek Map üzerinden O(1) hızına indirildi; `$transaction` süresi 60 saniyeye genişletildi (`timeout: 60000, maxWait: 15000`).
+       - `checkWholesalerStockMatchesAction`: Önizleme ekranındaki ürünlerin mağaza stoğunda zaten var olup olmadığını (ve mevcut stok adetlerini) anında sorgulayan sunucu aksiyonu eklendi.
+       - Dolar fiyatlarını (`buyPriceUsd`, `sellPriceUsd`) kaydeder ve güncel kurdan TL karşılıklarını (`buyPrice`, `sellPrice`) yazar.
+       - Her ürün için `InventoryLog` giriş kaydı atar.
+       - Tedarikçi seçildiyse: "UNPAID" (Açık hesap) durumunda `Supplier.balanceUsd` ve `balance` borcunu artırıp `SupplierTransaction` açar; "PAID" (Peşin) durumunda cari bakiyeyi değiştirmeden alışveriş geçmişini günceller.
+    3. **Önizleme Modalı Geliştirmeleri (`src/components/stock/wholesaler-import-modal.tsx`):**
+       - **Seçim Tikleri (Checkbox):** Tablonun en soluna ve tablo başlığına ("Tümünü Seç / Kaldır") tik kutusu eklendi. Kullanıcı aktarmak istemediği parçaların tikini kaldırarak listeyi dilediği gibi daraltabilir.
+       - **Dinamik Seçim KPI'ları:** Üstteki özet kartları (Kalem, Toplam Adet, Toplam Tutar, Tahmini Kâr) ve alttaki aktar butonu sadece seçili/tikli olan parçaların değerlerini canlı hesaplar.
+       - **Düzenlenebilir Ürün İsimleri:** Ürün adı artık doğrudan satır üzerindeki inputtan kolayca düzenlenebilir.
+       - **Stokta Benzer/Aynı Ürün Uyarısı:** Mağaza stoğunda zaten mevcut olan ürünlerin altında sarı `⚠️ Stokta Var (Stoğu: X Adet)` uyarısı gösterilir; yeni ürünlerde yeşil `✨ Yeni Ürün` rozeti belirir.
+       - **Akıllı Kategori Filtreleri & Arama:** Önizleme tablosu üstüne dinamik kategori çipleri (`[Tümü (58)]`, `[Kapak (13)]`, `[LCD / Ekran (45)]`, `[Şarj Başlığı]` vb.) ve anlık parça/model arama kutusu eklendi.
+       - **Satır Bazında Kategori Düzenleme:** Her ürün satırında `Yedek Parça` ve `Aksesuar` gruplarını içeren `STANDARD_CATEGORIES` açılır menüsü entegre edildi.
+       - **Toplu Satış Fiyatı Artırma:** `+$3.00`, `+$5.00` (varsayılan), `+$10.00` veya özel `$X` / `%X` artış butonları.
+       - **Renk Ayrıştırma (Splitter):** 2+ adetli kapak veya parçalarda "Renklere Ayır" modalı ile adedi renklere (Siyah, Beyaz vb.) paylaştırarak ayrı ürün satırlarına bölme.
+    4. **Stok Sayfası Entegrasyonu (`src/app/(dashboard)/stok/page.tsx`):**
+       - Stok sayfası üst komut menüsüne "Toptancı Listesi İçe Aktar (CSV/PDF)" butonu entegre edildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
+- [x] 2026-10-27: Satış Arşivinde Kapsamlı Arama (Ürün Adı, Müşteri, Açıklama, Büyük/Küçük Harf) & Seçilen Döneme / Bu Aya Özel Arama Kapsamı:
+  - **Talep:**
+    - Satış arşivinde arama yaparken sadece sayfada görüntülenenlerle sınırlı kalınmaması.
+    - Aramanın öncelikli olarak bu ay içerisinde (büyük/küçük harf duyarsız, Türkçe karakter toleranslı, ürün adı, müşteri ismi ve açıklamaya göre) sunucu tarafında tüm veri tabanında yapılması.
+    - Filtrelerden dönem seçildiğinde (örn. Dün, Bu Hafta, Ay Başından Bugüne vb.) aramanın kesinlikle sadece bu seçili süre içinde yapılması.
+  - **Yapılan İyileştirmeler:**
+    1. **Varsayılan Dönem Önceliği "Bu Ay" (Ay Başından Bugüne):**
+       - `src/app/(dashboard)/satis/gecmis/page.tsx`: Varsayılan başlangıç tarihi gün başı yerine `startOfMonth(now)` (ayın 1'i) olarak ayarlandı.
+       - `src/components/satis/sales-history-client.tsx`: Varsayılan hızlı filtre `"thisMonthTTD"` (Ay Başından Bugüne) olarak ayarlandı. Filtreler temizlendiğinde de yine bu ayın başına sıfırlanması sağlandı.
+    2. **Kapsamlı ve Türkçe Harf Duyarsız Arama Motoru (`src/lib/actions/activity-actions.ts`):**
+       - `getSearchVariants()` yardımcısı eklendi (i/İ, ı/I, küçük/büyük ve `tr-TR` varyasyonları üretilir).
+       - `getUnifiedHistory()` fonksiyonunda hem genel işlem arşivinde (`Prisma.TransactionWhereInput`) hem de doğrudan satış filtresinde (`Prisma.SaleWhereInput`) arama koşulları genişletildi:
+         - **Ürün Arama:** `items.some.product: { name, barcode, sku, description }` ve `sale.items.some.product: { ... }` dahil edildi (önceden ürün adına göre arama yapılamıyordu).
+         - **Müşteri Arama:** `customer.name`, `customer.phone` eklendi.
+         - **Açıklama Arama:** `description`, `notes`, `category`, `debt.notes`, `debt.description` eklendi.
+         - **Personel & Fiş No:** `user.name`, `saleNumber` eklendi.
+    3. **Seçili Tarih Filtresine Kesin Bağlılık:**
+       - Kullanıcı hızlı filtrelerden (Dün, Bu Hafta, Ay Başından Bugüne, Geçen Ay vb.) veya takvimden özel bir tarih aralığı seçtiğinde, `rangeStart` ve `rangeEnd` sunucu sorgusuna aktarılarak arama sadece bu seçili zaman dilimindeki kayıtlar arasından süzülür.
+    4. **Otomatik Arama Deneyimi (Debounce + Temizleme):**
+       - Arama kutusuna 400ms debounce eklendi; kullanıcı yazarken veya sildiğinde Enter'a basmasına gerek kalmadan otomatik olarak ilk sayfaya dönülerek arama sonuçları getirilir.
+       - Arama kutusu içerisine tek tıkla aramayı temizleme butonu (`X`) entegre edildi.
+  - **Tip ve Derleme Kontrolü:** `npx tsc --noEmit` hatasız tamamlandı (0 error).
+
 - [x] 2026-10-23: Hızlı Satış Yan Panelde (Sidebar POS) Dinamik Stok Düşümü ve Akıllı Göz (0 Stok) Entegrasyonu:
   - **Talep:**
     - Yan paneldeki hızlı satışta (POSCompact) ürün sepete eklendikçe anlık olarak listeden stok düşmesi (satış öncesi sepetteki adet kadar azalması).
@@ -1241,13 +1319,27 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
            - `[Excel'e Aktar]` ve `[Gün Sonu PDF]` butonları responsive üst bara entegre edildi.
     - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
 
-- [x] 2026-10-17: Stok Sayfası "Bitenler" (Stoğu Biten Ürünler) Filtreleme Düzeltmesi:
-    - **Dosyalar**: `src/lib/actions/product-actions.ts`, `src/components/product/streamed/stock-table-stream.tsx`, `src/components/product/stock-list-table.tsx`, `src/components/product/stock-dashboard-metrics.tsx`, `JOURNAL.md`.
-    - **Neden**: `/stok` sayfasında üstteki metrik kartındaki "Bitenler" veya tablodaki "Stoğu Bitenler" butonuna basıldığında stoğu 0 olan ürünler listelenmiyordu. Backend (`getProducts`) `outOfStock` filtresini desteklemiyor ve `StockTableStream` URL'deki `outOfStock` parametresini sorguya iletmiyordu; tablo ise yalnızca mevcut ilk 50 ürünlük sayfayı istemci tarafında filtrelemeye çalışıyordu.
-    - **Yapılanlar**:
-        1. **Backend Filtreleme (`getProducts`)**: `outOfStock?: boolean` parametresi eklendi. `outOfStock === true` olduğunda Prisma seviyesinde `where.stock = { lte: 0 }` filtresi uygulandı. Arama veya kategori filtreleri ile birlikte çalışması sağlandı.
-        2. **Stream Bileşeni (`StockTableStream`)**: `searchParams` asenkron çözümlendi ve `outOfStock: sp?.outOfStock === "true"` parametresi `getProducts` fonksiyonuna aktarıldı.
-        3. **Tablo Arayüzü (`StockListTable`)**: `showOutOfStockOnly` durumu `searchParams` ile senkronize edildi. Butona tıklandığında `outOfStock=true` URL parametresi güncellenip sayfa 1'e sıfırlanacak ve tekrar tıklandığında filtre temizlenecek şekilde iki yönlü toggle bağlandı. Aktifken gerçek toplam sıfır stoklu ürün sayısı `(${totalCount})` dinamik gösterildi.
-        4. **Metrik Kartı (`StockDashboardMetrics`)**: "Bitenler" kartı aktif filtre durumunda belirgin vurgulu (rose outline ve glow) yapıldı, tekrar tıklandığında filtreyi kapatacak toggle URL mantığı eklendi.
+- [x] 2026-10-27: Toptancı Yedek Parça Listesi İçe Aktarma Modalı Geliştirmeleri (Önizleme İçi Manuel Fiyatlandırma, Kategori Toplu Tik Kapatma/Açma, WF Çıtalı Ekran Ayrımı):
+    - **Dosyalar**: `src/lib/stock/wholesaler-parser.ts`, `src/components/stock/wholesaler-import-modal.tsx`, `src/lib/actions/stock-import-actions.ts`, `JOURNAL.md`.
+    - **Önizleme Ekranında El ile Serbest Fiyatlandırma (Geri Dönüş Zorunluluğu ve Seçim Sıfırlanması Engellendi)**:
+        - Kullanıcı önizleme ekranındayken fiyat artışını değiştirmek istediğinde geriye gitmek zorunda kalıyordu ve yapılan seçimler/isim düzenlemeleri kayboluyordu.
+        - Önizleme ekranı (Adım 2) üst araç çubuğuna serbest sayısal fiyat artışı girişi (`+$ [ 5.00 ]`) eklendi.
+        - `[Tümüne Ekle]` ve `[Seçilenlere Ekle]` butonları entegre edildi. Kullanıcı dilediği dolar artışını uyguladığında mevcut seçili (tikli) ürün durumları, satır düzenlemeleri ve renk dağılımları kesinlikle bozulmadan yalnızca satış fiyatları anında güncellenir.
+        - Hızlı kısayol butonları (`+$3`, `+$5`, `+$10`, `%35 Kâr`) da seçimleri bozmadan koruyacak şekilde güncellendi.
+    - **Kategori Bazlı Toplu Seçim / Tik Kapatma & Açma (Örn: Kapakların Tümünü Tek Tıkla Kapatıp Aralarından Seçebilme)**:
+        - Önizleme ekranına kategori filtre şeritlerinin altına etkileşimli "Kategori Seçim Yönetimi" çubuğu eklendi.
+        - Aktif kategoriye göre (örn: Kapaklar seçildiğinde) `[✓ Kapak Tümünü Seç]` ve `[✕ Kapak Tikini Kapat (N)]` butonları sağlandı.
+        - Kullanıcı örneğin kapakları tek seferde kapatıp sadece istediği birkaç modeli rahatça işaretleyebilir.
+        - Tablo başlığındaki genel checkbox, sadece o an filtrelenen görünümdeki ürünleri toplu açıp kapatacak şekilde akıllandırıldı.
+    - **Ekranlarda ÇITALI (WF - With Frame) ve Çıtasız Ekran Ayrımı**:
+        - Toptancı listelerindeki `WF`, `W/F`, `With Frame`, `Çıtalı`, `Citalı`, `Kasalı` ibarelerini otomatik tanıyan `isFrameScreen` dedektörü yazıldı.
+        - Standart kategorilere `LCD / Ekran (Çıtalı)` eklendi; WF tespit edilen ekranlar otomatik olarak bu kategoriye atandı.
+        - Tabloda her ekran satırına tek tıkla değiştirilebilir `[🖼️ Çıtalı (WF)]` / `[Çıtasız]` rozet düğmesi eklendi. Kullanıcı tek tıkla ekranı çıtalı veya çıtasız yapabilir ve kategori anında güncellenir.
+        - Kategori filtre çiplerinde `🖼️ LCD / Ekran (Çıtalı)` ve `LCD / Ekran` ayrı ayrı filtrelenebilir ve ayrı model adetleriyle listelenir.
+    - **Prisma P2028 Zaman Aşımı Çözümü (`stock-import-actions.ts`)**:
+        - 50+ ürünün tek tek ardışık döngüde sorgulanmasından kaynaklanan 5 saniyelik Prisma interactive transaction timeout hatası giderildi.
+        - Kategoriler ve mevcut ürünler tek bir `findMany` ile önceden in-memory Map'e önbelleklendi ve transaction süresi 60 saniyeye (`{ timeout: 60000, maxWait: 15000 }`) genişletildi.
     - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
+
 
