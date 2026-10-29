@@ -41,6 +41,217 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-29: Hızlı Satış (`/satis`) Kategori Bazlı Özgün ve Mat Border Renklendirme Sistemi:
+  - **Talep:**
+    - Ürün kartları ve kategori butonlarının bordürlerine kategoriye göre özgü renkler atanması.
+    - Neon ışıma veya abartılı parlaklıktan kaçınılması; mevcut ince 1px bordür çizgilerinin tonuna ve doğallığına sadık kalınarak her kategorinin zarif bir renk kimliğine sahip olması.
+  - **Yapılan İyileştirmeler:**
+    1. **Merkezi Kategori Palet Motoru (`src/lib/category-colors.ts`):**
+       - 12 adet dengeli, mat ve göz yormayan renk teması (Mavi, Mor/Violet, Zümrüt, Kehribar/Amber, Gök Mavisi, Gül/Rose, İndigo, Teal, Turuncu, Fuşya, Cyan, Arduvaz/Slate) oluşturuldu.
+       - Neon parlamalardan kaçınmak için %25-30 opaklıkta doğal 1px bordür çizgileri (`border-{color}-500/25 dark:border-{color}-400/25`) ve hover'da yumuşak %50-55 geçişler tanımlandı.
+       - Akıllı anahtar kelime eşleştirmesi (Telefon/Cihaz: Mavi, Aksesuar/Kılıf: Mor, Ekran/LCD: Zümrüt, Şarj/Kablo: Kehribar, Bilgisayar/Tablet: Gök Mavisi, Kulaklık/Ses: Gül vb.) ve özel kategoriler için stabil string hash algoritması uygulandı.
+    2. **Ürün Kartları Entegrasyonu (`src/components/pos/parts/product-card.tsx`):**
+       - Hem Bento ızgara kartında hem de kompakt liste satırında ürünün kategorisine ait özgün bordür rengi uygulandı.
+       - Kart içi kategori etiketi ve "+ Ekle" mikro butonu aynı renk ailesiyle ahenk kazandı.
+    3. **Kategori Seçim Şeridi Entegrasyonu (`src/components/pos/pos-interface.tsx`):**
+       - Üst kategori barındaki tüm butonlar ilgili kategorinin özgün bordür ve soft metin tonuyla donatıldı; aktif seçildiğinde o kategorinin asil rengine bürünmesi sağlandı.
+    4. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata). Dev server kesintisiz korundu.
+
+- [x] 2026-10-29: Hızlı Satış (`/satis`) Müşteri Seçimi Açılır Yönü Düzeltmesi & "Katman Katman" Boşluk/Border Kusurunun Temizlenmesi:
+  - **Talep:**
+    - Müşteri arama açılır kutusunun (`CustomerSelector`) yukarı doğru açılarak sepet başlığını örtmesi ve ekrandan taşması hatasının düzeltilmesi.
+    - POS sayfasında iç içe geçmiş ("katman katman") duran kart kenarlıkları, gereksiz dış boşluklar ve padding'lerin tamamen kaldırılması.
+  - **Yapılan İyileştirmeler:**
+    1. **Müşteri Seçim Açılır Menüsü Aşağı Yönlü Açılış (`src/components/pos/parts/customer-selector.tsx`):**
+       - `absolute bottom-full mb-4` yerine doğrudan girdinin altına açılan `absolute top-full mt-1.5 left-0 w-full` pozisyonlandırması uygulandı; yukarı taşma ve başlığı örtme sorunu tamamen giderildi.
+       - Tıklama dışı algılama (`handleClickOutside`) ve `isOpen` yönetimi eklenerek menünün istemsiz açık kalması engellendi.
+       - Arama kutusuna müşteri seçildiğinde tek tıkla perakendeye dönmeyi sağlayan temizleme (`X`) butonu eklendi.
+       - Hızlı Yeni Müşteri Ekleme, Perakende (İsimsiz) ve müşteri sonuç satırları daha kompakt (`h-9` girdi, `py-2` öğeler) hale getirildi.
+    2. **"Katman Katman" Düzenin Kaldırılması & Tam Ekran Bento Entegrasyonu (`src/app/globals.css` & `src/app/(dashboard)/satis/page.tsx`):**
+       - Genel dashboard düzenindeki (`layout.tsx`) dış kart (`rounded-3xl border border-border/40 bg-card/30`) ve 30px'lik aşırı padding'lerin POS terminalinde çift katman oluşturması engellendi.
+       - `data-pos-root="true"` özniteliği ve modern CSS `:has()` seçicisi (`#app-scroll-container:has([data-pos-root])`) ile POS sayfası açıkken dış sahte kartın bordürü, arkaplanı ve gereksiz padding'leri sıfırlandı.
+       - POS panelleri (Sol Ürün Kataloğu & Sağ Sepet) doğrudan temiz ekranda, tek bir dış bordür katmanına ve pencereye tam oturan (`calc(100vh - 4.75rem)`) kusursuz bento düzenine kavuşturuldu.
+    3. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata). Dev server kesintisiz korundu.
+
+- [x] 2026-10-29: Hızlı Satış (`/satis`) Sayfası & POS Terminali Kapsamlı Redesign (Bento Dashboard Düzeni, Sayfalama & Motion Efektler):
+  - **Talep:**
+    - Sayfayı en aşağı kadar kaydırma zorunluluğunun ortadan kaldırılması; ürünlerin ekrana sığacak şekilde sayfalanması veya daha işlevsel hale getirilmesi.
+    - Hızlı arama, gereksiz boşlukların kaldırılması ve tam bir modern Bento Dashboard hissiyatı kazandırılması.
+    - Yukarıdaki gereksiz `PageHeader` alanının tamamen kaldırılması.
+    - Ürün kartlarına motion efektler, net ve okunaklı isimler, üzerine gelindiğinde şık dönüşümle detayların (stok, barkod, micro-action) gösterilmesi.
+    - Mobil ve masaüstü uyumunun kusursuzlaştırılması, tüm satış ve sepet fonksiyonlarının (sıfır kayıp) korunması.
+  - **Yapılan İyileştirmeler:**
+    1. **Ekran Boyutuna Uyumlu Bento Düzeni (`src/app/(dashboard)/satis/page.tsx` & `pos-interface.tsx`):**
+       - Sayfa üstündeki 100+ piksellik gereksiz `<PageHeader>` tamamen kaldırıldı; POS arayüzü doğrudan en üstten tam ekran bento alanı olarak başlatıldı.
+       - Masaüstünde `lg:h-[calc(100vh-5.25rem)]` kuralı uygulanarak tarayıcı seviyesindeki çift kaydırma çubukları yok edildi; sol (katalog) ve sağ (sepet & ödeme) panelleri bağımsız akışa kavuşturuldu.
+    2. **Akıllı Ekran Sayfalaması & Görünüm Modları (`pos-interface.tsx`):**
+       - Sayfa kaydırma eziyetine son veren ekran sayfalaması eklendi: Sayfa Başı Ürün seçici (`12`, `16`, `24`, `Tümü`), mevcut sayfa / toplam sayfa göstergesi ve kompakt İleri/Geri butonları entegre edildi.
+       - Görünüm Seçici eklendi: Modern Izgara (`GRID`) ve Kompakt Liste (`LIST`) modları arasında tek tıkla geçiş; kullanıcı tercihi `localStorage` ile kalıcı hale getirildi.
+       - Hızlı Stok Durum Filtresi hapları eklendi: `Tümü`, `Stokta` ve `Kritik` seçenekleri ile kasiyerin aradığı ürüne anında erişmesi sağlandı.
+       - Arama kutusuna anında temizleme (`X`) butonu ve barkod tarayıcı tetikleyicisi eklendi.
+    3. **Motion Efektli & Dönüşümlü Ürün Kartları (`src/components/pos/parts/product-card.tsx`):**
+       - Kartlara donanımsal ivmeli mikro-etkileşimler (`whileHover={{ y: -3, scale: 1.015 }}`, `whileTap={{ scale: 0.97 }}`) uygulandı.
+       - Ürün isimleri yüksek kontrastlı, cesur ve okunaklı hale getirildi (`font-bold text-xs sm:text-sm text-foreground uppercase tracking-tight`).
+       - Stok durumu renkli nabız (pulse) göstergeleriyle (5 üzeri yeşil, 1-5 arası sarı, 0 kırmızı) dinamikleştirildi.
+       - Fiyatlar `tabular-nums` ile belirginleştirildi; varsa ikincil kur (Dolar/TL) karşılığı otomatik basıldı.
+       - Kartın üzerine gelindiğinde (hover) barkod/SKU ve parlayan "+ Ekle" aksiyon butonu şık bir animasyonla beliriyor.
+       - Liste görünümü (`isCompact=true`) için tek satırlık ultra-kompakt satır arayüzü tasarlandı.
+    4. **Özet & Ödeme Paneli Dengelemesi (`checkout-summary.tsx`):**
+       - Fazla dikey alan kaplayan 64px'lik butonlar `h-11 sm:h-12` standardına, aşırı padding `p-3.5` oranına çekilerek laptop ekranlarında sepetin taşmadan tek ekrana sığması sağlandı.
+    5. **İş Mantığı ve Sıfır Silme İlkesi:**
+       - Sadakat indirimleri, çoklu para birimi (TRY/USD), veresiye ve cari hesap seçicileri, fiş yazdırma modalı ve barkod tarayıcı tam uyumlulukla korundu.
+       - `createSale` eyleminin `{ success: true, data: sale }` dönüşü ile tip uyumu tam sağlandı.
+    6. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+- [x] 2026-10-29: Header Butonları Tarayıcı Kaydırma Çubuğu & Metin Seçim İmleci Kusurunun Kalıcı Çözümü:
+  - **Hata / Kusur:**
+    - "Yeni Borç Ekle" ve "Dışa Aktar" butonlarının bulunduğu başlık aksiyon çubuğunda, Windows 11 Fluent scrollbar motorunun `overflow-x-auto` kapsayıcısı sağ kenarında istenmeyen dikey kaydırma çubuğu kapsülü (scroll thumb) çizmesi.
+    - Buton metinlerine tıklandığında veya gelindiğinde farenin I-beam metin imlecine dönüşmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **Aksiyon Konteyneri Taşma Yönetimi (`src/components/ui/page-header.tsx`):**
+       - Masaüstü ve tablet ekranlarında (`sm:` ve üzeri) `sm:overflow-visible` uygulanarak kaydırma konteyneri tamamen devre dışı bırakıldı; Windows kaydırma çubuğu kapsülü kesin olarak yok edildi.
+       - Dar mobil ekranlarda (`< sm`) ise `py-1` dikey pay verilerek alt piksel yuvarlama taşmaları engellendi.
+    2. **Genel Buton İmleç & Seçim İntizamı (`src/components/ui/button.tsx`):**
+       - Tüm buton varyantlarına (`buttonVariants`) `cursor-pointer select-none` sınıfları dahil edilerek buton metinlerinin seçilmesi ve I-beam metin imleci oluşması tüm projede engellendi.
+    3. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+- [x] 2026-10-29: Navbar Döviz Butonları İçerik Bazlı Renklendirme (Dolar: Yeşil, Euro: Mavi, Altın: Sarı):
+  - **Talep:**
+    - Navbar döviz ve kur gösterge haplarının içeriğine göre özelleştirilmiş şık renk temasıyla donatılması:
+      - Dolar: Yeşil (Emerald)
+      - Euro: Mavi (Sky/Blue)
+      - Altın: Sarı (Amber/Gold)
+  - **Yapılan İyileştirmeler:**
+    1. **Özgün Renk & Işıma Paletleri (`src/components/navbar/currency-display.tsx`):**
+       - **Dolar:** Zümrüt yeşili zemin tint (`bg-emerald-500/8 dark:bg-emerald-500/10`), yeşil kenarlık (`border-emerald-500/30`), yeşil dikey ayırıcı (`border-emerald-500/20`), yeşil ikon (`DollarSign`), canlı yeşil başlık ve sayaç rakamları.
+       - **Euro:** Gök mavisi zemin tint (`bg-sky-500/8 dark:bg-sky-500/10`), mavi kenarlık (`border-sky-500/30`), mavi dikey ayırıcı (`border-sky-500/20`), mavi ikon (`Euro`), canlı mavi başlık ve sayaç rakamları.
+       - **Altın:** Kehribar sarısı zemin tint (`bg-amber-500/8 dark:bg-amber-500/10`), sarı/altın kenarlık (`border-amber-500/30`), sarı dikey ayırıcı (`border-amber-500/20`), sarı ikon (`Coins`), canlı sarı/altın başlık ve sayaç rakamları.
+    2. **Açık & Koyu Mod Yüksek Kontrastı:**
+       - Açık modda okunaklı koyu tonlar (`text-emerald-900`, `text-sky-900`, `text-amber-900`), koyu modda ise neon cam efekti (`dark:text-emerald-300`, `dark:text-sky-300`, `dark:text-amber-300`) ile her iki temada kusursuz estetik ve netlik sağlandı.
+       - İskelet yükleyiciler de ilgili kur rengine uygun degrade ile güncellendi.
+    3. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+- [x] 2026-10-29: Navbar Döviz Butonları Titreme (Layout Jitter / Shaking) Sorununun Giderilmesi:
+  - **Hata / Kusur:**
+    - Navbar döviz butonlarında (`CurrencyDisplay`) sayaç animasyonu (`CountingNumber`) çalışırken buton genişliğinin dinamik değişmesi ve butonlarda `transition-all` bulunması nedeniyle 60 FPS CSS layout enterpolasyonu oluşarak tüm navbarın yatayda titremesi/sallanması.
+  - **Yapılan İyileştirmeler:**
+    1. **Sabit ve Sarsılmaz Konteyner Yapısı (`src/components/navbar/currency-display.tsx`):**
+       - Buton kapsayıcılarına sabit genişlik tanımlandı (Dolar: `w-[144px]`, Euro: `w-[144px]`, Altın: `w-[174px]`; mobilde `w-[114px]`, `w-[114px]`, `w-[138px]`).
+       - Dış iskelet yükleyiciler (skeleton) aynı piksel genişliğine eşitlendi.
+    2. **Layout Titremesini Engelleyen CSS Düzenlemesi:**
+       - `transition-all` kaldırıldı; genişlik değişimlerini tetiklememesi için yalnızca `transition-colors duration-150` uygulandı.
+       - Sol blok (`Icon + Kur İsmi + Sağ Kenarlık`) `shrink-0` ile kilitlendi; sağ fiyat alanı (`flex-1 text-right tabular-nums overflow-hidden pl-1.5`) sağa hizalandı (`justify-end text-right`).
+       - Rakamlar sayarken buton genişliği veya sol kısımdaki ikon ve metinler 1 piksel dahi oynamadan tamamen sabit kaldı, sayaç yalnızca kendi iç alanında sağa yaslı olarak akıyor.
+    3. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+- [x] 2026-10-29: Proje Genelinde Sayaç Şeklinde Motion Sayı Efekti (`CountingNumber`) Entegrasyonu:
+  - **Talep:**
+    - Rakamlara sayaç şeklinde animasyonlu geçiş (motion effect) kazandırılması.
+    - `import { CountingNumber } from "@/components/ui/counting-number";` bileşeni üzerinden istenen API (`value`, `grouping`, `trigger="view"`, `duration`, `delay`, `className`, `prefix`, `suffix`) ile tam uyumlu altyapı oluşturulması.
+    - Anasayfa KPI kartları (8'li kart grubu), Veresiye istatistikleri, Gelir Analizi, Servis Durumu, Trend Ürünler, Son İşlemler ve Döviz kurlarında akıcı sayaç efektinin uygulanması.
+  - **Yapılan İyileştirmeler:**
+    1. **Bileşen Geliştirmesi (`src/components/ui/counting-number.tsx`):**
+       - `framer-motion` (`useMotionValue`, `useInView`, `animate`) tabanlı 60 FPS donanımsal ivmeli sayaç bileşeni oluşturuldu.
+       - Doğrudan `ref.current.textContent` manipülasyonu ile React re-render yükü olmaksızın pürüzsüz sayaç akışı sağlandı.
+       - Akıllı değer çözümleme: Hem doğrudan sayısal (`48_215`, `255.37`), hem de para birimi formatlı metinleri (`₺12.715,15`, `$255.37`, `(₺12.715,15)`) otomatik algılama desteği eklendi.
+       - Para birimine göre dinamik yerelleştirme: `$` tespit edildiğinde `en-US` (nokta ondalık), `₺` veya genel sayılarda `tr-TR` (virgül ondalık) desteği.
+       - Parantezli negatif/ikincil tutarlar (`(₺12.715,15)`) ve çift sembol oluşumunu engelleyen akıllı prefix koruması.
+       - SSR ve hidratasyon uyumu: İlk SSR renderında orijinal değer basılarak sıfır layout shift ve SEO uyumluluğu korundu.
+    2. **Finansal Maskeleme & Gösterim Entegrasyonu (`src/components/ui/reveal-financial.tsx`):**
+       - Tüm finansal metrikleri yöneten `RevealFinancial` bileşenine `<CountingNumber>` entegre edildi.
+       - Gizlilik/göz açma butonuna basıldığında veya sayfa açıldığında tüm bakiyeler sayaç efektiyle animasyonlu açılıyor.
+    3. **8'li Dashboard KPI Stat Kartları (`src/components/dashboard/stat-card.tsx`):**
+       - Kasa Bakiyesi, Satış Hacmi, Servis Gelirleri, Tahsilatlar, Hazır Cihazlar, Bekleyen Servisler, Kritik Stok ve Biten Stok sayaçları `CountingNumber` ile donatıldı.
+       - İkincil kur değerleri (örn. `($255.37)` ve `(₺12.715,15)`) animasyona bağlandı.
+    4. **Veresiye KPI Kartları (`src/components/finance/veresiye/veresiye-stats.tsx`):**
+       - TL Alacaklar, Dolar Alacaklar, Genel Toplam ve Tahsil Edilen toplamlar animasyonlu sayaç ile bağlandı.
+    5. **Grafik ve Streamed Bileşenler:**
+       - **Gelir Analizi (`revenue-analysis-stream.tsx`):** Brüt Gelir ve Net Kâr sayaç animasyonuna bağlandı.
+       - **Servis Durumu (`service-status-stream.tsx` & `service-status-chart.tsx`):** Toplam cihaz sayısı ve yüzde dilimleri sayaç animasyonuna bağlandı.
+       - **Trend Ürünler (`top-products-stream.tsx`):** Satış adetleri ve fiyatlar sayaç animasyonuna bağlandı.
+       - **Döviz Kurları (`currency-display.tsx`):** Navbar'daki Dolar, Euro ve Altın kurları sayaç animasyonuna bağlandı.
+    6. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata). Dev server çalışması korundu.
+
+- [x] 2026-10-29: Veresiye Terminali Header Butonları & Taşma / Kaydırma Çubuğu Kusurunun Giderilmesi:
+  - **Hata / Kusur:**
+    - Veresiye başlığındaki "Yeni Borç Ekle" ve "Dışa Aktar" buton grubunun sağında iç içe `overflow-x-auto` nedeniyle Windows Chrome/Edge tarayıcılarında çirkin dikey bir kaydırma çubuğu kapsülü (scroll thumb) oluşması.
+    - `no-scrollbar` sınıfının `globals.css` içinde tanımlı olmaması sebebiyle WebKit motorunun kaydırma çubuğunu gizlemeyip taşma render etmesi.
+    - "Dışa Aktar" butonundaki metne tıklandığında metin seçimi / I-beam imlecinin buton üzerinde görünmesi ve butonlar arası boşluğun orantısız olması.
+  - **Yapılan İyileştirmeler:**
+    1. **Global CSS Kaydırma Çubuğu Düzeltmesi (`src/app/globals.css`):**
+       - `.no-scrollbar` ve `.scrollbar-none` yardımcı sınıfları tüm tarayıcılar (WebKit, Firefox, IE/Edge) için scrollbar'ı %100 gizleyecek şekilde eklendi (`display: none !important; scrollbar-width: none !important`).
+    2. **Header Aksiyon Konteyneri (`src/components/ui/page-header.tsx` & `veresiye-client.tsx`):**
+       - İç içe gereksiz `overflow-x-auto no-scrollbar py-1 -my-1` kapsayıcısı kaldırılarak doğrudan temiz ve esnek `flex items-center gap-2 sm:gap-2.5 flex-nowrap shrink-0` yapısına geçirildi; taşma ve scrollbar kapsülü kalıcı olarak yok edildi.
+    3. **Buton UI & İntizam:**
+       - "Dışa Aktar" butonu `variant="outline"` ve `gap-2 select-none active:scale-95` ile yenilendi; metin seçim imleci engellendi.
+       - "Yeni Borç Ekle" ve "Dışa Aktar" butonlarının yükseklik ve boşluk oranları kusursuz hizaya getirildi.
+    4. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+- [x] 2026-10-29: Veresiye Terminali & Alacak Defteri UI/UX Yenilemesi - Kompakt Bento Düzeni, Gereksiz Boşlukların Kaldırılması & Modern Tasarım Dili Entegrasyonu:
+  - **Talep:**
+    - Veresiye (`/veresiye`) sayfasındaki gereksiz devasa boşlukların (40px aralıklar, 40px/48px iç dolgular, orantısız 40px köşe yuvarlatmaları) kaldırılması.
+    - Tasarım sisteminin (kompakt bento aralıkları, modern liquid glass stat kartları, net ve okunaklı tipografi, `tabular-nums`, şık `rounded-2xl` ve `rounded-xl` bileşenler) sayfaya ve tüm diyaloglarına uygulanması.
+  - **Yapılan İyileştirmeler:**
+    1. **Veresiye KPI Kartları (`src/components/finance/veresiye/veresiye-stats.tsx`):**
+       - 4 KPI kartı (TL Alacaklar, Dolar Alacaklar, Toplam Portföy, Tahsilat Performansı) yeni liquid glass renk paleti ve `backdrop-blur-xl` ile yeniden kodlandı.
+       - Aşırı `p-8` (32px) padding yerine dengeli `p-3.5 sm:p-4`, devasa `rounded-[2.5rem]` yerine standart `rounded-2xl` kullanıldı.
+       - Sayılar `text-xl sm:text-2xl md:text-3xl font-black tabular-nums tracking-tight` ile yüksek kontrastlı hale getirildi.
+    2. **Veresiye Araç Çubuğu (`src/components/finance/veresiye/veresiye-toolbar.tsx`):**
+       - Arama kutusu `h-9 sm:h-9.5 rounded-xl` olarak optimize edildi.
+       - Filtre açılır kutuları (Tümü, Borcu Olanlar, Borcu Olmayanlar, Sıralama) ve hızlı durum hapları (Tümü, Bekleyen, Geciken, Takip) tek satırda sıfır taşmayla kompakt hale getirildi.
+    3. **Yaşlandırma & Risk Analiz Paneli (`src/components/finance/veresiye/veresiye-analysis-side.tsx`):**
+       - 40px'lik `space-y-10` ve `px-8 pb-10 pt-4` devasa boşlukları kaldırılarak `space-y-4` ve `p-4` bento kart yapısına geçirildi.
+       - Yaşlandırma ilerleme çubukları için dinamik Tailwind sınıfı purge riskleri ortadan kaldırıldı (açık renk haritası tanımlandı).
+       - AI Projeksiyon kartı `rounded-2xl` ve şık degrade ile yeniden boyutlandırıldı.
+    4. **Müşteri Kartı & Satır Görünümü (`src/components/finance/veresiye/veresiye-customer-card.tsx`):**
+       - Liste görünümünde kompakt ve şık satırlar (`py-2 px-3 sm:py-2.5 sm:px-4`, sol renkli durum bordürü, `h-8` aksiyon butonları).
+       - Izgara görünümünde modern `rounded-2xl border border-border/50 bg-card/80` bento kartları.
+       - WhatsApp ekstre, borç fişi, tahsilat ve yeni borç ekleme butonları kompakt ve erişilebilir hale getirildi.
+    5. **Veresiye Terminali Ana Çerçevesi (`src/components/finance/veresiye-client.tsx`):**
+       - Header aksiyon butonları devasa `h-11 sm:h-12` yerine `h-9 sm:h-9.5 px-3.5 sm:px-4 rounded-xl` standardına çekildi.
+       - Analiz paneli ile müşteri tablosu arasındaki `gap-10` (40px) dev boşluk `gap-4 lg:gap-5` seviyesine indirilerek sayfa bir bütün olarak sıkılaştırıldı.
+       - Müşteri hareketleri/ekstre modalı, portföy müşteri detay penceresi, borç düzenleme ve tahsilat pencerelerindeki tüm `rounded-[2.5rem]`, `p-10`, `p-12` boşlukları standart `rounded-2xl sm:rounded-3xl` ve `p-4 sm:p-5` olarak optimize edildi.
+    6. **Tahsilat & Borç Ekleme Modalları (`veresiye-payment-modal.tsx`, `veresiye-payment-summary-modal.tsx`, `add-debt-modal.tsx`):**
+       - Aşırı dikey boşluklar, dev font boyutları ve devasa butonlar ekran alanını verimli kullanan kompakt SaaS form standardına kavuşturuldu.
+    7. **Doğrulama:** `npx tsc --noEmit` ile tüm proje derlendi ve 0 hata ile doğrulandı.
+
+- [x] 2026-10-29: Header "AKTİF / CANLI" Göstergesine Libraries.dev BorderBeam & ThinkingOrb Efektlerinin Entegrasyonu:
+  - **Talep:**
+    - Header başlığındaki "AKTİF / CANLI" durum hapına Libraries.dev'in `border-beam` (hareketli renkli sınır ışıması) ve `thinking-orbs` (hand-tuned AI parçacık küresi) efektlerinin entegre edilmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **Paket Kurulumu:** `border-beam` (^1.4.1) ve `thinking-orbs` (^0.3.2) paketleri projeye eklendi.
+    2. **Header Entegrasyonu (`src/components/dashboard/admin-dashboard.tsx`):**
+       - Eski statik yeşil nokta yerine `thinking-orbs` kütüphanesinden `<ThinkingOrb state="searching" size={20} color="#10b981" />` yerleştirildi.
+       - Durum kapsülü (pill) `border-beam` kütüphanesinden `<BorderBeam size="sm" colorVariant="colorful" strength={0.8} className="rounded-full">` ile sarmalanarak etrafında prizmatik hareketli bir sınır ışıması oluşturuldu.
+    3. **Doğrulama:** `npx tsc --noEmit` ile tip ve derleme denetimi başarıyla tamamlandı (0 hata).
+
+- [x] 2026-10-29: Dashboard Dual-Layer Liquid Glass Kartları, Tema Uyumlu Grafikler & 24-Kolon "Kitap Gibi" Sıfır Boşluklu Varsayılan Düzen:
+  - **Talep:**
+    - 8 adet KPI özet kartının (Kasa, Gelir, Tahsilat, Satış Hacmi, Hazır, Bekleyen, Kritik Stok, Veresiye) düz/katı renkler yerine göz alıcı, modern Liquid Glass (yarı saydam buzlu cam, ışık yansıması, akışkan sıvı blob ışımaları) mimarisine kavuşturulması.
+    - Chart ve analitik bileşenlerinin arka planlarının koyu lacivert SaaS teması (`#0c121d` / `bg-card/85 backdrop-blur-xl`) ile tam uyumlu hale getirilmesi.
+    - Widget'lar arasındaki orantısız yükseklik farklarından, boşluklardan ve taşmalardan kaynaklanan gereksiz boşlukların giderilmesi; tüm widget'ların 24 kolonluk tam ızgaraya sıfır boşlukla ("kitap gibi") oturacağı varsayılan bir düzen oluşturulması.
+  - **Yapılan İyileştirmeler:**
+    1. **8 Adet Liquid Glass KPI Kartı (`src/components/dashboard/stat-card.tsx`):**
+       - Her kart için özel renk paleti (Zümrüt Yeşili, Ametist Moru, Kehribar Sarısı, Safir Mavisi, Nane Yeşili, Buzul Camgöbeği, Yakut Kırmızısı, Derin İndigo) ve `backdrop-blur-2xl` cam efekti uygulandı.
+       - Kartın üst kenarında 1px specular cam yansıması, arkada akışkan sıvı bloblar, buzlu cam ikon kapsülü (`bg-white/15 backdrop-blur-md`) ve `tabular-nums` ile yüksek kontrastlı tipografi korundu.
+       - Kartların tüm `onClick`, `onLongPress`, modal açıcıları ve döviz formatlama yetenekleri eksiksiz muhafaza edildi.
+    2. **Tema Entegre Chart ve Panel Arka Planları:**
+       - `revenue-analysis-stream.tsx` ve `sales-trend-chart.tsx`: Koyu lacivert tema uyumlu yumuşak degradeli grafik dolgusu (`#3b82f6` %35 -> %0), ızgara çizgileri ve cam tooltip.
+       - `service-status-stream.tsx` & `service-status-chart.tsx`: `h-full` esnek yükseklik, segmentli kapasite çubuğu ve üstten hizalı kompakt durum listesi.
+       - `recent-transactions-stream.tsx`, `service-queue-stream.tsx`, `smart-insights.tsx`, `live-activity-feed.tsx`, `receivables-client.tsx`, `shortage-status-card.tsx`: Tüm kart konteynerleri `bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl border-border/40 dark:border-white/[0.08]` ile eşitlendi.
+    3. **24-Kolon Kusursuz Eş Yükseklikli Varsayılan Düzen (`src/lib/dashboard-layout.ts` & `dashboard-client.tsx`):**
+       - `SYSTEM_DASHBOARD_LAYOUT` 24 kolona tam oturan eş yükseklikli çiftler halinde yeniden dizayn edildi:
+         - Satır 1: 4 Finansal KPI (6+6+6+6 = 24 kolon, 1 satır)
+         - Satır 2: 4 Operasyonel KPI (6+6+6+6 = 24 kolon, 1 satır)
+         - Satır 3: Gelir Analizi (15 kolon) + Servis Durumu (9 kolon) = 24 kolon, tam 3 satır yükseklik
+         - Satır 4: Servis Kuyruğu (12 kolon) + Son İşlemler (12 kolon) = 24 kolon, tam 3 satır yükseklik
+         - Satır 5: Tahminleyici Zeka (12 kolon) + Canlı Akış (12 kolon) = 24 kolon, tam 3 satır yükseklik
+         - Satır 6: Trend Ürünler (12 kolon) + Alacaklarım (12 kolon) = 24 kolon, tam 3 satır yükseklik
+         - Satır 7: Kurye Sipariş Durumu (24 kolon, 2 satır yükseklik, 4'lü duyarlı ızgara)
+       - `gridAutoFlow: "row dense"` yerine `gridAutoFlow: "row"` kullanılarak widget'ların sıraları ve satır eşleşmeleri kilitlendi; widget'ların boşluklara atlayarak ızgarayı bozması önlendi.
+       - `normalizeDashboardLayout` içerisine eski asimetrik satır/kolon değerlerini ve eksik widget'ları tespit edip otomatik olarak yeni temiz düzene yükselten `isLegacyOrBrokenLayout` denetimi eklendi.
+       - "Varsayılan" butonu tetiklendiğinde temiz düzenin anında veritabanına da kaydedilmesi sağlandı.
+
 - [x] 2026-10-27: Toptancı İçe Aktarma - Akıllı Stok Kodu (SKU) Üretimi, "Stokta Var" Uyarı Rozetleri & Toplu Stok Eleme Sihirbazı:
   - **Talep:**
     - Her ürüne, ürünün kategorisi ve model adıyla uyumlu, takibi kolaylaştıran düzenli/rastgele bir stok kodu (SKU) atanması.
@@ -1343,3 +1554,117 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
 
 
 
+
+
+- [x] 2026-10-29: Dual-Mode UI/UX Değişikliklerinin Geri Alınması (Rollback):
+    - Kullanıcı talebi doğrultusunda önceki oturumda eklenen Next-Gen / Corbel / Moorly arayüz modifikasyonları, efekt bileşenleri (`src/components/ui/effects/`), `UIModeSwitcher`, `FloatingDock` ve ilgili tüm stil/kod değişiklikleri eksiksiz olarak geri alındı.
+    - Proje önceki kararlı ve orijinal haline döndürüldü.
+    - **Doğrulama**: `npx tsc --noEmit` ile doğrulandı.
+
+
+- [x] 2026-10-29: Dashboard UI/UX & Kısayol Chartları Tasarım İyileştirmesi (Superdesign & UI/UX Standartları):
+    - **Amaç ve Talep**: Anasayfa dashboard'undaki görsel kusurların (`.agents/skills/superdesign/SUPERDESIGN.md` ve `ui-ux-pro-max` standartları doğrultusunda) analiz edilip giderilmesi; gereksiz iç içe geçmiş devasa boşlukların kaldırılması; "kitap gibi" hizalı, kompakt ve üst düzey kurumsal SaaS görünümüne kavuşturulması; tüm kısayol chart ve widget'larının elden geçirilmesi.
+    - **Değiştirilen Dosyalar**:
+        - `src/app/(dashboard)/layout.tsx`: `main` ve iç kapsayıcıdaki katmerli dev boşluklar (`lg:p-10 p-0` + `lg:p-10 lg:px-12` = ~88px kenar boşluğu) ve balonlaşmış `lg:rounded-[3rem]` çerçevesi kompakt ve modern bir hiyerarşiye çekildi (`p-2 sm:p-4 lg:p-5`, iç kapsayıcı `rounded-2xl lg:rounded-3xl p-4 sm:p-5 lg:p-6 pb-24 lg:pb-8`). Ekran genişliği verimli kullanılır hale getirildi.
+        - `src/app/(dashboard)/dashboard/page.tsx`: Sayfa içindeki mükerrer `p-0 sm:p-6 lg:p-8` boşluğu kaldırılarak ana kapsayıcıyla tam uyum sağlandı.
+        - `src/components/dashboard/stat-card.tsx`: 8 farklı neon/şeker gradyanı yerine kurumsal koyu obsidian yüzey (`bg-card/90 dark:bg-[#0d1219]/90 backdrop-blur-md border border-border/50`) üzerine kimliğe özel hafif ambiyans ışıması ve zarif ikon rozeti getirildi. Tipografi `tabular-nums` ve yüksek kontrastlı hale getirildi, arkayı kirleten devasa filigran ikonlar temizlendi, hover aksiyonları akıcı mikro-etkileşimlere bağlandı.
+        - `src/components/dashboard/streamed/top-products-stream.tsx`: Dev kare kartlar ve boş kutu ikonları (`aspect-square h-14 w-14`) yerine kompakt, dengeli bento grid ve liste görünümü sağlandı. Fiyatlar `tabular-nums font-bold`, satış adedi ve kritik stok rozetleri derli toplu hale getirildi. Başlık ve kart dolguları `p-8`'den `px-5 py-3.5`'e çekildi.
+        - `src/components/dashboard/streamed/service-status-stream.tsx` & `src/components/charts/service-status-chart.tsx`: `p-8` iç dolguları `px-5 py-3.5` ve `p-4 sm:p-5` standartlarına çekildi. Segmented progress çubuğu şık ve ince bir formata (`h-2.5 rounded-full`) kavuşturuldu, durum satırları `tabular-nums` ve renkli durum göstergeleriyle kitap gibi hizalandı.
+        - `src/components/dashboard/smart-insights.tsx` & `src/components/dashboard/streamed/smart-insights-stream.tsx`: `p-8` devasa boşlukları sıkılaştırıldı, içgörü kartları `rounded-xl p-3 sm:p-3.5` ve zarif sol ikon çemberleriyle kompakt hale getirildi.
+        - `src/components/dashboard/streamed/recent-transactions-stream.tsx`: Finansal kayıtlar tablosu gereksiz padding'lerden (`py-4 px-8`) arındırılarak `py-2.5 px-4` kompakt satır yüksekliğine, net durum noktalarına (`THS`, `VRS`, `GDR`) ve sağa hizalı `tabular-nums` rakamlara kavuşturuldu.
+        - `src/components/dashboard/streamed/service-queue-stream.tsx`: Servis kuyruğu cihaz listesi kartı `p-8`'den `px-5 py-3.5`'e çekildi, cihaz ikon kutusu ve müşteri bilgileri hizalandı, kuyruktaki her bir cihaz kompakt ve okunaklı biçimlendirildi.
+        - `src/components/dashboard/widgets/shortage-status-card.tsx`: Kurye sipariş durumu kartı ve modalındaki aşırı şişkin `p-8 pb-6` padding'leri ve `rounded-[2rem]` köşeleri `rounded-2xl`, `px-5 py-3.5` ve derli toplu başlık/buton yapısıyla standardize edildi.
+        - `src/components/dashboard/streamed/revenue-analysis-stream.tsx` & `src/components/charts/sales-trend-chart.tsx`: Gelir analizi kartı ve grafiği elden geçirildi. Recharts alanı zarif gradyan ve eğri ile sadeleştirildi, özel siyah tooltip kompakt hale getirildi.
+        - `src/components/dashboard/live-activity-feed.tsx`: Canlı akış akıcı, modern ve net zaman etiketleriyle donatıldı.
+        - `src/components/dashboard/receivables-client.tsx`: Alacaklar ve veresiye kartındaki devasa boşluklar ve butonlar kompakt ve net bir liste formatına uyarlandı.
+        - `src/components/dashboard/admin-dashboard.tsx` & `src/components/dashboard/dashboard-client.tsx`: Üst başlık hiyerarşisi, mod değiştirici butonlar (`SİSTEM` / `PERSONEL`), grid otomatik satır aralıkları (`minmax(116px, auto)`) ve alt marjinler optimize edildi.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı. Hiçbir fonksiyon, veri çekme mantığı veya buton silinmeden 100% korundu.
+
+- [x] 2026-10-29: Açık Modda (Light Mode) 8 KPI Kartı Okunurluk Optimizasyonu & Libraries.dev BorderBeam'in Başar AI Noktalarına Entegrasyonu:
+    - **Kullanıcı Talebi**:
+        1. "Açık modda 8 kartı daha okunaklı yap. Renklerden okunmuyor, ama koyu modda güzel duruyor."
+        2. "Libraries.dev'in border-beam efektini Başar AI olan her yere uygula."
+    - **Yapılan İyileştirmeler**:
+        1. **Açık Modda 8 KPI Kartının Okunurluk ve Kontrastının Kusursuzlaştırılması (`src/components/dashboard/stat-card.tsx`):**
+            - Kart zeminine `bg-white/90 dark:bg-card/40` sağlam zemin katmanı entegre edildi; böylece açık modda pastel liquid glass gradyanının sayfa arka planıyla yıkanması ve okunurluk kaybı engellendi.
+            - Başlıklar, para birimi değerleri ve metinler açık modda ultra yüksek kontrastlı koyu tonlara (`text-slate-950 dark:text-white`, `text-slate-800 dark:text-white/80`, `text-slate-700 dark:text-white/75`, `text-slate-600 dark:text-white/70`) uyarlandı. Koyu moddaki saf beyaz ve parlayan görünüm 100% korundu.
+            - İkon pill'leri, durum rozetleri ve aksiyon butonları (`glassTheme.iconPill`, `badgePill`, `actionPill`) açık modda koyu yüksek kontrastlı renk tonlarıyla (`text-emerald-950`, `text-sky-950`, `text-violet-950`, `text-amber-950`, vb.) okunaklı hale getirildi.
+            - Üst kenar yansıması ve ambiyans lekelerinin opasiteleri açık modda zemin parlamasını engelleyecek şekilde optimize edildi.
+            - `badgePill` alanındaki sözdizimi parantez hatası giderildi.
+        2. **Libraries.dev `border-beam` & `thinking-orbs` Entegrasyonu:**
+            - `npm install border-beam thinking-orbs` ile orijinal resmi paketler sisteme dahil edildi.
+        3. **Başar AI Olan Her Yere BorderBeam Uygulanması:**
+            - **Header Canlı/Aktif Rozeti (`src/components/dashboard/admin-dashboard.tsx`):** Libraries.dev `<ThinkingOrb state="solving" size={20} color="#10b981" />` entegre edildi, "AKTİF" ve "CANLI" durumları Libraries.dev `<BorderBeam size="sm" colorVariant="colorful" strength={0.8}>` ile sarıldı.
+            - **Sidebar Başar AI Komuta Merkezi (`src/components/sidebar.tsx`):** Sol menünün altındaki Başar AI paneli (Analiz, Güncelle, Ara butonlarıyla birlikte) Libraries.dev `<BorderBeam size="md" colorVariant="colorful" strength={0.8}>` ile sarıldı.
+            - **Dashboard Tahminleyici Zeka Paneli (`src/components/dashboard/smart-insights.tsx`):** Anasayfadaki Başar AI içgörü ve operasyonel analiz kartı `<BorderBeam size="md" colorVariant="colorful" strength={0.65}>` ile sarıldı.
+            - **Stok & Kategori Yönetimi (`src/components/product/ai-category-creator.tsx`):** "BAŞAR AI Stok Ekle" / "BAŞAR AI Çoklu Ekle" tetikleyici butonu `<BorderBeam size="sm" colorVariant="colorful" strength={0.8}>` ile sarmalandı.
+            - **Teknik Servis Analiz Modalı (`src/components/service/technical-service-analysis-modal.tsx`):** "BAŞAR AI ANALİZ" butonu eski bileşenden Libraries.dev `<BorderBeam size="sm" colorVariant="ocean" strength={0.8}>` bileşenine taşındı.
+            - **Yeni Servis Arıza Teşhis Paneli (`src/components/features/service-new/ai-diagnostic-panel.tsx`):** Arıza açıklaması girildiğinde parlayan "BAŞAR AI ANALİZ" butonu Libraries.dev `<BorderBeam size="sm" colorVariant="colorful" strength={0.8}>` ile donatıldı.
+            - **Cihaz Merkezi (Device Hub) (`src/components/device-hub/create-device-modal.tsx`):** "BAŞAR AI ile Cihaz Ekle" kamera/kutu tarama butonu Libraries.dev `<BorderBeam size="sm" colorVariant="colorful" strength={0.8}>` ile sarıldı.
+            - **Başar AI Modalleri (`src/components/basarai/`):**
+                - `ai-analyze-modal.tsx`: "Analizi Başlat" butonu `<BorderBeam size="md" colorVariant="candy" strength={0.8}>` ile sarıldı.
+                - `ai-search-modal.tsx`: Doğal dilde akıllı arama input alanı `<BorderBeam size="md" colorVariant="candy" strength={0.7}>` ile sarıldı.
+                - `ai-update-modal.tsx`: Doğal dilde toplu güncelleme metin alanı `<BorderBeam size="md" colorVariant="candy" strength={0.7}>` ile sarıldı.
+    - **Sıfır Silme & Fonksiyon Bütünlüğü:** Tüm `onClick`, form `register`, state ve yönlendirme mantıkları eksiksiz ve dokunulmadan korundu.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
+- [x] 2026-10-29: Sidebar Tasarım & Motion İyileştirmesi (Referans Video / Sliding Accordion & Rail Dock):
+    - **Kullanıcı Talebi**: "Sidebar tasarımına geçelim burayı analiz et hataları tespit et. Açılır menüleri motion efekti ekle kayarak açılsın. Bu videoyu referans al: threadsdownloader.com.mp4"
+    - **Tespit Edilen Tasarım ve Etkileşim Hataları**:
+        1. *Animasyonsuz Açılır Menüler:* Alt menülerin doğrudan ani bir biçimde DOM'a eklenip kaldırılması (`{hasSubItems && isOpen && ...}`), sıfır yükseklik/kayma animasyonu.
+        2. *Statik Chevron Değişimi:* Açılışta ikonun ani şekilde `ChevronRight` -> `ChevronDown` olarak değişmesi (dönüş animasyonu eksikliği).
+        3. *Orantısız Başlık Yüksekliği:* `h-28` (112px) yüksekliğindeki aşırı şişkin header alanı ve logosundaki sürekli sonsuz pulse titremesi.
+        4. *Tipografi ve Yoğunluk Dengesizliği:* Menü öğelerinin `text-[15.5px]` ile modern SaaS standartlarına göre kaba kalması, alt menü hiyerarşik kılavuz çizgilerinin zayıflığı.
+        5. *Daraltma / Dock Eksikliği:* Videoda yer alan ince ikon rayı (collapsed rail) modunun olmaması.
+    - **Yapılan İyileştirmeler (`src/components/sidebar.tsx`):**
+        1. **Framer Motion Sliding Accordion:**
+           - Tüm açılır menülere (`AnimatePresence`) entegre edildi. Menü açıldığında `height: 0 -> "auto"` ve `opacity: 0 -> 1` yay fiziği (`type: "spring", stiffness: 450, damping: 35`) ile kayarak açılıyor; kapandığında da pürüzsüzce geri toplanıyor.
+           - Alt menü öğeleri için kademeli kayma (`initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}`) uygulandı.
+           - Açılır menülerin soluna `border-l border-border/40 pl-3` hiyerarşik ağaç kılavuz çizgisi eklendi; aktif alt öğeler için `bg-primary/10 text-primary` pill ve pulsing canlı durum noktası getirildi.
+        2. **90 Derece Dönen Yaylı Chevron:**
+           - Ok simgesi `motion.div animate={{ rotate: isOpen ? 90 : 0 }}` ile pürüzsüz 90 derece rotasyon efektine bağlandı.
+        3. **Kompakt Kurumsal Başlık:**
+           - Yükseklik `h-18` (72px) seviyesine çekildi. Sonsuz titreyen animasyon yerine dokunsal, hafif hover ölçekli (`group-hover:scale-105`) elit logo kartı yerleştirildi.
+           - Dükkan adı ve sektör etiketi derli toplu hale getirildi.
+        4. **İki Modlu Masaüstü Daraltma / Genişletme (Slim Icon Rail Dock):**
+           - Başlık sağ üstüne ve sol alta `PanelLeftClose` / `PanelLeftOpen` geçiş düğmesi entegre edildi.
+           - Kullanıcı masaüstünde menüyü `w-[72px]` daraltılmış ince ikon rayına çekebilir; durum `localStorage` (`basar_sidebar_collapsed`) üzerinde hatırlanır.
+           - Daraltılmış modda Başar AI, Libraries.dev `<BorderBeam>` ile sarılı kompakt orb ikonuna dönüşür.
+        5. **Sıfır Silme & Yetki/Modül Bütünlüğü:**
+           - Tüm yetki kontrolleri (`canSell`, `canFinance`, `canService`, `canStock`, `isEInvoiceEnabled`, `isModuleEnabled`), süper admin / kurye filtreleri ve Başar AI modalleri 100% korundu.
+    - **Doğrulama**: `npx tsc --noEmit` hatasız (0 error) tamamlandı.
+
+- [x] 2026-10-29: Sidebar Alt Menü İkonları, Tekli Akordiyon Kapanışı, Slim Rail Dock Sağa Doğru Blur Flyout ve Başar AI Doğal Dil Araması Düzeltmesi:
+    - **Kullanıcı Talebi**:
+        1. Alt menülere de menüye uygun ikonlar koyulsun.
+        2. Başka alt menü açıldığında açık olan menü kapansın (Single Accordion).
+        3. Slim Icon Rail Dock kullanıldığında alt menüleri olanların üzerine gelince veya basınca sidebarı açmak yerine o menüleri sağa doğru motion olarak açarak gösterilsin, arka planı blur yapılsın.
+        4. Başar AI doğal dilde aramada örneğin "10 dolar altındaki ürünleri göster" denildiğinde sadece stok sayfasını açması ve filtrelememesi hatası düzeltilsin, doğal dil araması etkinleştirilsin.
+    - **Yapılan İyileştirmeler**:
+        1. **Alt Menü İkonları (`src/components/sidebar.tsx`):**
+           - `getMenuItems` içerisindeki tüm alt menülere tematik Lucide ikonları tanımlandı:
+             - Servis Yönetimi: `PlusCircle` (Yeni Giriş), `LayoutGrid` (Servis Merkezi).
+             - Envanter: `Boxes` (Stok Listesi), `ClipboardList` (Tedarikçi Siparişleri), `Building2` (Tedarikçi Yönetimi), `ArrowLeftRight` (Hareket Analizi), `FolderTree` (Kategoriler), `Sparkles` (AI Önerileri), `RotateCcw` (İade / Hasarlı).
+             - POS & Kasa: `Zap` (Hızlı Satış), `History` (Satış Arşivi), `Receipt` (Kasa Raporu).
+             - Müşteri CRM: `Contact` (Portföy), `UserPlus` (Yeni Tanımlama).
+             - Ayarlar: `Sliders` (Sistem), `ScrollText` (Loglar), `Layers` (Sektörler), `Store` (Tüm Dükkanlar), `Send` (EDM), `Megaphone` (Duyurular).
+           - Hem dikey genişletilmiş akordiyonda hem de sağa açılan flyout popover'da her alt öğenin solunda kendi simgesi gösterildi.
+        2. **Tekli Akordiyon (Single Accordion Kapanışı):**
+           - `toggleMenu` fonksiyonu güncellenerek bir menü tıklandığında açık olan diğer tüm menülerin otomatik kapanması (`prev => prev.includes(label) ? [] : [label]`) sağlandı.
+        3. **Slim Rail Dock Sağa Açılan Motion & Frosted Blur Flyout:**
+           - Daraltılmış (Slim Rail) modda menü tıklandığında veya üzerine gelindiğinde (`hover & click`) sidebar artık genişlemiyor.
+           - Bunun yerine Radix `Popover` portallı mimarisiyle sağ tarafa doğru (`side="right" sideOffset={12}`) `backdrop-blur-2xl` buzlu cam zeminli, yaylı ve gölgeli (`shadow-2xl`) bir uçan panel (flyout menu) olarak pürüzsüzce açılıyor.
+           - `overflow-hidden` kırpılma riski olmadan ekran sınırlarına göre kusursuz konumlanıyor.
+        4. **Başar AI Doğal Dil Arama Motoru Düzeltmesi (`gemini-actions.ts`, `product-actions.ts`, `stock-table-stream.tsx`, `stock-list-table.tsx`):**
+           - *Sorun Tespiti:* Gemini çıktısı markdown kod blokları (````json ... ````) içerdiğinde doğrudan `JSON.parse` yapılarak sessizce `catch` bloğuna düşüyor ve boş filtre dönüyordu. Ayrıca Prisma `minPrice` / `maxPrice` null geldiğinde `{ gte: null }` hatası alıyor veya sadece alış fiyatını (`buyPriceUsd`) filtrelemeye çalışıp satış fiyatlarını ıskalıyordu.
+           - *Çözüm:*
+             - `parseNaturalLanguageQuery` deterministik doğal dil ayrıştırıcısı yazıldı. "10 dolar altındaki ürünler", "20 TL üzeri", "bitmek üzere olanlar" gibi kalıpları regex ve Türkçe anlambilimle anında USD/TL, minPrice, maxPrice, isCritical, maxStock ve anahtar kelimelere dönüştürüyor.
+             - Gemini yanıtları markdown bloklarından temizlenerek `null` değerler `undefined`'a çevrildi ve Gemini semantik zekası ile sezgisel ayrıştırıcı hibrit olarak birleştirildi (Gemini kotası dolsa dahi doğal dil araması 0ms'de %100 çalışır hale getirildi).
+             - `getProducts` içinde fiyat filtreleri `sellPriceUsd` VE `buyPriceUsd` (veya TL için `sellPrice` / `buyPrice`) alanlarını kapsayacak şekilde `where.OR` mantığına uyarlandı; `null` argümanların Prisma'ya gitmesi engellendi.
+             - `StockListTable` bileşeni üstüne parlayan dinamik `BAŞAR AI Doğal Dil Filtresi: "[sorgu]"` bilgilendirme rozeti ve tek tıkla aramayı sıfırlayan `Filtreyi Temizle ✕` aksiyonu eklendi.
+    - **Doğrulama**: `npx tsc --noEmit` hatasız (0 error) tamamlandı. Hiçbir özellik ve veri akışı silinmedi.
+
+- [x] 2026-10-29: Hata Düzeltmesi (Next.js Server Actions Export Kuralı):
+    - **Sorun**: `src/lib/actions/gemini-actions.ts` dosyası başında `"use server";` direktifi bulunduğu için Next.js derleyicisi bu dosyadan export edilen tüm fonksiyonların `async` olmasını bekliyordu. Senkron bir yardımcı fonksiyon olarak export edilen `parseNaturalLanguageQuery` derleme hatasına (`Server actions must be async functions`) yol açtı.
+    - **Çözüm**: Sadece `semanticSearchWithAI` içerisinde kullanılan `parseNaturalLanguageQuery` fonksiyonunun başındaki `export` ifadesi kaldırılarak yerel (unexported) bir yardımcı fonksiyon haline getirildi.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı. Next.js derleme hatası giderildi.

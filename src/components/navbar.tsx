@@ -120,7 +120,7 @@ export function Navbar({ shop }: { shop?: any }) {
 
           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
             <div className="hidden lg:flex items-center gap-3">
-              <div className="hidden xl:flex">
+              <div className="hidden xl:flex shrink-0">
                 <CurrencyDisplay />
               </div>
               {isAdmin && <ShortageList />}

@@ -45,6 +45,8 @@ import { TopProductsStream } from "@/components/dashboard/streamed/top-products-
 import { ShortageStatusCard } from "@/components/dashboard/widgets/shortage-status-card";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { ReceivablesStream } from "@/components/dashboard/streamed/receivables-stream";
+import { BorderBeam } from "border-beam";
+import { ThinkingOrb } from "thinking-orbs";
 
 interface AdminDashboardProps {
     stats: any;
@@ -194,32 +196,32 @@ export function AdminDashboard({
     const initialLayout = user?.dashboardLayout || [];
 
     return (
-        <div className="space-y-6 sm:space-y-8 pb-10">
+        <div className="space-y-5 pb-6">
             <DashboardOnboardingClient categories={categories} shop={shop} />
 
-            {/* Mobile-First Editorial Header Style */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-                <div className="flex items-center gap-3 sm:gap-5 w-full md:w-auto">
-                    <div className="hidden sm:flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-[1.2rem] bg-card/60 backdrop-blur-xl border border-border/40 shadow-xl shadow-primary/5 shrink-0">
-                        <LayoutDashboard className="h-6 w-6 sm:h-7 sm:w-7 text-primary animate-in zoom-in duration-500" />
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-5">
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-border/40 shadow-xs text-primary shrink-0">
+                        <LayoutDashboard className="h-5 w-5" />
                     </div>
-                    <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                            <h1 className="text-xl sm:text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic truncate">
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground uppercase truncate">
                                 {viewMode === "system" ? (shop?.name ? `${shop.name.toUpperCase()} PANELİ` : "SİSTEM PANELİ") : "PERSONEL DURUMU"}
                             </h1>
-                            <div className="flex items-center bg-card/40 backdrop-blur-md border border-border/40 p-0 rounded-full shadow-sm overflow-hidden scale-90 origin-left shrink-0">
-                                <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-emerald-500/5 border-r border-border/40">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                    <span className="text-[8px] text-emerald-600 tracking-tight font-bold uppercase">AKTİF</span>
+                            <BorderBeam size="sm" colorVariant="colorful" strength={0.8} className="rounded-full">
+                                <div className="flex items-center bg-card/90 dark:bg-[#0c121d]/90 backdrop-blur-md rounded-full shadow-xs overflow-hidden border border-border/40">
+                                    <div className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-0.5 bg-emerald-500/10 border-r border-border/40">
+                                        <ThinkingOrb state="solving" size={20} color="#10b981" />
+                                        <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-tight">AKTİF</span>
+                                    </div>
+                                    <span className="px-2.5 py-0.5 text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">CANLI</span>
                                 </div>
-                                <div className="px-2.5 sm:px-3 py-1">
-                                    <span className="text-[8px] text-muted-foreground tracking-tight uppercase font-bold">CANLI</span>
-                                </div>
-                            </div>
+                            </BorderBeam>
                         </div>
-                        <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-wider sm:tracking-[0.3em] opacity-40 flex-wrap">
-                            <span className="hidden sm:inline">OPERASYON VE FİNANS MERKEZİ</span>
+                        <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex-wrap">
+                            <span className="hidden sm:inline">Operasyon & Finans Merkezi</span>
                             <span className="hidden sm:inline">•</span>
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {format(new Date(), "d MMMM yyyy", { locale: tr })}</span>
                             <LiveClock />
@@ -227,23 +229,23 @@ export function AdminDashboard({
                     </div>
                 </div>
 
-                {/* Horizontal scrollable strip on mobile, clean inline bar on desktop */}
-                <div className="w-full md:w-auto overflow-x-auto no-scrollbar py-1 -my-1">
-                    <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-nowrap">
+                {/* Controls */}
+                <div className="w-full md:w-auto overflow-x-auto no-scrollbar py-0.5">
+                    <div className="flex items-center gap-2 shrink-0 flex-nowrap">
                         <DashboardEditButton />
                         <QuickShortcuts shop={shop} categories={categories} suppliers={suppliers} />
 
-                        <div className="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-inner shrink-0">
+                        <div className="flex p-0.5 bg-muted/60 dark:bg-muted/30 rounded-xl border border-border/40 shadow-xs shrink-0">
                             <Button
                                 variant={viewMode === "system" ? "default" : "ghost"}
                                 size="sm"
                                 onClick={() => setViewMode("system")}
                                 className={cn(
-                                    "rounded-xl px-3 sm:px-4 py-1.5 text-xs font-bold transition-all duration-300 shrink-0 whitespace-nowrap",
-                                    viewMode === "system" ? "shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
+                                    "rounded-lg px-3 py-1 text-xs font-semibold transition-all shrink-0 h-7",
+                                    viewMode === "system" ? "shadow-xs" : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <LayoutDashboard className="w-3.5 h-3.5 mr-1.5 sm:mr-2 shrink-0" />
+                                <LayoutDashboard className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                                 SİSTEM
                             </Button>
                             <Button
@@ -251,11 +253,11 @@ export function AdminDashboard({
                                 size="sm"
                                 onClick={() => setViewMode("staff")}
                                 className={cn(
-                                    "rounded-xl px-3 sm:px-4 py-1.5 text-xs font-bold transition-all duration-300 shrink-0 whitespace-nowrap",
-                                    viewMode === "staff" ? "shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
+                                    "rounded-lg px-3 py-1 text-xs font-semibold transition-all shrink-0 h-7",
+                                    viewMode === "staff" ? "shadow-xs" : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <Users className="w-3.5 h-3.5 mr-1.5 sm:mr-2 shrink-0" />
+                                <Users className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                                 PERSONEL
                             </Button>
                         </div>
@@ -267,11 +269,11 @@ export function AdminDashboard({
                 {viewMode === "system" ? (
                     <motion.div
                         key="system"
-                        initial={{ opacity: 0, scale: 0.98 }}
+                        initial={{ opacity: 0, scale: 0.99 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.02 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-8"
+                        exit={{ opacity: 0, scale: 1.01 }}
+                        transition={{ duration: 0.25 }}
+                        className="space-y-5"
                     >
                         <DashboardClient
                             initialLayout={initialLayout}
@@ -282,10 +284,10 @@ export function AdminDashboard({
                 ) : (
                     <motion.div
                         key="staff"
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        exit={{ opacity: 0, y: -12 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
                     >
                         <StaffDashboardClient data={staffData} teamData={staffOverview} defaultCurrency={defaultCurrency} usdRate={usdRate} />
                     </motion.div>

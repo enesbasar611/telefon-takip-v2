@@ -25,6 +25,7 @@ import { analyzeDeviceImageWithAI } from "@/lib/actions/gemini-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
 import { cleanFormData } from "@/lib/formatters";
+import { BorderBeam } from "border-beam";
 
 type Condition = "NEW" | "USED" | "INTERNATIONAL";
 
@@ -586,6 +587,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
       />
 
       <div className="flex items-center gap-2">
+        <BorderBeam size="sm" colorVariant="colorful" strength={0.8} className="rounded-2xl inline-flex">
         <Button
           type="button"
           onClick={() => aiPhotoInputRef.current?.click()}
@@ -604,6 +606,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             {isAiAnalyzing ? "Kutu Okunuyor..." : "BAŞAR AI ile Cihaz Ekle"}
           </span>
         </Button>
+        </BorderBeam>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

@@ -11,6 +11,7 @@ import { getShopHealthAnalysis } from "@/lib/actions/gemini-actions";
 import { useUI } from "@/lib/context/ui-context";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { BorderBeam } from "border-beam";
 
 interface AIReport {
     reportTitle: string;
@@ -163,13 +164,15 @@ export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenCh
                             <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
                                 Gemini 2.5 Flash motoru tüm envanterinizi, satış hızınızı ve finansal sağlığınızı saniyeler içinde tarayıp size özel rapor hazırlayacak.
                             </p>
+                            <BorderBeam size="md" colorVariant="candy" strength={0.8} className="rounded-2xl mt-4 w-full">
                             <Button
                                 onClick={handleAnalyze}
                                 disabled={isPending}
-                                className="mt-4 w-full h-14 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-violet-500/20 active:scale-[0.98] transition-all gap-3"
+                                className="w-full h-14 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-violet-500/20 active:scale-[0.98] transition-all gap-3"
                             >
                                 {isPending ? <><Loader2 className="h-5 w-5 animate-spin" /> Veriler İşleniyor...</> : <><Sparkles className="h-5 w-5" /> Analizi Başlat</>}
                             </Button>
+                            </BorderBeam>
                         </div>
                     ) : (
                         <div className="space-y-6">

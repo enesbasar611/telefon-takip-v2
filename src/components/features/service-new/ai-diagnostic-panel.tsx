@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { BorderBeam } from "border-beam";
 import type { AIDiagnosticResult } from "@/lib/actions/gemini-actions";
 
 interface AIDiagnosticPanelProps {
@@ -77,7 +78,8 @@ export function AIDiagnosticPanel({
                     <Label className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em] transition-colors group-hover:text-primary">
                         ARIZA TANIMI & TEŞHİS
                     </Label>
-                    <Button
+                    <BorderBeam size="sm" colorVariant="colorful" strength={0.8} active={Boolean(problemDesc && !isDiagnosticPending)} className="rounded-full inline-flex">
+<Button
                         type="button"
                         variant="ghost"
                         size="sm"
@@ -99,6 +101,7 @@ export function AIDiagnosticPanel({
                             {isDiagnosticPending ? "AI ÇALIŞIYOR..." : "BAŞAR AI ANALİZ"}
                         </span>
                     </Button>
+                    </BorderBeam>
                 </div>
 
                 <div className="relative">

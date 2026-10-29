@@ -46,7 +46,7 @@ export function PageHeader({
                     )}
                 </div>
             </div>
-            {actions && <div className="flex items-center gap-2 self-start xl:self-auto shrink-0 w-full xl:w-auto overflow-x-auto no-scrollbar pb-1 xl:pb-0">{actions}</div>}
+            {actions && <div className="flex items-center gap-2 self-start xl:self-auto shrink-0 max-w-full overflow-x-auto sm:overflow-visible no-scrollbar py-1">{actions}</div>}
         </div>
     );
 }

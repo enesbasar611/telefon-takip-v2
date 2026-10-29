@@ -431,7 +431,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                     </DialogTrigger>
                 )}
 
-                <DialogContent className="fixed w-full max-w-[95vw] md:max-w-[800px] h-[96vh] md:h-auto md:max-h-[90vh] bg-background border-none p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 md:rounded-[2.5rem] rounded-t-[2.5rem] rounded-b-none sm:rounded-b-[2.5rem] shadow-2xl flex flex-col transition-all duration-300">
+                <DialogContent className="fixed w-full max-w-[95vw] md:max-w-[760px] h-[94vh] md:h-auto md:max-h-[90vh] bg-background border-none p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col transition-all duration-300">
                     <div className="absolute inset-0 p-[2px] rounded-[inherit] overflow-hidden pointer-events-none z-0">
                         <motion.div
                             animate={{ rotate: [0, 360] }}
@@ -442,7 +442,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                     </div>
 
                     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden relative z-10">
-                        <div className="p-5 md:p-8 bg-card/50 border-b border-border/50 relative overflow-hidden">
+                        <div className="p-4 sm:p-5 bg-card/50 border-b border-border/50 relative overflow-hidden">
                             <div className="md:hidden w-12 h-1.5 bg-border rounded-full mx-auto mb-4" />
                             <DialogHeader className="relative z-10">
                                 <DialogTitle className="font-medium text-xl md:text-2xl">Bakkal Defteri (Veresiye)</DialogTitle>
@@ -452,7 +452,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                             </DialogHeader>
                         </div>
 
-                        <div className="p-5 md:p-8 space-y-8 overflow-y-auto flex-1 scrollbar-hide">
+                        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 scrollbar-hide">
                             {/* Customer Resolution */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2 relative">
@@ -488,7 +488,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                             {/* Existing debts section removed as requested by user */}
 
                             {/* ADD ITEM SECTION */}
-                            <div className="p-6 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10 space-y-4">
+                            <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 space-y-3">
                                 <div className="flex items-center gap-2 text-indigo-500 text-[10px] font-bold uppercase tracking-widest">
                                     <PlusCircle className="w-4 h-4" />
                                     Yeni Kalem Ekle
@@ -593,7 +593,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                             <div className="space-y-3">
                                 <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Eklenen Kalemler</Label>
                                 {debtItems.length === 0 ? (
-                                    <div className="h-24 rounded-[2rem] border border-dashed border-border/50 flex items-center justify-center text-xs text-muted-foreground italic bg-muted/20">
+                                    <div className="h-16 rounded-xl border border-dashed border-border/50 flex items-center justify-center text-xs text-muted-foreground italic bg-muted/20">
                                         Henüz bir kalem eklenmedi...
                                     </div>
                                 ) : (
@@ -622,7 +622,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                             </div>
 
                             {/* SUMMARY */}
-                            <div className="p-6 rounded-[2.5rem] bg-card dark:bg-zinc-900 border border-border/50 shadow-lg relative overflow-hidden">
+                            <div className="p-4 rounded-xl bg-card dark:bg-zinc-900 border border-border/50 shadow-sm relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-8 opacity-10"><FileText className="w-24 h-24 rotate-12" /></div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6 relative z-10">
                                     <div className="space-y-1">
@@ -645,15 +645,15 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                                 <Label className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">Ödeme Sözü Tarihi (Opsiyonel)</Label>
                                 <div className="relative">
                                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input type="date" {...register("dueDate")} className="h-12 bg-card border-border/50 rounded-2xl pl-12 text-sm" />
+                                    <Input type="date" {...register("dueDate")} className="h-9.5 bg-card border-border/50 rounded-xl pl-10 text-xs sm:text-sm" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="p-5 md:p-8 bg-card/50 border-t border-border/50">
+                        <div className="p-3.5 sm:p-4 bg-card/50 border-t border-border/50">
                             <DialogFooter className="flex-row gap-3">
-                                <Button type="button" variant="cancel" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-14 rounded-2xl text-[11px] font-bold uppercase tracking-widest">İptal</Button>
-                                <Button type="submit" disabled={isPending || debtItems.length === 0} className="flex-[2] h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl gap-3 shadow-xl border border-indigo-500/20 group">
+                                <Button type="button" variant="cancel" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-10 rounded-xl text-xs font-bold uppercase tracking-wider">İptal</Button>
+                                <Button type="submit" disabled={isPending || debtItems.length === 0} className="flex-[2] h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-2 shadow-sm border border-indigo-500/20 group">
                                     {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlusCircle className="h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform" />}
                                     <span className="font-inter font-light uppercase text-xs">Hesaba Geçir</span>
                                 </Button>

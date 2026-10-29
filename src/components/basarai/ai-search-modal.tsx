@@ -1,4 +1,5 @@
 "use client";
+import { BorderBeam } from "border-beam";
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -58,6 +59,7 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
 
                 <div className="p-8 pt-2 space-y-6">
                     <div className="space-y-3">
+                        <BorderBeam size="md" colorVariant="candy" strength={0.7} className="rounded-2xl">
                         <Input
                             value={query}
                             onChange={e => setQuery(e.target.value)}
@@ -68,6 +70,7 @@ export function AISearchModal({ open, onOpenChange }: { open: boolean, onOpenCha
                             onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
                             autoFocus
                         />
+                        </BorderBeam>
                     </div>
 
                     <Button

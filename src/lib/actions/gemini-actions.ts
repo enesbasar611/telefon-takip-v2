@@ -725,14 +725,81 @@ async function getProductSummaryFiltered(filters: { categoryName?: string; searc
     }));
 }
 
+function parseNaturalLanguageQuery(query: string): AISearchFilters {
+    const q = query.toLowerCase().trim();
+    const filters: AISearchFilters = {};
+
+    // 1. Currency detection
+    const isUsd = /dolar|usd|\$|dollar/i.test(q);
+    const isTl = /tl|lira|₺/i.test(q);
+    if (isUsd) filters.currency = "USD";
+    else if (isTl) filters.currency = "TL";
+
+    // 2. Price patterns
+    // Under price: "10 dolar altı", "10 doların altında", "10$ altı", "10 dolardan ucuz", "10 tl altı"
+    const underMatch = q.match(/(\d+(?:[\.,]\d+)?)\s*(?:dolar|usd|\$|tl|lira|₺)?\s*(?:altı|altında|alt|ucuz|aşağı|küçük|kadar)/i)
+      || q.match(/(?:altı|altında|alt|ucuz|kadar)\s*(\d+(?:[\.,]\d+)?)\s*(?:dolar|usd|\$|tl|lira|₺)?/i)
+      || q.match(/maksimum\s*(\d+(?:[\.,]\d+)?)/i)
+      || q.match(/en fazla\s*(\d+(?:[\.,]\d+)?)/i);
+
+    if (underMatch) {
+        const num = parseFloat(underMatch[1].replace(",", "."));
+        if (!isNaN(num)) filters.maxPrice = num;
+    }
+
+    // Above price: "20 dolar üstü", "20 doların üzerinde", "20$ üstü", "20 dolardan pahalı"
+    const aboveMatch = q.match(/(\d+(?:[\.,]\d+)?)\s*(?:dolar|usd|\$|tl|lira|₺)?\s*(?:üstü|üzerinde|üzeri|üst|pahalı|yukarı|büyük|fazla)/i)
+      || q.match(/(?:üstü|üzerinde|üzeri|pahalı)\s*(\d+(?:[\.,]\d+)?)\s*(?:dolar|usd|\$|tl|lira|₺)?/i)
+      || q.match(/minimum\s*(\d+(?:[\.,]\d+)?)/i)
+      || q.match(/en az\s*(\d+(?:[\.,]\d+)?)/i);
+
+    if (aboveMatch) {
+        const num = parseFloat(aboveMatch[1].replace(",", "."));
+        if (!isNaN(num)) filters.minPrice = num;
+    }
+
+    // Range: "10 ile 50 dolar arası", "10-50 tl arası"
+    const rangeMatch = q.match(/(\d+(?:[\.,]\d+)?)\s*(?:ile|-|ve)\s*(\d+(?:[\.,]\d+)?)\s*(?:dolar|usd|\$|tl|lira|₺)?\s*(?:arası|fiyat)/i);
+    if (rangeMatch) {
+        const minNum = parseFloat(rangeMatch[1].replace(",", "."));
+        const maxNum = parseFloat(rangeMatch[2].replace(",", "."));
+        if (!isNaN(minNum)) filters.minPrice = minNum;
+        if (!isNaN(maxNum)) filters.maxPrice = maxNum;
+    }
+
+    // 3. Stock conditions
+    if (/kritik|azalan|bitmek üzere|azalmış/i.test(q)) {
+        filters.isCritical = true;
+    }
+    if (/biten|tükenen|stokta olmayan|sıfır stok|tükendi/i.test(q)) {
+        filters.maxStock = 0;
+    }
+
+    // 4. Clean search name keyword (strip noise words)
+    let cleanedName = q
+      .replace(/(\d+(?:[\.,]\d+)?)\s*(?:dolar|usd|\$|tl|lira|₺)?\s*(?:altı|altında|alt|ucuz|aşağı|küçük|kadar|üstü|üzerinde|üzeri|üst|pahalı|yukarı|büyük|fazla)/gi, "")
+      .replace(/dolar|usd|\$|tl|lira|₺|ürünleri|ürünler|ürün|göster|listele|getir|olanları|olanlar|fiyatı|fiyat|fiyatlar|stok|stokları|lütfen|bana/gi, "")
+      .trim();
+
+    if (cleanedName.length >= 2) {
+        filters.name = cleanedName;
+    }
+
+    return filters;
+}
+
 export async function semanticSearchWithAI(query: string): Promise<{ success: true; filters: AISearchFilters } | { success: false; error: string }> {
     const { getShopId } = await import("@/lib/auth");
     const shopId = await getShopId();
 
-    const summary = await getProductSummaryFiltered();
-    const categories = await buildCategoryContext();
+    // Fast deterministic heuristic baseline
+    const heuristicFilters = parseNaturalLanguageQuery(query);
 
-    const schema = `{
+    try {
+        const summary = await getProductSummaryFiltered();
+        const categories = await buildCategoryContext();
+
+        const schema = `{
   "name": "string | null (ürün adı veya parçası)",
   "categoryName": "string | null (kategori adı)",
   "minPrice": "number | null",
@@ -743,7 +810,7 @@ export async function semanticSearchWithAI(query: string): Promise<{ success: tr
   "currency": "TL | USD | null"
 }`;
 
-    const systemPrompt = `Sen bir telefon dükkanı envanter arama asistanısın.
+        const systemPrompt = `Sen bir telefon dükkanı envanter arama asistanısın.
 Kullanıcının doğal dildeki arama sorgusunu teknik filtrelere dönüştür.
 
 MEVCUT KATEGORİLER:
@@ -753,21 +820,44 @@ ${JSON.stringify(categories.map((c: any) => c.name))}
 ${JSON.stringify(summary.slice(0, 20))}
 
 KURALLAR:
-- Kullanıcı "10 dolardan ucuz" diyorsa: currency: "USD", maxPrice: 10
+- Kullanıcı "10 dolardan ucuz" veya "10 dolar altı" diyorsa: currency: "USD", maxPrice: 10
 - Kullanıcı "bitmek üzere olanlar" diyorsa: isCritical: true veya maxStock: 5
 - "Ekranlar" diyorsa: categoryName: "Ekranlar"
 - SADECE JSON DÖNDÜR, METİN EKLEME:\n${schema}`;
 
-    const userPrompt = `ARAMA SORGUSU:\n${query}`;
+        const userPrompt = `ARAMA SORGUSU:\n${query}`;
 
-    const result = await callGemini(shopId, [systemPrompt, userPrompt]);
-    if ("error" in result) return { success: false, error: result.error };
+        const result = await callGemini(shopId, [systemPrompt, userPrompt]);
+        if ("error" in result) {
+            // Graceful fallback to heuristic filters if Gemini returns error
+            return { success: true, filters: heuristicFilters };
+        }
 
-    try {
-        const filters = JSON.parse(result.text) as AISearchFilters;
-        return { success: true, filters };
+        const cleaned = result.text.replace(/```json/gi, "").replace(/```/gi, "").trim();
+        const firstBrace = cleaned.indexOf("{");
+        const lastBrace = cleaned.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            const jsonStr = cleaned.slice(firstBrace, lastBrace + 1);
+            const rawFilters = JSON.parse(jsonStr) as any;
+
+            // Sanitize nulls into undefined and merge with heuristic
+            const finalFilters: AISearchFilters = { ...heuristicFilters };
+            if (rawFilters.name && typeof rawFilters.name === "string") finalFilters.name = rawFilters.name;
+            if (rawFilters.categoryName && typeof rawFilters.categoryName === "string") finalFilters.categoryName = rawFilters.categoryName;
+            if (typeof rawFilters.minPrice === "number" && !isNaN(rawFilters.minPrice)) finalFilters.minPrice = rawFilters.minPrice;
+            if (typeof rawFilters.maxPrice === "number" && !isNaN(rawFilters.maxPrice)) finalFilters.maxPrice = rawFilters.maxPrice;
+            if (typeof rawFilters.minStock === "number" && !isNaN(rawFilters.minStock)) finalFilters.minStock = rawFilters.minStock;
+            if (typeof rawFilters.maxStock === "number" && !isNaN(rawFilters.maxStock)) finalFilters.maxStock = rawFilters.maxStock;
+            if (typeof rawFilters.isCritical === "boolean") finalFilters.isCritical = rawFilters.isCritical;
+            if (rawFilters.currency === "USD" || rawFilters.currency === "TL") finalFilters.currency = rawFilters.currency;
+
+            return { success: true, filters: finalFilters };
+        }
+
+        return { success: true, filters: heuristicFilters };
     } catch {
-        return { success: false, error: "Arama terimi anlaşılamadı. Lütfen daha net bir ifade kullanın." };
+        // Fallback to heuristic filters
+        return { success: true, filters: heuristicFilters };
     }
 }
 

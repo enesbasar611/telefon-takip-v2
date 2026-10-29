@@ -84,6 +84,7 @@ export const CheckoutSummary = ({
         
         return balance;
     }, [rates, defaultCurrency]);
+
     const paymentMethods = [
         { id: "CASH", label: "NAKİT", icon: Banknote, color: "text-emerald-500", bg: "bg-emerald-500/10" },
         { id: "CREDIT_CARD", label: "KART", icon: CreditCard, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -119,7 +120,7 @@ export const CheckoutSummary = ({
     const renderAccountSelection = () => {
         if (!showAccountSelection) return null;
         return (
-            <div className="mb-2 rounded-xl border border-border/40 bg-muted/10 p-2 space-y-2">
+            <div className="mb-2 rounded-xl border border-border/40 bg-muted/10 p-2 space-y-1.5">
                 <div className="flex items-center justify-between gap-2 px-1">
                     <span className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">{accountSelectionTitle}</span>
                     {selectedAccount && (
@@ -127,7 +128,7 @@ export const CheckoutSummary = ({
                     )}
                 </div>
                 {eligibleAccounts.length === 0 ? (
-                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                         Bu ödeme yöntemi için uygun hesap bulunamadı.
                     </div>
                 ) : (
@@ -146,7 +147,7 @@ export const CheckoutSummary = ({
                                         }
                                     }}
                                     className={cn(
-                                        "min-h-9 rounded-lg border px-2.5 py-1.5 flex items-center gap-2 text-left transition-all",
+                                        "min-h-8 rounded-lg border px-2 py-1 flex items-center gap-2 text-left transition-all",
                                         checked
                                             ? "border-primary bg-primary/10 text-primary font-bold"
                                             : "border-border/40 bg-background/60 text-muted-foreground hover:border-primary/30 hover:bg-muted/30"
@@ -154,7 +155,7 @@ export const CheckoutSummary = ({
                                 >
                                     <Icon className="h-3.5 w-3.5 shrink-0" />
                                     <span className="min-w-0 flex-1">
-                                        <span className="block text-[11px] font-bold truncate leading-tight">{account.name}</span>
+                                        <span className="block text-[10px] font-bold truncate leading-tight">{account.name}</span>
                                         <span className="block text-[8px] uppercase tracking-wider opacity-70 leading-none mt-0.5">
                                             {account.type === "CASH" ? "NAKİT" : account.type === "BANK" ? "BANKA" : "KART"} 
                                             {account.balance !== undefined ? ` • ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: defaultCurrency || 'TRY', maximumFractionDigits: 2 }).format(convertBalance(Number(account.balance), 'TRY'))}` : ` • ${defaultCurrency || "TRY"}`}
@@ -280,24 +281,24 @@ export const CheckoutSummary = ({
         );
     }
 
-    // Standard Page View for POSInterface
+    // Standard Page View for POSInterface (Compact Bento Optimization)
     return (
-        <div className="p-6 bg-muted/5 border-t border-border/40">
-            <div className="grid grid-cols-4 gap-3 mb-5">
+        <div className="p-3 sm:p-3.5 bg-muted/5 border-t border-border/40 shrink-0">
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-2.5">
                 {paymentMethods.map((method) => (
                     <Button
                         key={method.id}
                         variant="ghost"
                         className={cn(
-                            "h-16 flex flex-col gap-1.5 rounded-2xl border transition-all p-0 group",
+                            "h-11 sm:h-12 flex flex-col gap-1 rounded-xl border transition-all p-0 group",
                             paymentMethod === method.id
-                                ? "bg-primary text-primary-foreground border-primary shadow-xl shadow-primary/20 scale-105"
+                                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20 scale-[1.02]"
                                 : "bg-muted/10 text-muted-foreground border-border/20 hover:bg-muted hover:border-border/50"
                         )}
                         onClick={() => setPaymentMethod(method.id)}
                     >
-                        <method.icon className={cn("h-5 w-5 transition-transform group-hover:scale-110", paymentMethod === method.id ? "text-primary-foreground" : "text-muted-foreground/60")} />
-                        <span className="text-[10px] font-black uppercase tracking-tighter">{method.label}</span>
+                        <method.icon className={cn("h-4 w-4 sm:h-4.5 sm:w-4.5 transition-transform group-hover:scale-110", paymentMethod === method.id ? "text-primary-foreground" : "text-muted-foreground/70")} />
+                        <span className="text-[9px] font-black uppercase tracking-wider">{method.label}</span>
                     </Button>
                 ))}
             </div>
@@ -305,49 +306,47 @@ export const CheckoutSummary = ({
             {renderAccountSelection()}
 
             {loyaltyEnabled && totalPoints > 0 && (
-                <div className="mb-5 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <Sparkles className="h-5 w-5 text-primary" />
+                <div className="mb-2.5 p-2.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Sparkles className="h-3.5 w-3.5 text-primary" />
                         </div>
                         <div>
-                            <div className="text-[11px] font-bold text-primary flex items-center gap-2">
-                                CÜZDAN BAKİYESİ KULLAN
+                            <div className="text-[10px] font-bold text-primary flex items-center gap-1.5 uppercase tracking-tight">
+                                CÜZDAN BAKİYESİ
                             </div>
-                            <div className="text-[9px] text-muted-foreground mt-0.5">
-                                Müşterinin {totalPoints} Puanı ({formatCurrency(totalPoints * pointValueTl)} TL değeri) var.
+                            <div className="text-[9px] text-muted-foreground">
+                                {totalPoints} Puan ({formatCurrency(totalPoints * pointValueTl)} TL)
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         {applyLoyaltyDiscount && (
-                            <span className="text-[10px] font-bold text-emerald-500">- ₺{formatCurrency(loyaltyDiscountAmount)}</span>
+                            <span className="text-[10px] font-bold text-emerald-500">-₺{formatCurrency(loyaltyDiscountAmount)}</span>
                         )}
                         <Checkbox
                             checked={applyLoyaltyDiscount}
                             onCheckedChange={(checked) => setApplyLoyaltyDiscount(!!checked)}
-                            className="h-6 w-6 rounded-lg border-primary/50 data-[state=checked]:bg-primary"
+                            className="h-5 w-5 rounded-md border-primary/50 data-[state=checked]:bg-primary"
                         />
                     </div>
                 </div>
             )}
 
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between px-2">
-                    <span className="text-[10px] sm:text-[11px] text-muted-foreground tracking-[0.2em] opacity-70">ÖDENECEK TOPLAM</span>
-                    <div className="flex flex-col items-end gap-0">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[12px] sm:text-[14px] font-bold text-muted-foreground italic">
-                                {formattedEquivalentTotal}
-                            </span>
-                        </div>
-                        <span className="text-3xl sm:text-5xl text-foreground drop-shadow-md font-black tracking-tighter">{formattedTotal}</span>
+            <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between px-1">
+                    <span className="text-[9px] font-bold text-muted-foreground tracking-wider uppercase opacity-80">ÖDENECEK TOPLAM</span>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-[11px] font-semibold text-muted-foreground/75 tabular-nums">
+                            {formattedEquivalentTotal}
+                        </span>
+                        <span className="text-xl sm:text-2xl text-foreground font-black tracking-tight tabular-nums">{formattedTotal}</span>
                     </div>
                 </div>
 
                 <Button
                     className={cn(
-                        "h-14 sm:h-16 w-full text-[13px] sm:text-[14px] font-bold gap-3 sm:gap-4 rounded-2xl sm:rounded-[1.5rem] transition-all shadow-2xl border active:scale-[0.98] whitespace-normal text-center leading-tight",
+                        "h-10 sm:h-11 w-full text-xs sm:text-sm font-bold gap-2 rounded-xl transition-all shadow-md border active:scale-[0.98] uppercase leading-tight",
                         isDebtBlocked
                             ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 shadow-rose-500/10"
                             : "bg-primary hover:bg-primary/90 text-primary-foreground hover:shadow-primary/20 border-primary/20"
@@ -356,20 +355,20 @@ export const CheckoutSummary = ({
                     onClick={onCheckout}
                 >
                     {isProcessing ? (
-                        <div className="flex items-center gap-3">
-                            <div className="h-5 w-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                             <span>İŞLENİYOR...</span>
                         </div>
                     ) : (
                         <>
-                            <span className="flex-1">
+                            <span className="flex-1 truncate">
                                 {isDebtBlocked
-                                    ? "MÜŞTERİ SEÇMENİZ GEREKİYOR (VERESİYE)"
+                                    ? "MÜŞTERİ SEÇİLMELİDİR (VERESİYE)"
                                     : "SATIŞI TAMAMLA & FİŞ YAZDIR"}
                             </span>
                             {isDebtBlocked
-                                ? <AlertCircle className="h-5 w-5 shrink-0" />
-                                : <CheckCircle className="h-5 w-5 shrink-0" />}
+                                ? <AlertCircle className="h-4 w-4 shrink-0" />
+                                : <CheckCircle className="h-4 w-4 shrink-0" />}
                         </>
                     )}
                 </Button>

@@ -1,8 +1,9 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useUI } from "@/lib/context/ui-context";
+import { CountingNumber } from "@/components/ui/counting-number";
 
 interface RevealFinancialProps {
   amount: string | number;
@@ -13,22 +14,23 @@ interface RevealFinancialProps {
 export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFinancialProps) {
   const { isFinancialVisible } = useUI();
 
-  const hasSymbol = typeof amount === "string" && (amount.startsWith('₺') || amount.startsWith('$'));
-  const finalPrefix = hasSymbol ? (amount as string)[0] : prefix;
-
-  const formattedAmount = typeof amount === "number"
-    ? formatCurrency(amount)
-    : amount.replace(/[₺$]/g, '').trim();
+  const hasSymbol = typeof amount === "string" && (amount.startsWith('₺') || amount.startsWith('$') || amount.startsWith('€'));
+  const finalPrefix = hasSymbol ? "" : prefix;
 
   return (
     <div
       className={cn("relative group cursor-pointer inline-flex items-center gap-2", className)}
     >
       <span className={cn(
-        "transition-all duration-300 ",
+        "transition-all duration-300",
         !isFinancialVisible && "blur-md select-none opacity-40"
       )}>
-        {finalPrefix}{formattedAmount}
+        <CountingNumber
+          value={amount}
+          prefix={finalPrefix}
+          trigger="view"
+          grouping
+        />
       </span>
       {!isFinancialVisible && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -38,6 +40,3 @@ export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFin
     </div>
   );
 }
-
-
-

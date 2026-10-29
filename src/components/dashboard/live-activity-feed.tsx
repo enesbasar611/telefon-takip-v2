@@ -29,60 +29,58 @@ import { Button } from "@/components/ui/button";
 
 export function LiveActivityFeed({ activity }: { activity: any[] }) {
   return (
-    <Card className="bg-card border border-border/5 shadow-2xl h-auto flex flex-col overflow-hidden rounded-[2rem] transition-all duration-500">
-      <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b border-slate-100 dark:border-border/50 p-8 pb-6 bg-muted/30">
-        <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm shadow-primary/5">
-            <Activity className="h-5 w-5 text-primary" />
+    <Card className="bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl border border-border/40 dark:border-white/[0.08] shadow-sm h-full flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-md animate-in fade-in">
+      <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 px-5 py-3.5 bg-muted/10">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+            <Activity className="h-4 w-4" />
           </div>
           <div>
-            <CardTitle className="font-medium text-lg font-sans">Canlı akış</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">Gerçek zamanlı etkinlik trafiği</p>
+            <CardTitle className="font-semibold text-sm tracking-tight uppercase text-foreground">Canlı akış</CardTitle>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Gerçek zamanlı etkinlik trafiği</p>
           </div>
         </div>
         <Link href="/raporlar">
-          <Button variant="outline" className="text-[10px] uppercase tracking-tighter text-primary border-primary/20 hover:bg-primary/5 h-9 rounded-xl px-4 transition-all">
-            Hepsini gör <ChevronRight className="h-3 w-3 ml-2" />
+          <Button variant="outline" size="sm" className="text-[10px] uppercase tracking-wider text-foreground hover:text-primary border-border/60 hover:bg-muted h-7 rounded-lg px-2.5 transition-all">
+            Hepsini gör <ChevronRight className="h-3 w-3 ml-1" />
           </Button>
         </Link>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-0 custom-scrollbar relative">
-        <div className="divide-y divide-slate-100 dark:divide-white/5">
+        <div className="divide-y divide-border/20">
           {activity.slice(0, 5).map((item) => (
-            <div key={item.id} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 group">
-              <div className="flex items-start gap-5">
-                <div className={`mt-1 h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${item.type === 'SERVICE' ? 'bg-primary/10 border-primary/20 text-primary' :
-                    item.type === 'AUDIT' ? 'bg-rose-100 dark:bg-rose-500/20 border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400' :
+            <div key={item.id} className="p-3 sm:p-3.5 hover:bg-muted/30 transition-colors group">
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 h-8 w-8 rounded-lg flex items-center justify-center border shadow-xs transition-transform group-hover:scale-105 shrink-0 ${item.type === 'SERVICE' ? 'bg-primary/10 border-primary/20 text-primary' :
+                    item.type === 'AUDIT' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
                       'bg-secondary/10 border-secondary/20 text-secondary'
                   }`}>
-                  {item.type === 'SERVICE' ? <Wrench className="h-5 w-5" /> :
-                    item.type === 'AUDIT' ? <ShieldAlert className="h-5 w-5" /> :
-                      <Banknote className="h-5 w-5" />}
+                  {item.type === 'SERVICE' ? <Wrench className="h-4 w-4" /> :
+                    item.type === 'AUDIT' ? <ShieldAlert className="h-4 w-4" /> :
+                      <Banknote className="h-4 w-4" />}
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                    <h4 className="font-medium text-[13px] text-foreground truncate font-sans">{item.title}</h4>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap tracking-[0.1em] bg-muted px-2 py-0.5 rounded">
+                <div className="flex-1 overflow-hidden min-w-0">
+                  <div className="flex items-center justify-between gap-3 mb-0.5">
+                    <h4 className="font-semibold text-xs text-foreground truncate uppercase">{item.title}</h4>
+                    <span className="text-[9px] text-muted-foreground whitespace-nowrap tracking-tight bg-muted/60 px-1.5 py-0.5 rounded-md tabular-nums">
                       {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: tr })}
                     </span>
                   </div>
-                  <p className="text-[12px] font-medium text-muted-foreground truncate group-hover:text-foreground transition-colors leading-relaxed">
-                    <span className="text-foreground">{item.user}</span> • {item.message}
+                  <p className="text-[11px] font-medium text-muted-foreground truncate group-hover:text-foreground transition-colors leading-snug">
+                    <span className="text-foreground/90 font-semibold">{item.user}</span> • {item.message}
                   </p>
                 </div>
               </div>
             </div>
           ))}
           {activity.length > 5 && (
-            <Link href="/raporlar" className="flex flex-col items-center justify-center py-4 bg-muted/5 border-t border-border/10 group cursor-pointer">
-              <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.25em] group-hover:text-primary transition-colors">
-                {activity.length - 5} KAYIT DAHA VAR
-              </span>
-              <ChevronRight className="h-3 w-3 text-muted-foreground/30 rotate-90 mt-1 animate-bounce" />
+            <Link href="/raporlar" className="flex items-center justify-center gap-1.5 py-2.5 bg-muted/10 hover:bg-muted/20 text-[10px] font-semibold text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors">
+              <span>{activity.length - 5} KAYIT DAHA VAR</span>
+              <ChevronRight className="h-3 w-3" />
             </Link>
           )}
           {activity.length === 0 && (
-            <div className="p-10 text-center text-gray-600 text-[10px]">
+            <div className="py-8 text-center text-muted-foreground text-[10px] uppercase tracking-wider">
               Henüz etkinlik yok.
             </div>
           )}

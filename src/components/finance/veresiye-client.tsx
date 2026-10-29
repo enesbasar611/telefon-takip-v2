@@ -1648,54 +1648,52 @@ export function VeresiyeClient({
                     </div>
                 }
                 actions={
-                    <div className="w-full sm:w-auto overflow-x-auto no-scrollbar py-1 -my-1">
-                        <div className="flex items-center gap-2 sm:gap-3 flex-nowrap shrink-0">
-                            {selectedCustomerIds.length > 0 && (
-                                <Button
-                                    onClick={handleBulkWhatsAppReminders}
-                                    className="h-11 sm:h-12 shrink-0 px-4 sm:px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 gap-2 text-xs font-black uppercase tracking-wider text-white transition-all animate-in zoom-in-95 whitespace-nowrap"
-                                >
-                                    <MessageCircle className="w-4 h-4" />
-                                    <span>{selectedCustomerIds.length} Kişiye Hatırlatma</span>
+                    <div className="flex items-center gap-2 sm:gap-2.5 flex-nowrap shrink-0">
+                        {selectedCustomerIds.length > 0 && (
+                            <Button
+                                onClick={handleBulkWhatsAppReminders}
+                                className="h-9 shrink-0 px-3.5 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-sm gap-1.5 text-xs font-bold uppercase tracking-wider text-white transition-all animate-in zoom-in-95 whitespace-nowrap select-none active:scale-95"
+                            >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span>{selectedCustomerIds.length} Kişiye Hatırlat</span>
+                            </Button>
+                        )}
+                        <div className="shrink-0">
+                            <AddDebtModal rates={rates}>
+                                <Button className="h-9 px-3.5 sm:px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm gap-2 shadow-sm border-none transition-all active:scale-95 whitespace-nowrap select-none">
+                                    <PlusCircle className="w-4 h-4 text-white shrink-0" />
+                                    <span>Yeni Borç Ekle</span>
                                 </Button>
-                            )}
-                            <div className="shrink-0">
-                                <AddDebtModal rates={rates}>
-                                    <Button className="h-11 sm:h-12 px-4 sm:px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm gap-2 shadow-lg shadow-blue-500/25 border-none transition-all active:scale-95 whitespace-nowrap">
-                                        <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                                        <span>Yeni Borç Ekle</span>
-                                    </Button>
-                                </AddDebtModal>
-                            </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        className="h-11 sm:h-12 shrink-0 px-4 sm:px-5 rounded-xl bg-muted/50 border border-border shadow-sm gap-2 text-xs font-bold hover:bg-muted transition-all text-foreground whitespace-nowrap"
-                                    >
-                                        <Download className="w-4 h-4 text-indigo-400" />
-                                        <span>Dışa Aktar</span>
-                                        <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-xl border-border bg-card/95 backdrop-blur-md p-1.5 z-50">
-                                    <DropdownMenuItem
-                                        onClick={exportToExcel}
-                                        className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer hover:bg-muted focus:bg-muted transition-colors text-foreground"
-                                    >
-                                        <Download className="w-4 h-4 text-emerald-500" />
-                                        <span>Excel Olarak İndir (.xlsx)</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        onClick={exportToCsv}
-                                        className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer hover:bg-muted focus:bg-muted transition-colors text-foreground"
-                                    >
-                                        <FileText className="w-4 h-4 text-indigo-400" />
-                                        <span>CSV Olarak İndir (.csv)</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            </AddDebtModal>
                         </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="h-9 shrink-0 px-3.5 rounded-xl bg-card/80 hover:bg-card border border-border/70 hover:border-border text-foreground shadow-2xs gap-2 text-xs font-bold transition-all active:scale-95 whitespace-nowrap select-none"
+                                >
+                                    <Download className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                    <span>Dışa Aktar</span>
+                                    <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0 opacity-70" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-xl border-border bg-card/95 backdrop-blur-md p-1.5 z-50">
+                                <DropdownMenuItem
+                                    onClick={exportToExcel}
+                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg cursor-pointer hover:bg-muted focus:bg-muted transition-colors text-foreground select-none"
+                                >
+                                    <Download className="w-4 h-4 text-emerald-500" />
+                                    <span>Excel Olarak İndir (.xlsx)</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={exportToCsv}
+                                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg cursor-pointer hover:bg-muted focus:bg-muted transition-colors text-foreground select-none"
+                                >
+                                    <FileText className="w-4 h-4 text-indigo-400" />
+                                    <span>CSV Olarak İndir (.csv)</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 }
             />
@@ -1711,7 +1709,7 @@ export function VeresiyeClient({
             </LayoutCustomizer>
 
             {/* --- Main Section --- */}
-            <div className={cn("grid grid-cols-1 gap-6 lg:gap-10", isAnalysisHidden ? "lg:grid-cols-1" : "lg:grid-cols-12")}>
+            <div className={cn("grid grid-cols-1 gap-4 lg:gap-5", isAnalysisHidden ? "lg:grid-cols-1" : "lg:grid-cols-12")}>
 
                 {/* Left Sidebar: Aging Analysis & Insights */}
                 <div className={cn("lg:col-span-3", !showMobileAnalysis && "hidden lg:block")}>
@@ -1722,7 +1720,7 @@ export function VeresiyeClient({
 
                 {/* Right: Premium Customer Table */}
                 <LayoutCustomizer sectionKey="veresiye_table" settings={settings} onUpdate={() => router.refresh()} className={cn(isAnalysisHidden ? "lg:col-span-12" : "lg:col-span-9")}>
-                    <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-3">
                         {/* Mobile toggle for Risk & Aging Analysis */}
                         <div className="flex lg:hidden justify-between items-center">
                             <Button
@@ -1730,7 +1728,7 @@ export function VeresiyeClient({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setShowMobileAnalysis((prev) => !prev)}
-                                className="w-full h-10 rounded-xl bg-card border-border/80 text-xs font-bold gap-2 text-muted-foreground hover:text-foreground"
+                                className="w-full h-9 rounded-xl bg-card border-border/80 text-xs font-bold gap-2 text-muted-foreground hover:text-foreground"
                             >
                                 <BarChart3 className="w-4 h-4 text-indigo-500" />
                                 <span>{showMobileAnalysis ? "Risk & Yaşlandırma Analizini Gizle" : "Risk & Yaşlandırma Analizini Göster"}</span>
@@ -1751,14 +1749,14 @@ export function VeresiyeClient({
                             onViewModeChange={handleViewModeChange}
                         />
 
-                        <Card className="bg-muted/20 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-border relative z-10 min-h-[350px]">
-                            <div className={cn("transition-all duration-500 flex flex-col h-full", isPending ? "opacity-30 blur-md grayscale pointer-events-none scale-[0.99]" : "opacity-100 blur-0 grayscale-0 scale-100")}>
+                        <Card className="bg-card/70 backdrop-blur-xl rounded-2xl shadow-2xs overflow-hidden border border-border/50 relative z-10 min-h-[300px]">
+                            <div className={cn("transition-all duration-300 flex flex-col h-full", isPending ? "opacity-30 blur-md grayscale pointer-events-none scale-[0.99]" : "opacity-100 blur-0 grayscale-0 scale-100")}>
                                 {aggregatedData.length > 0 && !isPending && (
                                     <div className={cn(
-                                        "transition-all duration-500",
+                                        "transition-all duration-300",
                                         viewMode === 'grid'
-                                            ? "grid grid-cols-1 lg:grid-cols-2 gap-3 p-4 md:p-6"
-                                            : "flex flex-col"
+                                            ? "grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-4"
+                                            : "flex flex-col p-1 sm:p-1.5 space-y-1.5"
                                     )}>
                                         <AnimatePresence mode="popLayout">
                                             {aggregatedData.map((item, idx) => (
@@ -1894,17 +1892,17 @@ export function VeresiyeClient({
 
             <AlertDialog open={!!historyCustomer} onOpenChange={(o) => { if (!o) { setHistoryCustomer(null); setSelectedDebtIds([]); setExpandedTxId(null); } }}>
                 <AlertDialogContent
-                    className="max-w-[800px] h-[85vh] bg-card rounded-[2.5rem] p-0 overflow-hidden flex flex-col shadow-2xl border border-border/50"
+                    className="max-w-[800px] h-[85vh] bg-card rounded-2xl sm:rounded-3xl p-0 overflow-hidden flex flex-col shadow-2xl border border-border/50"
                 >
-                    <div className="p-4 md:p-6 bg-muted/30 dark:bg-muted/10 border-b border-border/50 flex items-center justify-between gap-3 shrink-0">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
-                                <Users className="w-5 h-5" />
+                    <div className="p-3.5 sm:p-4 bg-muted/30 dark:bg-muted/10 border-b border-border/50 flex items-center justify-between gap-3 shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                                <Users className="w-4 h-4" />
                             </div>
-                            <div className="min-w-0 flex-1 ml-3">
-                                <h3 className="text-sm font-black text-foreground uppercase tracking-tight truncate">{historyCustomer?.name}</h3>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-sm font-bold text-foreground uppercase tracking-tight truncate">{historyCustomer?.name}</h3>
                                 <div className="flex items-center gap-2">
-                                    <p className="text-[10px] text-muted-foreground font-bold">{historyCustomer?.phone || "Telefon Yok"}</p>
+                                    <p className="text-[10px] text-muted-foreground font-semibold">{historyCustomer?.phone || "Telefon Yok"}</p>
                                     {(Number(historyCustomer?.balance) > 0 || Number(historyCustomer?.balanceUsd) > 0) && (
                                         <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
                                             Emanet: {defaultCurrency === "USD"
@@ -2652,7 +2650,7 @@ export function VeresiyeClient({
 
             {/* --- Edit Debt Modal --- */}
             <AlertDialog open={!!editingDebt} onOpenChange={(o) => { if (!o) setEditingDebt(null); }}>
-                <AlertDialogContent className="w-full max-w-[400px] h-auto rounded-[2rem] p-6 bg-card border border-border/50">
+                <AlertDialogContent className="w-full max-w-[400px] h-auto rounded-2xl p-5 bg-card border border-border/50">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Borç Kaydını Düzenle</AlertDialogTitle>
                     </AlertDialogHeader>
@@ -2692,7 +2690,7 @@ export function VeresiyeClient({
 
             {/* --- Edit Transaction Modal --- */}
             <AlertDialog open={!!editingTransaction} onOpenChange={(o) => { if (!o) setEditingTransaction(null); }}>
-                <AlertDialogContent className="w-full max-w-[400px] h-auto rounded-[2rem] p-6 bg-card border border-border/50">
+                <AlertDialogContent className="w-full max-w-[400px] h-auto rounded-2xl p-5 bg-card border border-border/50">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Tahsilatı Düzenle</AlertDialogTitle>
                         <AlertDialogDescription className="text-[11px] text-muted-foreground uppercase font-bold">
@@ -2730,22 +2728,22 @@ export function VeresiyeClient({
             </AlertDialog>
 
             <AlertDialog open={!!portfolioCustomer} onOpenChange={(o) => { if (!o) setPortfolioCustomer(null); }}>
-                <AlertDialogContent className="max-w-[900px] h-[85vh] bg-background dark:bg-[#0f172a] rounded-[3rem] p-0 overflow-hidden flex flex-col shadow-[0_50px_200px_-50px_rgba(0,0,0,0.5)] border-none">
-                    <div className="px-10 py-12 bg-slate-900 border-b border-white/5 relative overflow-hidden shrink-0">
-                        <div className="absolute top-0 right-0 p-12 opacity-10"><User className="w-32 h-32 rotate-12 text-white" /></div>
-                        <div className="relative z-10 flex items-center gap-8">
-                            <div className="w-24 h-24 rounded-[2rem] bg-white/10 flex items-center justify-center text-white border border-white/10 text-4xl font-black">
-                                {portfolioCustomer?.name[0].toUpperCase()}
-                            </div>
-                            <div className="space-y-2">
-                                <AlertDialogTitle className="text-4xl font-black text-white uppercase tracking-tight">{portfolioCustomer?.name}</AlertDialogTitle>
-                                <div className="flex items-center gap-4 text-white/60 text-xs">
-                                    <span className="flex items-center gap-2"><Phone className="w-4 h-4" /> {portfolioCustomer?.phone}</span>
-                                    <span className="flex items-center gap-2"><Calendar className="w-4 h-4" /> Müşteri Katılımı: {new Date(portfolioCustomer?.lastActivity).toLocaleDateString()}</span>
+                <AlertDialogContent className="max-w-[850px] h-[85vh] bg-background dark:bg-[#0f172a] rounded-2xl sm:rounded-3xl p-0 overflow-hidden flex flex-col shadow-2xl border border-border/50">
+                    <div className="px-5 py-5 sm:px-6 sm:py-6 bg-slate-900 border-b border-white/10 relative overflow-hidden shrink-0">
+                        <div className="absolute top-0 right-0 p-6 opacity-10"><User className="w-24 h-24 rotate-12 text-white" /></div>
+                        <div className="relative z-10 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3.5 min-w-0">
+                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white border border-white/15 text-2xl font-black shrink-0">
+                                    {portfolioCustomer?.name[0].toUpperCase()}
+                                </div>
+                                <div className="space-y-1 min-w-0">
+                                    <AlertDialogTitle className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight truncate">{portfolioCustomer?.name}</AlertDialogTitle>
+                                    <div className="flex flex-wrap items-center gap-3 text-white/60 text-xs">
+                                        <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {portfolioCustomer?.phone || "Telefon Yok"}</span>
+                                        <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Katılım: {new Date(portfolioCustomer?.lastActivity).toLocaleDateString()}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="absolute top-10 right-10 z-20 flex gap-4">
                             <Button
                                 onClick={async () => {
                                     const includePaidItems = await requestIncludePaidItemsInOutput();
@@ -2754,7 +2752,7 @@ export function VeresiyeClient({
                                         const res = await getCustomerStatement(portfolioCustomer.customerId || portfolioCustomer.id);
                                         if (res.success) {
                                             const combined = [
-	                                                ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                                 ...(res.transactions || []).map((t: any) => ({
                                                     ...t,
                                                     type: 'PAYMENT',
@@ -2778,50 +2776,50 @@ export function VeresiyeClient({
                                         toast.error("Bağlantı hatası.", { id: toastId });
                                     }
                                 }}
-                                className="h-14 px-8 rounded-2xl bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-3 transition-all active:scale-95 shadow-2xl"
+                                className="h-9.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center gap-2 transition-all active:scale-95 shadow-sm shrink-0"
                             >
-                                <Printer className="w-6 h-6" />
-                                <span className="text-xs font-black uppercase tracking-widest">FİŞ YAZDIR</span>
+                                <Printer className="w-4 h-4" />
+                                <span className="text-xs font-bold uppercase tracking-wider">FİŞ YAZDIR</span>
                             </Button>
                         </div>
                     </div>
 
-                    <div className="p-10 overflow-y-auto flex-1 scrollbar-hide bg-slate-50 dark:bg-zinc-900/50">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="p-4 sm:p-5 overflow-y-auto flex-1 scrollbar-hide bg-slate-50 dark:bg-zinc-900/50">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
                             {/* Stats Column */}
-                            <div className="space-y-6">
-                                <div className="p-8 rounded-[2rem] bg-emerald-500 text-white shadow-xl shadow-emerald-500/20">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="text-[10px] font-black opacity-60 uppercase tracking-widest">TOPLAM ALACAK (₺ KARŞILIĞI)</span>
+                            <div className="space-y-4">
+                                <div className="p-4 sm:p-5 rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-500/20">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] font-bold opacity-80 uppercase tracking-wider">TOPLAM ALACAK (₺)</span>
                                     </div>
-                                    <span className="text-4xl font-black tabular-nums tracking-tighter">
+                                    <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight">
                                         ₺{Math.round((portfolioCustomer?.totalRemainingTRY || 0) + ((portfolioCustomer?.totalRemainingUSD || 0) * (rates?.usd || 1))).toLocaleString('tr-TR')}
                                     </span>
-                                    <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
+                                    <div className="flex items-center gap-3 mt-4 pt-3 border-t border-white/20 text-xs">
                                         <div className="flex flex-col">
-                                            <span className="text-[9px] font-black opacity-60 uppercase mb-1">TL Bakiye</span>
+                                            <span className="text-[9px] font-bold opacity-80 uppercase">TL Bakiye</span>
                                             <span className="font-bold">₺{(portfolioCustomer?.totalRemainingTRY || 0).toLocaleString('tr-TR')}</span>
                                         </div>
-                                        <div className="flex flex-col border-l border-white/20 pl-4">
-                                            <span className="text-[9px] font-black opacity-60 uppercase mb-1">Dolar Bakiye</span>
+                                        <div className="flex flex-col border-l border-white/20 pl-3">
+                                            <span className="text-[9px] font-bold opacity-80 uppercase">USD Bakiye</span>
                                             <span className="font-bold">${(portfolioCustomer?.totalRemainingUSD || 0).toLocaleString('tr-TR')}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="p-8 rounded-[2rem] bg-card border border-border">
-                                    <span className="block text-[10px] font-black text-muted-foreground uppercase mb-2">SİSTEM HAREKETİ</span>
-                                    <div className="space-y-4 pt-2">
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Satış</span><span className="text-xs font-black text-foreground">{portfolioData?.sales?.length ?? '-'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Teknik Servis</span><span className="text-xs font-black text-foreground">{portfolioData?.tickets?.length ?? '-'}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-xs font-bold text-slate-500">Alacak Kaydı</span><span className="text-xs font-black text-foreground">{portfolioData?.debts?.length ?? '-'}</span></div>
+                                <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border/60">
+                                    <span className="block text-[10px] font-bold text-muted-foreground uppercase mb-1.5 tracking-wider">SİSTEM HAREKETİ</span>
+                                    <div className="space-y-2.5 pt-1">
+                                        <div className="flex justify-between items-center"><span className="text-xs font-semibold text-muted-foreground">Satış</span><span className="text-xs font-bold text-foreground">{portfolioData?.sales?.length ?? '-'}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-semibold text-muted-foreground">Teknik Servis</span><span className="text-xs font-bold text-foreground">{portfolioData?.tickets?.length ?? '-'}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-xs font-semibold text-muted-foreground">Alacak Kaydı</span><span className="text-xs font-bold text-foreground">{portfolioData?.debts?.length ?? '-'}</span></div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Feed Column */}
-                            <div className="md:col-span-2 space-y-8">
-                                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-2">SON İŞLEMLER</h4>
-                                <div className="space-y-4">
+                            <div className="md:col-span-2 space-y-3">
+                                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider pl-1">SON İŞLEMLER</h4>
+                                <div className="space-y-2.5">
                                     {!portfolioData ? (
                                         <div className="flex items-center justify-center h-32">
                                             <RefreshCcw className="w-6 h-6 text-muted-foreground animate-spin" />
@@ -2835,34 +2833,34 @@ export function VeresiyeClient({
                                         .sort((a: any, b: any) => b.formattedDate.getTime() - a.formattedDate.getTime())
                                         .slice(0, 9)
                                         .map((item: any, i) => (
-                                            <div key={i} className={cn("flex items-center gap-5 p-4 md:p-6 bg-card rounded-3xl border border-border shadow-sm transition-all cursor-default", item.type === 'DEBT' && item.isPaid && "opacity-60")}>
-                                                <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center shrink-0",
-                                                    item.type === 'SALE' ? "bg-indigo-100 text-indigo-600" :
-                                                        item.type === 'TICKET' ? "bg-amber-100 text-amber-600" :
-                                                            item.type === 'COLLECTION' ? "bg-emerald-100 text-emerald-600" :
-                                                                "bg-rose-100 text-rose-600"
+                                            <div key={i} className={cn("flex items-center gap-3 p-2.5 sm:p-3 bg-card rounded-xl border border-border/60 shadow-2xs transition-all cursor-default", item.type === 'DEBT' && item.isPaid && "opacity-60")}>
+                                                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                                    item.type === 'SALE' ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400" :
+                                                        item.type === 'TICKET' ? "bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400" :
+                                                            item.type === 'COLLECTION' ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" :
+                                                                "bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400"
                                                 )}>
-                                                    {item.type === 'SALE' ? <CreditCard className="w-5 h-5 md:w-6 md:h-6" /> :
-                                                        item.type === 'TICKET' ? <Phone className="w-5 h-5 md:w-6 md:h-6" /> :
-                                                            item.type === 'COLLECTION' ? <Wallet className="w-5 h-5 md:w-6 md:h-6" /> :
-                                                                <FileText className="w-5 h-5 md:w-6 md:h-6" />}
+                                                    {item.type === 'SALE' ? <CreditCard className="w-4 h-4" /> :
+                                                        item.type === 'TICKET' ? <Phone className="w-4 h-4" /> :
+                                                            item.type === 'COLLECTION' ? <Wallet className="w-4 h-4" /> :
+                                                                <FileText className="w-4 h-4" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="block text-[9px] font-black text-muted-foreground uppercase">{item.label}</span>
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <span className="block text-[9px] font-bold text-muted-foreground uppercase">{item.label}</span>
                                                         {item.type === 'DEBT' && (
-                                                            <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase", item.isPaid ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600")}>
+                                                            <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-bold uppercase", item.isPaid ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400")}>
                                                                 {item.isPaid ? "ÖDENDİ" : "BEKLİYOR"}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <span className="block text-xs md:text-sm font-bold text-foreground truncate">{item.saleNumber || item.ticketNumber || item.deviceModel || item.notes || "Belirtilmemiş İşlem"}</span>
-                                                    <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                                    <span className="block text-xs font-bold text-foreground truncate">{item.saleNumber || item.ticketNumber || item.deviceModel || item.notes || "Belirtilmemiş İşlem"}</span>
+                                                    <span className="block text-[10px] text-muted-foreground">
                                                         {!isNaN(item.formattedDate.getTime()) ? item.formattedDate.toLocaleDateString('tr-TR') : "-"}
                                                     </span>
                                                 </div>
                                                 <div className="text-right shrink-0 flex flex-col items-end">
-                                                    <span className={cn("text-base md:text-lg font-black tabular-nums", item.type === 'COLLECTION' ? "text-emerald-600" : "text-foreground")}>
+                                                    <span className={cn("text-sm sm:text-base font-black tabular-nums", item.type === 'COLLECTION' ? "text-emerald-600 dark:text-emerald-400" : "text-foreground")}>
                                                         {item.type === 'COLLECTION' ? '+' : ''}{item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                     </span>
                                                     {item.currency === 'USD' && (
@@ -2871,11 +2869,11 @@ export function VeresiyeClient({
                                                         </span>
                                                     )}
                                                     {item.type === 'COLLECTION' && (
-                                                        <div className="flex gap-1 mt-2">
+                                                        <div className="flex gap-1 mt-1">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-6 w-6 text-blue-500 rounded-lg hover:bg-blue-50"
+                                                                className="h-6 w-6 text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40"
                                                                 onClick={() => {
                                                                     setEditingTransaction(item);
                                                                     setEditTxAmount(item.amount.toString());
@@ -2887,7 +2885,7 @@ export function VeresiyeClient({
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-6 w-6 text-rose-500 rounded-lg hover:bg-rose-50"
+                                                                className="h-6 w-6 text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
                                                                 onClick={() => handleDeleteTransaction(item.id)}
                                                             >
                                                                 <RotateCcw className="h-3 w-3" />
@@ -2901,8 +2899,8 @@ export function VeresiyeClient({
                             </div>
                         </div>
                     </div>
-                    <div className="p-10 border-t border-slate-100 shrink-0 flex justify-end">
-                        <Button variant="ghost" onClick={() => setPortfolioCustomer(null)} className="h-14 px-10 rounded-2xl text-[11px] font-black uppercase tracking-widest text-muted-foreground">PENCEREYİ KAPAT</Button>
+                    <div className="p-3 sm:p-4 border-t border-border/50 shrink-0 flex justify-end">
+                        <Button variant="ghost" onClick={() => setPortfolioCustomer(null)} className="h-9 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">PENCEREYİ KAPAT</Button>
                     </div>
                 </AlertDialogContent>
             </AlertDialog>
@@ -2970,18 +2968,18 @@ export function VeresiyeClient({
                     setStatsPage(1);
                 }
             }}>
-                <AlertDialogContent className="max-w-[1000px] w-[95vw] bg-white/95 dark:bg-zinc-900/90 backdrop-blur-3xl rounded-[3rem] p-0 overflow-hidden shadow-[0_50px_200px_-50px_rgba(0,0,0,0.4)] border-border/50 border flex flex-col h-[90vh]">
+                <AlertDialogContent className="max-w-[960px] w-[95vw] bg-card rounded-2xl sm:rounded-3xl p-0 overflow-hidden shadow-2xl border border-border/50 flex flex-col h-[88vh]">
                     {/* Header Section */}
-                    <div className="bg-indigo-600 dark:bg-indigo-700 p-6 md:p-8 text-white relative overflow-hidden shrink-0">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                            <History className="w-48 h-48 rotate-12" />
+                    <div className="bg-indigo-600 dark:bg-indigo-700 p-4 sm:p-5 text-white relative overflow-hidden shrink-0">
+                        <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+                            <History className="w-36 h-36 rotate-12" />
                         </div>
 
-                        <div className="flex justify-between items-start relative z-10 mb-6">
-                            <div className="space-y-1">
-                                <AlertDialogTitle className="text-2xl md:text-3xl font-black uppercase tracking-tight flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md">
-                                        {statsModalType === 'COLLECTED' ? <Wallet className="w-6 h-6" /> : <TrendingUp className="w-6 h-6" />}
+                        <div className="flex justify-between items-start relative z-10 mb-4">
+                            <div className="space-y-0.5">
+                                <AlertDialogTitle className="text-lg sm:text-xl font-black uppercase tracking-tight flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md">
+                                        {statsModalType === 'COLLECTED' ? <Wallet className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
                                     </div>
                                     {statsModalType === 'RECEIVABLE_TRY' && "TL Alacakları"}
                                     {statsModalType === 'RECEIVABLE_USD' && "USD Alacakları"}
@@ -2989,64 +2987,64 @@ export function VeresiyeClient({
                                     {statsModalType === 'OVERDUE' && "Vadesi Geçenler"}
                                     {statsModalType === 'COLLECTED' && "Tahsilat Detayları"}
                                 </AlertDialogTitle>
-                                <p className="text-indigo-100/80 text-sm font-medium tracking-wide">
+                                <p className="text-indigo-100/80 text-xs font-medium tracking-wide">
                                     {statsDisplayData.length} Kayıt Listeleniyor • Detaylı Döküm ve Analiz
                                 </p>
                             </div>
-                            <Button variant="ghost" onClick={() => setStatsModalOpen(false)} className="text-white hover:bg-white/10 rounded-2xl h-10 w-10 p-0 flex items-center justify-center font-bold text-2xl transition-all active:scale-90">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                            <Button variant="ghost" onClick={() => setStatsModalOpen(false)} className="text-white hover:bg-white/10 rounded-xl h-8 w-8 p-0 flex items-center justify-center font-bold text-xl transition-all active:scale-90">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </Button>
                         </div>
 
                         {/* Controls Bar */}
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end relative z-10">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-end relative z-10">
                             {/* Search */}
-                            <div className="md:col-span-4 space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Kayıtlarda Ara</Label>
+                            <div className="md:col-span-4 space-y-1">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-indigo-100/70 ml-0.5">Kayıtlarda Ara</Label>
                                 <div className="relative group">
-                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-white transition-colors" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50 group-focus-within:text-white transition-colors" />
                                     <Input
                                         placeholder="Müşteri adı veya açıklama ile ara..."
                                         value={statsSearchQuery}
                                         onChange={(e) => setStatsSearchQuery(e.target.value)}
-                                        className="h-12 pl-10 pr-4 bg-white/10 border-white/10 text-white placeholder:text-white/30 rounded-2xl focus:ring-2 focus:ring-white/20 transition-all"
+                                        className="h-9 pl-9 pr-3 bg-white/10 border-white/15 text-white placeholder:text-white/40 rounded-xl text-xs focus:ring-1 focus:ring-white/30 transition-all"
                                     />
                                 </div>
                             </div>
 
                             {/* Date Picker Range */}
-                            <div className="md:col-span-2 space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Sıralama</Label>
+                            <div className="md:col-span-2 space-y-1">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-indigo-100/70 ml-0.5">Sıralama</Label>
                                 <Select value={statsSortMode} onValueChange={(value) => setStatsSortMode(value as any)}>
-                                    <SelectTrigger className="bg-white/10 border-white/10 text-white h-12 rounded-2xl focus:ring-2 focus:ring-white/20">
+                                    <SelectTrigger className="bg-white/10 border-white/15 text-white h-9 rounded-xl text-xs focus:ring-1 focus:ring-white/30">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="amount_desc">Yüksekten küçüğe</SelectItem>
-                                        <SelectItem value="amount_asc">Küçükten yükseğe</SelectItem>
-                                        <SelectItem value="date_asc">Eskiden yeniye</SelectItem>
-                                        <SelectItem value="date_desc">Yeniden eskiye</SelectItem>
+                                        <SelectItem value="amount_desc" className="text-xs">Yüksekten küçüğe</SelectItem>
+                                        <SelectItem value="amount_asc" className="text-xs">Küçükten yükseğe</SelectItem>
+                                        <SelectItem value="date_asc" className="text-xs">Eskiden yeniye</SelectItem>
+                                        <SelectItem value="date_desc" className="text-xs">Yeniden eskiye</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="md:col-span-4 grid grid-cols-2 gap-2">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Başlangıç</Label>
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-indigo-100/70 ml-0.5">Başlangıç</Label>
                                     <Input
                                         type="date"
                                         value={statsDates.start || ''}
                                         onChange={(e) => setStatsDates(d => ({ ...d, start: e.target.value }))}
-                                        className="bg-white/10 border-white/10 text-white h-12 rounded-2xl focus:ring-2 focus:ring-white/20"
+                                        className="bg-white/10 border-white/15 text-white h-9 rounded-xl text-xs focus:ring-1 focus:ring-white/30"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-100/60 ml-1">Bitiş</Label>
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] font-bold uppercase tracking-wider text-indigo-100/70 ml-0.5">Bitiş</Label>
                                     <Input
                                         type="date"
                                         value={statsDates.end || ''}
                                         onChange={(e) => setStatsDates(d => ({ ...d, end: e.target.value }))}
-                                        className="bg-white/10 border-white/10 text-white h-12 rounded-2xl focus:ring-2 focus:ring-white/20"
+                                        className="bg-white/10 border-white/15 text-white h-9 rounded-xl text-xs focus:ring-1 focus:ring-white/30"
                                     />
                                 </div>
                             </div>
@@ -3078,27 +3076,27 @@ export function VeresiyeClient({
                     </div>
 
                     {/* Content Scroll Area */}
-                    <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50 dark:bg-[#1a2231]/30 scrollbar-hide">
+                    <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 bg-muted/20 scrollbar-hide">
                         {statsIsLoading ? (
-                            <div className="flex flex-col items-center justify-center h-full gap-4">
-                                <div className="w-16 h-16 rounded-[2rem] bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                                    <RefreshCcw className="w-8 h-8 text-indigo-500 animate-spin" />
+                            <div className="flex flex-col items-center justify-center h-full gap-3">
+                                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                                    <RefreshCcw className="w-6 h-6 text-indigo-500 animate-spin" />
                                 </div>
-                                <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Veriler İşleniyor...</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Veriler İşleniyor...</span>
                             </div>
                         ) : statsDisplayData.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full gap-5 opacity-40">
-                                <div className="w-20 h-20 rounded-[2.5rem] bg-slate-200 dark:bg-zinc-800 flex items-center justify-center">
-                                    <Search className="w-10 h-10 text-slate-400 dark:text-zinc-500" />
+                            <div className="flex flex-col items-center justify-center h-full gap-3 opacity-40">
+                                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+                                    <Search className="w-6 h-6 text-muted-foreground" />
                                 </div>
                                 <div className="text-center">
-                                    <h4 className="text-sm font-black text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Kayıt Bulunamadı</h4>
-                                    <p className="text-xs font-medium text-slate-400 mt-1">Farklı bir tarih veya arama terimi deneyin.</p>
+                                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Kayıt Bulunamadı</h4>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">Farklı bir tarih veya arama terimi deneyin.</p>
                                 </div>
                             </div>
                         ) : (
                             <div className={cn(
-                                "gap-3 md:gap-4",
+                                "gap-2.5 sm:gap-3",
                                 statsViewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2" : "flex flex-col"
                             )}>
                                 {statsPagedData.map((item: any, idx: number) => {
@@ -3116,18 +3114,18 @@ export function VeresiyeClient({
                                                 if (isGroupedReceivable) setStatsCustomerDetail(item);
                                             }}
                                             className={cn(
-                                            "group flex items-center gap-3 p-3 md:p-3.5 bg-white/40 dark:bg-[#1a2231]/40 border border-border/40 shadow-sm hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 rounded-[1.5rem] transition-all relative overflow-hidden",
+                                            "group flex items-center gap-3 p-2.5 sm:p-3 bg-card border border-border/50 shadow-2xs hover:shadow-xs rounded-xl transition-all relative overflow-hidden",
                                             isGroupedReceivable ? "cursor-pointer" : "cursor-default",
                                             statsViewMode === 'grid' ? "w-full" : ""
                                         )}>
-                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100/50 dark:border-indigo-500/20">
+                                            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100/50 dark:border-indigo-500/20">
                                                 <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
                                                     {item.customer?.name?.[0].toUpperCase()}
                                                 </span>
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="text-sm font-black text-foreground truncate uppercase tracking-tight">{item.customer?.name}</span>
+                                                    <span className="text-xs sm:text-sm font-bold text-foreground truncate uppercase tracking-tight">{item.customer?.name}</span>
                                                     {item.paymentMethod && (
                                                         <Badge variant="secondary" className="text-[6px] h-3 px-1 font-black uppercase tracking-tighter bg-indigo-500/10 text-indigo-500 border-none">
                                                             {item.paymentMethod}
@@ -3135,14 +3133,14 @@ export function VeresiyeClient({
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[11px] font-bold text-muted-foreground/70 flex items-center gap-1 shrink-0">
+                                                    <span className="text-[10px] font-semibold text-muted-foreground/70 flex items-center gap-1 shrink-0">
                                                         {(() => {
                                                             const d = new Date(item.createdAt);
                                                             return !isNaN(d.getTime()) ? format(d, "dd.MM.yy", { locale: tr }) : "-";
                                                         })()}
                                                     </span>
                                                     <div className="w-0.5 h-0.5 rounded-full bg-border" />
-                                                    <span className="text-[11px] font-semibold text-muted-foreground/70 truncate max-w-[260px] italic">
+                                                    <span className="text-[10px] font-medium text-muted-foreground/70 truncate max-w-[260px] italic">
                                                         {isGroupedReceivable ? `${item.itemCount} işlem • detay için tıklayın` : (item.description || item.notes || "İşlem")}
                                                     </span>
                                                 </div>
@@ -3153,13 +3151,13 @@ export function VeresiyeClient({
                                                 {statsModalType === 'COLLECTED' && (
                                                     <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all scale-95 sm:scale-90 sm:group-hover:scale-100">
                                                         <Button
-                                                            variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                                                            variant="ghost" size="icon" className="h-6 w-6 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10"
                                                             onClick={(e) => { e.stopPropagation(); setEditingTransaction(item); setEditTxAmount(item.amount.toString()); setEditTxNotes(item.description || ""); }}
                                                         >
                                                             <Pencil className="w-3 h-3" />
                                                         </Button>
                                                         <Button
-                                                            variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                                            variant="ghost" size="icon" className="h-6 w-6 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
                                                             onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(item.id); }}
                                                         >
                                                             <RotateCcw className="w-3 h-3" />
@@ -3169,8 +3167,8 @@ export function VeresiyeClient({
 
                                                 <div className="text-right">
                                                     <span className={cn(
-                                                        "text-base font-black tabular-nums tracking-tighter",
-                                                        isIncome ? "text-emerald-600" : "text-rose-600"
+                                                        "text-sm sm:text-base font-black tabular-nums tracking-tight",
+                                                        isIncome ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                                                     )}>
                                                         {displayCurrency === 'USD' ? '$' : '₺'}{amount.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
                                                     </span>
@@ -3184,7 +3182,7 @@ export function VeresiyeClient({
                     </div>
 
                     {/* Footer / Summary Info */}
-                    <div className="p-6 md:p-8 border-t border-border/50 bg-white dark:bg-[#0f172a] flex flex-wrap items-center justify-between gap-4 shrink-0">
+                    <div className="p-3.5 sm:p-4 border-t border-border/50 bg-card flex flex-wrap items-center justify-between gap-3 shrink-0">
                         <div className="flex items-center gap-6">
                             <div className="flex flex-col">
                                 <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Toplam Kayıt</span>
@@ -3261,7 +3259,7 @@ export function VeresiyeClient({
 
             {/* Borç Fişi Modal */}
             <AlertDialog open={!!statsCustomerDetail} onOpenChange={(o) => { if (!o) setStatsCustomerDetail(null); }}>
-                <AlertDialogContent className="max-w-[720px] w-[94vw] bg-card rounded-[2rem] p-0 overflow-hidden border border-border/60 shadow-2xl">
+                <AlertDialogContent className="max-w-[720px] w-[94vw] bg-card rounded-2xl sm:rounded-3xl p-0 overflow-hidden border border-border/60 shadow-2xl">
                     <div className="p-6 bg-muted/30 border-b border-border/50 flex items-start justify-between gap-4">
                         <AlertDialogHeader className="space-y-1">
                             <AlertDialogTitle className="text-xl font-black uppercase tracking-tight">

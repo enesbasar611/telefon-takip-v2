@@ -156,10 +156,10 @@ export default async function DashboardLayout({
 
                                         <DashboardContent className={isCourier ? "p-0" : ""}>
                                             {!isCourier && <div className="print:hidden"><Navbar shop={shop} /></div>}
-                                            <main id="app-scroll-container" data-scroll-root className={`app-scroll-root flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'lg:p-10 p-0'}`}>
+                                            <main id="app-scroll-container" data-scroll-root className={`app-scroll-root flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative w-full ${isCourier ? 'p-0' : 'p-2 sm:p-4 lg:p-5'}`}>
                                                 <div className={isCourier
                                                     ? "w-full min-h-screen pb-32 relative z-10"
-                                                    : "max-w-[1700px] mx-auto w-full min-h-full lg:rounded-[3rem] lg:border border-white/30 dark:border-border/70 lg:bg-white/60 dark:lg:bg-background/95 lg:shadow-[0_8px_32px_-16px_rgba(0,0,0,0.1)] px-2 py-3 sm:p-4 pb-28 lg:p-10 lg:px-12 lg:pb-10 relative z-10 transition-opacity duration-300"
+                                                    : "max-w-[1750px] mx-auto w-full min-h-full rounded-2xl lg:rounded-3xl border border-border/40 bg-card/30 dark:bg-card/20 backdrop-blur-md px-3 py-4 sm:p-5 lg:p-6 pb-24 lg:pb-8 relative z-10 shadow-sm transition-all duration-300"
                                                 }>
                                                     <style dangerouslySetInnerHTML={{
                                                         __html: `

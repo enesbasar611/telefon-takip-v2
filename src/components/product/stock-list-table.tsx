@@ -31,7 +31,8 @@ import {
   RefreshCw,
   ScanLine,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import { ScannerModal } from "@/components/scanner/scanner-modal";
 import { useScanner } from "@/hooks/use-scanner";
@@ -74,7 +75,8 @@ export function StockListTable({
   shop,
   totalCount = 0,
   pageSize = 20,
-  currentPage = 1
+  currentPage = 1,
+  aiSearchQuery,
 }: {
   products: any[],
   categories: any[],
@@ -82,11 +84,22 @@ export function StockListTable({
   shop?: any,
   totalCount?: number,
   pageSize?: number,
-  currentPage?: number
+  currentPage?: number;
+  aiSearchQuery?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightedId = searchParams.get("highlight");
+  const activeAiSearch = aiSearchQuery || searchParams.get("ai_search");
+
+  const handleClearAiSearch = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("ai_search");
+    params.set("page", "1");
+    startTransition(() => {
+      router.replace(`?${params.toString()}`, { scroll: false });
+    });
+  };
 
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
@@ -427,6 +440,28 @@ export function StockListTable({
 
   return (
     <div className="space-y-4">
+      {activeAiSearch && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-violet-500/10 dark:bg-violet-500/15 border-b border-violet-500/20 text-xs">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-600 text-white font-bold text-[10px] tracking-wide uppercase shadow-xs">
+              <Sparkles className="h-3 w-3 animate-pulse" />
+              BAŞAR AI Doğal Dil Filtresi
+            </span>
+            <span className="font-semibold text-foreground italic">
+              "{activeAiSearch}"
+            </span>
+            <span className="text-muted-foreground/80">• {totalCount} ürün listelendi</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearAiSearch}
+            className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-lg hover:bg-violet-500/15"
+          >
+            Filtreyi Temizle ✕
+          </Button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 lg:p-6 border-b border-border/50 bg-transparent">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />

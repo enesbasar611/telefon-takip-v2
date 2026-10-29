@@ -6,7 +6,7 @@ import { serializePrisma } from "@/lib/utils";
 
 export async function StockTableStream({ searchParams, shop }: { searchParams?: any, shop?: any }) {
     const sp = await searchParams;
-    let aiFilters = {};
+    let aiFilters: any = {};
     if (sp?.ai_search) {
         const result = await semanticSearchWithAI(sp.ai_search);
         if (result.success) {
@@ -22,9 +22,9 @@ export async function StockTableStream({ searchParams, shop }: { searchParams?: 
             id: sp?.highlight,
             page: currentPage,
             pageSize: pageSize,
-            search: sp?.q,
-            isCritical: sp?.isCritical === "true",
-            outOfStock: sp?.outOfStock === "true",
+            search: sp?.q || aiFilters?.name,
+            isCritical: sp?.isCritical === "true" || aiFilters?.isCritical === true,
+            outOfStock: sp?.outOfStock === "true" || aiFilters?.maxStock === 0,
             ...aiFilters
         }),
         getCategories(),
@@ -45,9 +45,7 @@ export async function StockTableStream({ searchParams, shop }: { searchParams?: 
             totalCount={totalCount}
             pageSize={pageSize}
             currentPage={currentPage}
+            aiSearchQuery={sp?.ai_search}
         />
     );
 }
-
-
-

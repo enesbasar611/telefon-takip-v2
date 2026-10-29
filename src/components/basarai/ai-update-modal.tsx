@@ -12,6 +12,7 @@ import { applyBulkAIUpdates } from "@/lib/actions/product-actions";
 import { useUI } from "@/lib/context/ui-context";
 import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
+import { BorderBeam } from "border-beam";
 
 export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenChange: (v: boolean) => void }) {
     const [command, setCommand] = useState("");
@@ -110,6 +111,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                 <Label className="font-medium text-[11px]  text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                                     <Sparkles className="h-3.5 w-3.5 text-violet-500" /> Ne yapmak istiyorsunuz?
                                 </Label>
+                                <BorderBeam size="md" colorVariant="candy" strength={0.7} className="rounded-lg">
                                 <textarea
                                     value={command}
                                     onChange={e => {
@@ -126,6 +128,7 @@ export function AIUpdateModal({ open, onOpenChange }: { open: boolean, onOpenCha
                                     onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleParse(); }}
                                     autoFocus
                                 />
+                                </BorderBeam>
                                 <div className="flex justify-between items-center px-1">
                                     <p className="text-[10px] text-slate-600 font-mono">
                                         [Ctrl+Enter] Planı Hazırlar

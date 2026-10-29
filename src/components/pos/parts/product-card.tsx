@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
-import { Tag, Package, Plus } from "lucide-react";
+import { Tag, Package, Plus, Barcode, Check } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
+import { getCategoryTheme } from "@/lib/category-colors";
 
 interface ProductCardProps {
     product: any;
@@ -25,91 +27,152 @@ export const ProductCard = React.memo(({
     const stock = product.stock ?? 0;
     const isOutOfStock = stock <= 0;
     const priceStr = formatCurrency(displayPrice ?? product.sellPrice ?? 0);
+    const categoryName = product.category?.parent?.name
+        ? `${product.category.parent.name} > ${product.category.name}`
+        : (product.category?.name || "GENEL");
 
+    const categoryTheme = getCategoryTheme(product.category?.name || product.categoryId || categoryName);
+
+    // 1. Kompakt Liste Görünümü
     if (isCompact) {
         return (
-            <div
-                className="group flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/50 bg-card/70 px-3 py-2.5 transition-all duration-200 hover:border-blue-500/30 hover:bg-blue-500/5 active:scale-[0.99]"
-                onClick={() => onAdd(product)}
+            <motion.div
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.99 }}
+                className={cn(
+                    "group flex cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card/80 hover:bg-card px-3.5 py-2.5 transition-all duration-200 hover:shadow-xs active:scale-[0.99]",
+                    categoryTheme.cardBorder,
+                    isOutOfStock && "opacity-50 grayscale cursor-not-allowed hover:border-border/40 hover:bg-card/80"
+                )}
+                onClick={() => !isOutOfStock && onAdd(product)}
             >
-                <div className="flex min-w-0 items-center gap-3 overflow-hidden">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-muted/40 transition-colors group-hover:border-blue-500/10 group-hover:bg-blue-500/5">
-                        <Package className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-blue-500/50" />
+                <div className="flex min-w-0 items-center gap-3 overflow-hidden flex-1">
+                    <div className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors",
+                        categoryTheme.iconWrapper
+                    )}>
+                        <Package className="h-4 w-4 transition-colors" />
                     </div>
-                    <div className="flex min-w-0 flex-col">
-                        <h4 className="truncate text-xs font-black uppercase tracking-tight text-foreground transition-colors group-hover:text-blue-600">
+                    <div className="flex min-w-0 flex-col flex-1">
+                        <h4 className="truncate text-xs font-bold uppercase tracking-tight text-foreground transition-colors">
                             {product.name}
                         </h4>
-                        <div className="mt-1 flex items-center gap-2">
-                            <Badge variant="outline" className="rounded-md border-none bg-muted/50 px-2 py-0.5 text-[8px] text-muted-foreground uppercase">
-                                {product.category?.name || "GENEL"}
-                            </Badge>
+                        <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                            <span className={cn(
+                                "text-[9px] uppercase tracking-wider truncate max-w-[120px] px-2 py-0.5 rounded border font-semibold",
+                                categoryTheme.badge
+                            )}>
+                                {categoryName}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground/40">•</span>
                             <div className="flex items-center gap-1">
-                                <div className={cn("h-1.5 w-1.5 rounded-full", stock <= 5 ? "bg-rose-500" : "bg-emerald-500")} />
-                                <span className={cn("text-[9px] font-black", stock <= 5 ? "text-rose-500" : "text-emerald-500")}>
-                                    {stock}
+                                <span className={cn(
+                                    "h-1.5 w-1.5 rounded-full shrink-0",
+                                    isOutOfStock ? "bg-rose-500" : stock <= 5 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                                )} />
+                                <span className={cn(
+                                    "text-[9px] font-bold tabular-nums",
+                                    isOutOfStock ? "text-rose-500" : stock <= 5 ? "text-amber-500" : "text-emerald-500"
+                                )}>
+                                    {isOutOfStock ? "Tükendi" : `${stock} adet`}
                                 </span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+
+                <div className="flex shrink-0 items-center gap-3">
                     <div className="text-right">
-                        <span className="text-sm font-black text-foreground tabular-nums">
+                        <div className="text-xs sm:text-sm font-black text-foreground tabular-nums transition-colors">
                             {getCartCurrencySymbol()}{priceStr}
-                        </span>
+                        </div>
+                        <div className="text-[9px] text-muted-foreground/75 font-semibold tabular-nums">
+                            ({getEquivalentDisplay(product)})
+                        </div>
                     </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 shadow-sm transition-all group-hover:bg-blue-600 group-hover:text-white">
-                        <Plus className="h-4 w-4" />
+                    <div className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-xl border transition-all duration-200",
+                        isOutOfStock
+                            ? "bg-muted text-muted-foreground/30 border-transparent"
+                            : categoryTheme.addButton
+                    )}>
+                        <Plus className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     </div>
                 </div>
-            </div>
+            </motion.div>
         );
     }
 
-    // Standard Grid View for POSInterface
+    // 2. Standart / Bento Izgara Kartı
     return (
-        <button
+        <motion.button
+            type="button"
             onClick={() => onAdd(product)}
             disabled={isOutOfStock}
+            whileHover={!isOutOfStock ? { y: -3, scale: 1.015 } : undefined}
+            whileTap={!isOutOfStock ? { scale: 0.97 } : undefined}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             className={cn(
-                "flex flex-col text-left bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 group disabled:opacity-40 relative overflow-hidden aspect-[1/1.1] sm:aspect-[1/1.2]",
-                isOutOfStock && "grayscale cursor-not-allowed"
+                "group relative flex flex-col justify-between text-left rounded-2xl border bg-card/85 dark:bg-[#0c121d]/85 p-3.5 sm:p-4 backdrop-blur-xl transition-all duration-300 shadow-xs hover:shadow-md select-none overflow-hidden h-full min-h-[148px] sm:min-h-[160px]",
+                categoryTheme.cardBorder,
+                isOutOfStock && "opacity-45 grayscale cursor-not-allowed hover:border-border/40 hover:shadow-none"
             )}
         >
-            {/* Top Row: Category & Stock */}
-            <div className="flex items-start justify-between gap-2 mb-auto z-10 w-full">
-                <div className="text-[8px] sm:text-[10px] text-primary flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity min-w-0 flex-1">
-                    <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
-                    <span className="truncate">
-                        {product.category?.parent?.name ? `${product.category.parent.name} > ${product.category.name}` : product.category?.name}
-                    </span>
-                </div>
-                <div className={cn(
-                    "shrink-0 flex items-center justify-center h-5 sm:h-6 px-1.5 sm:px-2 rounded-full text-[8px] sm:text-[10px] font-bold border shadow-sm transition-transform group-hover:scale-105",
-                    stock <= 5
-                        ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
-                        : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+            {/* Top Row: Category & Stock Status */}
+            <div className="flex items-center justify-between gap-2 w-full mb-2">
+                <span className={cn(
+                    "text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider truncate max-w-[120px] sm:max-w-[150px] px-2 py-0.5 rounded-md border",
+                    categoryTheme.badge
                 )}>
-                    <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse mr-1", stock <= 5 ? "bg-rose-500" : "bg-emerald-500")} />
-                    {stock}
+                    {categoryName}
+                </span>
+
+                <div className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold border shrink-0 transition-transform group-hover:scale-105",
+                    isOutOfStock
+                        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                        : stock <= 5
+                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                )}>
+                    <span className={cn(
+                        "h-1.5 w-1.5 rounded-full shrink-0",
+                        isOutOfStock ? "bg-rose-500" : stock <= 5 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                    )} />
+                    <span>{isOutOfStock ? "TÜKENDİ" : `${stock} ADET`}</span>
                 </div>
             </div>
 
-            {/* Bottom Row: Price & Title */}
-            <div className="flex flex-col gap-0 z-10 w-full mt-auto">
-                <div className="text-[11px] sm:text-[13px] font-bold text-muted-foreground/80 mb-0">
-                    ({getEquivalentDisplay(product)})
-                </div>
-                <div className="text-foreground tabular-nums w-full leading-tight whitespace-nowrap overflow-visible drop-shadow-sm text-lg sm:text-xl font-black">
-                    {getCartCurrencySymbol()}{priceStr}
-                </div>
-                <div className="text-muted-foreground text-[10px] sm:text-[12px] line-clamp-2 leading-tight font-medium overflow-hidden text-ellipsis h-[2.4em] sm:h-[2.6em] mt-1">
+            {/* Middle: Product Name (Bold & Net) */}
+            <div className="my-auto py-1">
+                <h3 className="font-bold text-xs sm:text-sm text-foreground uppercase tracking-tight line-clamp-2 leading-snug transition-colors">
                     {product.name}
+                </h3>
+            </div>
+
+            {/* Bottom Row: Price & Hover Quick Action */}
+            <div className="pt-2 mt-auto border-t border-border/30 w-full flex items-end justify-between gap-2">
+                <div className="flex flex-col min-w-0">
+                    <div className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground/75 truncate tabular-nums">
+                        ({getEquivalentDisplay(product)})
+                    </div>
+                    <div className="text-base sm:text-lg font-black text-foreground transition-colors tabular-nums tracking-tight leading-none mt-0.5">
+                        {getCartCurrencySymbol()}{priceStr}
+                    </div>
+                </div>
+
+                {/* Micro Action Button */}
+                <div className={cn(
+                    "flex items-center gap-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-1 rounded-xl transition-all duration-200 shrink-0 shadow-xs",
+                    isOutOfStock
+                        ? "bg-muted text-muted-foreground/30"
+                        : categoryTheme.addButton
+                )}>
+                    <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5 transition-transform group-hover:rotate-90 group-hover:scale-110" />
+                    <span className="hidden sm:inline">Ekle</span>
                 </div>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-muted/20 to-transparent pointer-events-none group-hover:opacity-0 transition-opacity" />
-        </button>
+        </motion.button>
     );
 });
 

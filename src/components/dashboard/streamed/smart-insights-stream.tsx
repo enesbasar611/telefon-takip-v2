@@ -13,7 +13,6 @@ export function SmartInsightsStream({ cols = 8, rows = 4, shopId, onDataStatus }
             const dataRaw = await getDashboardStats();
             const data = serializePrisma(dataRaw);
             if (onDataStatus) {
-                // Usually not empty if we have any stats, but let's check
                 onDataStatus(!data || Object.keys(data).length === 0);
             }
             return data;
@@ -23,14 +22,11 @@ export function SmartInsightsStream({ cols = 8, rows = 4, shopId, onDataStatus }
         refetchOnMount: false,
     });
 
-    if (isLoading) return <Card className="h-full border border-border/40 bg-card rounded-[2rem] animate-pulse" />;
+    if (isLoading) return <Card className="h-full border border-border/40 bg-card/60 rounded-2xl animate-pulse" />;
 
     return (
-        <div className="h-full shadow-xl rounded-[2rem] overflow-hidden animate-in fade-in">
+        <div className="h-full shadow-sm rounded-2xl overflow-hidden animate-in fade-in">
             <SmartInsights stats={data} cols={cols} rows={rows} />
         </div>
     );
 }
-
-
-

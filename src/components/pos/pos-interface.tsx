@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, useTransition, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import {
   ShoppingCart,
@@ -37,9 +36,17 @@ import {
   UserPlus,
   Loader2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Check,
-  X
+  X,
+  Sparkles,
+  ScanLine,
+  LayoutGrid,
+  List,
+  Filter
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { createSale, getSaleById } from "@/lib/actions/sale-actions";
 import { getPOSInitialData } from "@/lib/actions/product-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
@@ -51,7 +58,6 @@ import { cn, formatPhone, formatCurrency, normalizeSearchText } from "@/lib/util
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, ScanLine } from "lucide-react";
 import { getSettings } from "@/lib/actions/setting-actions";
 import { ScannerModal } from "@/components/scanner/scanner-modal";
 import { useScanner } from "@/hooks/use-scanner";
@@ -62,6 +68,7 @@ import { CustomerSelector } from "./parts/customer-selector";
 import { CheckoutSummary } from "./parts/checkout-summary";
 import { QuickCreateProductModal } from "@/components/product/quick-create-product-modal";
 import { SmartStockGuardrailModal } from "./parts/smart-stock-guardrail-modal";
+import { getCategoryTheme } from "@/lib/category-colors";
 
 export function POSInterface({ initialSaleId }: {
   initialSaleId?: string;
@@ -71,12 +78,13 @@ export function POSInterface({ initialSaleId }: {
     setMounted(true);
   }, []);
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: posData, isLoading: isPosLoading } = useQuery({
     queryKey: ["pos-initial-data"],
     queryFn: () => getPOSInitialData(),
     refetchOnWindowFocus: false,
-    staleTime: 10 * 60 * 1000, // 10 minutes cache to avoid DB hits on every view
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: initialSale } = useQuery({
@@ -98,14 +106,14 @@ export function POSInterface({ initialSaleId }: {
   });
 
   const searchParams = useSearchParams();
-  const router = useRouter();
 
-  // Frictionless & Smart Eye State
+  // Frictionless Instant Product Creator State
   const [quickProductOpen, setQuickProductOpen] = useState(false);
   const [quickProductName, setQuickProductName] = useState("");
+
+  // Smart Eye Stock Guardrail State
   const [guardrailOpen, setGuardrailOpen] = useState(false);
   const [guardrailProduct, setGuardrailProduct] = useState<any>(null);
-  const tenantConfig = useTenant();
 
   // Show receipt if arrived via sale confirmation URL
   useEffect(() => {
@@ -128,6 +136,28 @@ export function POSInterface({ initialSaleId }: {
   const [lastSale, setLastSale] = useState<any>(null);
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false);
   const [saleDescription, setSaleDescription] = useState("");
+
+  // Görünüm Modu (Grid / List)
+  const [viewMode, setViewMode] = useState<"GRID" | "LIST">("GRID");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pos_view_mode");
+      if (saved === "GRID" || saved === "LIST") setViewMode(saved);
+    }
+  }, []);
+  const handleViewModeChange = (mode: "GRID" | "LIST") => {
+    setViewMode(mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pos_view_mode", mode);
+    }
+  };
+
+  // Stok Filtresi (Tümü / Stokta / Kritik)
+  const [stockFilter, setStockFilter] = useState<"ALL" | "IN_STOCK" | "CRITICAL">("ALL");
+
+  // Ekrana Göre Sayfalama (Pagination)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "ALL">(16);
 
   const pointValueTl = useMemo(() => {
     const loyaltyVal = settingsData?.find((s: any) => s.key === "loyalty_point_value_tl")?.value;
@@ -164,19 +194,32 @@ export function POSInterface({ initialSaleId }: {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(displaySearchTerm);
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [displaySearchTerm]);
 
+  // Category product counters
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: products.length };
+    products.forEach((p) => {
+      const cid = p.categoryId || "OTHER";
+      counts[cid] = (counts[cid] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
+  // Filtered products list
   const filteredProducts = useMemo(() => {
     const searchNormalized = normalizeSearchText(debouncedSearchTerm);
     const isSearching = searchNormalized.length > 0;
 
     return products.filter((p) => {
       const isService = p.category?.name?.toLowerCase() === "hizmet";
+      const stock = Number(p.stock || 0);
 
-      // Always filter out items with no stock, unless it's a service
-      if (!isService && p.stock != null && p.stock <= 0) return false;
+      // Stok Filtresi
+      if (stockFilter === "IN_STOCK" && !isService && stock <= 0) return false;
+      if (stockFilter === "CRITICAL" && !isService && (stock <= 0 || stock > 5)) return false;
 
       const matchesSearch = !isSearching ||
         normalizeSearchText(p.name).includes(searchNormalized) ||
@@ -186,14 +229,27 @@ export function POSInterface({ initialSaleId }: {
 
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
 
-      // Arama yapılıyorsa kategori sınırlamasını kaldır (global arama), aksi halde kategoriye göre filtrele
       if (isSearching) {
         return matchesSearch;
       }
 
       return matchesCategory;
     });
-  }, [products, debouncedSearchTerm, selectedCategory]);
+  }, [products, debouncedSearchTerm, selectedCategory, stockFilter]);
+
+  // Reset page when search or category/filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, selectedCategory, stockFilter]);
+
+  const totalPages = Math.max(1, pageSize === "ALL" ? 1 : Math.ceil(filteredProducts.length / (pageSize as number)));
+
+  const paginatedProducts = useMemo(() => {
+    if (pageSize === "ALL") return filteredProducts;
+    const size = pageSize as number;
+    const start = (currentPage - 1) * size;
+    return filteredProducts.slice(start, start + size);
+  }, [filteredProducts, currentPage, pageSize]);
 
   // ?fullscreen=true paramını yakala ve state'i ayarla
   useEffect(() => {
@@ -207,7 +263,6 @@ export function POSInterface({ initialSaleId }: {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isFullscreen) {
         setIsFullscreen(false);
-        // URL'deki fullscreen=true parametresini temizle (isteğe bağlı ama temizlik iyidir)
         router.replace("/satis");
       }
     };
@@ -241,7 +296,7 @@ export function POSInterface({ initialSaleId }: {
         queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
       }
     } catch (e) {
-      toast({ title: "Hata", variant: "destructive", description: "Hızlı kayıt yapıalamadı." });
+      toast({ title: "Hata", variant: "destructive", description: "Hızlı kayıt yapılamadı." });
     } finally {
       setIsCreatingCustomer(false);
     }
@@ -298,8 +353,7 @@ export function POSInterface({ initialSaleId }: {
   };
 
   const getCartCurrencySymbol = useCallback(() => {
-    if (saleCurrency === "USD") return "$";
-    return "₺";
+    return saleCurrency === "USD" ? "$" : "₺";
   }, [saleCurrency]);
 
   const getCartDisplayPrice = useCallback((item: any) => {
@@ -370,7 +424,7 @@ export function POSInterface({ initialSaleId }: {
     const isService = product.category?.name?.toLowerCase() === "hizmet";
     const currentStock = Number(product.stock || 0);
 
-    // Smart Eye Stock Guardrail: Never block abruptly; guide proactively
+    // Smart Eye Stock Guardrail
     if (!forceAllowZero && !isService && currentStock <= 0) {
       setGuardrailProduct(product);
       setGuardrailOpen(true);
@@ -402,7 +456,6 @@ export function POSInterface({ initialSaleId }: {
       return [...currentCart, cartItem];
     });
 
-    // Ufak yeşil seçim popup'ını tetikle
     addSelectionToast(product);
   }, [getCartDisplayPrice, saleCurrency, usdRate, addSelectionToast]);
 
@@ -415,7 +468,6 @@ export function POSInterface({ initialSaleId }: {
       p.sku?.toUpperCase() === normalizedValue
     );
 
-    // Frictionless Action: If product is not found, offer instant creation inline without page hopping
     if (!product) {
       setQuickProductName(normalizedValue);
       setQuickProductOpen(true);
@@ -494,12 +546,10 @@ export function POSInterface({ initialSaleId }: {
     { allowGlobal: true }
   );
 
-  // Sync cart to mobile whenever it changes
   useEffect(() => {
     syncCartToMobile(cart);
   }, [cart, syncCartToMobile]);
 
-  // Listen for mobile-initiated cart actions
   useEffect(() => {
     const handleRemove = (e: any) => {
       removeFromCart(e.detail.productId);
@@ -527,25 +577,19 @@ export function POSInterface({ initialSaleId }: {
     };
   }, [removeFromCart, updateQuantity, addToCart, updatePrice]);
 
-  useEffect(() => {
-    if (shopId) {
-      setScannerRoomId(shopId);
-      initializeScannerRoom(shopId);
-    }
-  }, [initializeScannerRoom, shopId]);
+  const subtotal = useMemo(() => {
+    return cart.reduce((acc, item) => {
+      const p = item.sellPrice !== undefined ? item.sellPrice : item.unitPrice;
+      return acc + (p || 0) * item.quantity;
+    }, 0);
+  }, [cart]);
 
   const displaySubtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (getCartDisplayPrice(item) * item.quantity), 0);
-  }, [cart, getCartDisplayPrice]);
-
-  const subtotal = useMemo(() => {
-    // subtotal is always the TL base for backend and equivalent calculations
-    // Calculate dynamically to be reactive to exchange rate changes
-    return cart.reduce((sum, item) => {
-      const itemTlPrice = item.sellPriceUsd ? (item.sellPriceUsd * usdRate) : (item.sellPrice || 0);
-      return sum + (Number(itemTlPrice.toFixed(2)) * item.quantity);
+    return cart.reduce((acc, item) => {
+      const p = item.unitPrice !== undefined ? item.unitPrice : item.sellPrice;
+      return acc + (p || 0) * item.quantity;
     }, 0);
-  }, [cart, usdRate]);
+  }, [cart]);
 
   const selectedCustomer = useMemo(() => {
     if (!selectedCustomerId || selectedCustomerId === "null") return null;
@@ -561,7 +605,6 @@ export function POSInterface({ initialSaleId }: {
   }, [applyLoyaltyDiscount, totalPoints, subtotal, pointValueTl, loyaltyEnabled]);
 
   const usedPoints = Math.floor(loyaltyDiscountAmount / pointValueTl);
-
   const finalTotal = subtotal - loyaltyDiscountAmount;
 
   const eligibleAccounts = useMemo(() => {
@@ -590,15 +633,13 @@ export function POSInterface({ initialSaleId }: {
     } else if (!selectedAccountId || !eligibleAccounts.some((a) => a.id === selectedAccountId)) {
       setSelectedAccountId(eligibleAccounts[0].id);
     }
-  }, [eligibleAccounts, paymentMethod]);
-
+  }, [eligibleAccounts, paymentMethod, selectedAccountId]);
 
   const displayTotal = useMemo(() => {
     const discount = saleCurrency === "USD" ? (loyaltyDiscountAmount / usdRate) : loyaltyDiscountAmount;
     return Math.max(0, displaySubtotal - discount);
   }, [displaySubtotal, loyaltyDiscountAmount, saleCurrency, usdRate]);
 
-  // Pre-formatted strings for consistent display across components
   const { formattedTotal, formattedSubtotal, formattedTax, formattedEquivalentTotal } = useMemo(() => {
     const symbol = getCartCurrencySymbol();
     const isUSD = saleCurrency === "USD";
@@ -606,8 +647,7 @@ export function POSInterface({ initialSaleId }: {
 
     const fmt = (val: number) => symbol + val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    // Tax is included in our prices (20%)
-    const taxValue = displayTotal * 0.166666; // 20% in 120% total
+    const taxValue = displayTotal * 0.166666;
     const subtotalNoTax = displayTotal - taxValue;
 
     return {
@@ -648,53 +688,26 @@ export function POSInterface({ initialSaleId }: {
             ? Number((loyaltyDiscountAmount / usdRate).toFixed(2))
             : Number(loyaltyDiscountAmount.toFixed(2)),
           usedPoints,
-          description: saleDescription
+          description: saleDescription || undefined
         });
 
-        if (result.success) {
-          // 1. Optimistic Stock Update: Update query cache immediately
-          queryClient.setQueryData(["pos-initial-data"], (old: any) => {
-            if (!old) return old;
-            return {
-              ...old,
-              products: old.products.map((p: any) => {
-                const soldItem = cart.find(item => item.id === p.id);
-                if (soldItem) {
-                  return { ...p, stock: p.stock - soldItem.quantity };
-                }
-                return p;
-              })
-            };
-          });
-
-          // 2. Receipt and Success State
-          setLastSale(result.data);
+        const saleData = (result as any)?.data || (result as any)?.sale;
+        if (result.success && saleData) {
+          toast({ title: "Satış Başarılı", description: "İşlem kaydedildi ve stoklar güncellendi." });
+          setLastSale(saleData);
           setShowReceipt(true);
-
-          // 3. UI Cleanup
           setCart([]);
-          setDisplaySearchTerm("");
           setSelectedCustomerId(undefined);
-          setSelectedAccountId("");
+          setCustomerSearch("");
           setSaleDescription("");
-          // 4. Invalidate to seamlessly update server state without reload
           queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
-          queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
-          queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] });
-          queryClient.invalidateQueries({ queryKey: ["dashboard-recent-transactions"] });
-          queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
-          queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
-
-          toast({ title: "Satış Başarılı", description: "İşlem kaydedildi ve fiş hazırlandı." });
-
-          // 5. Notifications
-          window.dispatchEvent(new CustomEvent("notification-update"));
+          queryClient.invalidateQueries({ queryKey: ["dashboard-service-metrics"] });
         } else {
-          toast({ title: "Hata", description: result.error, variant: "destructive" });
+          toast({ title: "Hata", description: result.error || "Satış kaydedilemedi", variant: "destructive" });
         }
-      } catch (error) {
-        toast({ title: "Sistem Hatası", variant: "destructive" });
+      } catch (e: any) {
+        toast({ title: "Hata", description: e.message || "Bir hata oluştu", variant: "destructive" });
       } finally {
         setIsProcessing(false);
       }
@@ -704,14 +717,12 @@ export function POSInterface({ initialSaleId }: {
   const closeReceiptAndReload = () => {
     setShowReceipt(false);
     setLastSale(null);
-    // No direct router.refresh() needed here, state is cleanly reset.
-    // The background query invalidation has already synced everything.
   };
 
   const content = (
     <div ref={containerRef} className={cn(
-      "flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-6 bg-transparent sm:bg-background h-full overflow-hidden p-0 sm:p-4 lg:p-6 relative transition-all duration-700",
-      isFullscreen && "fixed inset-0 z-[40] p-4 lg:p-8 bg-background/95 backdrop-blur-xl",
+      "flex flex-col lg:grid lg:grid-cols-12 gap-2 sm:gap-2.5 h-full lg:h-[calc(100vh-4.75rem)] overflow-hidden p-0 relative transition-all duration-300",
+      isFullscreen && "fixed inset-0 z-[40] p-2.5 sm:p-4 bg-background/95 backdrop-blur-xl",
       showReceipt && "bg-emerald-950/20"
     )} style={{ zIndex: isFullscreen ? 40 : undefined }}>
       {/* Background decoration for fullscreen */}
@@ -722,105 +733,31 @@ export function POSInterface({ initialSaleId }: {
       {showReceipt && (
         <div className="absolute inset-0 z-0 pointer-events-none animate-success-pulse bg-emerald-500/5 transition-all" />
       )}
+
       {/* Product Selection Area (Left Pane) */}
-      <div className="lg:col-span-8 flex flex-col gap-4 sm:gap-6 overflow-hidden">
-        <div className="flex flex-col flex-1 overflow-hidden bg-card/60 sm:bg-card border-0 sm:border sm:border-border/40 rounded-2xl sm:rounded-[2.5rem] shadow-none sm:shadow-sm">
-          {/* Header & Search - Single Clean Row on Mobile */}
-          <div className="p-3 sm:p-8 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-8 bg-muted/5">
-            <div className="flex items-center justify-between sm:justify-start gap-3 flex-shrink-0">
-              <div className="flex items-center gap-2.5 sm:gap-4">
-                <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-full bg-primary flex items-center justify-center shadow-md shadow-primary/20 shrink-0">
-                  <ShoppingCart className="h-4.5 w-4.5 sm:h-6 sm:w-6 text-primary-foreground" />
-                </div>
-                <div className="flex flex-col">
-                  <h2 className="font-bold text-base sm:text-2xl text-foreground leading-none">Hızlı <span className="text-primary">Satış</span></h2>
-                  <p className="text-[8px] sm:text-[11px] text-muted-foreground font-semibold leading-none mt-1 uppercase tracking-wider">POS v2.0</p>
-                </div>
+      <div className="lg:col-span-8 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl">
+        {/* Top Controls & Search Bar */}
+        <div className="p-2.5 sm:p-3 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-muted/10 shrink-0">
+          {/* Mobile Title & Currency */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-xl bg-primary flex items-center justify-center shadow-xs shrink-0">
+                <ShoppingCart className="h-4 w-4 text-primary-foreground" />
               </div>
-
-              {/* Action buttons next to title on mobile */}
-              <div className="flex sm:hidden items-center rounded-lg border border-border/40 bg-muted/30 p-0.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => toggleSaleCurrency("TRY")}
-                  className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-black transition-all",
-                    saleCurrency === "TRY" ? "bg-emerald-600 text-white shadow-sm" : "text-muted-foreground"
-                  )}
-                >
-                  ₺
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleSaleCurrency("USD")}
-                  className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-black transition-all",
-                    saleCurrency === "USD" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground"
-                  )}
-                >
-                  $
-                </button>
-              </div>
-              <div className="flex sm:hidden items-center gap-1.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    setQuickProductName(displaySearchTerm || "");
-                    setQuickProductOpen(true);
-                  }}
-                  className="h-8 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 text-[10px] font-bold gap-1 shrink-0 transition-all"
-                  title="Sayfadan ayrılmadan yeni ürün kaydet"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Ürün</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={toggleFullscreen}
-                  className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted/50 transition-all shrink-0"
-                >
-                  {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                </Button>
+              <div>
+                <h2 className="font-extrabold text-sm sm:text-base text-foreground leading-none tracking-tight">Hızlı Satış</h2>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">POS Terminali</span>
               </div>
             </div>
 
-            <div className="flex-1 w-full sm:max-w-xl">
-              <div className="relative group">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input
-                  placeholder="Ürün adı veya barkod okut..."
-                  className="pl-10 pr-10 sm:pl-12 sm:pr-12 bg-muted/30 border-border/40 h-11 sm:h-12 rounded-xl sm:rounded-2xl text-xs sm:text-xs focus:bg-background focus:ring-2 focus:ring-primary/10 transition-all shadow-inner"
-                  value={displaySearchTerm}
-                  onChange={(e) => setDisplaySearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && addBarcodeMatchToCart(displaySearchTerm)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  autoFocus
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-8 sm:w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg sm:rounded-xl transition-colors"
-                  onClick={() => setIsScannerModalOpen(true)}
-                >
-                  <ScanLine className="h-4 w-4 sm:h-4 sm:w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Desktop buttons */}
-            <div className="hidden sm:flex items-center rounded-xl border border-border/40 bg-muted/40 p-1 shrink-0">
+            {/* Currency Switcher */}
+            <div className="flex items-center rounded-xl border border-border/40 bg-muted/30 p-0.5 shrink-0">
               <button
                 type="button"
                 onClick={() => toggleSaleCurrency("TRY")}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-black transition-all",
-                  saleCurrency === "TRY" ? "bg-emerald-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "px-2.5 py-1 rounded-lg text-xs font-black transition-all",
+                  saleCurrency === "TRY" ? "bg-emerald-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 ₺ TL
@@ -829,194 +766,393 @@ export function POSInterface({ initialSaleId }: {
                 type="button"
                 onClick={() => toggleSaleCurrency("USD")}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-black transition-all",
-                  saleCurrency === "USD" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  "px-2.5 py-1 rounded-lg text-xs font-black transition-all",
+                  saleCurrency === "USD" ? "bg-blue-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 $ USD
               </button>
             </div>
-            <div className="hidden sm:flex items-center gap-2 sm:gap-3 shrink-0">
-              <Button
+          </div>
+
+          {/* Search Box */}
+          <div className="flex-1 w-full sm:max-w-md">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Input
+                placeholder="Ürün adı, barkod okut veya kategori ara..."
+                className="pl-9 pr-14 bg-background/80 border-border/40 h-9 sm:h-9.5 rounded-xl text-xs focus:bg-background focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
+                value={displaySearchTerm}
+                onChange={(e) => setDisplaySearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && addBarcodeMatchToCart(displaySearchTerm)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                {displaySearchTerm && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-lg"
+                    onClick={() => setDisplaySearchTerm("")}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                  onClick={() => setIsScannerModalOpen(true)}
+                  title="Barkod Okuyucu Aç"
+                >
+                  <ScanLine className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Actions: Stock Filter, View Mode, Fast Product, Fullscreen */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-between sm:justify-end">
+            {/* Stock Filter Pills */}
+            <div className="flex items-center rounded-xl border border-border/40 bg-muted/30 p-0.5 text-[10px]">
+              <button
                 type="button"
+                onClick={() => setStockFilter("ALL")}
+                className={cn(
+                  "px-2 py-1 rounded-lg font-bold uppercase transition-all",
+                  stockFilter === "ALL" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Tümü
+              </button>
+              <button
+                type="button"
+                onClick={() => setStockFilter("IN_STOCK")}
+                className={cn(
+                  "px-2 py-1 rounded-lg font-bold uppercase transition-all",
+                  stockFilter === "IN_STOCK" ? "bg-emerald-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Stokta
+              </button>
+              <button
+                type="button"
+                onClick={() => setStockFilter("CRITICAL")}
+                className={cn(
+                  "px-2 py-1 rounded-lg font-bold uppercase transition-all",
+                  stockFilter === "CRITICAL" ? "bg-amber-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Kritik
+              </button>
+            </div>
+
+            {/* View Mode (Grid vs List) */}
+            <div className="flex items-center rounded-xl border border-border/40 bg-muted/30 p-0.5">
+              <button
+                type="button"
+                onClick={() => handleViewModeChange("GRID")}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  viewMode === "GRID" ? "bg-card text-foreground shadow-xs border border-border/30" : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Izgara Görünümü"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleViewModeChange("LIST")}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  viewMode === "LIST" ? "bg-card text-foreground shadow-xs border border-border/30" : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Kompakt Liste Görünümü"
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Quick Product Button */}
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setQuickProductName(displaySearchTerm || "");
+                setQuickProductOpen(true);
+              }}
+              className="h-8 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 text-xs font-bold gap-1 shrink-0 transition-all shadow-xs"
+              title="Yeni ürün oluştur"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span className="hidden xl:inline">Ürün Ekle</span>
+            </Button>
+
+            {/* Fullscreen Button */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleFullscreen}
+              className="h-8 w-8 rounded-xl border-border/40 hover:bg-muted/50 transition-all shrink-0"
+              title={isFullscreen ? "Tam Ekrandan Çık" : "Tam Ekran Yap"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Category Rail (Compact, Scrollable) */}
+        <div className="px-2.5 sm:px-3 py-1.5 border-b border-border/30 bg-muted/15 overflow-x-auto no-scrollbar flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setSelectedCategory("ALL")}
+            className={cn(
+              "px-3 py-1 rounded-xl text-[10px] uppercase font-bold tracking-wider shrink-0 transition-all border",
+              selectedCategory === "ALL"
+                ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                : "bg-card/70 border-border/40 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+            )}
+          >
+            TÜMÜ ({products.length})
+          </button>
+          {categories.map((cat: any) => {
+            const catTheme = getCategoryTheme(cat.name || cat.id);
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={cn(
+                  "px-3 py-1 rounded-xl text-[10px] uppercase font-bold tracking-wider shrink-0 transition-all border",
+                  isSelected
+                    ? catTheme.pillActive
+                    : catTheme.pillInactive
+                )}
+              >
+                {cat.name} {categoryCounts[cat.id] ? `(${categoryCounts[cat.id]})` : ""}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Product Items Area */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-2.5 sm:p-3 custom-scrollbar bg-muted/5 relative">
+          {isPosLoading && products.length === 0 ? (
+            <div className="h-full w-full flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 text-primary animate-spin opacity-50" />
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="h-full w-full flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-3 shadow-inner">
+                <Package className="h-7 w-7" />
+              </div>
+              <p className="text-sm font-bold text-foreground tracking-tight">
+                {displaySearchTerm ? `"${displaySearchTerm}" ile eşleşen ürün bulunamadı` : "Bu kategoride ürün bulunamadı"}
+              </p>
+              <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
+                Sayfadan ayrılmadan bu ürünü anında sisteme kaydedebilir ve sepete aktarabilirsiniz.
+              </p>
+              <Button
                 onClick={() => {
                   setQuickProductName(displaySearchTerm || "");
                   setQuickProductOpen(true);
                 }}
-                className="h-10 sm:h-12 rounded-xl sm:rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 sm:px-4 text-xs font-bold gap-1.5 shrink-0 transition-all"
-                title="Sayfadan ayrılmadan yeni ürün kaydet"
+                className="h-9 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1.5 shadow-md shadow-primary/20 transition-all"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Hızlı Ürün</span>
+                <span>{displaySearchTerm ? `"${displaySearchTerm}" Oluştur` : "Hızlı Ürün Oluştur"}</span>
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleFullscreen}
-                className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl border-border/40 hover:bg-muted/50 transition-all"
-              >
-                {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-              </Button>
+            </div>
+          ) : viewMode === "GRID" ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
+              {paginatedProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAdd={addToCart}
+                  getEquivalentDisplay={getEquivalentDisplay}
+                  getCartCurrencySymbol={getCartCurrencySymbol}
+                  displayPrice={getCartDisplayPrice(product)}
+                  isCompact={false}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {paginatedProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAdd={addToCart}
+                  getEquivalentDisplay={getEquivalentDisplay}
+                  getCartCurrencySymbol={getCartCurrencySymbol}
+                  displayPrice={getCartDisplayPrice(product)}
+                  isCompact={true}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="h-10 px-3 border-t border-border/40 bg-card/80 backdrop-blur-md flex items-center justify-between shrink-0 text-xs text-muted-foreground select-none">
+          <div className="flex items-center gap-2">
+            <span className="font-bold tabular-nums text-foreground text-[11px]">
+              {filteredProducts.length === 0 ? "0 ürün" : `${(currentPage - 1) * (pageSize === "ALL" ? filteredProducts.length : (pageSize as number)) + 1} - ${Math.min(currentPage * (pageSize === "ALL" ? filteredProducts.length : (pageSize as number)), filteredProducts.length)} / ${filteredProducts.length} Ürün`}
+            </span>
+            <div className="hidden sm:flex items-center gap-1 text-[10px] ml-2">
+              <span className="opacity-70">Sayfa Başı:</span>
+              {[12, 16, 24, "ALL"].map((size) => (
+                <button
+                  key={String(size)}
+                  onClick={() => { setPageSize(size as any); setCurrentPage(1); }}
+                  className={cn(
+                    "px-1.5 py-0.5 rounded text-[10px] font-bold transition-all",
+                    pageSize === size ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"
+                  )}
+                >
+                  {size === "ALL" ? "Tümü" : size}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Categories Tab */}
-          <div className="px-8 py-4 border-b border-border/40 bg-card overflow-x-auto relative z-20">
-            <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-              <TabsList className="bg-transparent gap-3 p-0 h-auto">
-                <TabsTrigger
-                  value="ALL"
-                  className="rounded-full h-10 px-8 text-[10px] uppercase font-black tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
-                >
-                  TÜMÜ
-                </TabsTrigger>
-                {categories.map((cat: any) => (
-                  <TabsTrigger
-                    key={cat.id}
-                    value={cat.id}
-                    className="rounded-full h-10 px-8 text-[10px] uppercase font-black tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all shadow-sm border border-border/40 data-[state=active]:border-primary"
-                  >
-                    {cat.name.toUpperCase()}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {/* Grid Area */}
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-muted/5 relative">
-            {isPosLoading && products.length === 0 ? (
-              <div className="h-full w-full flex items-center justify-center">
-                <Loader2 className="h-10 w-10 text-primary animate-spin opacity-50" />
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="h-full w-full flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mb-4 shadow-inner">
-                  <Package className="h-8 w-8" />
-                </div>
-                <p className="text-base font-bold text-foreground tracking-tight">
-                  {displaySearchTerm ? `"${displaySearchTerm}" ile eşleşen ürün bulunamadı` : "Bu kategoride ürün bulunamadı"}
-                </p>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-6">
-                  Sayfadan ayrılmadan bu ürünü anında sisteme kaydedebilir ve doğrudan sepete ekleyebilirsiniz.
-                </p>
-                <Button
-                  onClick={() => {
-                    setQuickProductName(displaySearchTerm || "");
-                    setQuickProductOpen(true);
-                  }}
-                  className="h-11 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>{displaySearchTerm ? `"${displaySearchTerm}" Ürününü Anında Oluştur` : "Hızlı Ürün Oluştur"}</span>
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAdd={addToCart}
-                    getEquivalentDisplay={getEquivalentDisplay}
-                    getCartCurrencySymbol={getCartCurrencySymbol}
-                    displayPrice={getCartDisplayPrice(product)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="h-6.5 px-2 text-[10px] font-bold rounded-lg"
+              >
+                <ChevronLeft className="h-3 w-3 mr-0.5" />
+                <span className="hidden sm:inline">Önceki</span>
+              </Button>
+              <span className="text-[11px] font-bold text-foreground tabular-nums px-1.5">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="h-6.5 px-2 text-[10px] font-bold rounded-lg"
+              >
+                <span className="hidden sm:inline">Sonraki</span>
+                <ChevronRight className="h-3 w-3 ml-0.5" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Cart and Customer Selection (Right Pane) */}
-      <div className="lg:col-span-4 flex flex-col gap-6 overflow-hidden">
-        <div className="flex flex-col flex-1 overflow-hidden bg-card border border-border/40 rounded-[2.5rem] shadow-sm">
-          {/* Cart Header */}
-          <div className="p-8 border-b border-border/40 flex items-center justify-between bg-muted/5">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
-                <ShoppingCart className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl text-foreground">Aktif <span className="text-primary">Sepet</span></span>
-                <p className="text-[10px] text-muted-foreground">{cart.length} Ürün Seçildi</p>
-              </div>
+      <div className="lg:col-span-4 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl">
+        {/* Cart Header */}
+        <div className="h-11 px-3 sm:px-4 border-b border-border/40 flex items-center justify-between bg-muted/15 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-xs">
+              <ShoppingCart className="h-3.5 w-3.5 text-primary" />
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setCart([])} className="h-10 rounded-full text-[10px] text-rose-500 hover:bg-rose-500/10 px-6 border border-rose-500/40">
-              BOŞALT
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-bold text-foreground">Sepet</span>
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {cart.reduce((acc, item) => acc + item.quantity, 0)} Adet
+              </span>
+            </div>
+          </div>
+          {cart.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCart([])}
+              className="h-7 rounded-lg text-[10px] font-bold text-rose-500 hover:bg-rose-500/10 px-2.5 border border-rose-500/30 gap-1"
+            >
+              <Trash2 className="h-3 w-3" />
+              <span>Temizle</span>
             </Button>
-          </div>
+          )}
+        </div>
 
-          <div className="p-8 border-b border-border/40 bg-muted/5 flex flex-col gap-4">
-            <CustomerSelector
-              customers={customers}
-              selectedCustomerId={selectedCustomerId}
-              setSelectedCustomerId={setSelectedCustomerId}
-              customerSearch={customerSearch}
-              setCustomerSearch={setCustomerSearch}
-              onNewCustomer={handleQuickCreateCustomer}
-              isProcessing={isCreatingCustomer}
-            />
-            <Textarea 
-              placeholder="Açıklama / Not (İsteğe Bağlı)" 
-              value={saleDescription} 
-              onChange={(e) => setSaleDescription(e.target.value)} 
-              className="text-xs min-h-[60px] bg-background border-border/40 resize-none rounded-xl"
-            />
-          </div>
-
-          {/* Cart Items */}
-          <div className="flex-none overflow-y-auto p-0 custom-scrollbar relative max-h-[48vh]">
-            <div className="divide-y divide-white/5">
-              {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground/80 p-10 text-center">
-                  <div className="relative">
-                    <ShoppingCart className="h-16 w-16 mb-4 opacity-[0.03] text-foreground" />
-                    <ShoppingCart className="h-8 w-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 text-primary" />
-                  </div>
-                  <p className="text-[9px] opacity-40">Sepetiniz şu an boş</p>
-                </div>
-              ) : (
-                cart.map((item) => (
-                  <CartItem
-                    key={item.id}
-                    item={item}
-                    updateQuantity={updateQuantity}
-                    updatePrice={updatePrice}
-                    removeFromCart={removeFromCart}
-                    getCartCurrencySymbol={getCartCurrencySymbol}
-                    getEquivalentDisplay={getEquivalentDisplay}
-                    displayPrice={getCartDisplayPrice(item)}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          <CheckoutSummary
-            paymentMethod={paymentMethod}
-            setPaymentMethod={setPaymentMethod}
-            loyaltyEnabled={loyaltyEnabled}
-            totalPoints={totalPoints}
-            pointValueTl={pointValueTl}
-            applyLoyaltyDiscount={applyLoyaltyDiscount}
-            setApplyLoyaltyDiscount={setApplyLoyaltyDiscount}
-            loyaltyDiscountAmount={loyaltyDiscountAmount}
-            onCheckout={handleCheckout}
-            isProcessing={isProcessing}
-            isDebtBlocked={paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")}
-            defaultCurrency={defaultCurrency}
-            rates={exchangeRates}
-            formattedTotal={formattedTotal}
-            formattedSubtotal={formattedSubtotal}
-            formattedTax={formattedTax}
-            formattedEquivalentTotal={formattedEquivalentTotal}
-            accounts={eligibleAccounts}
-            selectedAccountId={selectedAccountId}
-            setSelectedAccountId={setSelectedAccountId}
+        {/* Customer & Description */}
+        <div className="p-2 sm:p-2.5 border-b border-border/30 bg-muted/5 flex flex-col gap-1.5 shrink-0">
+          <CustomerSelector
+            customers={customers}
+            selectedCustomerId={selectedCustomerId}
+            setSelectedCustomerId={setSelectedCustomerId}
+            customerSearch={customerSearch}
+            setCustomerSearch={setCustomerSearch}
+            onNewCustomer={handleQuickCreateCustomer}
+            isProcessing={isCreatingCustomer}
+            isCompact={true}
+          />
+          <Textarea 
+            placeholder="Satış notu veya açıklama (İsteğe bağlı)..." 
+            value={saleDescription} 
+            onChange={(e) => setSaleDescription(e.target.value)} 
+            className="text-xs min-h-[38px] max-h-[52px] bg-background/80 border-border/40 resize-none rounded-lg py-1 px-2.5 shadow-inner"
           />
         </div>
+
+        {/* Cart Items List */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-2 custom-scrollbar relative">
+          <div className="space-y-1.5">
+            {cart.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground/60 py-12 px-4 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center mb-2">
+                  <ShoppingCart className="h-6 w-6 opacity-30 text-muted-foreground" />
+                </div>
+                <p className="text-xs font-semibold text-foreground/80">Sepetiniz Boş</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Ürünlere tıklayarak veya barkod okutarak sepete ekleyin.</p>
+              </div>
+            ) : (
+              cart.map((item) => (
+                <CartItem
+                  key={item.id}
+                  item={item}
+                  updateQuantity={updateQuantity}
+                  updatePrice={updatePrice}
+                  removeFromCart={removeFromCart}
+                  getCartCurrencySymbol={getCartCurrencySymbol}
+                  getEquivalentDisplay={getEquivalentDisplay}
+                  displayPrice={getCartDisplayPrice(item)}
+                  isCompact={true}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Checkout Summary */}
+        <CheckoutSummary
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
+          loyaltyEnabled={loyaltyEnabled}
+          totalPoints={totalPoints}
+          pointValueTl={pointValueTl}
+          applyLoyaltyDiscount={applyLoyaltyDiscount}
+          setApplyLoyaltyDiscount={setApplyLoyaltyDiscount}
+          loyaltyDiscountAmount={loyaltyDiscountAmount}
+          onCheckout={handleCheckout}
+          isProcessing={isProcessing}
+          isDebtBlocked={paymentMethod === "DEBT" && (!selectedCustomerId || selectedCustomerId === "null")}
+          defaultCurrency={defaultCurrency}
+          rates={exchangeRates}
+          formattedTotal={formattedTotal}
+          formattedSubtotal={formattedSubtotal}
+          formattedTax={formattedTax}
+          formattedEquivalentTotal={formattedEquivalentTotal}
+          accounts={eligibleAccounts}
+          selectedAccountId={selectedAccountId}
+          setSelectedAccountId={setSelectedAccountId}
+        />
       </div>
 
       {lastSale && (
@@ -1085,7 +1221,7 @@ export function POSInterface({ initialSaleId }: {
         ? createPortal(content, document.body)
         : content}
 
-      {/* Ürün Seçildi Yeşil Popup Yığını (Document body portal ile z-[99999] üstte gösterilir) */}
+      {/* Ürün Seçildi Yeşil Popup Yığını */}
       {typeof document !== "undefined" && selectionToasts.length > 0 &&
         createPortal(
           <div className="fixed bottom-6 right-6 z-[99999] flex flex-col-reverse items-end gap-1.5 pointer-events-none select-none max-sm:bottom-20 max-sm:left-1/2 max-sm:-translate-x-1/2 max-sm:right-auto max-sm:items-center">
@@ -1102,7 +1238,7 @@ export function POSInterface({ initialSaleId }: {
                     {toast.name}
                   </span>
                   <span className="text-[9px] font-bold text-emerald-100/90 leading-none mt-0.5">
-                    Ürün seçildi
+                    Ürün sepete eklendi
                   </span>
                 </div>
                 <span className="text-[11px] font-black tabular-nums bg-black/20 text-emerald-100 px-2 py-0.5 rounded-lg shrink-0">

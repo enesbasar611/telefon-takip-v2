@@ -124,20 +124,56 @@ export const getProducts = cache(async function getProducts(options: {
     }
 
     // Price filters
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      const priceField = currency === "USD" ? "buyPriceUsd" : "buyPrice";
-      where[priceField] = {};
-      if (minPrice !== undefined) where[priceField].gte = minPrice;
-      if (maxPrice !== undefined) where[priceField].lte = maxPrice;
+    const validMinPrice = typeof minPrice === "number" && !isNaN(minPrice) ? minPrice : undefined;
+    const validMaxPrice = typeof maxPrice === "number" && !isNaN(maxPrice) ? maxPrice : undefined;
+
+    if (validMinPrice !== undefined || validMaxPrice !== undefined) {
+      const priceRange: any = {};
+      if (validMinPrice !== undefined) priceRange.gte = validMinPrice;
+      if (validMaxPrice !== undefined) priceRange.lte = validMaxPrice;
+
+      let priceConditions: any[] = [];
+      if (currency === "USD") {
+        priceConditions = [
+          { sellPriceUsd: priceRange },
+          { buyPriceUsd: priceRange }
+        ];
+      } else if (currency === "TL") {
+        priceConditions = [
+          { sellPrice: priceRange },
+          { buyPrice: priceRange }
+        ];
+      } else {
+        priceConditions = [
+          { sellPrice: priceRange },
+          { buyPrice: priceRange },
+          { sellPriceUsd: priceRange },
+          { buyPriceUsd: priceRange }
+        ];
+      }
+
+      if (where.OR) {
+        where.AND = [
+          ...(where.AND || []),
+          { OR: where.OR },
+          { OR: priceConditions }
+        ];
+        delete where.OR;
+      } else {
+        where.OR = priceConditions;
+      }
     }
 
     // Stock filters
+    const validMinStock = typeof minStock === "number" && !isNaN(minStock) ? minStock : undefined;
+    const validMaxStock = typeof maxStock === "number" && !isNaN(maxStock) ? maxStock : undefined;
+
     if (outOfStock) {
       where.stock = { lte: 0 };
-    } else if (minStock !== undefined || maxStock !== undefined) {
+    } else if (validMinStock !== undefined || validMaxStock !== undefined) {
       where.stock = {};
-      if (minStock !== undefined) where.stock.gte = minStock;
-      if (maxStock !== undefined) where.stock.lte = maxStock;
+      if (validMinStock !== undefined) where.stock.gte = validMinStock;
+      if (validMaxStock !== undefined) where.stock.lte = validMaxStock;
     }
 
     // Critical stock filter

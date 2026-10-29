@@ -6,40 +6,66 @@ export interface DashboardWidgetConfig {
 }
 
 export const SYSTEM_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
-  // ROW 1: Financial KPIs
+  // ROW 1: Financial KPIs (24 cols total, 1 row tall)
   { id: "stat_sales", cols: 6, rows: 1 },
   { id: "stat_income", cols: 6, rows: 1 },
   { id: "stat_collections", cols: 6, rows: 1 },
   { id: "stat_accounts", cols: 6, rows: 1 },
 
-  // ROW 2: Operational KPIs
+  // ROW 2: Operational KPIs (24 cols total, 1 row tall)
   { id: "stat_ready", cols: 6, rows: 1 },
   { id: "stat_pending", cols: 6, rows: 1 },
   { id: "stat_stock", cols: 6, rows: 1 },
   { id: "stat_debts", cols: 6, rows: 1 },
 
-  // ROW 3: Main Analytics & Overview
-  { id: "revenue", cols: 16, rows: 3 },
-  { id: "service_status", cols: 8, rows: 2 },
+  // ROW 3: Main Performance & Analytics (15 + 9 = 24 cols, 3 rows tall)
+  { id: "revenue", cols: 15, rows: 3 },
+  { id: "service_status", cols: 9, rows: 3 },
 
-  // ROW 4: Insights & Activity
-  { id: "ai_insights", cols: 10, rows: 2 },
-  { id: "activity", cols: 14, rows: 3 },
-
-  // ROW 5: Detailed Lists
+  // ROW 4: Operations & Live Transactions (12 + 12 = 24 cols, 3 rows tall)
   { id: "service_queue", cols: 12, rows: 3 },
   { id: "transactions", cols: 12, rows: 3 },
 
-  // ROW 6: Inventory & Receivables
-  { id: "inventory", cols: 10, rows: 3 },
-  { id: "receivables", cols: 14, rows: 3 },
+  // ROW 5: AI Intelligence & Live Activity Feed (12 + 12 = 24 cols, 3 rows tall)
+  { id: "ai_insights", cols: 12, rows: 3 },
+  { id: "activity", cols: 12, rows: 3 },
 
-  // Extra Widgets (Courier Status)
+  // ROW 6: Inventory Performance & Receivables (12 + 12 = 24 cols, 3 rows tall)
+  { id: "inventory", cols: 12, rows: 3 },
+  { id: "receivables", cols: 12, rows: 3 },
+
+  // ROW 7: Logistics & Delivery (24 cols, 2 rows tall)
   { id: "shortage_status", cols: 24, rows: 2 },
 ];
 
 function isPositiveNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+export function isLegacyOrBrokenLayout(layout: Array<DashboardWidgetConfig | string> | null | undefined): boolean {
+  if (!Array.isArray(layout) || layout.length === 0) return true;
+
+  // Check if primary system widgets are missing
+  const ids = new Set(layout.map((item) => (typeof item === "string" ? item : item?.id)));
+  if (!ids.has("revenue") || !ids.has("service_status") || !ids.has("stat_sales")) {
+    return true;
+  }
+
+  // Detect outdated dimension signatures that caused uneven grid gaps
+  const configs = layout.filter((item) => typeof item !== "string") as DashboardWidgetConfig[];
+  const serviceStatus = configs.find((c) => c.id === "service_status");
+  if (serviceStatus && (serviceStatus.rows === 2 || serviceStatus.cols === 8)) return true;
+
+  const aiInsights = configs.find((c) => c.id === "ai_insights");
+  if (aiInsights && (aiInsights.cols === 10 || aiInsights.rows === 2)) return true;
+
+  const inventory = configs.find((c) => c.id === "inventory");
+  if (inventory && inventory.cols === 10) return true;
+
+  const revenue = configs.find((c) => c.id === "revenue");
+  if (revenue && revenue.cols === 16) return true;
+
+  return false;
 }
 
 export function getSystemDashboardLayout(availableWidgetIds: Iterable<string>) {
@@ -56,7 +82,8 @@ export function normalizeDashboardLayout(
   const fallback = fallbackLayout ?? getSystemDashboardLayout(available);
   const fallbackById = new Map(fallback.map((item) => [item.id, item]));
 
-  if (!Array.isArray(layout) || layout.length === 0) {
+  // If layout is missing, empty, or has outdated dimensions causing gaps, return clean balanced default
+  if (!Array.isArray(layout) || layout.length === 0 || isLegacyOrBrokenLayout(layout)) {
     return fallback.map((item) => ({ ...item }));
   }
 
@@ -65,19 +92,36 @@ export function normalizeDashboardLayout(
       const id = typeof item === "string" ? item : item?.id;
       if (!id || !available.has(id)) return null;
 
-      const defaultItem = fallbackById.get(id) ?? { id, cols: 6, rows: 2 };
+      const defaultItem = fallbackById.get(id) ?? { id, cols: 12, rows: 3 };
       if (typeof item === "string") {
         return { ...defaultItem };
       }
 
+      // Upgrade known outdated dimensions to balanced pairs
+      let cols = isPositiveNumber(item.cols) ? Math.min(24, Math.max(1, item.cols)) : defaultItem.cols;
+      let rows = isPositiveNumber(item.rows) ? Math.min(40, Math.max(1, item.rows)) : defaultItem.rows;
+
+      if (id === "service_status" && rows === 2) rows = 3;
+      if (id === "ai_insights" && (rows === 2 || cols === 10)) { rows = 3; cols = 12; }
+      if (id === "inventory" && cols === 10) cols = 12;
+      if (id === "revenue" && cols === 16) cols = 15;
+
       return {
         ...item,
         id,
-        cols: isPositiveNumber(item.cols) ? Math.min(24, Math.max(1, item.cols)) : defaultItem.cols,
-        rows: isPositiveNumber(item.rows) ? Math.min(40, Math.max(1, item.rows)) : defaultItem.rows,
+        cols,
+        rows,
       };
     })
     .filter(Boolean) as DashboardWidgetConfig[];
+
+  // Ensure any missing system widgets from available list are appended gracefully
+  const existingIds = new Set(normalized.map((n) => n.id));
+  for (const fallbackItem of fallback) {
+    if (!existingIds.has(fallbackItem.id) && available.has(fallbackItem.id)) {
+      normalized.push({ ...fallbackItem });
+    }
+  }
 
   return normalized.length > 0 ? normalized : fallback.map((item) => ({ ...item }));
 }

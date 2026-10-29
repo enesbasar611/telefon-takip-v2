@@ -21,6 +21,7 @@ import { useUI } from "@/lib/context/ui-context";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
 import { useRouter } from "next/navigation";
+import { BorderBeam } from "border-beam";
 
 interface Category {
     id: string;
@@ -555,15 +556,17 @@ export function AICategoryCreator({
                 {triggerButton ? (
                     triggerButton
                 ) : (
-                    <Button
-                        className={cn(
-                            "gap-2 h-10 px-5 rounded-xl bg-white dark:bg-[#111] border border-zinc-200 dark:border-[#333] text-indigo-600 dark:text-violet-400 hover:bg-zinc-50 dark:hover:bg-[#18181A] transition-all text-xs font-bold uppercase tracking-wider shadow-sm gemini-aura-button",
-                            className
-                        )}
-                    >
-                        <Sparkles className="h-4 w-4" />
-                        {triggerText}
-                    </Button>
+                    <BorderBeam size="sm" colorVariant="colorful" strength={0.8} className="rounded-xl inline-flex">
+                        <Button
+                            className={cn(
+                                "gap-2 h-10 px-5 rounded-xl bg-white dark:bg-[#111] border border-zinc-200 dark:border-[#333] text-indigo-600 dark:text-violet-400 hover:bg-zinc-50 dark:hover:bg-[#18181A] transition-all text-xs font-bold uppercase tracking-wider shadow-sm",
+                                className
+                            )}
+                        >
+                            <Sparkles className="h-4 w-4 text-violet-500 animate-pulse" />
+                            {triggerText}
+                        </Button>
+                    </BorderBeam>
                 )}
             </DialogTrigger>
 

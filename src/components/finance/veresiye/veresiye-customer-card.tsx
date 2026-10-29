@@ -8,7 +8,6 @@ import {
     MessageCircle,
     Receipt,
     Eye,
-    ChevronDown,
     MoreVertical,
     PlusCircle,
     RotateCcw
@@ -76,17 +75,17 @@ export function VeresiyeCustomerCard({
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(idx * 0.02, 0.3) }}
+            transition={{ delay: Math.min(idx * 0.015, 0.2), duration: 0.2 }}
             onClick={() => onDetail(item)}
             className={cn(
                 "group relative transition-all overflow-hidden cursor-pointer",
                 viewMode === 'list'
-                    ? "py-2 px-3 sm:py-2.5 sm:px-4 md:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 hover:bg-muted/30 border-b border-border/40 bg-card/40"
-                    : "p-3 sm:p-3.5 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/30 flex flex-col justify-between gap-3",
+                    ? "py-2 px-3 sm:py-2.5 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3.5 hover:bg-muted/40 border-b border-border/40 bg-card/40 transition-colors"
+                    : "p-3 sm:p-3.5 rounded-2xl border border-border/50 bg-card/80 hover:bg-card/95 backdrop-blur-sm shadow-2xs hover:shadow-xs hover:border-primary/30 flex flex-col justify-between gap-2.5",
                 isSelected && (viewMode === 'list' ? "bg-primary/5 dark:bg-primary/10" : "ring-2 ring-primary/40 bg-primary/[0.03]"),
-                hasNoDebt ? (viewMode === 'list' ? "border-l-4 border-l-emerald-500" : "border-emerald-500/30") : (viewMode === 'list' ? "border-l-4 border-l-rose-500" : "border-rose-500/30")
+                hasNoDebt ? (viewMode === 'list' ? "border-l-3 border-l-emerald-500" : "border-emerald-500/25") : (viewMode === 'list' ? "border-l-3 border-l-rose-500" : "border-rose-500/25")
             )}
         >
             {/* Top row / Info Section */}
@@ -98,20 +97,20 @@ export function VeresiyeCustomerCard({
                         onSelect(item.customerId);
                     }}
                     className={cn(
-                        "w-4 h-4 sm:w-5 sm:h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0",
+                        "w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0",
                         isSelected
-                            ? "bg-primary border-primary shadow-sm text-primary-foreground"
+                            ? "bg-primary border-primary shadow-2xs text-primary-foreground"
                             : "border-muted-foreground/40 bg-background hover:border-primary/60"
                     )}
                 >
-                    {isSelected && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-sm bg-white" />}
+                    {isSelected && <div className="w-1.5 h-1.5 rounded-xs bg-white" />}
                 </div>
 
                 {/* Avatar with initial */}
                 <div className="shrink-0 relative">
                     <div className={cn(
-                        "rounded-xl flex items-center justify-center font-extrabold text-white shadow-md select-none transition-transform group-hover:scale-105",
-                        viewMode === 'grid' ? "w-8 h-8 text-xs" : "w-8 h-8 text-xs sm:w-9 sm:h-9 sm:text-sm",
+                        "rounded-xl flex items-center justify-center font-extrabold text-white shadow-2xs select-none transition-transform group-hover:scale-105",
+                        viewMode === 'grid' ? "w-8 h-8 text-xs" : "w-8 h-8 text-xs sm:w-8.5 sm:h-8.5 sm:text-xs",
                         hasNoDebt ? "bg-gradient-to-br from-emerald-500 to-teal-600" : "bg-gradient-to-br from-indigo-500 to-blue-600"
                     )}>
                         {item.name.charAt(0).toUpperCase()}
@@ -120,7 +119,7 @@ export function VeresiyeCustomerCard({
 
                 {/* Customer Details */}
                 <div className="flex-1 min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                         <h3 className="font-bold tracking-tight text-foreground uppercase truncate text-xs sm:text-sm">
                             {item.name}
                         </h3>
@@ -136,12 +135,12 @@ export function VeresiyeCustomerCard({
                         )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10px] sm:text-[11px] text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px] text-muted-foreground">
                         {item.phone ? (
                             <a
                                 href={`tel:${item.phone}`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="hover:text-primary flex items-center gap-1"
+                                className="hover:text-primary flex items-center gap-1 transition-colors"
                             >
                                 <Phone className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground/70" />
                                 <span>{item.phone}</span>
@@ -198,7 +197,7 @@ export function VeresiyeCustomerCard({
                     >
                         <Button
                             size="sm"
-                            className="hidden sm:inline-flex h-8 px-2.5 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-1.5 shadow-sm transition-all shrink-0"
+                            className="hidden sm:inline-flex h-8 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-1.5 shadow-2xs transition-all shrink-0"
                         >
                             <PlusCircle className="w-3.5 h-3.5" />
                             <span className="hidden md:inline">Yeni Borç Ekle</span>
@@ -210,7 +209,7 @@ export function VeresiyeCustomerCard({
                     <Button
                         size="sm"
                         onClick={() => onPayment(item)}
-                        className="h-8 px-2.5 sm:px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1 shadow-sm transition-all"
+                        className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1 shadow-2xs transition-all"
                     >
                         <span>Tahsilat</span>
                     </Button>
@@ -221,7 +220,7 @@ export function VeresiyeCustomerCard({
                         size="icon"
                         onClick={() => onWhatsApp(item)}
                         title="WhatsApp Ekstre Gönder"
-                        className="h-8 w-8 rounded-xl text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
+                        className="h-8 w-8 rounded-xl text-emerald-600 border-emerald-500/25 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
                     >
                         <MessageCircle className="w-3.5 h-3.5" />
                     </Button>

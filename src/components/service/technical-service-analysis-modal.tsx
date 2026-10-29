@@ -25,7 +25,7 @@ import {
 import { getTechnicalServiceAnalysis } from "@/lib/actions/gemini-actions";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { BorderBeam } from "@/components/ui/border-beam";
+import { BorderBeam } from "border-beam";
 import { cn } from "@/lib/utils";
 
 export function TechnicalServiceAnalysisModal({ trigger }: { trigger?: React.ReactNode }) {
@@ -61,19 +61,18 @@ export function TechnicalServiceAnalysisModal({ trigger }: { trigger?: React.Rea
     >
       <DialogTrigger asChild>
         {trigger || (
-          <Button
-            className="group relative h-11 gap-2 overflow-hidden rounded-xl border border-blue-500/30 bg-blue-950/40 px-6 backdrop-blur-xl transition-all hover:bg-blue-900/60 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.5)]"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 animate-pulse-slow" />
-            <BorderBeam duration={4} size={150} className="opacity-70" />
-            
-            <div className="relative flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)] group-hover:scale-110 transition-transform animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
-              <Sparkles className="absolute h-4 w-4 text-blue-300 drop-shadow-[0_0_12px_rgba(96,165,250,1)] group-hover:scale-110 transition-transform" />
-            </div>
-            
-            <span className="relative text-[11px] font-black tracking-widest text-white uppercase drop-shadow-md">BAŞAR AI ANALİZ</span>
-          </Button>
+          <BorderBeam size="sm" colorVariant="ocean" strength={0.8} className="rounded-xl inline-flex">
+            <Button
+              className="group relative h-11 gap-2 overflow-hidden rounded-xl border border-blue-500/30 bg-blue-950/40 px-6 backdrop-blur-xl transition-all hover:bg-blue-900/60 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.5)]"
+            >
+              <div className="relative flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)] group-hover:scale-110 transition-transform animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                <Sparkles className="absolute h-4 w-4 text-blue-300 drop-shadow-[0_0_12px_rgba(96,165,250,1)] group-hover:scale-110 transition-transform" />
+              </div>
+              
+              <span className="relative text-[11px] font-black tracking-widest text-white uppercase drop-shadow-md">BAŞAR AI ANALİZ</span>
+            </Button>
+          </BorderBeam>
         )}
       </DialogTrigger>
 
