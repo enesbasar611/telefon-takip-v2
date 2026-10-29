@@ -41,6 +41,26 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-29: Hızlı Satış (`/satis`) Mobil Görünüm Sekmeli Sepet, Adımlı Satış Akışı & Müşteri Seçim Modalı:
+  - **Talep:**
+    - Mobilde sepet ve ürün kataloğunun sıkışıp ürün seçiminin engellenmesi sorununa çözüm: Sekmeli / adımlı (stepped flow) mobil mimari (Önce geniş ekranda ürün seçimi, ardından müşteri seçimi, sonrasında satış onayı).
+    - Müşteri seçimini tek tıkla açılan temiz bir modal / buton haline getirmek; mobilde ekranı maksimum ferah ve kullanışlı kılmak.
+  - **Yapılan İyileştirmeler:**
+    1. **Özel Müşteri Seçim Modalı (`src/components/pos/parts/customer-modal.tsx`):**
+       - Radix `Dialog` tabanlı, mobil ve masaüstü tam uyumlu, yukarı/aşağı taşma riski olmayan bağımsız müşteri modalı geliştirildi.
+       - Otomatik odaklanan hızlı arama çubuğu, tek tıkla Perakende Satış kartı, hızlı müşteri oluşturma kartı (`onQuickCreateCustomer`) ve VIP rozetli müşteri listesi entegre edildi.
+    2. **Mobil Sekmeli / Adımlı POS Arayüzü (`src/components/pos/pos-interface.tsx`):**
+       - `mobileTab` state (`"PRODUCTS" | "CART"`) eklendi.
+       - Mobilde üstte `[🛍️ Ürünler (X)]` ve `[🛒 Sepet (Y)]` segment kontrolü yerleştirildi.
+       - Ürün seçimi modunda sol katalog paneli mobilde tam ekran genişlikte açılıyor, sepet gizleniyor; ürünler ferah ızgara veya kompakt listede rahatça seçilebiliyor.
+       - Sepete ürün eklendiğinde ekranın altından yumuşakça kayarak beliren dinamik yüzen sepet çubuğu (`[🛒 X Ürün • ₺Toplam] [Sepete Git & Ödeme Yap →]`) eklendi.
+       - Sepet moduna geçildiğinde sol panel gizlenip sepet paneli tam ekran açılıyor; üstte tek tıkla ürünlere dönmeyi sağlayan `[← Ürünler]` butonu bulunuyor.
+       - Sepet panelindeki hantal dropdown yerine şık, 1 satırlık `MÜŞTERİ HESABI` kartı ve `[Değiştir]` / `[Perakende Yap X]` aksiyonları yerleştirildi.
+       - Sol panel başlığında doğrudan `CustomerModal`'ı açan kompakt müşteri hap butonu eklendi.
+       - Satış tamamlandığında veya fiş kapatıldığında arayüz otomatik olarak ürün kataloğuna dönerek bir sonraki satışa hazır hale getiriliyor.
+       - Masaüstü görünümü (`lg:`) hiçbir şekilde bozulmadan 8 sütun katalog + 4 sütun sepet yan yana bento ızgarasını korumaya devam ediyor.
+    3. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata). Dev server kesintisiz korundu.
+
 - [x] 2026-10-29: Hızlı Satış (`/satis`) Kategori Bazlı Özgün ve Mat Border Renklendirme Sistemi:
   - **Talep:**
     - Ürün kartları ve kategori butonlarının bordürlerine kategoriye göre özgü renkler atanması.

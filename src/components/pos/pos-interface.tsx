@@ -44,7 +44,9 @@ import {
   ScanLine,
   LayoutGrid,
   List,
-  Filter
+  Filter,
+  User,
+  UserCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createSale, getSaleById } from "@/lib/actions/sale-actions";
@@ -65,6 +67,7 @@ import { useDashboardData, useTenant } from "@/lib/context/dashboard-data-contex
 import { ProductCard } from "./parts/product-card";
 import { CartItem } from "./parts/cart-item";
 import { CustomerSelector } from "./parts/customer-selector";
+import { CustomerModal } from "./parts/customer-modal";
 import { CheckoutSummary } from "./parts/checkout-summary";
 import { QuickCreateProductModal } from "@/components/product/quick-create-product-modal";
 import { SmartStockGuardrailModal } from "./parts/smart-stock-guardrail-modal";
@@ -178,6 +181,10 @@ export function POSInterface({ initialSaleId }: {
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const customerSearchRef = useRef<HTMLInputElement>(null);
+
+  // Mobil Sekmeli Görünüm (Ürünler vs Sepet) & Müşteri Modalı
+  const [mobileTab, setMobileTab] = useState<"PRODUCTS" | "CART">("PRODUCTS");
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -700,6 +707,7 @@ export function POSInterface({ initialSaleId }: {
           setSelectedCustomerId(undefined);
           setCustomerSearch("");
           setSaleDescription("");
+          setMobileTab("PRODUCTS");
           queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-service-metrics"] });
@@ -735,16 +743,54 @@ export function POSInterface({ initialSaleId }: {
       )}
 
       {/* Product Selection Area (Left Pane) */}
-      <div className="lg:col-span-8 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl">
+      <div className={cn(
+        "lg:col-span-8 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl",
+        mobileTab === "CART" && "hidden lg:flex"
+      )}>
+        {/* Mobile Top Segmented Tab Switcher */}
+        <div className="flex lg:hidden items-center p-1 bg-muted/20 border-b border-border/30 gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setMobileTab("PRODUCTS")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all",
+              mobileTab === "PRODUCTS"
+                ? "bg-card text-foreground shadow-xs border border-border/40"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Package className="h-3.5 w-3.5" />
+            <span>Ürünler ({filteredProducts.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("CART")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all relative",
+              mobileTab === "CART"
+                ? "bg-card text-foreground shadow-xs border border-border/40"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ShoppingCart className="h-3.5 w-3.5" />
+            <span>Sepet ({cart.reduce((acc, item) => acc + item.quantity, 0)})</span>
+            {cart.length > 0 && (
+              <span className="ml-1 text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
+                {getCartCurrencySymbol()}{displayTotal.toFixed(0)}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Top Controls & Search Bar */}
-        <div className="p-2.5 sm:p-3 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-muted/10 shrink-0">
-          {/* Mobile Title & Currency */}
+        <div className="p-2 sm:p-2.5 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-muted/10 shrink-0">
+          {/* Title, Currency & Customer Trigger */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-xl bg-primary flex items-center justify-center shadow-xs shrink-0">
                 <ShoppingCart className="h-4 w-4 text-primary-foreground" />
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <h2 className="font-extrabold text-sm sm:text-base text-foreground leading-none tracking-tight">Hızlı Satış</h2>
                 <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">POS Terminali</span>
               </div>
@@ -756,7 +802,7 @@ export function POSInterface({ initialSaleId }: {
                 type="button"
                 onClick={() => toggleSaleCurrency("TRY")}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg text-xs font-black transition-all",
+                  "px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-black transition-all",
                   saleCurrency === "TRY" ? "bg-emerald-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -766,22 +812,40 @@ export function POSInterface({ initialSaleId }: {
                 type="button"
                 onClick={() => toggleSaleCurrency("USD")}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg text-xs font-black transition-all",
+                  "px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-black transition-all",
                   saleCurrency === "USD" ? "bg-blue-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 $ USD
               </button>
             </div>
+
+            {/* Customer Quick Trigger Button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCustomerModalOpen(true)}
+              className={cn(
+                "h-8 rounded-xl px-2.5 text-xs font-bold gap-1.5 shrink-0 border transition-all",
+                selectedCustomer
+                  ? "bg-primary/10 border-primary/30 text-primary shadow-xs"
+                  : "bg-card/70 border-border/40 text-muted-foreground hover:text-foreground"
+              )}
+              title="Müşteri Seç veya Değiştir"
+            >
+              {selectedCustomer ? <UserCheck className="h-3.5 w-3.5 text-primary" /> : <User className="h-3.5 w-3.5 text-muted-foreground" />}
+              <span className="truncate max-w-[85px] sm:max-w-[120px]">{selectedCustomer ? selectedCustomer.name : "Müşteri Seç"}</span>
+            </Button>
           </div>
 
           {/* Search Box */}
-          <div className="flex-1 w-full sm:max-w-md">
+          <div className="flex-1 w-full sm:max-w-xs md:max-w-sm">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
-                placeholder="Ürün adı, barkod okut veya kategori ara..."
-                className="pl-9 pr-14 bg-background/80 border-border/40 h-9 sm:h-9.5 rounded-xl text-xs focus:bg-background focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
+                placeholder="Ürün adı, barkod okut veya ara..."
+                className="pl-8 pr-14 bg-background/80 border-border/40 h-8.5 rounded-xl text-xs focus:bg-background focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
                 value={displaySearchTerm}
                 onChange={(e) => setDisplaySearchTerm(e.target.value)}
                 onKeyDown={(e) => {
@@ -796,35 +860,35 @@ export function POSInterface({ initialSaleId }: {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-lg"
+                    className="h-6.5 w-6.5 text-muted-foreground hover:text-foreground rounded-lg"
                     onClick={() => setDisplaySearchTerm("")}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3 w-3" />
                   </Button>
                 )}
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                  className="h-6.5 w-6.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                   onClick={() => setIsScannerModalOpen(true)}
                   title="Barkod Okuyucu Aç"
                 >
-                  <ScanLine className="h-4 w-4" />
+                  <ScanLine className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Right Actions: Stock Filter, View Mode, Fast Product, Fullscreen */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-between sm:justify-end">
+          <div className="flex items-center gap-1.5 shrink-0 justify-between sm:justify-end flex-wrap">
             {/* Stock Filter Pills */}
             <div className="flex items-center rounded-xl border border-border/40 bg-muted/30 p-0.5 text-[10px]">
               <button
                 type="button"
                 onClick={() => setStockFilter("ALL")}
                 className={cn(
-                  "px-2 py-1 rounded-lg font-bold uppercase transition-all",
+                  "px-2 py-0.5 rounded-lg font-bold uppercase transition-all",
                   stockFilter === "ALL" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -834,7 +898,7 @@ export function POSInterface({ initialSaleId }: {
                 type="button"
                 onClick={() => setStockFilter("IN_STOCK")}
                 className={cn(
-                  "px-2 py-1 rounded-lg font-bold uppercase transition-all",
+                  "px-2 py-0.5 rounded-lg font-bold uppercase transition-all",
                   stockFilter === "IN_STOCK" ? "bg-emerald-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -844,7 +908,7 @@ export function POSInterface({ initialSaleId }: {
                 type="button"
                 onClick={() => setStockFilter("CRITICAL")}
                 className={cn(
-                  "px-2 py-1 rounded-lg font-bold uppercase transition-all",
+                  "px-2 py-0.5 rounded-lg font-bold uppercase transition-all",
                   stockFilter === "CRITICAL" ? "bg-amber-600 text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -858,7 +922,7 @@ export function POSInterface({ initialSaleId }: {
                 type="button"
                 onClick={() => handleViewModeChange("GRID")}
                 className={cn(
-                  "p-1.5 rounded-lg transition-all",
+                  "p-1 rounded-lg transition-all",
                   viewMode === "GRID" ? "bg-card text-foreground shadow-xs border border-border/30" : "text-muted-foreground hover:text-foreground"
                 )}
                 title="Izgara Görünümü"
@@ -869,7 +933,7 @@ export function POSInterface({ initialSaleId }: {
                 type="button"
                 onClick={() => handleViewModeChange("LIST")}
                 className={cn(
-                  "p-1.5 rounded-lg transition-all",
+                  "p-1 rounded-lg transition-all",
                   viewMode === "LIST" ? "bg-card text-foreground shadow-xs border border-border/30" : "text-muted-foreground hover:text-foreground"
                 )}
                 title="Kompakt Liste Görünümü"
@@ -886,11 +950,11 @@ export function POSInterface({ initialSaleId }: {
                 setQuickProductName(displaySearchTerm || "");
                 setQuickProductOpen(true);
               }}
-              className="h-8 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 text-xs font-bold gap-1 shrink-0 transition-all shadow-xs"
+              className="h-7.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2 text-xs font-bold gap-1 shrink-0 transition-all shadow-xs"
               title="Yeni ürün oluştur"
             >
-              <Plus className="h-3.5 w-3.5" />
-              <span className="hidden xl:inline">Ürün Ekle</span>
+              <Plus className="h-3 w-3" />
+              <span className="hidden sm:inline">Ürün</span>
             </Button>
 
             {/* Fullscreen Button */}
@@ -898,10 +962,10 @@ export function POSInterface({ initialSaleId }: {
               variant="outline"
               size="icon"
               onClick={toggleFullscreen}
-              className="h-8 w-8 rounded-xl border-border/40 hover:bg-muted/50 transition-all shrink-0"
+              className="h-7.5 w-7.5 rounded-xl border-border/40 hover:bg-muted/50 transition-all shrink-0"
               title={isFullscreen ? "Tam Ekrandan Çık" : "Tam Ekran Yap"}
             >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             </Button>
           </div>
         </div>
@@ -942,7 +1006,10 @@ export function POSInterface({ initialSaleId }: {
         </div>
 
         {/* Product Items Area */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-2.5 sm:p-3 custom-scrollbar bg-muted/5 relative">
+        <div className={cn(
+          "flex-1 min-h-0 overflow-y-auto p-2.5 sm:p-3 custom-scrollbar bg-muted/5 relative",
+          cart.length > 0 && "pb-24 lg:pb-3"
+        )}>
           {isPosLoading && products.length === 0 ? (
             <div className="h-full w-full flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 text-primary animate-spin opacity-50" />
@@ -1054,10 +1121,60 @@ export function POSInterface({ initialSaleId }: {
       </div>
 
       {/* Cart and Customer Selection (Right Pane) */}
-      <div className="lg:col-span-4 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl">
+      <div className={cn(
+        "lg:col-span-4 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl",
+        mobileTab === "PRODUCTS" && "hidden lg:flex"
+      )}>
+        {/* Mobile Top Segmented Tab Switcher */}
+        <div className="flex lg:hidden items-center p-1 bg-muted/20 border-b border-border/30 gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setMobileTab("PRODUCTS")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all",
+              mobileTab === "PRODUCTS"
+                ? "bg-card text-foreground shadow-xs border border-border/40"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Package className="h-3.5 w-3.5" />
+            <span>Ürünler ({filteredProducts.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("CART")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold transition-all relative",
+              mobileTab === "CART"
+                ? "bg-card text-foreground shadow-xs border border-border/40"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ShoppingCart className="h-3.5 w-3.5" />
+            <span>Sepet ({cart.reduce((acc, item) => acc + item.quantity, 0)})</span>
+            {cart.length > 0 && (
+              <span className="ml-1 text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
+                {getCartCurrencySymbol()}{displayTotal.toFixed(0)}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Cart Header */}
         <div className="h-11 px-3 sm:px-4 border-b border-border/40 flex items-center justify-between bg-muted/15 shrink-0">
           <div className="flex items-center gap-2">
+            {/* Mobile Back Button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileTab("PRODUCTS")}
+              className="lg:hidden h-7.5 px-2 text-xs font-bold gap-1 text-primary hover:bg-primary/10 rounded-xl"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Ürünler</span>
+            </Button>
+
             <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shadow-xs">
               <ShoppingCart className="h-3.5 w-3.5 text-primary" />
             </div>
@@ -1081,23 +1198,61 @@ export function POSInterface({ initialSaleId }: {
           )}
         </div>
 
-        {/* Customer & Description */}
-        <div className="p-2 sm:p-2.5 border-b border-border/30 bg-muted/5 flex flex-col gap-1.5 shrink-0">
-          <CustomerSelector
-            customers={customers}
-            selectedCustomerId={selectedCustomerId}
-            setSelectedCustomerId={setSelectedCustomerId}
-            customerSearch={customerSearch}
-            setCustomerSearch={setCustomerSearch}
-            onNewCustomer={handleQuickCreateCustomer}
-            isProcessing={isCreatingCustomer}
-            isCompact={true}
-          />
+        {/* Customer Account & Description */}
+        <div className="p-2 sm:p-2.5 border-b border-border/30 bg-muted/5 flex flex-col gap-2 shrink-0">
+          <div className="flex items-center justify-between p-2 rounded-xl bg-background/80 border border-border/40 shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={cn(
+                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                selectedCustomer ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground"
+              )}>
+                {selectedCustomer ? <UserCheck className="h-4 w-4" /> : <User className="h-4 w-4" />}
+              </div>
+              <div className="min-w-0">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block leading-none">
+                  MÜŞTERİ HESABI
+                </span>
+                <span className="text-xs font-bold text-foreground truncate block mt-0.5">
+                  {selectedCustomer ? selectedCustomer.name : "Perakende (İsimsiz Satış)"}
+                </span>
+                {selectedCustomer?.phone && (
+                  <span className="text-[10px] text-muted-foreground font-medium block">
+                    {formatPhone(selectedCustomer.phone)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {selectedCustomer && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  onClick={() => setSelectedCustomerId(undefined)}
+                  title="Perakende Yap"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] font-bold rounded-lg px-2.5 border-border/50 hover:bg-muted"
+                onClick={() => setIsCustomerModalOpen(true)}
+              >
+                {selectedCustomer ? "Değiştir" : "Müşteri Seç"}
+              </Button>
+            </div>
+          </div>
+
           <Textarea 
             placeholder="Satış notu veya açıklama (İsteğe bağlı)..." 
             value={saleDescription} 
             onChange={(e) => setSaleDescription(e.target.value)} 
-            className="text-xs min-h-[38px] max-h-[52px] bg-background/80 border-border/40 resize-none rounded-lg py-1 px-2.5 shadow-inner"
+            className="text-xs min-h-[36px] max-h-[48px] bg-background/80 border-border/40 resize-none rounded-lg py-1 px-2.5 shadow-inner"
           />
         </div>
 
@@ -1209,6 +1364,47 @@ export function POSInterface({ initialSaleId }: {
           addToCart(prod, true);
         }}
       />
+
+      {/* Customer Selection Modal */}
+      <CustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        customers={customers}
+        selectedCustomerId={selectedCustomerId}
+        onSelectCustomer={(id, name) => {
+          setSelectedCustomerId(id);
+          if (name) setCustomerSearch(name);
+        }}
+        onQuickCreateCustomer={handleQuickCreateCustomer}
+        isCreatingCustomer={isCreatingCustomer}
+      />
+
+      {/* Mobile Floating Cart Summary Button */}
+      {cart.length > 0 && mobileTab === "PRODUCTS" && (
+        <div className="lg:hidden fixed bottom-3 left-3 right-3 z-40 animate-in slide-in-from-bottom-3 duration-200">
+          <button
+            type="button"
+            onClick={() => setMobileTab("CART")}
+            className="w-full flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground rounded-2xl shadow-2xl shadow-primary/40 active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs">
+                {cart.reduce((s, i) => s + i.quantity, 0)}
+              </div>
+              <div className="text-left">
+                <div className="text-xs font-bold leading-tight">Sepete Git & Ödeme Yap</div>
+                <div className="text-[10px] opacity-80 font-medium">{cart.length} çeşit ürün</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black tabular-nums">
+                {getCartCurrencySymbol()}{displayTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+              </span>
+              <ChevronRight className="h-4 w-4" />
+            </div>
+          </button>
+        </div>
+      )}
 
     </div>
   );
