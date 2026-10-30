@@ -962,8 +962,8 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                     {/* Customer Selection & Checkout Form */}
                     {cart.length > 0 && (
                         <div className="space-y-4 pt-2 border-t border-border/40">
-                            {/* Customer Selector */}
-                            <div className="space-y-1.5">
+                            {/* Customer Selector - Mobilde sepet görünümünde gizlendi */}
+                            <div className="hidden sm:block space-y-1.5">
                                 <span className="text-[11px] font-bold text-muted-foreground uppercase px-1">
                                     Müşteri Seçimi (İsteğe Bağlı)
                                 </span>

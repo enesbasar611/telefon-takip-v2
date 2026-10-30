@@ -173,7 +173,7 @@ export const CheckoutSummary = ({
 
     if (isCompact) {
         return (
-            <div className="space-y-2 border-t border-border/40 bg-card p-3 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] backdrop-blur-xl">
+            <div className="space-y-2 border-t border-border/40 bg-card p-3 pb-28 lg:pb-3 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] backdrop-blur-xl">
                 <div className="bg-muted/30 border border-border/40 p-2.5 rounded-2xl space-y-2">
                     <button
                         onClick={() => setShowDetails(!showDetails)}
@@ -283,7 +283,7 @@ export const CheckoutSummary = ({
 
     // Standard Page View for POSInterface (Compact Bento Optimization)
     return (
-        <div className="p-3 sm:p-3.5 bg-muted/5 border-t border-border/40 shrink-0">
+        <div className="p-3 sm:p-3.5 bg-muted/5 border-t border-border/40 shrink-0 pb-28 lg:pb-3.5">
             <div className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-2.5">
                 {paymentMethods.map((method) => (
                     <Button

@@ -35,7 +35,7 @@ function POSData({ searchParams }: { searchParams: { saleId?: string } }) {
 
 export default function POSPage({ searchParams }: { searchParams: { saleId?: string } }) {
   return (
-    <div data-pos-root="true" className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden animate-in fade-in duration-200">
+    <div data-pos-root="true" className="w-full min-h-0 flex-1 flex flex-col lg:h-full lg:overflow-hidden overflow-y-auto animate-in fade-in duration-200">
       <POSData searchParams={searchParams} />
     </div>
   );

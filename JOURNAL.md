@@ -41,6 +41,24 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-30: Mobil POS Ekranı Kaydırma (Scroll), Sepet Bölümünde Müşteri Seçiminin Gizlenmesi ve Satış Yap Butonunun Alt Navigasyon Üstüne Alınması:
+  - **Talep:**
+    - Mobilde POS sayfasında sepet kısmına gidildiğinde satış yap butonunun alt navigasyon dock'unun altında kalarak tıklanamaz olması sorununun giderilmesi.
+    - Mobilde sepet bölümündeki müşteri seçimi kartının kaldırılarak alanın ferahlatılması.
+    - Mobilde POS ekranının kilitli kalmaması, ekranın aşağı/yukarı rahatça kaydırılabilmesi (`overflow-y-auto`).
+  - **Yapılan İyileştirmeler:**
+    1. **Ekran Kaydırma (Scroll) Serbestliği ([`page.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/app/(dashboard)/satis/page.tsx) & [`pos-interface.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/pos-interface.tsx)):**
+       - Mobilde ekranı kitleyici `overflow-hidden` kısıtı `overflow-y-auto` ve `min-h-full` olarak düzenlendi.
+       - Sol (ürünler) ve sağ (sepet) panelleri mobilde `min-h-full overflow-visible` yapılarak sayfanın doğal şekilde kaydırılması sağlandı.
+    2. **Sepette Müşteri Seçiminin Mobilde Gizlenmesi ([`pos-interface.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/pos-interface.tsx)):**
+       - Sepet panelindeki müşteri seçimi ve not alanı mobilde gizlendi (`hidden lg:flex`).
+       - Müşteri seçimi üst paneldeki buton üzerinden zaten yapılabildiği için sepet alanında ~80px dikey alan kazanılarak sepet kalemleri ve ödeme özeti yukarı taşındı.
+       - Eğer bir müşteri seçilmişse sepet başlığında minik bir etiketle ismi bilgi amaçlı gösteriliyor.
+    3. **Satış Yap Butonu & Alt Navigasyon Çakışmasının Çözümü ([`checkout-summary.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/parts/checkout-summary.tsx) & [`pos-interface.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/pos-interface.tsx)):**
+       - `CheckoutSummary` bileşenine mobilde `pb-28 lg:pb-3.5` eklendi. Böylece alt navigasyon dock'unun (`BottomNav` z-50) kapladığı alanın çok üzerinde tampon boşluk bırakıldı.
+       - "SATIŞI TAMAMLA & FİŞ YAZDIR" butonu alt navigasyonun tamamen üzerinde, rahatça görülebilir ve tek parmakla tıklanabilir hale getirildi.
+       - Ürünler sekmesindeki sepet yönlendirme butonu da `bottom-3` yerine `bottom-20` konumuna alınarak alt navigasyonun üstünde konumlandırıldı.
+
 - [x] 2026-10-30: Satış İadesi Düzeltmeleri, Astronomik Tutar / Kur Senkronizasyonu, İşlem Özeti Kartı Redesign ve Anlık Canlı Bakiye Senkronizasyonu:
   - **Talep:**
     - Canlıda satışı iade etmeme rağmen satış arşivinde hala satış olarak görünmesi ve 5.000 TL yerine $249.781 olarak yansıması hatasının çözülmesi.

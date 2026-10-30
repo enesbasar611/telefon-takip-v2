@@ -746,7 +746,7 @@ export function POSInterface({ initialSaleId }: {
 
   const content = (
     <div ref={containerRef} className={cn(
-      "flex flex-col lg:grid lg:grid-cols-12 gap-2 sm:gap-2.5 h-full lg:h-[calc(100vh-4.75rem)] overflow-hidden p-0 relative transition-all duration-300",
+      "flex flex-col lg:grid lg:grid-cols-12 gap-2 sm:gap-2.5 min-h-full lg:h-[calc(100vh-4.75rem)] overflow-y-auto lg:overflow-hidden p-0 relative transition-all duration-300 pb-28 lg:pb-0",
       isFullscreen && "fixed inset-0 z-[40] p-2.5 sm:p-4 bg-background/95 backdrop-blur-xl",
       showReceipt && "bg-emerald-950/20"
     )} style={{ zIndex: isFullscreen ? 40 : undefined }}>
@@ -761,7 +761,7 @@ export function POSInterface({ initialSaleId }: {
 
       {/* Product Selection Area (Left Pane) */}
       <div className={cn(
-        "lg:col-span-8 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl",
+        "lg:col-span-8 flex flex-col min-h-full lg:h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-visible lg:overflow-hidden backdrop-blur-xl",
         mobileTab === "CART" && "hidden lg:flex"
       )}>
         {/* Mobile Top Segmented Tab Switcher */}
@@ -1139,7 +1139,7 @@ export function POSInterface({ initialSaleId }: {
 
       {/* Cart and Customer Selection (Right Pane) */}
       <div className={cn(
-        "lg:col-span-4 flex flex-col h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-hidden backdrop-blur-xl",
+        "lg:col-span-4 flex flex-col min-h-full lg:h-full min-h-0 bg-card/85 dark:bg-[#0c121d]/85 border border-border/40 rounded-2xl shadow-sm overflow-visible lg:overflow-hidden backdrop-blur-xl",
         mobileTab === "PRODUCTS" && "hidden lg:flex"
       )}>
         {/* Mobile Top Segmented Tab Switcher */}
@@ -1200,6 +1200,11 @@ export function POSInterface({ initialSaleId }: {
               <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                 {cart.reduce((acc, item) => acc + item.quantity, 0)} Adet
               </span>
+              {selectedCustomer && (
+                <span className="lg:hidden text-[9px] font-bold text-primary truncate max-w-[100px] bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                  {selectedCustomer.name}
+                </span>
+              )}
             </div>
           </div>
           {cart.length > 0 && (
@@ -1215,8 +1220,8 @@ export function POSInterface({ initialSaleId }: {
           )}
         </div>
 
-        {/* Customer Account & Description */}
-        <div className="p-2 sm:p-2.5 border-b border-border/30 bg-muted/5 flex flex-col gap-2 shrink-0">
+        {/* Customer Account & Description - Mobilde kaldırıldı, sadece masaüstünde görünür */}
+        <div className="hidden lg:flex p-2 sm:p-2.5 border-b border-border/30 bg-muted/5 flex-col gap-2 shrink-0">
           <div className="flex items-center justify-between p-2 rounded-xl bg-background/80 border border-border/40 shadow-2xs">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className={cn(
@@ -1274,7 +1279,7 @@ export function POSInterface({ initialSaleId }: {
         </div>
 
         {/* Cart Items List */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-2 custom-scrollbar relative">
+        <div className="flex-1 min-h-[120px] max-h-[40vh] lg:max-h-none overflow-y-auto p-2 custom-scrollbar relative">
           <div className="space-y-1.5">
             {cart.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground/60 py-12 px-4 text-center">
@@ -1398,7 +1403,7 @@ export function POSInterface({ initialSaleId }: {
 
       {/* Mobile Floating Cart Summary Button */}
       {cart.length > 0 && mobileTab === "PRODUCTS" && (
-        <div className="lg:hidden fixed bottom-3 left-3 right-3 z-40 animate-in slide-in-from-bottom-3 duration-200">
+        <div className="lg:hidden fixed bottom-20 left-3 right-3 z-40 animate-in slide-in-from-bottom-3 duration-200">
           <button
             type="button"
             onClick={() => setMobileTab("CART")}
