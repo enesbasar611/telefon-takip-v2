@@ -133,10 +133,20 @@ export async function getComputedAccounts(shopId: string, options?: { includeIna
     if (resetAt && tx.createdAt <= resetAt) continue;
     const account = accounts.find((a) => a.id === tx.financeAccountId);
     if (!account) continue;
-    const amountTry = convertTransactionAmount(Number(tx.amount || 0), toSupportedCurrency(tx.currency), rates).TRY;
+
+    const accountCurrency = toSupportedCurrency(account.currency || "TRY");
+    const txCurrency = toSupportedCurrency(tx.currency || "TRY");
+    let impactAmount = Number(tx.amount || 0);
+
+    // İşlem para birimi hesap para biriminden farklıysa doğru para birimine dönüştür
+    if (txCurrency !== accountCurrency) {
+      const converted = convertTransactionAmount(impactAmount, txCurrency, rates);
+      impactAmount = accountCurrency === "USD" ? converted.USD : accountCurrency === "EUR" ? converted.EUR : converted.TRY;
+    }
+
     const impact = account.type === "CREDIT_CARD"
-      ? (tx.type === "INCOME" ? -amountTry : amountTry)
-      : (tx.type === "INCOME" ? amountTry : -amountTry);
+      ? (tx.type === "INCOME" ? -impactAmount : impactAmount)
+      : (tx.type === "INCOME" ? impactAmount : -impactAmount);
     computedBalanceByAccount.set(tx.financeAccountId, (computedBalanceByAccount.get(tx.financeAccountId) || 0) + impact);
     transactionCountByAccount.set(tx.financeAccountId, (transactionCountByAccount.get(tx.financeAccountId) || 0) + 1);
   }
@@ -219,6 +229,7 @@ export async function createAccount(data: {
     }
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true, account: serializePrisma(account) };
   } catch (error) {
@@ -383,6 +394,7 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
     revalidatePath("/satis/kasa");
     revalidatePath("/");
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
@@ -549,6 +561,7 @@ export async function updateManualTransaction(
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true, transaction: serializePrisma(transaction) };
   } catch (error) {
@@ -661,6 +674,7 @@ export async function updateAccount(id: string, data: {
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true, account: serializePrisma(account) };
   } catch (error) {
@@ -732,6 +746,7 @@ export async function resetCashRegisters(data: {
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
 
     await recordAuditLog({
@@ -839,9 +854,11 @@ export async function getDailySummary() {
           type: 'EXPENSE',
           createdAt: { gte: today },
           paymentMethod: { not: "DEBT" },
-          OR: [
-            { category: { not: "Iade" } },
-            { category: null }
+          NOT: [
+            { category: { equals: "İade", mode: "insensitive" } },
+            { category: { equals: "Iade", mode: "insensitive" } },
+            { description: { contains: "İade", mode: "insensitive" } },
+            { description: { contains: "Iade", mode: "insensitive" } },
           ]
         },
         select: { amount: true, currency: true }
@@ -873,23 +890,27 @@ export async function getDailySummary() {
       })
     ]);
 
-    const cashBalance = computedAccounts.filter(a => a.type === 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
-    const bankBalance = computedAccounts.filter(a => a.type !== 'CASH').reduce((sum, a) => sum + Number(a.balance), 0);
+    const cashBalance = computedAccounts.filter(a => a.type === 'CASH').reduce((sum, a) => {
+      const cur = toSupportedCurrency(a.currency || "TRY");
+      const bal = Number(a.balance || 0);
+      return sum + convertTransactionAmount(bal, cur, rates).TRY;
+    }, 0);
+
+    const bankBalance = computedAccounts.filter(a => a.type !== 'CASH').reduce((sum, a) => {
+      const cur = toSupportedCurrency(a.currency || "TRY");
+      const bal = Number(a.balance || 0);
+      return sum + convertTransactionAmount(bal, cur, rates).TRY;
+    }, 0);
     
-    const grossIncome = todaySales.reduce((sum, sale) => {
+    // Satışların net cirosu (finalAmount zaten iade düşülmüş güncel tutardır)
+    const todayIncome = todaySales.reduce((sum, sale) => {
       const currency = toSupportedCurrency(sale.transaction?.currency);
-      const amount = Number(sale.transaction?.amount ?? sale.finalAmount ?? 0);
+      const amount = Number(sale.finalAmount ?? sale.transaction?.amount ?? 0);
       return sum + convertTransactionAmount(amount, currency, rates).TRY;
     }, 0);
-    
-    const returnsIncomeReduction = todayReturns.reduce((sum, ret) => {
-      const amount = Number(ret.refundAmount || 0);
-      return sum + convertTransactionAmount(amount, toSupportedCurrency(ret.refundCurrency || "TRY"), rates).TRY;
-    }, 0);
-    
-    const todayIncome = grossIncome - returnsIncomeReduction;
 
-    const grossProfit = todaySales.reduce((sum, sale) => {
+    // Satışların net kârı (sale.items zaten iade edilmiş ürünleri düşmüş net ürün listesidir)
+    const todayProfit = todaySales.reduce((sum, sale) => {
       const currency = toSupportedCurrency(sale.transaction?.currency);
       const saleProfit = sale.items.reduce((itemSum, item) => {
         const unitPriceTry = convertTransactionAmount(Number(item.unitPrice || 0), currency, rates).TRY;
@@ -898,16 +919,6 @@ export async function getDailySummary() {
       }, 0);
       return sum + saleProfit;
     }, 0);
-    
-    const returnsProfitReduction = todayReturns.reduce((sum, ret) => {
-      const amount = Number(ret.refundAmount || 0);
-      const unitCost = Number(ret.product?.buyPrice || 0);
-      const unitPrice = ret.quantity > 0 ? (amount / ret.quantity) : 0;
-      const unitPriceTry = convertTransactionAmount(unitPrice, toSupportedCurrency(ret.refundCurrency || "TRY"), rates).TRY;
-      return sum + ((unitPriceTry - unitCost) * ret.quantity);
-    }, 0);
-    
-    const todayProfit = grossProfit - returnsProfitReduction;
 
     const todayExpense = todayExpenseTransactions.reduce((sum, tx) => {
       return sum + convertTransactionAmount(Number(tx.amount || 0), toSupportedCurrency(tx.currency), rates).TRY;
@@ -1033,6 +1044,7 @@ export async function openDailySession(openingBalance: number, notes?: string, m
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true, session: serializePrisma(session) };
   } catch (error) {
@@ -1178,6 +1190,7 @@ export async function transferFunds(data: {
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {
@@ -1419,6 +1432,7 @@ export async function deleteAccount(id: string) {
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
 
     await recordAuditLog({
@@ -1455,6 +1469,7 @@ export async function deleteTransaction(id: string) {
           createdAt: true,
           customerId: true,
           category: true,
+          saleId: true,
           financeAccount: { select: { name: true, type: true } },
           user: { select: { name: true } }
         }
@@ -1494,6 +1509,15 @@ export async function deleteTransaction(id: string) {
         where: { id, shopId }
       });
 
+      // Eğer işleme bağlı bir satış fişi varsa, arşivde yetim kalmaması için satış kaydını da temizle
+      if (transaction.saleId) {
+        await tx.saleItem.deleteMany({ where: { saleId: transaction.saleId, shopId } });
+        await tx.debt.deleteMany({ where: { saleId: transaction.saleId, shopId } });
+        await tx.inventoryMovement.deleteMany({ where: { saleId: transaction.saleId, shopId } });
+        await tx.returnTicket.updateMany({ where: { saleId: transaction.saleId, shopId }, data: { saleId: null } });
+        await tx.sale.delete({ where: { id: transaction.saleId, shopId } }).catch(() => {});
+      }
+
       // IMPORTANT: Update subsequent transactions' running balances
       if (transaction.financeAccountId) {
         const amount = Number(transaction.amount);
@@ -1513,6 +1537,7 @@ export async function deleteTransaction(id: string) {
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
 
     if (deletedTxDetails) {
@@ -1571,6 +1596,7 @@ export async function deleteTransactions(ids: string[]) {
     });
 
     revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true };
   } catch (error) {

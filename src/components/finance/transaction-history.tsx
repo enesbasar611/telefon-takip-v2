@@ -29,6 +29,8 @@ import { deleteTransaction, deleteTransactions } from "@/lib/actions/finance-act
 import { toast } from "sonner";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { EditTransactionWrapper } from "./edit-transaction-wrapper";
+import { DeleteSaleConfirmModal } from "@/components/satis/delete-sale-confirm-modal";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -113,12 +115,23 @@ export function TransactionHistory({
     const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [deleteSaleId, setDeleteSaleId] = useState<string | null>(null);
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    const queryClient = useQueryClient();
     const { rates } = useDashboardData();
     const usdRate = rates?.usd || 35.0;
     const eurRate = rates?.eur || 38.0;
+
+    const handleTriggerDelete = (t: any) => {
+        const sId = t.saleId || t.sale?.id;
+        if (sId) {
+            setDeleteSaleId(sId);
+        } else {
+            setDeleteId(t.id);
+        }
+    };
 
     const filtered = transactions.filter((t) => {
         if (t.paymentMethod === "DEBT") return false;
@@ -270,6 +283,8 @@ export function TransactionHistory({
         if (res.success) {
             toast.success("İşlem başarıyla silindi");
             setDeleteId(null);
+            queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+            queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
         } else {
             toast.error(res.error || "İşlem silinemedi");
         }
@@ -473,8 +488,8 @@ export function TransactionHistory({
                                                 <div className="flex flex-col items-end opacity-50 space-y-0">
                                                     {t.currency === "TRY" ? (
                                                         <>
-                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">~${(Number(t.amount) / usdRate).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}</span>
-                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">~€{(Number(t.amount) / eurRate).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}</span>
+                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">~${(Number(t.amount) / usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">~€{(Number(t.amount) / eurRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                         </>
                                                     ) : (
                                                         <span className="text-[10px] text-muted-foreground font-medium">~₺{Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString("tr-TR")}</span>
@@ -523,7 +538,7 @@ export function TransactionHistory({
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => setDeleteId(t.id)}
+                                                    onClick={() => handleTriggerDelete(t)}
                                                     className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -607,7 +622,7 @@ export function TransactionHistory({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setDeleteId(t.id)}
+                                            onClick={() => handleTriggerDelete(t)}
                                             className="h-8 px-3 rounded-lg border border-border/40 text-[10px] text-rose-500 gap-2 hover:bg-rose-500/10 hover:border-rose-500/20"
                                         >
                                             <Trash2 className="h-3 w-3" /> Sil
@@ -674,6 +689,17 @@ export function TransactionHistory({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <DeleteSaleConfirmModal
+                saleId={deleteSaleId}
+                open={!!deleteSaleId}
+                onOpenChange={(open) => !open && setDeleteSaleId(null)}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+                    queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+                    queryClient.invalidateQueries({ queryKey: ["sales-history"] });
+                }}
+            />
         </Card>
     );
 }

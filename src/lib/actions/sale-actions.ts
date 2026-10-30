@@ -368,72 +368,255 @@ export async function getSaleById(id: string) {
     return null;
   }
 }
-export async function deleteSale(id: string, revertStock: boolean = true) {
+export interface DeleteSaleOptions {
+  revertStock?: boolean;
+  adjustFinanceBalance?: boolean;
+  deleteTransaction?: boolean;
+}
+
+export interface SaleDeletePreview {
+  id: string;
+  saleNumber: string;
+  customerName: string;
+  customerId?: string | null;
+  totalAmount: number;
+  finalAmount: number;
+  discount: number;
+  currency: string;
+  paymentMethod: string;
+  createdAt: Date;
+  items: {
+    id: string;
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    currentStock: number;
+  }[];
+  transaction?: {
+    id: string;
+    amount: number;
+    currency: string;
+    type: string;
+    financeAccountId?: string | null;
+    financeAccountName?: string | null;
+    financeAccountBalance?: number | null;
+  } | null;
+  debt?: {
+    id: string;
+    amount: number;
+    remainingAmount: number;
+  } | null;
+}
+
+export async function getSaleDeletePreview(saleId: string): Promise<{ success: boolean; data?: SaleDeletePreview; error?: string }> {
+  try {
+    const shopId = await getShopId();
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId, shopId },
+      include: {
+        customer: { select: { id: true, name: true } },
+        items: {
+          include: {
+            product: { select: { id: true, name: true, stock: true } }
+          }
+        },
+        transaction: {
+          include: {
+            financeAccount: { select: { id: true, name: true, balance: true, type: true } }
+          }
+        },
+        debt: { select: { id: true, amount: true, remainingAmount: true } }
+      }
+    });
+
+    if (!sale) return { success: false, error: "Satış kaydı bulunamadı." };
+
+    const currency = sale.transaction?.currency || "TRY";
+
+    const preview: SaleDeletePreview = {
+      id: sale.id,
+      saleNumber: sale.saleNumber,
+      customerName: sale.customer?.name || "Perakende Satış",
+      customerId: sale.customerId,
+      totalAmount: Number(sale.totalAmount),
+      finalAmount: Number(sale.finalAmount),
+      discount: Number(sale.discount),
+      currency,
+      paymentMethod: sale.paymentMethod,
+      createdAt: sale.createdAt,
+      items: sale.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.product?.name || "Ürün",
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+        currentStock: item.product?.stock ?? 0
+      })),
+      transaction: sale.transaction ? {
+        id: sale.transaction.id,
+        amount: Number(sale.transaction.amount),
+        currency: sale.transaction.currency || "TRY",
+        type: sale.transaction.type,
+        financeAccountId: sale.transaction.financeAccountId,
+        financeAccountName: sale.transaction.financeAccount?.name || "Nakit Kasa",
+        financeAccountBalance: sale.transaction.financeAccount ? Number(sale.transaction.financeAccount.balance) : null
+      } : null,
+      debt: sale.debt ? {
+        id: sale.debt.id,
+        amount: Number(sale.debt.amount),
+        remainingAmount: Number(sale.debt.remainingAmount)
+      } : null
+    };
+
+    return { success: true, data: serializePrisma(preview) };
+  } catch (error) {
+    console.error("getSaleDeletePreview error:", error);
+    return { success: false, error: "Satış detayları alınamadı." };
+  }
+}
+
+export async function deleteSale(
+  id: string,
+  options: boolean | DeleteSaleOptions = true
+) {
   try {
     const shopId = await getShopId();
     const userId = await getUserId();
 
-    // Rate limit: 10 deletions per minute
-    await checkRateLimit(`deleteSale:${userId}`, 10);
+    const normalizedOptions: DeleteSaleOptions = typeof options === "boolean"
+      ? { revertStock: options, adjustFinanceBalance: true, deleteTransaction: true }
+      : {
+          revertStock: options.revertStock ?? true,
+          adjustFinanceBalance: options.adjustFinanceBalance ?? true,
+          deleteTransaction: options.deleteTransaction ?? true
+        };
 
-    // 1. Get sale details
+    // Rate limit: 20 deletions per minute
+    await checkRateLimit(`deleteSale:${userId}`, 20);
+
+    // 1. Get sale details with relations
     const sale = await prisma.sale.findUnique({
       where: { id, shopId },
-      include: { items: true }
+      include: {
+        items: { include: { product: true } },
+        transaction: { include: { financeAccount: true } },
+        debt: true
+      }
     });
 
     if (!sale) return { success: false, error: "Satış bulunamadı." };
 
     await prisma.$transaction(async (tx) => {
       // 2. Refund Stocks if requested
-      if (revertStock) {
+      if (normalizedOptions.revertStock) {
         for (const item of sale.items) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } }
-          });
+          if (item.productId) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: item.quantity } }
+            });
 
-          // Add movement for record-keeping
-          await tx.inventoryMovement.create({
-            data: {
-              productId: item.productId,
-              shopId,
-              type: "IN",
-              quantity: item.quantity,
-              notes: `Satış İptali (Stok Geri): ${sale.saleNumber}`
-            }
-          });
+            await tx.inventoryMovement.create({
+              data: {
+                productId: item.productId,
+                shopId,
+                type: "IN",
+                quantity: item.quantity,
+                notes: `Satış Silme (Stok İadesi): ${sale.saleNumber}`
+              }
+            });
+          }
         }
       }
 
-      // 3. Delete related records
-      // Delete associated transactions
-      await tx.transaction.deleteMany({
-        where: { saleId: id, shopId }
+      // 3. Reverse Finance Account Balance if requested and linked
+      if (normalizedOptions.adjustFinanceBalance && sale.transaction?.financeAccountId) {
+        const amount = Number(sale.transaction.amount);
+        const balanceChange = sale.transaction.type === 'INCOME' ? -amount : amount;
+
+        await tx.financeAccount.update({
+          where: { id: sale.transaction.financeAccountId },
+          data: {
+            balance: { increment: balanceChange },
+            availableBalance: sale.transaction.financeAccount?.type === 'CREDIT_CARD' ? { increment: balanceChange } : undefined
+          }
+        });
+
+        // Update subsequent running balances
+        await tx.transaction.updateMany({
+          where: {
+            financeAccountId: sale.transaction.financeAccountId,
+            createdAt: { gt: sale.transaction.createdAt },
+            shopId
+          },
+          data: {
+            runningBalance: { increment: balanceChange }
+          }
+        });
+      }
+
+      // 4. Delete or unlink associated transaction
+      if (normalizedOptions.deleteTransaction) {
+        await tx.transaction.deleteMany({
+          where: { saleId: id, shopId }
+        });
+      } else {
+        await tx.transaction.updateMany({
+          where: { saleId: id, shopId },
+          data: {
+            saleId: null,
+            description: `${sale.transaction?.description || 'Satış'} [Satış Fişi Silindi: ${sale.saleNumber}]`
+          }
+        });
+      }
+
+      // 5. Unlink ReturnTickets if any
+      await tx.returnTicket.updateMany({
+        where: { saleId: id, shopId },
+        data: { saleId: null }
       });
 
-      // Delete inventory movements associated with this sale
+      // 6. Delete inventory movements associated with this sale
       await tx.inventoryMovement.deleteMany({
         where: { saleId: id, shopId }
       });
 
-      // Delete sale items
+      // 7. Delete debt if exists
+      if (sale.debt) {
+        await tx.debt.deleteMany({
+          where: { saleId: id, shopId }
+        });
+      }
+
+      // 8. Delete sale items
       await tx.saleItem.deleteMany({
         where: { saleId: id, shopId }
       });
 
-      // Delete debt if exists
-      await tx.debt.deleteMany({
-        where: { saleId: id, shopId }
-      });
-
-      // Finally delete the sale
+      // 9. Finally delete the sale
       await tx.sale.delete({
         where: { id, shopId }
       });
     });
 
+    recordAuditLog({
+      action: "DELETE",
+      entityType: "SALE",
+      entityId: id,
+      entityName: sale.saleNumber,
+      message: `${sale.saleNumber} numaralı satış silindi. (Tutar: ${sale.finalAmount} TL, Stok İadesi: ${normalizedOptions.revertStock ? "Evet" : "Hayır"}, Kasa Düzeltmesi: ${normalizedOptions.adjustFinanceBalance ? "Evet" : "Hayır"})`,
+      details: {
+        saleNumber: sale.saleNumber,
+        finalAmount: sale.finalAmount,
+        options: normalizedOptions
+      }
+    }).catch(console.error);
+
     revalidatePath("/satis/gecmis");
+    revalidatePath("/satis/kasa");
     revalidatePath("/stok");
     revalidatePath("/veresiye");
     revalidateTag(`dashboard-${shopId}`);

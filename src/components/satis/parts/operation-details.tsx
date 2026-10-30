@@ -4,11 +4,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     ArrowLeftRight,
+    Calendar,
+    Clock,
+    FileText,
     MessageCircle,
-    Printer
+    Pencil,
+    Printer,
+    Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import { UnifiedOperation } from "@/lib/actions/activity-actions";
+import { EditTransactionWrapper } from "@/components/finance/edit-transaction-wrapper";
 
 interface OperationDetailsProps {
     op: UnifiedOperation;
@@ -16,9 +24,10 @@ interface OperationDetailsProps {
     getTypeLabel: (type: any) => string;
     getPaymentLabel: (method: string) => string;
     translateLabel: (text: string | null | undefined) => string;
-    handleReturn: (op: UnifiedOperation, item: any) => void;
+    handleReturn: (op: UnifiedOperation, item?: any) => void;
     handleSendWhatsApp: (op: UnifiedOperation, item?: any) => void;
     handlePrintReceipt: (op: UnifiedOperation) => void;
+    handleDeleteSale?: (op: UnifiedOperation) => void;
     rates?: any;
     defaultCurrency?: string;
 }
@@ -32,114 +41,172 @@ export function OperationDetails({
     handleReturn,
     handleSendWhatsApp,
     handlePrintReceipt,
+    handleDeleteSale,
     rates,
     defaultCurrency = "TRY"
 }: OperationDetailsProps) {
     const convertAmount = (amount: number, currency: string) => {
+        let converted = amount;
+        let symbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : "₺";
         if (defaultCurrency !== currency && rates) {
             if (currency === "TRY" && defaultCurrency === "USD") {
-                return { amount: amount / (rates.usd || 34.5), symbol: "$" };
+                converted = amount / (rates.usd || 34.5);
+                symbol = "$";
             } else if (currency === "USD" && defaultCurrency === "TRY") {
-                return { amount: amount * (rates.usd || 34.5), symbol: "₺" };
+                converted = amount * (rates.usd || 34.5);
+                symbol = "₺";
             }
         }
-        return { amount, symbol: currency === "USD" ? "$" : "₺" };
+        return { amount: converted, symbol };
     };
 
-    const { amount: displayAmount, symbol: displaySymbol } = convertAmount(op.amount, op.currency);
-    const isIncome = op.transactionType === 'INCOME';
+    const isFullyReturned = op.isReturned || op.status === "İADE EDİLDİ" || (op.amount === 0 && (op.type === "SALE" || !!op.saleId));
+    const isSale = op.type === "SALE" || !!op.saleId;
+
+    const transactionForEdit = {
+        id: op.id,
+        amount: op.amount,
+        currency: op.currency,
+        type: op.transactionType || (op.type === "EXPENSE" ? "EXPENSE" : "INCOME"),
+        description: op.description,
+        category: op.status,
+        customerId: op.customerId,
+        customer: op.customerId ? { id: op.customerId, name: op.customerName } : undefined,
+        paymentMethod: op.paymentMethod,
+        financeAccountId: op.financeAccountId,
+        saleId: op.saleId,
+        debtId: op.debtId,
+        createdAt: op.date,
+    };
+
     return (
-        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">İşlem Detayları</h4>
-                <div className="h-px flex-1 bg-border/20 mx-4" />
-                <span className="text-[10px] font-mono opacity-40">#{op.number}</span>
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-muted/30 to-muted/10 border border-border/40 space-y-4 animate-in fade-in duration-200">
+            {/* Üst Kısım: Tarih & Saat ve Fiş / İşlem Numarası */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/30">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground font-semibold">
+                    <div className="flex items-center gap-1.5 bg-background/70 px-3 py-1.5 rounded-xl border border-border/30 shadow-xs">
+                        <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                        <span>{format(new Date(op.date), "dd MMMM yyyy", { locale: tr })}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-background/70 px-3 py-1.5 rounded-xl border border-border/30 shadow-xs">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{format(new Date(op.date), "HH:mm")}</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-background/70 border border-border/30 text-muted-foreground">
+                        #{op.number}
+                    </span>
+                    <Badge variant="outline" className={cn("text-[10px] font-bold px-2.5 py-1 rounded-lg border", getTypeColor(op.type))}>
+                        {op.status || getTypeLabel(op.type)}
+                    </Badge>
+                </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                    <p className="text-[14px] text-muted-foreground/80 leading-relaxed italic">"{op.description}"</p>
-                    {op.items.length > 0 && (
-                        <div className="space-y-3">
-                            {op.items.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-background/50 border border-border/40 group/sub">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-[13px]">{item.quantity}x</div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[14px] font-black tracking-tight">{item.name}</span>
-                                            <span className="text-[12px] text-muted-foreground font-bold">{convertAmount(item.price || 0, op.currency).symbol}{convertAmount(item.price || 0, op.currency).amount.toLocaleString('tr-TR')} / birim</span>
+
+            {/* Ürün Bilgisi ve Açıklama Bölümü */}
+            <div className="space-y-2.5">
+                {op.description && (
+                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-background/50 border border-border/20 text-sm">
+                        <FileText className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/70 block mb-0.5">Ürün Açıklaması / Not</span>
+                            <span className="italic text-foreground/90 font-medium text-xs sm:text-sm">"{op.description}"</span>
+                        </div>
+                    </div>
+                )}
+
+                {op.items.length > 0 ? (
+                    <div className="space-y-2">
+                        {op.items.map((item, idx) => {
+                            const { amount: itemPrice, symbol } = convertAmount(item.price || 0, op.currency);
+                            return (
+                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-background/80 border border-border/30 gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                                            {item.quantity}x
+                                        </div>
+                                        <div>
+                                            <span className="text-sm font-bold text-foreground block">{item.name}</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Birim Fiyat: {symbol}{itemPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-10 px-4 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-orange-500/10 hover:text-orange-600"
-                                            onClick={() => handleReturn(op, item)}
-                                        >
-                                            <ArrowLeftRight className="h-4 w-4 mr-2" />
-                                            İADE
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-10 px-4 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-500/10 hover:text-emerald-600"
-                                            onClick={() => handleSendWhatsApp(op, item)}
-                                        >
-                                            <MessageCircle className="h-4 w-4 mr-2" />
-                                            MSJ
-                                        </Button>
+                                    <div className="text-right sm:self-center font-bold text-sm text-foreground/90 pl-11 sm:pl-0">
+                                        {symbol}{(itemPrice * (item.quantity || 1)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <div className="bg-background/40 rounded-[2rem] p-8 border border-border/40 space-y-6">
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-80">İŞLEM ÖZETİ</span>
-                        <div className="flex items-baseline justify-between mt-2">
-                            <span className={cn(
-                                "text-3xl font-black tracking-tighter",
-                                op.type === "EXPENSE" ? "text-rose-600 dark:text-rose-400" :
-                                op.type === "DEBT_DIRECT" ? "text-orange-600 dark:text-orange-400" :
-                                op.type === "PAYMENT" ? "text-emerald-600 dark:text-emerald-400" :
-                                "text-blue-600 dark:text-blue-400"
-                            )}>
-                                {op.type === "EXPENSE" ? "-" : "+"}{displaySymbol}{displayAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                            </span>
-                            <Badge variant="outline" className={cn("text-[10px] font-black tracking-[0.1em] px-3 py-1 uppercase rounded-lg border-2", getTypeColor(op.type))}>
-                                {getTypeLabel(op.type)}
-                            </Badge>
-                        </div>
+                            );
+                        })}
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1 p-4 rounded-2xl bg-muted/40 border border-border/20">
-                            <span className="text-[10px] font-black text-muted-foreground opacity-60 uppercase tracking-widest">ÖDEME YÖNTEMİ</span>
-                            <span className="text-[13px] font-black">{getPaymentLabel(op.paymentMethod)}</span>
-                        </div>
-                        <div className="flex flex-col gap-1 p-4 rounded-2xl bg-muted/40 border border-border/20">
-                            <span className="text-[10px] font-black text-muted-foreground opacity-60 uppercase tracking-widest">HESAP / KASA</span>
-                            <span className="text-[13px] font-black truncate">{translateLabel(op.accountName) || "Nakit Kasa"}</span>
-                        </div>
+                ) : (
+                    <div className="p-3 rounded-xl bg-background/80 border border-border/30 text-xs sm:text-sm font-semibold text-muted-foreground">
+                        {op.description || "Kayıtlı ürün bilgisi bulunmuyor."}
                     </div>
-                    <div className="flex gap-3 pt-2">
+                )}
+            </div>
+
+            {/* Aksiyon Butonları Çubuğu: WhatsApp, İade, Düzenle, Fiş Yazdır, Satışı Sil */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/20">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-10 px-4 rounded-xl font-bold text-xs tracking-wider uppercase border-border/40 hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/30 transition-all"
+                    onClick={() => handleSendWhatsApp(op)}
+                >
+                    <MessageCircle className="w-4 h-4 mr-2 text-emerald-500" />
+                    WHATSAPP
+                </Button>
+
+                {isSale && !isFullyReturned && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-10 px-4 rounded-xl font-bold text-xs tracking-wider uppercase border-border/40 hover:bg-orange-500/10 hover:text-orange-600 hover:border-orange-500/30 transition-all"
+                        onClick={() => handleReturn(op, op.items.length === 1 ? op.items[0] : undefined)}
+                    >
+                        <ArrowLeftRight className="w-4 h-4 mr-2 text-orange-500" />
+                        İADE ET
+                    </Button>
+                )}
+
+                <EditTransactionWrapper
+                    transaction={transactionForEdit}
+                    trigger={
                         <Button
-                            className="flex-1 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 font-black text-[11px] tracking-widest uppercase shadow-xl shadow-emerald-500/20"
-                            onClick={() => handlePrintReceipt(op)}
-                        >
-                            <Printer className="w-5 h-5 mr-3" />
-                            FİŞ YAZDIR
-                        </Button>
-                        <Button
+                            size="sm"
                             variant="outline"
-                            className="flex-1 h-14 rounded-2xl font-black text-[11px] tracking-widest uppercase border-border/40 hover:bg-background"
-                            onClick={() => handleSendWhatsApp(op)}
+                            className="h-10 px-4 rounded-xl font-bold text-xs tracking-wider uppercase border-border/40 hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/30 transition-all"
                         >
-                            <MessageCircle className="w-5 h-5 mr-3 text-emerald-500" />
-                            WHATSAPP
+                            <Pencil className="w-4 h-4 mr-2 text-blue-500" />
+                            DÜZENLE
                         </Button>
-                    </div>
-                </div>
+                    }
+                />
+
+                {isSale && (
+                    <Button
+                        size="sm"
+                        className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider uppercase shadow-md shadow-emerald-600/20 transition-all"
+                        onClick={() => handlePrintReceipt(op)}
+                    >
+                        <Printer className="w-4 h-4 mr-2" />
+                        FİŞ YAZDIR
+                    </Button>
+                )}
+
+                {isSale && handleDeleteSale && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-10 px-4 rounded-xl font-bold text-xs tracking-wider uppercase border-rose-500/30 text-rose-600 hover:bg-rose-500 hover:text-white transition-all ml-auto"
+                        onClick={() => handleDeleteSale(op)}
+                    >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        SATIŞI SİL
+                    </Button>
+                )}
             </div>
         </div>
     );

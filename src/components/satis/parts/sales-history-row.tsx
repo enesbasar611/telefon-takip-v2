@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeftRight, ChevronDown, ChevronUp, Loader2, Printer, ReceiptText, User } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, ChevronUp, Loader2, Printer, ReceiptText, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -19,6 +19,7 @@ interface SalesHistoryRowProps {
     translateLabel: (text: string | null | undefined) => string;
     handlePrintReceipt: (op: UnifiedOperation) => void;
     handleReturn: (op: UnifiedOperation, item: any) => void;
+    handleDeleteSale?: (op: UnifiedOperation) => void;
     receiptLoading: string | null;
     rates?: any;
     defaultCurrency?: string;
@@ -34,6 +35,7 @@ export function SalesHistoryRow({
     translateLabel,
     handlePrintReceipt,
     handleReturn,
+    handleDeleteSale,
     receiptLoading,
     rates,
     defaultCurrency = "TRY",
@@ -60,17 +62,20 @@ export function SalesHistoryRow({
     const { amount: displayAmount, symbol: displaySymbol } = getDisplayAmount();
     const isIncome = op.transactionType === "INCOME";
 
+    const isFullyReturned = op.isReturned || op.status === "İADE EDİLDİ" || (op.amount === 0 && (op.type === "SALE" || !!op.saleId));
+
     return (
         <tr
             className={cn(
                 "group hover:bg-muted/10 transition-all duration-300 cursor-pointer border-b border-border/30",
-                isExpanded && "bg-muted/5 shadow-inner"
+                isExpanded && "bg-muted/5 shadow-inner",
+                isFullyReturned && "opacity-75 bg-muted/5"
             )}
             onClick={onToggleExpand}
         >
             <td className="px-6 py-2">
-                <Badge variant="outline" className={cn("text-xs font-semibold px-2 py-1 rounded-lg border", getTypeColor(op.type))}>
-                    {getTypeLabel(op.type)}
+                <Badge variant="outline" className={cn("text-xs font-semibold px-2 py-1 rounded-lg border", isFullyReturned ? "bg-orange-500/10 text-orange-600 border-orange-500/30" : getTypeColor(op.type))}>
+                    {isFullyReturned ? "İADE EDİLDİ" : getTypeLabel(op.type)}
                 </Badge>
             </td>
             <td className="px-6 py-2">
@@ -83,12 +88,13 @@ export function SalesHistoryRow({
                 <div className="flex items-center gap-3">
                     <div className={cn(
                         "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                        isFullyReturned ? "bg-orange-500/10 text-orange-600" :
                         op.type === "EXPENSE" ? "bg-rose-500/10 text-rose-600" :
                         op.type === "DEBT_DIRECT" ? "bg-orange-500/10 text-orange-600" :
                         op.type === "PAYMENT" ? "bg-emerald-500/10 text-emerald-600" :
                         "bg-blue-500/10 text-blue-600"
                     )}>
-                        {op.type === "EXPENSE" ? <ReceiptText className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                        {isFullyReturned ? <ArrowLeftRight className="h-4 w-4" /> : op.type === "EXPENSE" ? <ReceiptText className="h-4 w-4" /> : <User className="h-4 w-4" />}
                     </div>
                     <span className="text-sm font-semibold tracking-tight">{op.customerName}</span>
                 </div>
@@ -116,17 +122,24 @@ export function SalesHistoryRow({
                 <div className="flex flex-col items-end">
                     <span className={cn(
                         "text-lg font-bold tracking-tight",
+                        isFullyReturned ? "line-through text-muted-foreground/60" :
                         op.type === "EXPENSE" ? "text-rose-600 dark:text-rose-400" :
                         op.type === "DEBT_DIRECT" ? "text-orange-600 dark:text-orange-400" :
                         op.type === "PAYMENT" ? "text-emerald-600 dark:text-emerald-400" :
                         "text-blue-600 dark:text-blue-400"
                     )}>
-                        {op.type === "EXPENSE" ? "-" : "+"}{displaySymbol}{displayAmount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                        {op.type === "EXPENSE" ? "-" : "+"}{displaySymbol}{displayAmount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     <div className="flex items-center gap-1 opacity-70">
-                        <span className="text-xs font-semibold text-muted-foreground">
-                            {op.accountName ? translateLabel(op.accountName) : getPaymentLabel(op.paymentMethod)}
-                        </span>
+                        {isFullyReturned ? (
+                            <Badge variant="outline" className="text-[9px] font-bold text-orange-500 border-orange-500/30 bg-orange-500/10">
+                                İADE
+                            </Badge>
+                        ) : (
+                            <span className="text-xs font-semibold text-muted-foreground">
+                                {op.accountName ? translateLabel(op.accountName) : getPaymentLabel(op.paymentMethod)}
+                            </span>
+                        )}
                     </div>
                 </div>
             </td>
@@ -147,7 +160,7 @@ export function SalesHistoryRow({
                             }
                         </Button>
                     )}
-                    {(op.type === "SALE" || op.type === "DEBT_DIRECT") && (
+                    {(op.type === "SALE" || op.type === "DEBT_DIRECT") && !isFullyReturned && (
                         <Button
                             size="icon"
                             variant="ghost"
@@ -159,6 +172,20 @@ export function SalesHistoryRow({
                             }}
                         >
                             <ArrowLeftRight className="h-4 w-4" />
+                        </Button>
+                    )}
+                    {(op.type === "SALE" || !!op.saleId) && handleDeleteSale && (
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Satışı Sil"
+                            className="h-10 w-10 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-none text-rose-500/80 hover:text-white"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSale(op);
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4" />
                         </Button>
                     )}
                     <Button

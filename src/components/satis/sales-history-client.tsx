@@ -2,7 +2,7 @@
 
 import { Fragment, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -43,6 +43,7 @@ import {
 import { getSaleById } from "@/lib/actions/sale-actions";
 import { UnifiedSaleModal } from "@/components/pos/unified-sale-modal";
 import { AddReturnModal } from "@/components/stock/add-return-modal";
+import { DeleteSaleConfirmModal } from "./delete-sale-confirm-modal";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { toast } from "sonner";
 
@@ -81,6 +82,7 @@ export function SalesHistoryClient({
     staffList = [],
 }: SalesHistoryClientProps) {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<string>("charts");
     const [comparisonMode, setComparisonMode] = useState<"TTD" | "ROLLING_SPAN">("TTD");
     const [page, setPage] = useState(currentPage || 1);
@@ -90,6 +92,7 @@ export function SalesHistoryClient({
     const [paymentMethodFilter, setPaymentMethodFilter] = useState("ALL");
     const [staffFilter, setStaffFilter] = useState("ALL");
     const [activeQuickFilter, setActiveQuickFilter] = useState<string>("thisMonthTTD");
+    const [deleteSaleId, setDeleteSaleId] = useState<string | null>(null);
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: new Date(startDate),
         to: new Date(endDate),
@@ -142,6 +145,9 @@ export function SalesHistoryClient({
         let expense = 0;
 
         items.forEach((op: UnifiedOperation) => {
+            if (op.isReturned || op.status === "İADE EDİLDİ" || (op.amount === 0 && (op.type === "SALE" || !!op.saleId))) {
+                return;
+            }
             let amount = Number(op.amount) || 0;
             const currency = op.currency || "TRY";
 
@@ -440,6 +446,15 @@ export function SalesHistoryClient({
             })),
         });
         setIsReturnModalOpen(true);
+    };
+
+    const handleDeleteSale = (op: UnifiedOperation) => {
+        const sId = op.saleId || op.id;
+        if (!sId) {
+            toast.error("Satış kimliği bulunamadı.");
+            return;
+        }
+        setDeleteSaleId(sId);
     };
 
     const formattedRange = appliedRange?.from
@@ -784,6 +799,7 @@ export function SalesHistoryClient({
                                                 getPaymentLabel={getPaymentLabel}
                                                 translateLabel={translateLabel}
                                                 handlePrintReceipt={handlePrintReceipt}
+                                                handleDeleteSale={handleDeleteSale}
                                                 handleReturn={(selectedOp, item) => {
                                                     if (selectedOp.items.length > 1 && expandedOpId !== selectedOp.id) {
                                                         setExpandedOpId(selectedOp.id);
@@ -808,6 +824,7 @@ export function SalesHistoryClient({
                                                             handleReturn={handleReturn}
                                                             handleSendWhatsApp={handleSendWhatsApp}
                                                             handlePrintReceipt={handlePrintReceipt}
+                                                handleDeleteSale={handleDeleteSale}
                                                             rates={rates}
                                                             defaultCurrency={defaultCurrency}
                                                         />
@@ -917,7 +934,30 @@ export function SalesHistoryClient({
                 open={isReturnModalOpen}
                 onOpenChange={setIsReturnModalOpen}
                 initialData={returnInitialData}
-                onSuccess={() => router.refresh()}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["sales-history"] });
+                    queryClient.invalidateQueries({ queryKey: ["sales-history-report"] });
+                    queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+                    queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+                    queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                    queryClient.invalidateQueries({ queryKey: ["daily-session"] });
+                    router.refresh();
+                }}
+            />
+
+            <DeleteSaleConfirmModal
+                saleId={deleteSaleId}
+                open={!!deleteSaleId}
+                onOpenChange={(open) => !open && setDeleteSaleId(null)}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["sales-history"] });
+                    queryClient.invalidateQueries({ queryKey: ["sales-history-report"] });
+                    queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+                    queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+                    queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                    queryClient.invalidateQueries({ queryKey: ["daily-session"] });
+                    router.refresh();
+                }}
             />
         </div>
     );

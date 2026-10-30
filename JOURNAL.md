@@ -41,6 +41,69 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-30: Satış İadesi Düzeltmeleri, Astronomik Tutar / Kur Senkronizasyonu, İşlem Özeti Kartı Redesign ve Anlık Canlı Bakiye Senkronizasyonu:
+  - **Talep:**
+    - Canlıda satışı iade etmeme rağmen satış arşivinde hala satış olarak görünmesi ve 5.000 TL yerine $249.781 olarak yansıması hatasının çözülmesi.
+    - Kasa bakiyesinin eksiye ($ -247.110 ) düşmesi ve günlük gelirde -$249.781 görünmesi probleminin ortadan kaldırılması.
+    - Ürün satıldıktan sonra kasa raporu sayfası ve satış arşivinden yapılan düzenlemeler, silmeler veya iadelerin anlık olarak bakiyeye yansıması (live sync).
+    - İşlem Özeti kartındaki gereksiz bölümlerin (büyük mükerrer tutar kutusu, gereksiz ödeme yöntemi/kasa kutuları) kaldırılması; sadece işlem yapılan tarih saat, ürün adı ve ürün açıklaması, WhatsApp mesajı, iade, düzenleme, fiş yazdırma ve silme butonlarının yer alması.
+  - **Yapılan İyileştirmeler:**
+    1. **İşlem Özeti Kartının Yeniden Tasarımı ([`OperationDetails`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/satis/parts/operation-details.tsx)):**
+       - İki kolonlu hantal ve mükerrer düzen kaldırıldı. Sağ taraftaki devasa tutar, mükerrer hesap/kasa ve ödeme yöntemi kutuları temizlendi.
+       - Tek, ferah ve kompakt kart tasarımı:
+         - Üst Bölüm: Takvim ve saat rozetleriyle işlem yapılan tam tarih ve saat (`dd MMMM yyyy, HH:mm`), işlem/fiş no (`#SALE-1200`) ve durum rozeti.
+         - Orta Bölüm: Varsa ürün açıklaması/müşteri notu (`"A57 5g Kasım müşteri"`) ve satıştaki ürünlerin adı, adedi (`1x`), birim fiyatı ve toplamı.
+         - Eylem Çubuğu (Action Bar): WhatsApp Mesajı (`WHATSAPP`), İade Et (`İADE ET`), İşlem Düzenleme Modalını açan Düzenle (`DÜZENLE`), Termal fiş çıkartan (`FİŞ YAZDIR`) ve Satış Silme onay popup'ını açan (`SATIŞI SİL`) butonları yerleştirildi.
+    2. **İade Edilen Satışların Arşivde Doğru Temsili ([`activity-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/activity-actions.ts)):**
+       - `getUnifiedHistory`: `Transaction` ve `Sale` sorgularında satışın iade edilip edilmediği (`sale.finalAmount <= 0`) kontrol edildi.
+       - Tamamı iade edilen satışlar artık pozitif satış gibi görünmüyor; `status = "İADE EDİLDİ"`, `amount = 0`, `isReturned = true` olarak işaretlendi.
+       - Satıştaki kalemler tamamen iade edildiğinde ürün listesi boş kalmıyor; açıklama üzerinden iade edilen ürün adı net şekilde gösteriliyor.
+       - Kısmi iadelerde kalan net tutar ve `status = "KISMİ İADE"` durumu sağlandı.
+    3. **Satış Arşivi Satır Görünümü & Toplam Hesaplama ([`sales-history-row.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/satis/parts/sales-history-row.tsx) & [`sales-history-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/satis/sales-history-client.tsx)):**
+       - Satır üzerinde iade edilen satışın tutarı üstü çizili ve soluk gösteriliyor; yanına `İADE EDİLDİ` rozeti ekleniyor.
+       - Tablo altındaki toplam ciro hesaplamasında (`displayedTotals`) iade edilen satışlar net ciroya dahil edilmeyerek bilanço tutarlılığı korundu.
+    4. **Günlük Kasa Net Gelir ve İade Gider Filtresi Düzeltmesi ([`finance-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/finance-actions.ts)):**
+       - `getDailySummary`: `todayExpenseTransactions` sorgusundaki Türkçe noktalı `İ` vs noktasız `I` uyumsuzluğu giderildi (`İade` ve `Iade` büyük/küçük harf duyarsız `NOT` filtresiyle işletme giderlerinden hariç tutuldu).
+       - Bu sayede müşteriye yapılan iade geri ödemesi normal işletme gideri sayılmayarak günlük gelirin eksiye düşmesi önlendi.
+    5. **Tam Kapsamlı Anlık Canlı Senkronizasyon (Live Cache Invalidation):**
+       - [`add-return-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/stock/add-return-modal.tsx): İade yapıldığında `sales-history`, `sales-history-report`, `finance-summary`, `finance-transactions`, `finance-accounts`, `daily-session` anında invalidate ediliyor.
+       - [`create-transaction-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/create-transaction-modal.tsx) & [`edit-customer-payment-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/edit-customer-payment-modal.tsx): Kasa hareketinde yapılan her düzenleme anında satış arşivine ve kasa bakiyesine yansıtılıyor.
+       - [`delete-sale-confirm-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/satis/delete-sale-confirm-modal.tsx): Satış silindiğinde tüm finans ve arşiv sorguları anında yenileniyor.
+
+- [x] 2026-10-30: Satış Silme Akıllı Popup Sistemi, Kasa-Arşiv Senkronizasyonu, İade Çifte Düşüş Düzeltmeleri ve Dolar 2-Basamak Formatı:
+  - **Talep:**
+    - Satış arşivinden veya kasa raporundan bir satış silinebilsin.
+    - Silerken modal/popup açılsın: Ürünler silindikten sonra stoğa eklensin mi, kasa bakiyesinden düşülsün mü, kasa hareketlerinden silinsin mi seçenekleri sunulsun.
+    - Seçilen durumlara göre bakiye ve stok değişimi anlık olarak popup içinde dinamik gösterilsin ve buna göre kayıtlar tutarlı silinsin.
+    - Kasa raporundan ürün silince satış arşivinde hala durması sorununun çözülmesi.
+    - Ürün iade sisteminin analizi: İadelerin 2 kere düşmesi sorununun tespiti ve çözümü; veresiye borçlu iadeler ve vazgeçme akışlarının düzeltilmesi.
+    - TL / Dolar ayrımının düzgün yapılması, kasa bakiyelerinde dolar görünümünde virgülden sonra her zaman 2 rakam (`0.00`) kullanılması.
+  - **Yapılan İyileştirmeler:**
+    1. **Akıllı Satış Silme Modal Bileşeni ([`DeleteSaleConfirmModal`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/satis/delete-sale-confirm-modal.tsx)):**
+       - Hem Satış Arşivi (`/satis/gecmis`) hem de Kasa Raporu (`/satis/kasa`) ekranlarında çalışan bağımsız silme onay modalı geliştirildi.
+       - Satış numarası, müşteri, toplam tutar, ödeme yöntemi ve satıştaki tüm ürün kalemleri detaylı listeleniyor.
+       - 3 interaktif kontrol: 1) Ürünleri Stoğa Geri Ekle, 2) Kasa Bakiyesinden Düş (ilgili hesap), 3) Kasa Hareket Kaydını Sil.
+       - Canlı Değişim Özeti Kartı: Seçimlere göre stoğun ne kadar artacağı (`+X adet`), kasadan ne kadar düşeceği (`-X ₺ / $X`) ve veresiye borcunun nasıl güncelleneceği renkli ve anlık hesaplanarak sunuldu.
+    2. **Gelişmiş Satış Silme Motoru ([`sale-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/sale-actions.ts)):**
+       - `getSaleDeletePreview(saleId)`: Modal açılırken satışın tüm kalemlerini, bağlı kasa hesabını ve güncel stokları döndüren önizleme eylemi eklendi.
+       - `deleteSale(id, options)`: `revertStock`, `adjustFinanceBalance`, `deleteTransaction` seçeneklerine göre:
+         - Ürün stoklarını geri yükler ve `IN` envanter hareketi açar.
+         - Bağlı kasa hesabının (`FinanceAccount`) bakiyesini ve sonraki işlemlerin `runningBalance` değerlerini geriye dönük düzeltir.
+         - Kasa hareketini (`Transaction`) temizler veya iptal olarak işaretler.
+         - Varsa veresiye borç (`Debt`) kaydını ve satış kalemlerini siler; iadeleri güvenceye alır.
+    3. **Kasa Raporu & Satış Arşivi Senkronizasyonu ([`transaction-history.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/transaction-history.tsx) & [`finance-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/finance-actions.ts)):**
+       - Kasa raporunda silinmek istenen satır bir satış işlemine bağlıysa (`t.saleId`), doğrudan `DeleteSaleConfirmModal` açılarak hem satışın hem kasanın birlikte temizlenmesi sağlandı.
+       - `deleteTransaction` fonksiyonu da arka planda `saleId` içeriyorsa ilgili satış kalemlerini ve kaydını yetim bırakmayacak şekilde güncellendi; "kasa raporundan silince satış arşivinde kalması" sorunu kökten çözüldü.
+       - Satış arşivine ([`sales-history-row.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/satis/parts/sales-history-row.tsx) & [`operation-details.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/satis/parts/operation-details.tsx)) doğrudan kırmızı "Satışı Sil" butonu entegre edildi.
+    4. **Ürün İade Sistemi Çifte Düşüş Hatalarının Giderilmesi ([`return-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/return-actions.ts) & [`finance-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/finance-actions.ts)):**
+       - **Hata 1 (Veresiye İadede Haksız Nakit Çıkışı):** `createMultipleReturnTickets` içinde müşteri veresiye borcuyla almışken müşterinin borcu düşürüldüğü halde ayrıca kasadan nakit `recordReturnExpense` gideri kesilerek çifte zarar yazılıyordu; bu haksız nakit çıkışı kaldırıldı, yalnızca borç bakiyesi düşürülecek şekilde düzeltildi.
+       - **Hata 2 (`getDailySummary` Çifte İade Kesintisi):** İade yapıldığında `Sale.finalAmount` ve `SaleItem`'lar zaten düşürüldüğü için, günlük gelir ve kâr hesaplamalarında tekrar `returnsIncomeReduction` ve `returnsProfitReduction` düşülerek çifte düşüş yapılması engellendi; net ciro ve kâr hesabı stabilize edildi.
+    5. **TL / Dolar Ayrımı ve 2-Basamak Formatı ([`finance-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/finance-actions.ts), [`account-list.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/account-list.tsx), [`counting-number.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/ui/counting-number.tsx)):**
+       - `getComputedAccounts` içinde işlemler hesaba yansıtılırken hesabın kendi para birimi (`account.currency`) dikkate alınarak dönüşüm sağlandı (Dolar kasasına TL tutar eklenmesi yanlışı giderildi).
+       - Dolar para birimi gösterimlerinde virgülden sonra her zaman 2 basamak (`minimumFractionDigits: 2, maximumFractionDigits: 2`) zorunlu kılındı (`$125` yerine `$125.00`).
+       - `CountingNumber` animasyon bileşeni dolar simgesi (`$`) algıladığında varsayılan basamağı otomatik olarak 2'ye sabitledi.
+    6. **Doğrulama:** `npx tsc --noEmit` ile tüm proje kontrol edildi (0 hata). Dev server kesintisiz korundu.
+
 - [x] 2026-10-29: Hızlı Satış (`/satis`) Mobil Görünüm Sekmeli Sepet, Adımlı Satış Akışı & Müşteri Seçim Modalı:
   - **Talep:**
     - Mobilde sepet ve ürün kataloğunun sıkışıp ürün seçiminin engellenmesi sorununa çözüm: Sekmeli / adımlı (stepped flow) mobil mimari (Önce geniş ekranda ürün seçimi, ardından müşteri seçimi, sonrasında satış onayı).

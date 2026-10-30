@@ -32,9 +32,10 @@ export function CountingNumber({
   // Parse numeric value, prefix, suffix if value is passed as string (e.g. "₺255.37", "(₺12.715,15)", "$0.00")
   const { numericValue, extractedPrefix, extractedSuffix, autoDecimals } = useMemo(() => {
     if (typeof value === "number") {
+      const isUsd = prefix.includes("$") || suffix.includes("$");
       const dec = decimals !== undefined
         ? decimals
-        : (value % 1 !== 0 ? (value.toString().split(".")[1]?.length || 2) : 0);
+        : (isUsd ? 2 : (value % 1 !== 0 ? (value.toString().split(".")[1]?.length || 2) : 0));
       return { numericValue: value, extractedPrefix: prefix, extractedSuffix: suffix, autoDecimals: dec };
     }
 
@@ -82,11 +83,14 @@ export function CountingNumber({
     }
 
     const num = parseFloat(clean);
+    const isUsd = p.includes("$") || s.includes("$");
+    const resolvedDec = decimals !== undefined ? decimals : (isUsd ? 2 : decCount);
+
     return {
       numericValue: isNaN(num) ? 0 : num,
       extractedPrefix: p,
       extractedSuffix: s,
-      autoDecimals: decimals !== undefined ? decimals : decCount,
+      autoDecimals: resolvedDec,
     };
   }, [value, prefix, suffix, decimals]);
 

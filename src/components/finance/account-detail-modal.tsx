@@ -408,11 +408,11 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                                         <p className={cn("text-[13px] font-semibold", t.type === 'INCOME' ? "text-emerald-500" : "text-rose-500")}>
                                                             {t.type === 'INCOME' ? '+' : '-'}
                                                             {t.currency === "USD" ? "$" : t.currency === "EUR" ? "€" : "₺"}
-                                                            {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: t.currency === "TRY" ? 2 : 1 })}
+                                                            {Number(t.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </p>
                                                         <p className="text-[9px] text-muted-foreground/60 font-medium">
                                                             {t.currency === "TRY" ? (
-                                                                `~${(Number(t.amount) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}$`
+                                                                `~$${(Number(t.amount) / usdRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                                             ) : (
                                                                 `~₺${Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString('tr-TR')}`
                                                             )}

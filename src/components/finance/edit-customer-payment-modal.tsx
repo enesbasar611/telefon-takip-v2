@@ -72,6 +72,11 @@ export function EditCustomerPaymentModal({
                 queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
                 queryClient.invalidateQueries({ queryKey: ["transactions"] });
                 queryClient.invalidateQueries({ queryKey: ["debts"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["sales-history"] });
+                queryClient.invalidateQueries({ queryKey: ["sales-history-report"] });
+                queryClient.invalidateQueries({ queryKey: ["daily-session"] });
             } else {
                 toast.error(res.error || "Güncelleme başarısız");
             }

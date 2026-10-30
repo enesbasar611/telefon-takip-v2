@@ -720,15 +720,9 @@ export async function createMultipleReturnTickets(tickets: {
         const refundVal = Number(data.refundAmount || 0);
         if (refundVal > 0) {
           if (data.debtId && processingPlan.reduceDebt) {
+            // Veresiye borçlu işlem: Yalnızca müşterinin borcundan düşülür.
+            // Kasaya önceden nakit girmediği için kasadan çifte nakit çıkışı (recordReturnExpense) YAPILMAZ.
             await reduceDebtForReturn(tx, shopId, data.debtId, refundVal);
-            await recordReturnExpense(tx, {
-              financeAccountId,
-              amount: refundVal,
-              currency: data.refundCurrency || "TRY",
-              ticketNumber,
-              userId,
-              shopId,
-            });
           } else if (data.saleId || data.sourceType === "SALE" || data.sourceType === "CUSTOMER") {
             // For completed sales or general customer returns, create an Expense transaction
             if (financeAccountId) {

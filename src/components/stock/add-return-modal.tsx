@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Dialog,
     DialogContent,
@@ -102,6 +103,7 @@ const returnActionDescriptions: Record<ReturnProcessingAction, string> = {
 };
 
 export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: AddReturnModalProps) {
+    const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [sourceType, setSourceType] = useState<"CUSTOMER" | "SUPPLIER">(initialData?.sourceType || "CUSTOMER");
     const [selectedSourceId, setSelectedSourceId] = useState<string>(initialData?.sourceId || "");
@@ -366,6 +368,16 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                 onOpenChange(false);
                 setItems([]);
                 setSelectedSourceId("");
+                queryClient.invalidateQueries({ queryKey: ["sales-history"] });
+                queryClient.invalidateQueries({ queryKey: ["sales-history-report"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["daily-session"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+                queryClient.invalidateQueries({ queryKey: ["debts"] });
+                queryClient.invalidateQueries({ queryKey: ["products"] });
                 onSuccess?.(enrichedTickets);
             } else {
                 toast.error(res.error || "İadeler oluşturulamadı.");

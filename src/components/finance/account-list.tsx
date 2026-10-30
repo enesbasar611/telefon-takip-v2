@@ -69,10 +69,19 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
     const { rates, defaultCurrency } = useDashboardData();
     const usdRate = rates?.usd || 35.0;
     const eurRate = rates?.eur || 38.0;
-    const formatDisplayMoney = (value: number) => {
-        const amount = defaultCurrency === "USD" ? value / usdRate : defaultCurrency === "EUR" ? value / eurRate : value;
-        const symbol = defaultCurrency === "USD" ? "$" : defaultCurrency === "EUR" ? "€" : "₺";
-        return `${symbol}${amount.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}`;
+    const formatDisplayMoney = (value: number, accountCurrency?: string) => {
+        const isUsd = accountCurrency === "USD" || (!accountCurrency && defaultCurrency === "USD");
+        const isEur = accountCurrency === "EUR" || (!accountCurrency && defaultCurrency === "EUR");
+        
+        let amount = value;
+        if (!accountCurrency) {
+            amount = defaultCurrency === "USD" ? value / usdRate : defaultCurrency === "EUR" ? value / eurRate : value;
+        }
+        const symbol = isUsd ? "$" : isEur ? "€" : "₺";
+        return `${symbol}${amount.toLocaleString("tr-TR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
     };
 
     const handleDelete = async (id: string) => {
@@ -210,16 +219,24 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
-                                    <p className="text-xl font-bold tracking-tighter text-foreground">{formatDisplayMoney(Number(account.balance))}</p>
+                                    <p className="text-xl font-bold tracking-tighter text-foreground">{formatDisplayMoney(Number(account.balance), account.currency)}</p>
                                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Hesap para birimi: {account.currency || "TRY"}</p>
-                                    <div className="flex gap-2 mt-0.5 opacity-60">
-                                        <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
-                                            ~${(Number(account.balance) / usdRate).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}
-                                        </span>
-                                        <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
-                                            ~€{(Number(account.balance) / eurRate).toLocaleString("tr-TR", { maximumFractionDigits: 0 })}
-                                        </span>
-                                    </div>
+                                    {account.currency === "USD" ? (
+                                        <div className="flex gap-2 mt-0.5 opacity-60">
+                                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                                ~₺{Math.round(Number(account.balance) * usdRate).toLocaleString("tr-TR")}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2 mt-0.5 opacity-60">
+                                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                                ~${(Number(account.balance) / usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                                ~€{(Number(account.balance) / eurRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                    )}
 
                                     {account.type === "CREDIT_CARD" && account.limit && (
                                         <div className="mt-3 space-y-1.5">

@@ -262,6 +262,8 @@ export function CreateTransactionModal({
         queryClient.invalidateQueries({ queryKey: ["finance-accounts"] }),
         queryClient.invalidateQueries({ queryKey: ["finance-summary"] }),
         queryClient.invalidateQueries({ queryKey: ["daily-session"] }),
+        queryClient.invalidateQueries({ queryKey: ["sales-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["sales-history-report"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-init"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-data"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] }),

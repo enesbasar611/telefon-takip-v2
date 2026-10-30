@@ -682,11 +682,23 @@ export function POSInterface({ initialSaleId }: {
       try {
         const result = await createSale({
           customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
-          items: cart.map(item => ({
-            productId: item.id,
-            quantity: item.quantity,
-            unitPrice: Number(((item.sellPrice !== undefined ? item.sellPrice : item.unitPrice) || 0).toFixed(2))
-          })),
+          items: cart.map(item => {
+            let price = item.unitPrice;
+            if (saleCurrency === "USD") {
+              price = item.sellPriceUsd !== undefined && Number(item.sellPriceUsd) > 0
+                ? Number(item.sellPriceUsd)
+                : (item.unitPrice ? (item.unitPrice > 1000 && item.sellPrice ? item.sellPrice / usdRate : item.unitPrice) : (item.sellPrice ? item.sellPrice / usdRate : 0));
+            } else {
+              price = item.sellPrice !== undefined && Number(item.sellPrice) > 0
+                ? Number(item.sellPrice)
+                : (item.unitPrice || 0);
+            }
+            return {
+              productId: item.id,
+              quantity: item.quantity,
+              unitPrice: Number(Number(price || 0).toFixed(2))
+            };
+          }),
           totalAmount: Number(displayTotal.toFixed(2)),
           currency: saleCurrency,
           paymentMethod,
@@ -711,6 +723,11 @@ export function POSInterface({ initialSaleId }: {
           queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-service-metrics"] });
+          queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+          queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+          queryClient.invalidateQueries({ queryKey: ["sales-history"] });
+          queryClient.invalidateQueries({ queryKey: ["sales-history-report"] });
+          queryClient.invalidateQueries({ queryKey: ["daily-session"] });
         } else {
           toast({ title: "Hata", description: result.error || "Satış kaydedilemedi", variant: "destructive" });
         }

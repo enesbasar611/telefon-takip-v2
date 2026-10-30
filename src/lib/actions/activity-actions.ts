@@ -24,12 +24,15 @@ export interface UnifiedOperation {
     customerPhone?: string;
     paymentMethod: string;
     accountName?: string;
+    financeAccountId?: string;
     description: string;
     items: { name: string; quantity: number; price?: number; productId?: string; saleId?: string; debtId?: string }[];
     status?: string;
     saleId?: string;
     debtId?: string;
     transactionType: "INCOME" | "EXPENSE";
+    isReturned?: boolean;
+    originalAmount?: number;
 }
 
 function getSearchVariants(term: string): string[] {
@@ -144,13 +147,25 @@ export async function getUnifiedHistory(options: {
 
             const items: UnifiedOperation[] = sales.map((sale) => {
                 const isDebt = sale.paymentMethod === "DEBT";
-                const operationItems = (sale.items || []).map((item) => ({
+                const saleFinalAmount = Number(sale.finalAmount);
+                const isFullyReturned = saleFinalAmount <= 0;
+                const isPartiallyReturned = saleFinalAmount > 0 && Number(sale.totalAmount) > saleFinalAmount;
+                const operationItems: UnifiedOperation["items"] = (sale.items || []).map((item) => ({
                     name: item.product?.name || "Bilinmeyen Ürün",
                     quantity: item.quantity,
                     price: Number(item.unitPrice),
                     productId: item.productId,
                     saleId: sale.id,
                 }));
+
+                if (operationItems.length === 0 && isFullyReturned) {
+                    operationItems.push({
+                        name: sale.transaction?.description ? `${sale.transaction.description} (İade Edildi)` : "İade Edilen Satış",
+                        quantity: 1,
+                        price: Number(sale.totalAmount),
+                        saleId: sale.id,
+                    });
+                }
 
                 const customerName = sale.customer 
                     ? sale.customer.name 
@@ -161,16 +176,19 @@ export async function getUnifiedHistory(options: {
                     type: isDebt ? "DEBT_DIRECT" : "SALE",
                     number: sale.saleNumber,
                     date: sale.createdAt,
-                    amount: Number(sale.finalAmount),
+                    amount: isFullyReturned ? 0 : saleFinalAmount,
+                    originalAmount: Number(sale.totalAmount),
+                    isReturned: isFullyReturned,
                     currency: sale.transaction?.currency || "TRY",
                     customerName,
                     customerId: sale.customerId || undefined,
                     customerPhone: sale.customer?.phone || undefined,
                     paymentMethod: sale.paymentMethod,
                     accountName: undefined,
+                    financeAccountId: sale.transaction?.financeAccountId || undefined,
                     description: sale.transaction?.description || `Satış ${sale.saleNumber}`,
                     items: operationItems,
-                    status: isDebt ? "VERESİYE" : "SATIŞ",
+                    status: isFullyReturned ? "İADE EDİLDİ" : isPartiallyReturned ? "KISMİ İADE" : (isDebt ? "VERESİYE" : "SATIŞ"),
                     saleId: sale.id,
                     debtId: undefined,
                     transactionType: "INCOME" as const,
@@ -285,12 +303,21 @@ export async function getUnifiedHistory(options: {
             const isDebt = (tx.paymentMethod === "DEBT" || !!tx.debtId) && !isPayment && !isExpense;
             const isSale = !!tx.saleId && !isDebt && !isExpense;
 
+            const saleFinalAmount = tx.sale ? Number(tx.sale.finalAmount) : Number(tx.amount);
+            const isFullyReturned = !!tx.sale && saleFinalAmount <= 0;
+            const isPartiallyReturned = !!tx.sale && saleFinalAmount > 0 && saleFinalAmount < Number(tx.amount);
+            const isReturnExpense = isExpense && (
+                tx.category === "İade" || 
+                tx.category === "Iade" || 
+                (tx.description && /iade/i.test(tx.description))
+            );
+
             let type: OperationType = "SALE";
             if (isExpense) type = "EXPENSE";
             else if (isDebt) type = "DEBT_DIRECT";
             else if (isPayment) type = "PAYMENT";
 
-            const operationItems = tx.sale?.items.map((item: any) => ({
+            const operationItems: UnifiedOperation["items"] = tx.sale?.items.map((item: any) => ({
                 name: item.product?.name || "Bilinmeyen Ürün",
                 quantity: item.quantity,
                 price: Number(item.unitPrice),
@@ -298,6 +325,17 @@ export async function getUnifiedHistory(options: {
                 saleId: tx.saleId || undefined,
                 debtId: tx.debtId || undefined,
             })) || [];
+
+            if (isSale && operationItems.length === 0 && isFullyReturned) {
+                operationItems.push({
+                    name: tx.description ? `${tx.description} (İade Edildi)` : "İade Edilen Satış",
+                    quantity: 1,
+                    price: Number(tx.amount),
+                    productId: undefined,
+                    saleId: tx.saleId || undefined,
+                    debtId: tx.debtId || undefined,
+                });
+            }
 
             if (isDebt && operationItems.length === 0) {
                 operationItems.push({
@@ -312,7 +350,7 @@ export async function getUnifiedHistory(options: {
 
             if (isExpense && operationItems.length === 0) {
                 operationItems.push({
-                    name: tx.description || tx.category || "İşletme Gideri",
+                    name: tx.description || tx.category || (isReturnExpense ? "İade Çıkışı" : "İşletme Gideri"),
                     quantity: 1,
                     price: Number(tx.amount),
                     productId: undefined,
@@ -322,24 +360,32 @@ export async function getUnifiedHistory(options: {
             }
 
             const customerName = isExpense 
-                ? (tx.supplier?.name || tx.customer?.name || tx.category || "İşletme Gideri")
+                ? (isReturnExpense ? (tx.customer?.name || "İade Müşterisi") : (tx.supplier?.name || tx.customer?.name || tx.category || "İşletme Gideri"))
                 : (tx.customer ? tx.customer.name : (tx.saleId ? "HIZLI SATIŞ" : "DİĞER"));
+
+            const displayAmount = isFullyReturned ? 0 : (isPartiallyReturned ? saleFinalAmount : Number(tx.amount));
+            const statusLabel = isReturnExpense 
+                ? "İADE" 
+                : (isFullyReturned ? "İADE EDİLDİ" : (isPartiallyReturned ? "KISMİ İADE" : (isExpense ? "GİDER" : (isSale ? "SATIŞ" : (isDebt ? "VERESİYE" : "TAHSİLAT")))));
 
             return {
                 id: tx.id,
                 type,
                 number: tx.sale?.saleNumber || (isExpense ? `G-${tx.id.substring(0, 6)}` : isDebt ? `B-${tx.id.substring(0, 6)}` : `O-${tx.id.substring(0, 6)}`),
                 date: tx.createdAt,
-                amount: Number(tx.amount),
+                amount: displayAmount,
+                originalAmount: Number(tx.amount),
+                isReturned: isFullyReturned,
                 currency: tx.currency,
                 customerName,
                 customerId: tx.customerId || undefined,
                 customerPhone: tx.customer?.phone || undefined,
                 paymentMethod: tx.paymentMethod,
                 accountName: tx.financeAccount?.name,
+                financeAccountId: tx.financeAccountId || undefined,
                 description: tx.description,
                 items: operationItems,
-                status: isExpense ? "GİDER" : (isSale ? "SATIŞ" : (isDebt ? "VERESİYE" : "TAHSİLAT")),
+                status: statusLabel,
                 saleId: tx.saleId || undefined,
                 debtId: tx.debtId || undefined,
                 transactionType: tx.type,
