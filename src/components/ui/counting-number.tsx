@@ -35,7 +35,7 @@ export function CountingNumber({
       const isUsd = prefix.includes("$") || suffix.includes("$");
       const dec = decimals !== undefined
         ? decimals
-        : (isUsd ? 2 : (value % 1 !== 0 ? (value.toString().split(".")[1]?.length || 2) : 0));
+        : (isUsd ? 2 : (value % 1 !== 0 ? Math.min(2, value.toString().split(".")[1]?.length || 2) : 0));
       return { numericValue: value, extractedPrefix: prefix, extractedSuffix: suffix, autoDecimals: dec };
     }
 
@@ -84,7 +84,7 @@ export function CountingNumber({
 
     const num = parseFloat(clean);
     const isUsd = p.includes("$") || s.includes("$");
-    const resolvedDec = decimals !== undefined ? decimals : (isUsd ? 2 : decCount);
+    const resolvedDec = decimals !== undefined ? decimals : Math.min(2, isUsd ? 2 : decCount);
 
     return {
       numericValue: isNaN(num) ? 0 : num,

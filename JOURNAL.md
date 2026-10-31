@@ -41,6 +41,87 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-31: Stok Sayfası (Envanter Yönetimi) Küsürat Formatlaması (2 Basamak) ve Varsayılan Para Birimi ($ / ₺) Entegrasyonu:
+  - **Talep:**
+    - Stok sayfasındaki finansal tutarlarda kayan noktalı sayı küsüratlarının çok fazla olması (örn. `₺ 238.451,67999999996` ve `₺ 284.711,43999999...`), bunların virgülden sonra en fazla 2 basamak olacak şekilde sınırlandırılması.
+    - Stok sayfasında ayarlar/profil üzerinden varsayılan para birimi değiştirilse bile (Dolar seçilse dahi) değişikliklerin yansımaması ve sürekli TL gösterilmesi sorununun çözülmesi.
+  - **Tespit Edilen Kök Neden:**
+    - `CountingNumber` bileşeni (`counting-number.tsx`) `value.toString().split(".")[1]?.length` mantığıyla ondalık basamak sayısını üst sınırsız alıyordu; JavaScript floating point hassasiyet hatalarından kaynaklanan 12-14 basamaklı ondalıklar doğrudan ekrana yazılıyordu.
+    - `/stok` sayfası ve alt bileşenleri (`StockDashboardMetrics`, `CategorySummaryCards`, `StockListTable`) çoklu para birimi desteğinden önce yazılmıştı ve `useDashboardData()` kancasını dinlemeyerek `₺` simgesini ve ham TL tutarlarını statik olarak kullanıyordu.
+  - **Yapılan İyileştirmeler:**
+    1. **Sayı Animasyonu ve Finansal Gösterim Küsürat Sınırlandırması ([`counting-number.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/ui/counting-number.tsx) & [`reveal-financial.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/ui/reveal-financial.tsx)):**
+       - `CountingNumber` bileşeninde varsayılan otomatik ondalık tespiti `Math.min(2, ...)` ile en fazla 2 basamak olacak şekilde mühürlendi.
+       - `RevealFinancial` bileşenine `decimals?: number = 2` prop'u eklenerek `CountingNumber`'a iletildi; gizleme/gösterme durumlarında 2 basamaklı format standardı sağlandı.
+    2. **Stok KPI Metriklerinde Para Birimi ve Küsürat Desteği ([`stock-dashboard-metrics.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/product/stock-dashboard-metrics.tsx) & [`product-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/product-actions.ts)):**
+       - `getInventoryStats` fonksiyonunda `buyPriceUsd` ve `sellPriceUsd` alanları sorguya dahil edildi, `usdRate` ile USD cinsinden stok maliyeti (`totalValueUsd`) ve beklenen kâr (`potentialProfitUsd`) hesaplandı. Tüm değerler `.toFixed(2)` ile yuvarlandı.
+       - `StockDashboardMetrics` bileşeni `useDashboardData()` ile entegre edildi. Varsayılan para birimi USD seçildiğinde ana tutarlar `$` simgesiyle, parantez içinde ikincil TL karşılığıyla birlikte gösterildi.
+    3. **Kategori Özet Kartlarında Dinamik Döviz ([`category-summary-cards.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/product/category-summary-cards.tsx)):**
+       - Kategori bazlı maliyet ve kâr hesaplamalarında `defaultCurrency === "USD"` durumunda ürünün `buyPriceUsd` veya kur çevrimi kullanıldı, tutarlar `.toFixed(2)` formatına çekildi ve dinamik simge (`$` veya `₺`) aktarıldı.
+    4. **Stok Listesi Tablosunda Çift Para Birimi ([`stock-list-table.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/product/stock-list-table.tsx)):**
+       - Hem masaüstü tablo satırlarında hem mobil ürün kartlarında satış fiyatı ve maliyet gösterimleri aktif varsayılan para birimine göre dinamik hale getirildi (`USD` ise birincil `$`, rozette `₺`; `TRY` ise birincil `₺`, rozette `$`).
+       - Tüm maliyet ve fiyat alanları 2 ondalık basamağa sabitlendi.
+    5. **Doğrulama:**
+       - `npx tsc --noEmit` ile tip kontrolü yapıldı ve 0 hata ile doğrulandı.
+
+
+- [x] 2026-10-31: Kasa Kapanış ve Sıfırlama Geçmişi Analizi, Geçmiş Ayların Kaybolma Sorununun Giderilmesi ve Ay Seçerek Otomatik Kapanış (1-Son Gün) Özelliği:
+  - **Talep:**
+    - Kasa kapanış durumunun analizi; kapanış tutarı, kapandıktan sonraki durum, satışların işleyişi ve geçmişe dönüp bakma yapısının netleştirilmesi.
+    - "Geçen ayı kapatmıştım ama şuan canlıda görünmüyor, silinmiş" sorununun kalıcı çözümü; geçmiş ayların asla silinmemesi/kaybolmaması.
+    - Kullanıcı ay sonu manuel kasa kapatmasa bile dilediği ayı seçerek o ayın 1. günü ile son günü arasındaki tüm verileri (satış, gelir, gider, kâr, hesap bakiyeleri) otomatik kapatıp "Kasa Sıfırlama Geçmişi"ne mühürlü bilanço olarak kaydedebilmesi.
+  - **Tespit Edilen Kök Neden:**
+    - `getCashRegisterResetReport` fonksiyonunda `period: "MONTH"` filtresi seçildiğinde `startDate` değişkeni `now.getMonth() - 1` (son 30 gün) olarak filtreleniyordu.
+    - Aylar devrettikçe veya 30 gün geçtikçe (örneğin Eylül ayı kapanışı Ekim ayı sonuna gelindiğinde), 30 günden eski kaldığı için sorgu tarafından filtrelenip listeden düşüyor, kullanıcı da kapanışın silindiğini sanıyordu. Veritabanından hiçbir şey silinmemişti, sadece filtreleme 30 gün kısıtı koyuyordu.
+  - **Yapılan İyileştirmeler:**
+    1. **Filtrelemenin Düzeltilmesi & Geçmiş Ayların Kalıcı Görünürlüğü ([`finance-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/finance-actions.ts) & [`cash-reset-report.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/cash-reset-report.tsx)):**
+       - `CashResetReport` varsayılan filtresi `"ALL"` ("Tümü") olarak ayarlandı. Böylece geçmiş aylar (Eylül, Temmuz, önceki yıllar) sayfaya girildiği anda eksiksiz listelenir.
+       - Dinamik Ay/Yıl seçici dropdown eklendi (`2026 - Ekim`, `2026 - Eylül`, vb.). Kullanıcı istediği ayı seçerek o aya ait kapanışları doğrudan filtreleyebilir.
+       - Arama ve hesap filtreleri güçlendirildi.
+    2. **Ay Seçerek Otomatik Kapanış Motoru ([`autoCloseMonth`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/finance-actions.ts)):**
+       - Kullanıcı arayüzden Ay ve Yıl seçtiğinde sistem otomatik olarak o ayın 1. günü 00:00:00 ile son günü 23:59:59 arasındaki:
+         - Toplam satış hacmini ve adedini,
+         - Toplam gelirleri,
+         - Toplam giderleri ve iadeleri,
+         - Net dönem kârını,
+         - Aktif hesapların (Nakit, Banka, POS) o ayki kapanış bakiyelerini hesaplar.
+       - Oluşturulan kaydın `createdAt` tarihi seçilen ayın son gününe sabitlenir (`monthEnd`). Böylece kronolojik sıralamada tam ait olduğu ayda listelenir.
+       - Güvenlik Önlemi (`resetLiveAccounts`): Geçmiş bir ay geriye dönük kapatılırken dükkanın bugünkü canlı nakit/banka bakiyesini sıfırlamaz (opsiyonel onay kutusu ile korunur).
+       - Eğer o ay daha önce kapatılmışsa mükerrer kayıt oluşturmaz, mevcut dönemi günceller.
+    3. **Anlık Kapanış Önizlemesi ([`getMonthClosurePreview`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/finance-actions.ts)):**
+       - Kullanıcı modalda ay ve yılı değiştirdiği anda arka planda sorgu çalışarak o ayın satış, gelir, gider ve kârını önizleme kartlarında canlı gösterir.
+    4. **Dönem Kapatma / Sıfırlama Modalının Geliştirilmesi ([`cash-reset-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/cash-reset-modal.tsx)):**
+       - İki sekmeli modern arayüz:
+         - *Sekme 1: Ay Seçerek Otomatik Kapat* (1. gün - son gün otomatik analizi, önizleme kartları, dükkan bakiyesini koruma güvencesi).
+         - *Sekme 2: Canlı Kasaları Sıfırla* (Günün veya dönemin fiziki devrinde anlık sıfırlama).
+    5. **Kapanış Detay ve Dekont Görünümü ([`cash-reset-detail-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/cash-reset-detail-modal.tsx)):**
+       - Dönem özetleri (satış cirosu, giderler, kâr), hesap dağılımları ve yazdırma/dekont desteği eklendi.
+       - Hatalı/mükerrer kapanışlar için güvenli silme seçeneği (`deleteCashRegisterReset`) eklendi.
+    6. **Doğrulama:**
+       - `npx tsc --noEmit` ile tüm tip kontrolleri 0 hata ile doğrulandı.
+
+- [x] 2026-10-31: POS Sepet İçi Fiyat Düzeltmelerinde Dinamik TL / Dolar (₺ / $) Ayrımı ve Kur Çevrim İyileştirmesi:
+  - **Talep:**
+    - Varsayılan para birimi Dolar ($) olsa bile POS satışı sırasında kullanıcının bazı durumlarda Türk Lirası (₺) olarak fiyat girmek isteyebilmesi.
+    - Fiyat düzeltmesi kısmında TL/Dolar ayrımı yapılabilmesi; TL girilen fiyatın sanki Dolar girilmiş gibi kura çarpılıp yüz binlerce liralık/dolarlık hatalı şişmeye yol açmasının kesin olarak engellenmesi.
+  - **Yapılan İyileştirmeler:**
+    1. **Sepet Kalemi Fiyat Düzenleme Alanına İnteraktif Çift Para Birimi Seçicisi ([`cart-item.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/parts/cart-item.tsx)):**
+       - Her sepet kaleminin fiyat giriş kutusunun başına segmentli `[ ₺ | $ ]` para birimi butonları eklendi.
+       - Kullanıcı `₺` seçtiğinde yeşil zeminle TL modu aktifleşir ve input içerisine TL karşılığı yansıtılır.
+       - Kullanıcı `$` seçtiğinde mavi zeminle Dolar modu aktifleşir ve input içerisine USD karşılığı yansıtılır.
+       - Butonlar arası tek tıkla geçiş yapıldığında mevcut girilmiş fiyat anlık canlı kur üzerinden otomatik ve kusursuz dönüştürülür.
+       - Kutunun hemen yanında veya altında canlı ikincil kur eşdeğeri göstergesi (`≈ $100.10` veya `≈ ₺5.000,00`) eklendi; böylece kasiyer yazdığı tutarın diğer para birimindeki tam karşılığını anlık olarak görür.
+    2. **POS Fiyat Güncelleme ve Alt Toplam Mantığının Para Birimi Güvencesine Alınması ([`pos-interface.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/pos-interface.tsx) & [`pos-compact.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/pos-compact.tsx)):**
+       - `updatePrice(id, newPrice, priceCurrency)` fonksiyonu genişletildi: Kullanıcının fiyatı TL mi yoksa USD mi girdiği açıkça parametre olarak aktarılıyor.
+       - Eğer POS para birimi USD iken kullanıcı 5000 TL girdiğinde:
+         - `sellPrice = 5000` TL
+         - `sellPriceUsd = 5000 / usdRate` (~$100.10)
+         - `unitPrice` = $100.10 (Sepet USD modunda olduğu için birim fiyat $100.10 olarak tutulur).
+         - 5000 TL'nin $5000 sayılıp kurla çarpılarak 249.781 TL/USD gibi astronomik rakamlara dönüşmesi hatası tamamen ortadan kaldırıldı.
+       - `displaySubtotal` ve `createSale` sepet verisi oluşturulurken aktif para birimine göre `sellPriceUsd` (USD modu için) veya `sellPrice` (TRY modu için) garantili olarak seçilir.
+       - Sepet ana para birimi değiştirildiğinde (`toggleSaleCurrency`) mevcut sepet kalemlerinin fiyatları orantılı olarak bozulmadan dönüştürülür.
+    3. **Doğrulama:**
+       - `npx tsc --noEmit` ile tip kontrolleri yapıldı ve 0 hata ile doğrulandı.
+
 - [x] 2026-10-30: Mobil POS Ekranı Kaydırma (Scroll), Sepet Bölümünde Müşteri Seçiminin Gizlenmesi ve Satış Yap Butonunun Alt Navigasyon Üstüne Alınması:
   - **Talep:**
     - Mobilde POS sayfasında sepet kısmına gidildiğinde satış yap butonunun alt navigasyon dock'unun altında kalarak tıklanamaz olması sorununun giderilmesi.

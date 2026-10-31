@@ -336,20 +336,36 @@ export function POSInterface({ initialSaleId }: {
 
   const toggleSaleCurrency = (newCurrency: "TRY" | "USD") => {
     if (newCurrency === saleCurrency) return;
+    const rate = usdRate && usdRate > 0 ? usdRate : 1;
     setCart((prevCart) =>
       prevCart.map((item) => {
-        let newUnitPrice = item.unitPrice ?? item.sellPrice;
+        let tlPrice = item.sellPrice ?? 0;
+        let usdPrice = item.sellPriceUsd ?? 0;
         if (newCurrency === "USD") {
-          newUnitPrice = Number((newUnitPrice / usdRate).toFixed(2));
+          const newUnitPrice = usdPrice > 0 ? usdPrice : Number((tlPrice / rate).toFixed(2));
+          usdPrice = newUnitPrice;
+          if (!tlPrice || tlPrice <= 0) {
+            tlPrice = Number((newUnitPrice * rate).toFixed(2));
+          }
+          return {
+            ...item,
+            unitPrice: newUnitPrice,
+            sellPrice: tlPrice,
+            sellPriceUsd: usdPrice,
+          };
         } else {
-          newUnitPrice = Number((newUnitPrice * usdRate).toFixed(2));
+          const newUnitPrice = tlPrice > 0 ? tlPrice : Number((usdPrice * rate).toFixed(2));
+          tlPrice = newUnitPrice;
+          if (!usdPrice || usdPrice <= 0) {
+            usdPrice = Number((newUnitPrice / rate).toFixed(2));
+          }
+          return {
+            ...item,
+            unitPrice: newUnitPrice,
+            sellPrice: tlPrice,
+            sellPriceUsd: usdPrice,
+          };
         }
-        return {
-          ...item,
-          unitPrice: newUnitPrice,
-          sellPrice: newCurrency === "TRY" ? newUnitPrice : Number((newUnitPrice * usdRate).toFixed(2)),
-          sellPriceUsd: newCurrency === "USD" ? newUnitPrice : Number((newUnitPrice / usdRate).toFixed(2)),
-        };
       })
     );
     setSaleCurrency(newCurrency);
@@ -453,12 +469,20 @@ export function POSInterface({ initialSaleId }: {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
+      const rate = usdRate && usdRate > 0 ? usdRate : 1;
+      const initialSellPrice = product.sellPrice && Number(product.sellPrice) > 0
+        ? Number(product.sellPrice)
+        : (saleCurrency === "TRY" ? unitPrice : Number((unitPrice * rate).toFixed(2)));
+      const initialSellPriceUsd = product.sellPriceUsd && Number(product.sellPriceUsd) > 0
+        ? Number(product.sellPriceUsd)
+        : (saleCurrency === "USD" ? unitPrice : Number((unitPrice / rate).toFixed(2)));
+
       const cartItem = {
         ...product,
         quantity: 1,
         unitPrice,
-        sellPrice: saleCurrency === "TRY" ? unitPrice : Number((unitPrice * usdRate).toFixed(2)),
-        sellPriceUsd: saleCurrency === "USD" ? unitPrice : Number((unitPrice / usdRate).toFixed(2)),
+        sellPrice: initialSellPrice,
+        sellPriceUsd: initialSellPriceUsd,
       };
       return [...currentCart, cartItem];
     });
@@ -510,32 +534,30 @@ export function POSInterface({ initialSaleId }: {
     }));
   }, [products]);
 
-  const updatePrice = useCallback((id: string, newPrice: number) => {
+  const updatePrice = useCallback((id: string, newPrice: number, priceCurrency?: "TRY" | "USD") => {
+    const currency = priceCurrency || saleCurrency;
+    const rate = usdRate && usdRate > 0 ? usdRate : 1;
     setCart((prev) => prev.map((item) => {
       if (item.id === id) {
-        if (defaultCurrency === "USD") {
-          const tlPrice = Number((newPrice * usdRate).toFixed(2));
-          return {
-            ...item,
-            sellPriceUsd: newPrice,
-            sellPrice: tlPrice,
-            unitPrice: tlPrice,
-          };
-        } else if (defaultCurrency === "EUR") {
-          const tlPrice = Number((newPrice * eurRate).toFixed(2));
-          return {
-            ...item,
-            sellPriceEur: newPrice,
-            sellPrice: tlPrice,
-            unitPrice: tlPrice,
-          };
+        let tlPrice: number;
+        let usdPrice: number;
+        if (currency === "USD") {
+          usdPrice = Number(newPrice.toFixed(2));
+          tlPrice = Number((newPrice * rate).toFixed(2));
         } else {
-          return { ...item, sellPrice: newPrice, unitPrice: newPrice };
+          tlPrice = Number(newPrice.toFixed(2));
+          usdPrice = Number((newPrice / rate).toFixed(2));
         }
+        return {
+          ...item,
+          sellPrice: tlPrice,
+          sellPriceUsd: usdPrice,
+          unitPrice: saleCurrency === "USD" ? usdPrice : tlPrice,
+        };
       }
       return item;
     }));
-  }, [defaultCurrency, usdRate, eurRate]);
+  }, [saleCurrency, usdRate]);
 
   const removeFromCart = useCallback((id: string) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
@@ -586,17 +608,21 @@ export function POSInterface({ initialSaleId }: {
 
   const subtotal = useMemo(() => {
     return cart.reduce((acc, item) => {
-      const p = item.sellPrice !== undefined ? item.sellPrice : item.unitPrice;
+      const p = item.sellPrice !== undefined && Number(item.sellPrice) > 0
+        ? Number(item.sellPrice)
+        : Number(item.unitPrice || 0);
       return acc + (p || 0) * item.quantity;
     }, 0);
   }, [cart]);
 
   const displaySubtotal = useMemo(() => {
     return cart.reduce((acc, item) => {
-      const p = item.unitPrice !== undefined ? item.unitPrice : item.sellPrice;
-      return acc + (p || 0) * item.quantity;
+      const p = saleCurrency === "USD"
+        ? (item.sellPriceUsd !== undefined && Number(item.sellPriceUsd) > 0 ? Number(item.sellPriceUsd) : (item.unitPrice || 0))
+        : (item.sellPrice !== undefined && Number(item.sellPrice) > 0 ? Number(item.sellPrice) : (item.unitPrice || 0));
+      return acc + (Number(p) || 0) * item.quantity;
     }, 0);
-  }, [cart]);
+  }, [cart, saleCurrency]);
 
   const selectedCustomer = useMemo(() => {
     if (!selectedCustomerId || selectedCustomerId === "null") return null;
@@ -683,16 +709,9 @@ export function POSInterface({ initialSaleId }: {
         const result = await createSale({
           customerId: selectedCustomerId === "null" ? undefined : selectedCustomerId,
           items: cart.map(item => {
-            let price = item.unitPrice;
-            if (saleCurrency === "USD") {
-              price = item.sellPriceUsd !== undefined && Number(item.sellPriceUsd) > 0
-                ? Number(item.sellPriceUsd)
-                : (item.unitPrice ? (item.unitPrice > 1000 && item.sellPrice ? item.sellPrice / usdRate : item.unitPrice) : (item.sellPrice ? item.sellPrice / usdRate : 0));
-            } else {
-              price = item.sellPrice !== undefined && Number(item.sellPrice) > 0
-                ? Number(item.sellPrice)
-                : (item.unitPrice || 0);
-            }
+            const price = saleCurrency === "USD"
+              ? (item.sellPriceUsd !== undefined && Number(item.sellPriceUsd) > 0 ? Number(item.sellPriceUsd) : Number(item.unitPrice || 0))
+              : (item.sellPrice !== undefined && Number(item.sellPrice) > 0 ? Number(item.sellPrice) : Number(item.unitPrice || 0));
             return {
               productId: item.id,
               quantity: item.quantity,
@@ -1301,6 +1320,8 @@ export function POSInterface({ initialSaleId }: {
                   getEquivalentDisplay={getEquivalentDisplay}
                   displayPrice={getCartDisplayPrice(item)}
                   isCompact={true}
+                  saleCurrency={saleCurrency}
+                  usdRate={usdRate}
                 />
               ))
             )}

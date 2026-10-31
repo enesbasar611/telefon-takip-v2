@@ -9,9 +9,10 @@ interface RevealFinancialProps {
   amount: string | number;
   className?: string;
   prefix?: string;
+  decimals?: number;
 }
 
-export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFinancialProps) {
+export function RevealFinancial({ amount, className, prefix = "₺", decimals = 2 }: RevealFinancialProps) {
   const { isFinancialVisible } = useUI();
 
   const hasSymbol = typeof amount === "string" && (amount.startsWith('₺') || amount.startsWith('$') || amount.startsWith('€'));
@@ -30,6 +31,7 @@ export function RevealFinancial({ amount, className, prefix = "₺" }: RevealFin
           prefix={finalPrefix}
           trigger="view"
           grouping
+          decimals={decimals}
         />
       </span>
       {!isFinancialVisible && (

@@ -493,14 +493,25 @@ export function POSCompact({ products: initialProducts, customers, categories }:
         }));
     };
 
-    const updatePrice = (id: string, newPrice: number) => {
+    const updatePrice = (id: string, newPrice: number, priceCurrency?: "TRY" | "USD") => {
+        const currency = priceCurrency || saleCurrency;
+        const rate = usdRate && usdRate > 0 ? usdRate : 1;
         setCart((prev) => prev.map((item) => {
             if (item.id === id) {
+                let tlPrice: number;
+                let usdPrice: number;
+                if (currency === "USD") {
+                    usdPrice = Number(newPrice.toFixed(2));
+                    tlPrice = Number((newPrice * rate).toFixed(2));
+                } else {
+                    tlPrice = Number(newPrice.toFixed(2));
+                    usdPrice = Number((newPrice / rate).toFixed(2));
+                }
                 return {
                     ...item,
-                    unitPrice: newPrice,
-                    sellPrice: saleCurrency === "TRY" ? newPrice : Number((newPrice * usdRate).toFixed(2)),
-                    sellPriceUsd: saleCurrency === "USD" ? newPrice : Number((newPrice / usdRate).toFixed(2)),
+                    unitPrice: saleCurrency === "USD" ? usdPrice : tlPrice,
+                    sellPrice: tlPrice,
+                    sellPriceUsd: usdPrice,
                 };
             }
             return item;
@@ -513,8 +524,13 @@ export function POSCompact({ products: initialProducts, customers, categories }:
 
     // Subtotal calculated directly from cart unitPrices in active sale currency
     const displaySubtotal = useMemo(() => {
-        return cart.reduce((sum, item) => sum + (Number(item.unitPrice || 0) * item.quantity), 0);
-    }, [cart]);
+        return cart.reduce((sum, item) => {
+            const p = saleCurrency === "USD"
+                ? (item.sellPriceUsd !== undefined && Number(item.sellPriceUsd) > 0 ? Number(item.sellPriceUsd) : (item.unitPrice || 0))
+                : (item.sellPrice !== undefined && Number(item.sellPrice) > 0 ? Number(item.sellPrice) : (item.unitPrice || 0));
+            return sum + (Number(p || 0) * item.quantity);
+        }, 0);
+    }, [cart, saleCurrency]);
 
     const displaySubtotalTl = useMemo(() => {
         if (saleCurrency === "TRY") return displaySubtotal;
@@ -954,6 +970,8 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                     getEquivalentDisplay={(itm: any) => getProductEquivalentDisplay(itm, saleCurrency)}
                                     displayPrice={item.unitPrice}
                                     isCompact={true}
+                                    saleCurrency={saleCurrency}
+                                    usdRate={usdRate}
                                 />
                             ))
                         )}

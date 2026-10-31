@@ -13,6 +13,7 @@ import { recordAuditLog } from "./audit-actions";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
 import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
 import { generateSaleNumber } from "./sale-actions";
+import { getExchangeRates } from "@/lib/actions/currency-actions";
 
 
 async function checkStockAndAddShortage(productId: string, productName: string) {
@@ -1075,12 +1076,14 @@ export async function getProductMovements(productId: string) {
 export async function getInventoryStats() {
   try {
     const shopId = await getShopId();
-    const [products, allTrackedProducts, outOfStockCount] = await Promise.all([
+    const [products, allTrackedProducts, outOfStockCount, rates] = await Promise.all([
       prisma.product.findMany({
         where: { shopId, isDeleted: false },
         select: {
           buyPrice: true,
+          buyPriceUsd: true,
           sellPrice: true,
+          sellPriceUsd: true,
           stock: true,
         }
       }),
@@ -1094,24 +1097,45 @@ export async function getInventoryStats() {
           isDeleted: false,
           stock: { lte: 0 }
         }
-      })
+      }),
+      getExchangeRates(shopId)
     ]);
 
     const criticalCount = allTrackedProducts.filter(p => p.stock > 0 && p.stock <= p.criticalStock).length;
+    const usdRate = Number(rates?.usd) > 0 ? Number(rates.usd) : 34;
 
-    const totalValue = products.reduce((acc, p) => acc + (Number(p.buyPrice) * p.stock), 0);
-    const potentialProfit = products.reduce((acc, p) => acc + ((Number(p.sellPrice) - Number(p.buyPrice)) * p.stock), 0);
+    const totalValue = Number(products.reduce((acc, p) => acc + (Number(p.buyPrice || 0) * p.stock), 0).toFixed(2));
+    const potentialProfit = Number(products.reduce((acc, p) => acc + ((Number(p.sellPrice || 0) - Number(p.buyPrice || 0)) * p.stock), 0).toFixed(2));
     const totalItems = products.reduce((acc, p) => acc + (p.stock > 0 ? p.stock : 0), 0);
+
+    const totalValueUsd = Number(products.reduce((acc, p) => {
+      const bUsd = p.buyPriceUsd !== null && p.buyPriceUsd !== undefined && Number(p.buyPriceUsd) > 0
+        ? Number(p.buyPriceUsd)
+        : (Number(p.buyPrice || 0) / usdRate);
+      return acc + (bUsd * p.stock);
+    }, 0).toFixed(2));
+
+    const potentialProfitUsd = Number(products.reduce((acc, p) => {
+      const bUsd = p.buyPriceUsd !== null && p.buyPriceUsd !== undefined && Number(p.buyPriceUsd) > 0
+        ? Number(p.buyPriceUsd)
+        : (Number(p.buyPrice || 0) / usdRate);
+      const sUsd = p.sellPriceUsd !== null && p.sellPriceUsd !== undefined && Number(p.sellPriceUsd) > 0
+        ? Number(p.sellPriceUsd)
+        : (Number(p.sellPrice || 0) / usdRate);
+      return acc + ((sUsd - bUsd) * p.stock);
+    }, 0).toFixed(2));
 
     return {
       totalValue,
+      totalValueUsd,
       potentialProfit,
+      potentialProfitUsd,
       criticalCount,
       outOfStockCount,
       totalItems
     };
   } catch (error) {
-    return { totalValue: 0, potentialProfit: 0, criticalCount: 0, outOfStockCount: 0, totalItems: 0 };
+    return { totalValue: 0, totalValueUsd: 0, potentialProfit: 0, potentialProfitUsd: 0, criticalCount: 0, outOfStockCount: 0, totalItems: 0 };
   }
 }
 

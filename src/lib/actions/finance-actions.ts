@@ -765,27 +765,371 @@ export async function resetCashRegisters(data: {
   }
 }
 
+export async function autoCloseMonth(data: {
+  year: number;
+  month: number; // 1 - 12
+  notes?: string;
+  resetLiveAccounts?: boolean;
+}) {
+  try {
+    const shopId = await getShopId();
+    const userId = await getUserId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+
+    const year = Number(data.year);
+    const month = Number(data.month);
+    if (!year || !month || month < 1 || month > 12) {
+      return { success: false, error: "Geçersiz yıl veya ay seçildi." };
+    }
+
+    const monthNames = [
+      "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+      "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+    ];
+    const monthName = monthNames[month - 1];
+    const monthStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const rates = await getExchangeRates(shopId);
+
+    // 1. Fetch active accounts
+    const accounts = await prisma.financeAccount.findMany({
+      where: { shopId, isActive: true },
+      orderBy: { createdAt: "asc" }
+    });
+
+    if (accounts.length === 0) {
+      return { success: false, error: "Dükkana ait aktif hesap bulunamadı." };
+    }
+
+    // 2. Fetch sales and transactions in this month range
+    const [monthSales, monthTransactions] = await Promise.all([
+      prisma.sale.findMany({
+        where: {
+          shopId,
+          createdAt: { gte: monthStart, lte: monthEnd },
+          finalAmount: { gt: 0 }
+        },
+        select: { finalAmount: true, totalAmount: true, paymentMethod: true }
+      }),
+      prisma.transaction.findMany({
+        where: {
+          shopId,
+          createdAt: { gte: monthStart, lte: monthEnd }
+        },
+        select: {
+          amount: true,
+          currency: true,
+          type: true,
+          financeAccountId: true,
+          paymentMethod: true,
+          description: true
+        }
+      })
+    ]);
+
+    // Calculate monthly statistics
+    const totalSales = monthSales.reduce((sum, s) => sum + Number(s.finalAmount || 0), 0);
+    
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let totalReturns = 0;
+
+    monthTransactions.forEach((t) => {
+      const amt = Number(t.amount || 0);
+      if (t.type === "INCOME") {
+        totalIncome += amt;
+      } else if (t.type === "EXPENSE") {
+        totalExpense += amt;
+        const desc = (t.description || "").toLowerCase();
+        if (desc.includes("iade") || desc.includes("i̇ade")) {
+          totalReturns += amt;
+        }
+      }
+    });
+
+    const netPeriodBalance = totalIncome - totalExpense;
+
+    const now = new Date();
+    const isCurrentMonth = now.getFullYear() === year && (now.getMonth() + 1) === month;
+
+    const accountSnapshots = accounts.map((acc) => {
+      const accTxs = monthTransactions.filter((t) => t.financeAccountId === acc.id);
+      const accNet = accTxs.reduce((sum, t) => {
+        const amt = Number(t.amount || 0);
+        return t.type === "INCOME" ? sum + amt : sum - amt;
+      }, 0);
+
+      // If current month, closingBalance is live balance; if past month, use net transactions or live balance
+      const closingVal = isCurrentMonth
+        ? Number(acc.balance || 0)
+        : (accNet !== 0 ? accNet : Number(acc.balance || 0));
+
+      const closingValSafe = Number(closingVal.toFixed(2));
+      const closingValUsd = convertTransactionAmount(closingValSafe, "TRY", rates).USD;
+
+      return {
+        accountId: acc.id,
+        accountName: acc.name,
+        accountType: acc.type,
+        accountCurrency: acc.currency || "TRY",
+        closingBalance: closingValSafe,
+        closingBalanceUsd: closingValUsd
+      };
+    });
+
+    const totalBalance = accountSnapshots.reduce((sum, a) => sum + a.closingBalance, 0);
+    const totalBalanceUsd = convertTransactionAmount(totalBalance, "TRY", rates).USD;
+
+    const title = `${monthName} ${year} Kasa Kapanışı`;
+
+    const summaryNotes = [
+      `📅 Dönem: 01 ${monthName} ${year} - ${monthEnd.getDate()} ${monthName} ${year}`,
+      `💰 Toplam Satış Hacmi: ₺${totalSales.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} (${monthSales.length} adet işlem)`,
+      `📈 Toplam Gelir: ₺${totalIncome.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}`,
+      `📉 Toplam Gider: ₺${totalExpense.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}${totalReturns > 0 ? ` (₺${totalReturns.toLocaleString("tr-TR")} İadeler dahil)` : ""}`,
+      `⚖️ Net Dönem Kârı / Hareketi: ₺${netPeriodBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}`,
+      data.notes ? `\n📝 Not: ${data.notes}` : ""
+    ].filter(Boolean).join("\n");
+
+    // 4. Save into CashRegisterReset in transaction
+    const reset = await prisma.$transaction(async (tx) => {
+      const existing = await tx.cashRegisterReset.findFirst({
+        where: {
+          shopId,
+          periodType: "MONTH",
+          title: { contains: `${monthName} ${year}` }
+        }
+      });
+
+      if (existing) {
+        await tx.cashRegisterResetAccount.deleteMany({ where: { resetId: existing.id } });
+        const updated = await tx.cashRegisterReset.update({
+          where: { id: existing.id },
+          data: {
+            title,
+            notes: summaryNotes,
+            totalBalance,
+            totalBalanceUsd,
+            userId,
+            createdAt: monthEnd,
+            accounts: {
+              create: accountSnapshots.map((a) => ({
+                accountId: a.accountId,
+                accountName: a.accountName,
+                accountType: a.accountType,
+                accountCurrency: a.accountCurrency,
+                closingBalance: a.closingBalance,
+                closingBalanceUsd: a.closingBalanceUsd,
+                shopId
+              }))
+            }
+          },
+          include: { accounts: true }
+        });
+
+        if (data.resetLiveAccounts) {
+          await tx.financeAccount.updateMany({
+            where: { shopId, isActive: true },
+            data: { balance: 0, availableBalance: 0 }
+          });
+        }
+
+        return updated;
+      }
+
+      const created = await tx.cashRegisterReset.create({
+        data: {
+          title,
+          notes: summaryNotes,
+          periodType: "MONTH",
+          totalBalance,
+          totalBalanceUsd,
+          shopId,
+          userId,
+          createdAt: monthEnd,
+          accounts: {
+            create: accountSnapshots.map((a) => ({
+              accountId: a.accountId,
+              accountName: a.accountName,
+              accountType: a.accountType,
+              accountCurrency: a.accountCurrency,
+              closingBalance: a.closingBalance,
+              closingBalanceUsd: a.closingBalanceUsd,
+              shopId
+            }))
+          }
+        },
+        include: { accounts: true }
+      });
+
+      if (data.resetLiveAccounts) {
+        await tx.financeAccount.updateMany({
+          where: { shopId, isActive: true },
+          data: { balance: 0, availableBalance: 0 }
+        });
+      }
+
+      return created;
+    });
+
+    revalidatePath("/satis/kasa");
+    revalidatePath("/satis/gecmis");
+    revalidatePath("/dashboard");
+    revalidateTag(`dashboard-${shopId}`);
+
+    await recordAuditLog({
+      action: "CREATE",
+      entityType: "FINANCE",
+      entityId: reset.id,
+      entityName: title,
+      message: `${title} otomatik olarak oluşturuldu ve arşivlendi.`,
+      details: { totalSales, totalIncome, totalExpense, totalBalance, totalBalanceUsd }
+    });
+
+    return { success: true, reset: serializePrisma(reset) };
+  } catch (error) {
+    console.error("autoCloseMonth error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Ay kapanışı oluşturulamadı." };
+  }
+}
+
+export async function getMonthClosurePreview(year: number, month: number) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+
+    const monthNames = [
+      "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+      "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+    ];
+    const monthName = monthNames[month - 1];
+    const monthStart = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const rates = await getExchangeRates(shopId);
+
+    const [monthSales, monthTransactions, accounts] = await Promise.all([
+      prisma.sale.findMany({
+        where: {
+          shopId,
+          createdAt: { gte: monthStart, lte: monthEnd },
+          finalAmount: { gt: 0 }
+        },
+        select: { finalAmount: true }
+      }),
+      prisma.transaction.findMany({
+        where: {
+          shopId,
+          createdAt: { gte: monthStart, lte: monthEnd }
+        },
+        select: { amount: true, type: true, description: true }
+      }),
+      prisma.financeAccount.findMany({
+        where: { shopId, isActive: true },
+        select: { id: true, name: true, type: true, balance: true, currency: true }
+      })
+    ]);
+
+    const totalSales = monthSales.reduce((sum, s) => sum + Number(s.finalAmount || 0), 0);
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let totalReturns = 0;
+
+    monthTransactions.forEach((t) => {
+      const amt = Number(t.amount || 0);
+      if (t.type === "INCOME") totalIncome += amt;
+      else if (t.type === "EXPENSE") {
+        totalExpense += amt;
+        const desc = (t.description || "").toLowerCase();
+        if (desc.includes("iade") || desc.includes("i̇ade")) totalReturns += amt;
+      }
+    });
+
+    const netProfit = totalIncome - totalExpense;
+    const now = new Date();
+    const isCurrentMonth = now.getFullYear() === year && (now.getMonth() + 1) === month;
+
+    return {
+      success: true,
+      data: {
+        year,
+        month,
+        monthName,
+        startDate: format(monthStart, "dd.MM.yyyy"),
+        endDate: format(monthEnd, "dd.MM.yyyy"),
+        salesCount: monthSales.length,
+        totalSales,
+        totalIncome,
+        totalExpense,
+        totalReturns,
+        netProfit,
+        isCurrentMonth,
+        usdRate: Number(rates.usd) || 34,
+        accounts: serializePrisma(accounts)
+      }
+    };
+  } catch (error) {
+    console.error("getMonthClosurePreview error:", error);
+    return { success: false, error: "Önizleme yüklenemedi." };
+  }
+}
+
+export async function deleteCashRegisterReset(resetId: string) {
+  try {
+    const shopId = await getShopId();
+    if (!shopId) return { success: false, error: "Dükkan bilgisi bulunamadı." };
+
+    await prisma.cashRegisterReset.delete({
+      where: { id: resetId, shopId }
+    });
+
+    revalidatePath("/satis/kasa");
+    return { success: true };
+  } catch (error) {
+    console.error("deleteCashRegisterReset error:", error);
+    return { success: false, error: "Kasa kapanış kaydı silinemedi." };
+  }
+}
+
 export async function getCashRegisterResetReport(options: {
   period?: "DAY" | "WEEK" | "MONTH" | "ALL";
   accountId?: string;
+  year?: number;
+  month?: number;
 } = {}) {
   try {
     const shopId = await getShopId();
     if (!shopId) return { resets: [], accounts: [] };
 
-    const now = new Date();
-    const startDate = new Date(now);
-    if (options.period === "DAY") startDate.setHours(0, 0, 0, 0);
-    else if (options.period === "WEEK") startDate.setDate(now.getDate() - 7);
-    else if (options.period === "MONTH") startDate.setMonth(now.getMonth() - 1);
+    let createdAtFilter: any = undefined;
 
-    const createdAt = options.period && options.period !== "ALL" ? { gte: startDate } : undefined;
+    if (options.year && options.month) {
+      const start = new Date(options.year, options.month - 1, 1, 0, 0, 0, 0);
+      const end = new Date(options.year, options.month, 0, 23, 59, 59, 999);
+      createdAtFilter = { gte: start, lte: end };
+    } else if (options.period === "DAY") {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      createdAtFilter = { gte: start };
+    } else if (options.period === "WEEK") {
+      const start = new Date();
+      start.setDate(start.getDate() - 7);
+      createdAtFilter = { gte: start };
+    } else if (options.period === "MONTH") {
+      // Current calendar month (from 1st of current month)
+      const start = new Date();
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      createdAtFilter = { gte: start };
+    }
+    // If period is "ALL" or undefined, createdAtFilter is undefined (shows all historical resets!)
 
     const [resets, accounts] = await Promise.all([
       prisma.cashRegisterReset.findMany({
         where: {
           shopId,
-          ...(createdAt ? { createdAt } : {}),
+          ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
           ...(options.accountId ? { accounts: { some: { accountId: options.accountId } } } : {})
         },
         orderBy: { createdAt: "desc" },
@@ -796,7 +1140,7 @@ export async function getCashRegisterResetReport(options: {
           },
           user: { select: { name: true } }
         },
-        take: 60
+        take: 120
       }),
       prisma.financeAccount.findMany({
         where: { shopId, isActive: true },

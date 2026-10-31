@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,6 +90,9 @@ export function StockListTable({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { defaultCurrency = "TRY", rates } = useDashboardData();
+  const usdRate = Number(rates?.usd) > 0 ? Number(rates.usd) : 34;
+  const isUSD = defaultCurrency === "USD";
   const highlightedId = searchParams.get("highlight");
   const activeAiSearch = aiSearchQuery || searchParams.get("ai_search");
 
@@ -651,11 +655,26 @@ export function StockListTable({
                   <div className="bg-muted/40 p-3 rounded-xl border border-border flex flex-col justify-center text-right">
                     <p className="text-[9px] font-medium text-muted-foreground/80 mb-1.5 uppercase tracking-wider">SATIŞ FİYATI</p>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-[14px] font-semibold text-foreground">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
-                      {product.sellPriceUsd && (
-                        <span className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                          ${product.sellPriceUsd}
-                        </span>
+                      {isUSD ? (
+                        <>
+                          <span className="text-[14px] font-semibold text-foreground">
+                            ${Number(product.sellPriceUsd ? product.sellPriceUsd : (Number(product.sellPrice || 0) / usdRate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-medium bg-muted/60 px-1.5 py-0.5 rounded border border-border/40">
+                            ₺{Number(product.sellPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[14px] font-semibold text-foreground">
+                            ₺{Number(product.sellPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          {product.sellPriceUsd && (
+                            <span className="text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                              ${Number(product.sellPriceUsd).toFixed(2)}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -665,11 +684,27 @@ export function StockListTable({
                   <div className="flex flex-col items-start gap-1">
                     <div className="flex items-center gap-1.5 font-medium uppercase tracking-wider text-[9px] text-rose-500">MALİYET</div>
                     <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-2 py-1">
-                      <RevealFinancial amount={product.buyPrice} className="text-[12px] text-rose-500 font-semibold" />
-                      {product.buyPriceUsd && (
-                        <span className="text-[11px] text-blue-400  flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-                          ${product.buyPriceUsd}
-                        </span>
+                      {isUSD ? (
+                        <>
+                          <RevealFinancial 
+                            amount={product.buyPriceUsd ? Number(product.buyPriceUsd) : (Number(product.buyPrice || 0) / usdRate)} 
+                            prefix="$" 
+                            decimals={2} 
+                            className="text-[12px] text-rose-500 font-semibold" 
+                          />
+                          <span className="text-[10px] text-muted-foreground font-medium bg-muted/60 px-1.5 py-0.5 rounded border border-border/40">
+                            ₺{Number(product.buyPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <RevealFinancial amount={product.buyPrice} prefix="₺" decimals={2} className="text-[12px] text-rose-500 font-semibold" />
+                          {product.buyPriceUsd && (
+                            <span className="text-[11px] text-blue-400 flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                              ${Number(product.buyPriceUsd).toFixed(2)}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -822,23 +857,55 @@ export function StockListTable({
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end">
                       <div className="flex items-center gap-2">
-                        {product.sellPriceUsd && (
-                          <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                            ${product.sellPriceUsd}
-                          </span>
+                        {isUSD ? (
+                          <>
+                            <span className="text-[10px] font-semibold text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded border border-border/40">
+                              ₺{Number(product.sellPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <span className="text-[14px] font-semibold text-foreground transition-colors">
+                              ${Number(product.sellPriceUsd ? product.sellPriceUsd : (Number(product.sellPrice || 0) / usdRate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {product.sellPriceUsd && (
+                              <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                ${Number(product.sellPriceUsd).toFixed(2)}
+                              </span>
+                            )}
+                            <span className="text-[14px] font-semibold text-foreground transition-colors">
+                              ₺{Number(product.sellPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </>
                         )}
-                        <span className="text-[14px] font-semibold text-foreground transition-colors">₺{Number(product.sellPrice).toLocaleString('tr-TR')}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[9px] uppercase tracking-widest text-rose-500">Maliyet:</span>
                         <div className="flex items-center gap-1.5 bg-rose-500/5 px-2 py-0.5 rounded-lg border border-rose-500/30">
-                          {product.buyPriceUsd && (
+                          {isUSD ? (
                             <>
-                              <span className="text-[10px] font-semibold text-blue-400/90">${product.buyPriceUsd}</span>
+                              <RevealFinancial 
+                                amount={product.buyPriceUsd ? Number(product.buyPriceUsd) : (Number(product.buyPrice || 0) / usdRate)} 
+                                prefix="$" 
+                                decimals={2} 
+                                className="text-[11px] text-rose-500 font-semibold" 
+                              />
                               <span className="text-[9px] text-muted-foreground/50">=</span>
+                              <span className="text-[10px] font-semibold text-muted-foreground">
+                                ₺{Number(product.buyPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {product.buyPriceUsd && (
+                                <>
+                                  <span className="text-[10px] font-semibold text-blue-400/90">${Number(product.buyPriceUsd).toFixed(2)}</span>
+                                  <span className="text-[9px] text-muted-foreground/50">=</span>
+                                </>
+                              )}
+                              <RevealFinancial amount={product.buyPrice} prefix="₺" decimals={2} className="text-[11px] text-rose-500 font-semibold" />
                             </>
                           )}
-                          <RevealFinancial amount={product.buyPrice} className="text-[11px] text-rose-500 font-semibold" />
                         </div>
                       </div>
                     </div>
