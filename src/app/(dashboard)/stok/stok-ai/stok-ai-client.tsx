@@ -225,7 +225,7 @@ export function StockAIClient({
                             </Badge>
 
                             <Badge className="bg-slate-800/80 text-muted-foreground border-slate-700 px-3 py-1 text-[10px] uppercase font-mono tracking-wider">
-                                GEMINI 2.5 FLASH YAPAY ZEKA MOTORU
+                                GEMINI 3.8 FLASH YAPAY ZEKA MOTORU
                             </Badge>
 
                             {metrics?.todayStr && (

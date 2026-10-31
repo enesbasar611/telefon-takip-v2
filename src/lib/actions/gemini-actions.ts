@@ -259,7 +259,7 @@ export async function callGemini(
         const genAI = new GoogleGenerativeAI(key);
         const model = genAI.getGenerativeModel(
             {
-                model: "gemini-2.5-flash",
+                model: "gemini-3.8-flash",
                 generationConfig: {
                     responseMimeType: responseType === "json" ? "application/json" : "text/plain",
                     temperature: 0.1,
@@ -1313,7 +1313,7 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
     try {
         const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
 
 
 

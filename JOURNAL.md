@@ -41,6 +41,23 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-10-31: Gemini Yapay Zeka Model Adlarının `gemini-3.8-flash` Olarak Güncellenmesi:
+  - **Talep:**
+    - Kod tabanındaki (`src/` ve `.env` dosyaları) `gemini-2.5-flash` (ve eski `gemini-1.5`, `gemini-2.0`) model dizgilerinin mantık değiştirilmeden `gemini-3.8-flash` olarak güncellenmesi.
+  - **Tespit ve Uygulama:**
+    - `src/lib/actions/gemini-actions.ts`:
+      - `callGemini` ana çağrı fonksiyonundaki model adı `gemini-3.8-flash` olarak güncellendi.
+      - `validateGeminiKeyAction` API anahtar doğrulama fonksiyonundaki model adı `gemini-3.8-flash` olarak güncellendi.
+    - `src/app/(dashboard)/stok/stok-ai/stok-ai-client.tsx`:
+      - UI telemetri rozetindeki model etiketi `GEMINI 3.8 FLASH YAPAY ZEKA MOTORU` olarak senkronize edildi.
+    - `src/components/basarai/ai-analyze-modal.tsx`:
+      - Analiz modalı bilgilendirme metnindeki model adı `Gemini 3.8 Flash` olarak güncellendi.
+    - `.env` ve `.env.local` dosyaları taranarak model tanımlaması bulunmadığı, yalnızca `GEMINI_API_KEY` tutulduğu doğrulandı.
+  - **Doğrulama:**
+    - Kod tabanı regex taramasıyla eski model dizgisi kalmadığı teyit edildi.
+    - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+
 - [x] 2026-10-31: Stok Sayfası (Envanter Yönetimi) Küsürat Formatlaması (2 Basamak) ve Varsayılan Para Birimi ($ / ₺) Entegrasyonu:
   - **Talep:**
     - Stok sayfasındaki finansal tutarlarda kayan noktalı sayı küsüratlarının çok fazla olması (örn. `₺ 238.451,67999999996` ve `₺ 284.711,43999999...`), bunların virgülden sonra en fazla 2 basamak olacak şekilde sınırlandırılması.

@@ -162,7 +162,7 @@ export function AIAnalyzeModal({ open, onOpenChange }: { open: boolean, onOpenCh
                             </div>
                             <h3 className="font-bold text-xl text-foreground">Analize Hazırız</h3>
                             <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                                Gemini 2.5 Flash motoru tüm envanterinizi, satış hızınızı ve finansal sağlığınızı saniyeler içinde tarayıp size özel rapor hazırlayacak.
+                                Gemini 3.8 Flash motoru tüm envanterinizi, satış hızınızı ve finansal sağlığınızı saniyeler içinde tarayıp size özel rapor hazırlayacak.
                             </p>
                             <BorderBeam size="md" colorVariant="candy" strength={0.8} className="rounded-2xl mt-4 w-full">
                             <Button
