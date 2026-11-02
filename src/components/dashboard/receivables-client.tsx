@@ -2,17 +2,40 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingDown, Users, ChevronRight, ArrowLeft, Wallet, Calendar, Search, X as CloseIcon, MessageCircle, Receipt } from "lucide-react";
+import {
+    Users,
+    ChevronRight,
+    Wallet,
+    Calendar,
+    Search,
+    X as CloseIcon,
+    MessageCircle,
+    Receipt,
+    Star,
+    Plus,
+    FileText,
+    ArrowUpRight,
+    HandCoins,
+} from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
-import { useUI } from "@/lib/context/ui-context";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
-import { DollarSign, Plus } from "lucide-react";
 import { DebtReceiptModal } from "@/components/finance/debt-receipt-modal";
 import { AddDebtModal } from "@/components/finance/add-debt-modal";
+import { CustomerVeresiyeModal } from "./modals/customer-veresiye-modal";
+import { VeresiyeDetailModal } from "./modals/veresiye-detail-modal";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Debt {
     id: string;
@@ -24,11 +47,13 @@ interface Debt {
     notes?: string | null;
     isPaid?: boolean;
     customer?: {
+        id?: string;
         name: string;
         phone?: string;
     };
     customerId: string;
     sale?: {
+        saleNumber?: string;
         items?: Array<{
             product?: { name: string };
             quantity: number;
@@ -47,12 +72,23 @@ interface ReceivablesClientProps {
 
 export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows = 4 }: ReceivablesClientProps) {
     const cardRef = useRef<HTMLDivElement>(null);
-    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+    const queryClient = useQueryClient();
+
+    // Search and filter states
     const [searchTerm, setSearchTerm] = useState("");
     const [showSearch, setShowSearch] = useState(false);
-    const [receiptOpen, setReceiptOpen] = useState(false);
+
+    // Modal states
     const [addDebtOpen, setAddDebtOpen] = useState(false);
-    const [visibleCustomerLimit, setVisibleCustomerLimit] = useState(5);
+    const [addDebtTarget, setAddDebtTarget] = useState<{ name: string; phone: string } | null>(null);
+
+    const [allVeresiyeModalOpen, setAllVeresiyeModalOpen] = useState(false);
+
+    const [detailCustomer, setDetailCustomer] = useState<any | null>(null);
+    const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+
+    const [receiptOpen, setReceiptOpen] = useState(false);
+    const [receiptCustomer, setReceiptCustomer] = useState<any | null>(null);
 
     // WhatsApp Modal States
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
@@ -60,17 +96,39 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
     const [whatsappCustomerName, setWhatsappCustomerName] = useState("");
     const [whatsappMessage, setWhatsappMessage] = useState("");
 
+    // Pinned / Favorite Dealers
+    const [pinnedCustomerIds, setPinnedCustomerIds] = useState<string[]>([]);
+
     const openWhatsAppModal = (name: string, phone: string, totalTRY: number, totalUSD: number) => {
         setWhatsappCustomerName(name);
         setWhatsappPhone(phone.replace(/[^0-9]/g, ''));
 
-        let msg = `Merhaba ${name},\n\nBekleyen ödemeniz hakkında bilgi vermek istedim:\n\n`;
+        let msg = `Merhaba ${name},\n\nBekleyen cari veresiye ödemeniz hakkında bilgi vermek istedim:\n\n`;
         if (totalTRY > 0) msg += `💰 Güncel Borç (TL): ₺${totalTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}\n`;
         if (totalUSD > 0) msg += `💵 Güncel Borç (USD): $${totalUSD.toFixed(2)}\n`;
         msg += `\nİyi çalışmalar dileriz.`;
 
         setWhatsappMessage(msg);
         setWhatsappModalOpen(true);
+    };
+
+    const handleOpenAddDebt = (customer?: { name: string; phone?: string }) => {
+        if (customer) {
+            setAddDebtTarget({ name: customer.name, phone: customer.phone || "" });
+        } else {
+            setAddDebtTarget(null);
+        }
+        setAddDebtOpen(true);
+    };
+
+    const handleOpenCustomerDetail = (customer: any) => {
+        setDetailCustomer(customer);
+        setIsCustomerModalOpen(true);
+    };
+
+    const handleOpenReceiptForCustomer = (customer: any) => {
+        setReceiptCustomer(customer);
+        setReceiptOpen(true);
     };
 
     const AVATAR_COLORS = [
@@ -88,28 +146,6 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
         Array.isArray(debts) ? debts.filter(d => !d.remainingAmount || Number(d.remainingAmount) > 0) : []
         , [debts]);
 
-    useEffect(() => {
-        const el = cardRef.current;
-        if (!el) return;
-
-        const calculateLimit = () => {
-            const height = el.getBoundingClientRect().height;
-            if (!height || height < 520) {
-                setVisibleCustomerLimit(5);
-                return;
-            }
-            const itemHeight = 60;
-            const availableHeight = height - 120;
-            const calculated = Math.floor(availableHeight / itemHeight);
-            setVisibleCustomerLimit(Math.max(4, Math.min(10, calculated)));
-        };
-
-        calculateLimit();
-        const observer = new ResizeObserver(calculateLimit);
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, []);
-
     const allAggregates = useMemo(() => {
         const aggregates: Record<string, {
             id: string;
@@ -119,6 +155,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
             totalUSD: number;
             count: number;
             lastActivity: number;
+            debts: Debt[];
         }> = {};
 
         unpaidDebts.forEach(d => {
@@ -131,7 +168,8 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                     totalTRY: 0,
                     totalUSD: 0,
                     count: 0,
-                    lastActivity: new Date(d.createdAt).getTime()
+                    lastActivity: new Date(d.createdAt).getTime(),
+                    debts: [],
                 };
             }
             if (d.currency === "USD") {
@@ -140,105 +178,132 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                 aggregates[cId].totalTRY += Number(d.remainingAmount);
             }
             aggregates[cId].count += 1;
+            aggregates[cId].debts.push(d);
         });
 
         return Object.values(aggregates).sort((a, b) => b.lastActivity - a.lastActivity);
     }, [unpaidDebts]);
 
-    const customerAggregates = useMemo(() => {
+    // Load & initialize pinned dealers from localStorage
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("veresiye_pinned_dealers");
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) {
+                    setPinnedCustomerIds(parsed);
+                    return;
+                }
+            }
+            // If no saved pins, automatically pre-pin the top 2 dealers
+            if (allAggregates.length > 0) {
+                const defaultPinned = allAggregates.slice(0, 2).map(c => c.id);
+                setPinnedCustomerIds(defaultPinned);
+                localStorage.setItem("veresiye_pinned_dealers", JSON.stringify(defaultPinned));
+            }
+        } catch (e) {
+            console.error("Error reading pinned dealers:", e);
+        }
+    }, [allAggregates]);
+
+    const togglePinCustomer = (customerId: string, customerName: string, e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setPinnedCustomerIds(prev => {
+            const isPinned = prev.includes(customerId);
+            const next = isPinned ? prev.filter(id => id !== customerId) : [...prev, customerId];
+            try {
+                localStorage.setItem("veresiye_pinned_dealers", JSON.stringify(next));
+            } catch {}
+            if (isPinned) {
+                toast.info(`${customerName} sık kullanılanlardan çıkarıldı`);
+            } else {
+                toast.success(`${customerName} sık kullanılan bayilere eklendi`);
+            }
+            return next;
+        });
+    };
+
+    const pinnedAggregates = useMemo(() => {
+        return allAggregates.filter(c => pinnedCustomerIds.includes(c.id));
+    }, [allAggregates, pinnedCustomerIds]);
+
+    const filteredCustomerAggregates = useMemo(() => {
         if (!searchTerm) return allAggregates;
         const lower = searchTerm.toLocaleLowerCase('tr-TR');
-        return allAggregates.filter(c => c.name.toLocaleLowerCase('tr-TR').includes(lower));
+        return allAggregates.filter(c =>
+            c.name.toLocaleLowerCase('tr-TR').includes(lower) ||
+            (c.phone && c.phone.includes(lower))
+        );
     }, [allAggregates, searchTerm]);
-
-    const selectedCustomer = useMemo(() =>
-        allAggregates.find(c => c.id === selectedCustomerId)
-        , [allAggregates, selectedCustomerId]);
-
-    const customerDebts = useMemo(() =>
-        unpaidDebts.filter(d => d.customerId === selectedCustomerId)
-        , [unpaidDebts, selectedCustomerId]);
-
-    const visibleCustomerAggregates = useMemo(
-        () => customerAggregates.slice(0, visibleCustomerLimit),
-        [customerAggregates, visibleCustomerLimit]
-    );
-    const hiddenCustomerCount = Math.max(0, customerAggregates.length - visibleCustomerAggregates.length);
 
     return (
         <>
             <Card ref={cardRef} className="h-full flex flex-col border border-border/40 bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl dark:border-white/[0.08] shadow-sm rounded-2xl overflow-hidden font-sans group/card transition-all duration-300 hover:shadow-md animate-in fade-in">
+                {/* Header Profile Section */}
                 <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 px-5 py-3.5 bg-muted/10">
                     <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 text-orange-600">
-                            <Wallet className="h-4 w-4" />
+                        <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-600 dark:text-amber-400">
+                            <HandCoins className="h-4 w-4" />
                         </div>
                         <div className="flex flex-col">
-                            <CardTitle className="font-semibold text-sm tracking-tight uppercase text-foreground">
-                                {selectedCustomerId ? "Borç Detayları" : "Alacaklarım"}
+                            <CardTitle className="font-semibold text-sm tracking-tight uppercase text-foreground flex items-center gap-2">
+                                <span>Veresiyeler</span>
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 normal-case">
+                                    {allAggregates.length} Bayi
+                                </span>
                             </CardTitle>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider leading-none">
-                                    {selectedCustomerId ? "Müşteri Dosyası" : "Tahsilat Bekleyenler"}
+                                    Veresiye & Alacak Takibi
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div className="flex gap-1.5">
-                        {/* Fiş butonu - sadece müşteri seçiliyken */}
-                        {selectedCustomerId && (
-                            <button
-                                onClick={() => setReceiptOpen(true)}
-                                className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-xs"
-                                title="Fiş Yazdır / WhatsApp"
-                            >
-                                <Receipt className="h-3.5 w-3.5" />
-                            </button>
-                        )}
-                        {selectedCustomerId && selectedCustomer?.phone && (
-                            <button
-                                onClick={() => openWhatsAppModal(selectedCustomer.name, selectedCustomer.phone!, selectedCustomer.totalTRY, selectedCustomer.totalUSD)}
-                                className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-xs"
-                                title="WhatsApp'tan Hatırlat"
-                            >
-                                <MessageCircle className="h-3.5 w-3.5" />
-                            </button>
-                        )}
-                        {!selectedCustomerId && (
-                            <button
-                                onClick={() => setAddDebtOpen(true)}
-                                className="h-7 w-7 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all shadow-xs"
-                                title="Yeni Veresiye Ekle"
-                            >
-                                <Plus className="h-3.5 w-3.5" />
-                            </button>
-                        )}
-                        {!selectedCustomerId && (
-                            <button
-                                onClick={() => setShowSearch(!showSearch)}
-                                className={cn(
-                                    "h-7 w-7 rounded-lg flex items-center justify-center transition-all shadow-xs",
-                                    showSearch ? "bg-primary text-primary-foreground" : "bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground"
-                                )}
-                            >
-                                {showSearch ? <CloseIcon className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
-                            </button>
-                        )}
-                        {!selectedCustomerId && (
-                            <Link href="/veresiye" className="h-7 w-7 rounded-lg bg-muted/60 flex items-center justify-center hover:bg-orange-500 hover:text-white text-muted-foreground transition-all shadow-xs">
-                                <ChevronRight className="h-3.5 w-3.5" />
-                            </Link>
-                        )}
+
+                    <div className="flex items-center gap-1.5">
+                        {/* Yeni Veresiye Ekle Butonu */}
+                        <button
+                            onClick={() => handleOpenAddDebt()}
+                            className="h-7 px-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:bg-indigo-600 hover:text-white transition-all shadow-xs text-[11px] font-bold"
+                            title="Yeni Veresiye / Alacak Ekle"
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Yeni</span>
+                        </button>
+
+                        {/* Search Butonu */}
+                        <button
+                            onClick={() => setShowSearch(!showSearch)}
+                            className={cn(
+                                "h-7 w-7 rounded-lg flex items-center justify-center transition-all shadow-xs",
+                                showSearch ? "bg-primary text-primary-foreground" : "bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                            title="Bayi / Müşteri Ara"
+                        >
+                            {showSearch ? <CloseIcon className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+                        </button>
+
+                        {/* Tüm Veresiye Detayları Modalı Açma Butonu */}
+                        <button
+                            onClick={() => setAllVeresiyeModalOpen(true)}
+                            className="h-7 px-2 rounded-lg bg-muted/60 flex items-center gap-1 hover:bg-amber-500 hover:text-white text-muted-foreground transition-all shadow-xs text-[11px] font-bold"
+                            title="Tüm Veresiyeler & Detay Modalı"
+                        >
+                            <span className="hidden sm:inline">Tümü</span>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
                     </div>
                 </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 pt-3 flex flex-col custom-scrollbar">
-                    {showSearch && !selectedCustomerId && (
+
+                <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 pt-3.5 flex flex-col custom-scrollbar">
+                    {/* Arama Alanı */}
+                    {showSearch && (
                         <div className="mb-3 animate-in slide-in-from-top-2 duration-200">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                                 <Input
-                                    placeholder="Müşteri ismiyle ara..."
+                                    placeholder="Bayi veya müşteri adıyla ara..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-9 h-9 bg-muted/20 border-border/40 rounded-xl text-xs focus-visible:ring-primary/20"
@@ -247,154 +312,322 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                             </div>
                         </div>
                     )}
-                    {!selectedCustomerId ? (
-                        <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 custom-scrollbar">
-                            {customerAggregates.length > 0 ? (
-                                <>
-                                    {visibleCustomerAggregates.map((agg) => (
-                                        <div key={agg.id} className="relative group/item">
-                                            <button
-                                                onClick={() => setSelectedCustomerId(agg.id)}
-                                                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-muted/20 hover:bg-muted/40 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] transition-all border border-border/40 hover:border-border text-left"
-                                            >
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className={cn(
-                                                        "h-9 w-9 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-xs",
-                                                        getAvatarColor(agg.name)
-                                                    )}>
-                                                        {agg.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="text-xs font-semibold tracking-tight text-foreground truncate">{agg.name}</span>
-                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-tight">{agg.count} İşlem Bekliyor</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                                    <div className="flex flex-col items-end">
-                                                        {agg.totalTRY > 0 && <RevealFinancial amount={agg.totalTRY} className="text-xs sm:text-sm font-bold tabular-nums tracking-tight leading-tight text-foreground" />}
-                                                        {agg.totalUSD > 0 && <RevealFinancial amount={agg.totalUSD} prefix="$" className="text-[10px] font-semibold text-blue-500 tracking-tight tabular-nums leading-tight" />}
-                                                    </div>
-                                                    {agg.phone && (
-                                                        <div
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD);
-                                                            }}
-                                                            className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shrink-0 cursor-pointer"
-                                                            title="WhatsApp Mesaj Gönder"
-                                                        >
-                                                            <MessageCircle className="h-3.5 w-3.5" />
-                                                        </div>
-                                                    )}
-                                                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover/item:text-foreground transition-colors shrink-0" />
-                                                </div>
-                                            </button>
-                                        </div>
-                                    ))}
-                                    {hiddenCustomerCount > 0 && (
-                                        <Link
-                                            href="/veresiye"
-                                            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-muted/20 hover:bg-muted/40 text-[10px] font-semibold text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors"
-                                        >
-                                            <span>{hiddenCustomerCount} KAYIT DAHA VAR</span>
-                                            <ChevronRight className="h-3 w-3" />
-                                        </Link>
-                                    )}
-                                </>
-                            ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                                    <Users className="h-7 w-7 mb-1.5 opacity-40" />
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider">Kayıtlı alacak bulunmuyor</p>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-4 duration-300">
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <div className="bg-primary/5 rounded-xl p-3.5 border border-primary/10 flex flex-col items-center justify-center text-center">
-                                    <Wallet className="h-4 w-4 text-primary mb-1 opacity-70" />
-                                    <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Toplam Alacak (TL)</p>
-                                    <RevealFinancial amount={selectedCustomer?.totalTRY || 0} className="text-lg font-bold tabular-nums tracking-tight text-foreground" />
-                                </div>
-                                <div className="bg-blue-500/5 rounded-xl p-3.5 border border-blue-500/10 flex flex-col items-center justify-center text-center">
-                                    <DollarSign className="h-4 w-4 text-blue-500 mb-1 opacity-70" />
-                                    <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Toplam Alacak (USD)</p>
-                                    <RevealFinancial amount={selectedCustomer?.totalUSD || 0} prefix="$" className="text-lg font-bold tabular-nums tracking-tight text-blue-500" />
-                                </div>
-                            </div>
 
-                            <div className="flex-1 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Açık İşlemler</p>
-                                {customerDebts.map((debt) => (
-                                    <div key={debt.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/40">
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <Calendar className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    {/* SIK KULLANILAN BAYİLER ÖZEL ÇERÇEVESİ */}
+                    <div className="mb-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.04] dark:bg-amber-500/[0.03] p-3 shadow-xs space-y-2 shrink-0">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500 animate-pulse" />
+                                <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                                    Sık Kullanılan Bayiler
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] text-muted-foreground/70 font-semibold">
+                                    {pinnedAggregates.length} Bayi Sabit
+                                </span>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded-md flex items-center gap-1 transition-all"
+                                        >
+                                            <Plus className="h-2.5 w-2.5" />
+                                            <span>Bayi Sabitle</span>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-[220px] max-h-60 overflow-y-auto p-1.5 rounded-xl z-50">
+                                        <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase px-2 py-1 font-bold">
+                                            Sabitlenecek Bayiyi Seçin
+                                        </DropdownMenuLabel>
+                                        {allAggregates.map(cust => (
+                                            <DropdownMenuItem
+                                                key={cust.id}
+                                                onClick={() => togglePinCustomer(cust.id, cust.name)}
+                                                className="text-xs flex items-center justify-between p-2 rounded-lg cursor-pointer"
+                                            >
+                                                <span className="font-semibold truncate">{cust.name}</span>
+                                                {pinnedCustomerIds.includes(cust.id) ? (
+                                                    <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500 shrink-0 ml-1" />
+                                                ) : (
+                                                    <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-1" />
+                                                )}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </div>
+
+                        {pinnedAggregates.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {pinnedAggregates.map(pinned => (
+                                    <div
+                                        key={pinned.id}
+                                        onClick={() => handleOpenAddDebt(pinned)}
+                                        className="p-2.5 rounded-xl bg-background/80 hover:bg-background border border-amber-500/20 hover:border-amber-500/40 shadow-xs transition-all flex items-center justify-between gap-2 group/pin cursor-pointer"
+                                        title={`${pinned.name} için doğrudan alacak ekle (Tıkla)`}
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className={cn(
+                                                "h-7 w-7 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shrink-0 shadow-xs",
+                                                getAvatarColor(pinned.name)
+                                            )}>
+                                                {pinned.name.charAt(0).toUpperCase()}
+                                            </div>
                                             <div className="min-w-0">
-                                                <span className="text-xs font-semibold text-foreground">{new Date(debt.createdAt).toLocaleDateString("tr-TR")}</span>
-                                                {debt.notes && <p className="text-[10px] text-muted-foreground italic truncate">{debt.notes}</p>}
+                                                <h5 className="text-xs font-bold text-foreground truncate group-hover/pin:text-amber-500 transition-colors">
+                                                    {pinned.name}
+                                                </h5>
+                                                <div className="flex items-center gap-1.5 text-[10px] font-semibold">
+                                                    {pinned.totalTRY > 0 && (
+                                                        <span className="text-foreground">
+                                                            ₺{pinned.totalTRY.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                    )}
+                                                    {pinned.totalUSD > 0 && (
+                                                        <span className="text-blue-500 font-bold">
+                                                            ${pinned.totalUSD.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                        <RevealFinancial
-                                            amount={Number(debt.remainingAmount)}
-                                            prefix={debt.currency === "USD" ? "$" : "₺"}
-                                            className={cn(
-                                                "text-xs sm:text-sm font-bold tabular-nums shrink-0 ml-2",
-                                                debt.currency === "USD" ? "text-blue-500" : "text-foreground"
-                                            )}
-                                        />
+
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleOpenAddDebt(pinned);
+                                                }}
+                                                className="h-6 px-1.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all text-[9px] font-bold flex items-center gap-0.5"
+                                                title="Alacak Ekle"
+                                            >
+                                                <Plus className="h-2.5 w-2.5" />
+                                                <span>Alacak</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleOpenCustomerDetail(pinned);
+                                                }}
+                                                className="h-6 px-1.5 rounded-md bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground text-[9px] font-bold flex items-center gap-0.5"
+                                                title="Tüm Detayları Modalda Aç"
+                                            >
+                                                <FileText className="h-2.5 w-2.5 text-blue-500" />
+                                                <span>Detay</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => togglePinCustomer(pinned.id, pinned.name, e)}
+                                                className="p-1 rounded-md text-amber-500 hover:text-rose-500 transition-colors"
+                                                title="Sabitlemeyi kaldır"
+                                            >
+                                                <Star className="h-3 w-3 fill-amber-500" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
+                        ) : (
+                            <p className="text-[10px] text-muted-foreground/70 italic py-1">
+                                ⭐ Aşağıdaki listeden bayilerin yanındaki yıldıza tıklayarak buraya sabitleyebilirsiniz.
+                            </p>
+                        )}
+                    </div>
 
-                            {/* Actions */}
-                            <div className="pt-3 space-y-2">
-                                <Button
-                                    onClick={() => setReceiptOpen(true)}
-                                    size="sm"
-                                    className="w-full h-8 text-xs font-semibold tracking-wider uppercase gap-1.5 rounded-lg"
-                                >
-                                    <Receipt className="h-3.5 w-3.5" />
-                                    Fiş Yazdır / WhatsApp
-                                </Button>
+                    {/* TÜM BAYİLER VE MÜŞTERİLER LİSTESİ */}
+                    <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
+                        {filteredCustomerAggregates.length > 0 ? (
+                            <>
+                                {filteredCustomerAggregates.map((agg) => {
+                                    const isPinned = pinnedCustomerIds.includes(agg.id);
 
-                                <Button
-                                    size="sm"
-                                    className="w-full h-8 text-xs font-semibold tracking-wider uppercase rounded-lg"
-                                    variant="outline"
-                                    onClick={() => setSelectedCustomerId(null)}
+                                    return (
+                                        <div
+                                            key={agg.id}
+                                            onClick={() => handleOpenAddDebt(agg)}
+                                            className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-muted/20 hover:bg-muted/30 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-all border border-border/40 hover:border-amber-500/30 group text-left cursor-pointer"
+                                            title={`${agg.name} üzerine tıklayarak doğrudan alacak ekleyin`}
+                                        >
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                {/* Pin Toggle Button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => togglePinCustomer(agg.id, agg.name, e)}
+                                                    className="p-1 rounded-md hover:bg-muted/50 transition-colors shrink-0"
+                                                    title={isPinned ? "Sık kullanılanlardan çıkar" : "Sık kullanılanlara sabitle"}
+                                                >
+                                                    <Star className={cn(
+                                                        "h-3.5 w-3.5 transition-colors",
+                                                        isPinned ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30 hover:text-amber-500"
+                                                    )} />
+                                                </button>
+
+                                                {/* Avatar */}
+                                                <div className={cn(
+                                                    "h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-xs",
+                                                    getAvatarColor(agg.name)
+                                                )}>
+                                                    {agg.name.charAt(0).toUpperCase()}
+                                                </div>
+
+                                                {/* Dealer Info */}
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-xs font-semibold tracking-tight text-foreground truncate group-hover:text-amber-500 transition-colors">
+                                                        {agg.name}
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                                                        {agg.count} İşlem Bekliyor
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Balances & Action Buttons */}
+                                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                                <div className="flex flex-col items-end mr-1">
+                                                    {agg.totalTRY > 0 && (
+                                                        <RevealFinancial amount={agg.totalTRY} className="text-xs sm:text-sm font-bold tabular-nums tracking-tight leading-tight text-foreground" />
+                                                    )}
+                                                    {agg.totalUSD > 0 && (
+                                                        <RevealFinancial amount={agg.totalUSD} prefix="$" className="text-[10px] font-semibold text-blue-500 tracking-tight tabular-nums leading-tight" />
+                                                    )}
+                                                </div>
+
+                                                {/* Hızlı Alacak Ekle Butonu */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenAddDebt(agg);
+                                                    }}
+                                                    className="h-7 px-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all text-[10px] font-bold flex items-center gap-1 shrink-0"
+                                                    title={`${agg.name} için alacak ekle`}
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                    <span className="hidden sm:inline">Alacak</span>
+                                                </button>
+
+                                                {/* Detay Butonu (MODAL AÇAR - Kartı uzatmaz) */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenCustomerDetail(agg);
+                                                    }}
+                                                    className="h-7 px-2 rounded-lg bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 transition-all text-[10px] font-bold flex items-center gap-1 shrink-0"
+                                                    title="Veresiye Detaylarını Modalda Aç"
+                                                >
+                                                    <FileText className="h-3 w-3 text-blue-500" />
+                                                    <span>Detay</span>
+                                                </button>
+
+                                                {/* WhatsApp Butonu */}
+                                                {agg.phone && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD);
+                                                        }}
+                                                        className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shrink-0"
+                                                        title="WhatsApp Ekstre Gönder"
+                                                    >
+                                                        <MessageCircle className="h-3.5 w-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setAllVeresiyeModalOpen(true)}
+                                    className="flex items-center justify-center gap-1.5 py-2.5 mt-1 rounded-xl bg-muted/20 hover:bg-muted/40 text-[10px] font-semibold text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors border border-border/30"
                                 >
-                                    Listeye Geri Dön
-                                </Button>
+                                    <span>TÜM VERESİYELERİ VE HAREKETLERİ GÖR</span>
+                                    <ChevronRight className="h-3 w-3" />
+                                </button>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                                <Users className="h-7 w-7 mb-1.5 opacity-40" />
+                                <p className="text-[10px] font-semibold uppercase tracking-wider">
+                                    {searchTerm ? "Aramaya uygun bayi bulunamadı" : "Kayıtlı veresiye alacağı bulunmuyor"}
+                                </p>
                             </div>
-                        </div>
-                    )}
-
-                    <WhatsAppConfirmModal
-                        isOpen={whatsappModalOpen}
-                        onClose={() => setWhatsappModalOpen(false)}
-                        phone={whatsappPhone}
-                        customerName={whatsappCustomerName}
-                        initialMessage={whatsappMessage}
-                    />
+                        )}
+                    </div>
                 </CardContent>
             </Card>
 
-            {/* Fiş Modal */}
-            {selectedCustomer && (
+            {/* 1. MÜŞTERİ / BAYİ ÖZEL VERESİYE DETAY MODALI (Detaya basınca açılan zengin modal) */}
+            <CustomerVeresiyeModal
+                customer={detailCustomer}
+                isOpen={isCustomerModalOpen}
+                onClose={() => {
+                    setIsCustomerModalOpen(false);
+                    setDetailCustomer(null);
+                }}
+                onAddDebt={(cust) => handleOpenAddDebt(cust)}
+                onOpenReceipt={() => {
+                    if (detailCustomer) handleOpenReceiptForCustomer(detailCustomer);
+                }}
+                onOpenWhatsApp={() => {
+                    if (detailCustomer && detailCustomer.phone) {
+                        openWhatsAppModal(detailCustomer.name, detailCustomer.phone, detailCustomer.totalTRY, detailCustomer.totalUSD);
+                    }
+                }}
+            />
+
+            {/* 2. TÜM DÜKKAN GENEL VERESİYE DETAY MODALI */}
+            <VeresiyeDetailModal
+                isOpen={allVeresiyeModalOpen}
+                onClose={() => setAllVeresiyeModalOpen(false)}
+            />
+
+            {/* 3. ALACAK / BORÇ EKLEME MODALI */}
+            <AddDebtModal
+                open={addDebtOpen}
+                onOpenChange={(open) => {
+                    setAddDebtOpen(open);
+                    if (!open) setAddDebtTarget(null);
+                }}
+                initialData={addDebtTarget}
+                onSuccess={() => {
+                    setAddDebtOpen(false);
+                    setAddDebtTarget(null);
+                    queryClient.invalidateQueries({ queryKey: ["dashboard-receivables"] });
+                    queryClient.invalidateQueries({ queryKey: ["dashboard-veresiye-detail"] });
+                    queryClient.invalidateQueries({ queryKey: ["debts"] });
+                }}
+            />
+
+            {/* 4. FİŞ & EKSTRE MODALI */}
+            {receiptCustomer && (
                 <DebtReceiptModal
                     open={receiptOpen}
-                    onClose={() => setReceiptOpen(false)}
-                    customer={{ id: selectedCustomer.id, name: selectedCustomer.name, phone: selectedCustomer.phone }}
-                    debts={customerDebts}
+                    onClose={() => {
+                        setReceiptOpen(false);
+                        setReceiptCustomer(null);
+                    }}
+                    customer={{ id: receiptCustomer.id, name: receiptCustomer.name, phone: receiptCustomer.phone }}
+                    debts={receiptCustomer.debts || []}
                     shopName={shopName}
                     shopPhone={shopPhone}
                 />
             )}
 
-            <AddDebtModal
-                open={addDebtOpen}
-                onOpenChange={setAddDebtOpen}
-                onSuccess={() => setAddDebtOpen(false)}
+            {/* 5. WHATSAPP HATIRLATMA MODALI */}
+            <WhatsAppConfirmModal
+                isOpen={whatsappModalOpen}
+                onClose={() => setWhatsappModalOpen(false)}
+                phone={whatsappPhone}
+                customerName={whatsappCustomerName}
+                initialMessage={whatsappMessage}
             />
         </>
     );

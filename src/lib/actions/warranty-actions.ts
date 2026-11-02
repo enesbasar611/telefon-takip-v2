@@ -32,6 +32,7 @@ export async function getWarrantyStats() {
                     createdAt: true,
                     serviceTicket: {
                         select: {
+                            id: true,
                             ticketNumber: true,
                             customer: {
                                 select: {
@@ -70,17 +71,23 @@ export async function getWarrantyStats() {
 export async function getTicketForWarranty(searchTerm: string) {
     try {
         const shopId = await getShopId();
-        if (!searchTerm || searchTerm.length < 3) return null;
+        if (!searchTerm || searchTerm.trim().length < 2) return null;
 
-        const term = searchTerm.trim().toUpperCase();
+        const rawTerm = searchTerm.trim();
+        const cleanPhone = rawTerm.replace(/[^0-9]/g, '');
 
-        // Aramayı Fiş Numarası (SRV-...) veya Telefon Numarası üzerinden yap
+        // Aramayı Fiş Numarası (SRV-...), Müşteri Adı Soyadı, Telefon Numarası veya Cihaz bilgisi üzerinden yap
         const tickets = await prisma.serviceTicket.findMany({
             where: {
                 shopId,
                 OR: [
-                    { ticketNumber: { contains: term } },
-                    { customer: { phone: { contains: term.replace(/\s+/g, '') } } }
+                    { ticketNumber: { contains: rawTerm, mode: "insensitive" } },
+                    { customer: { name: { contains: rawTerm, mode: "insensitive" } } },
+                    ...(cleanPhone && cleanPhone.length >= 2 ? [{ customer: { phone: { contains: cleanPhone } } }] : []),
+                    { deviceBrand: { contains: rawTerm, mode: "insensitive" } },
+                    { deviceModel: { contains: rawTerm, mode: "insensitive" } },
+                    { imei: { contains: rawTerm, mode: "insensitive" } },
+                    { serialNumber: { contains: rawTerm, mode: "insensitive" } },
                 ]
             },
             include: {
@@ -88,10 +95,11 @@ export async function getTicketForWarranty(searchTerm: string) {
                 usedParts: {
                     include: { product: true }
                 },
-                returns: true
+                returns: true,
+                shop: true,
             },
             orderBy: { createdAt: "desc" },
-            take: 5
+            take: 25
         });
 
         return serializePrisma(tickets);

@@ -28,7 +28,7 @@ const QUICK_ACTIONS: Record<StatType, QuickAction> = {
     COLLECTIONS: { kind: "modal", modal: "INCOME", label: "Tahsilat Al" },
     READY_DEVICES: { kind: "route", href: "/servis", label: "Teslim Et" },
     CRITICAL_STOCK: { kind: "modal", modal: "PRODUCT", label: "Ürün Ekle" },
-    TOTAL_DEBTS: { kind: "modal", modal: "DEBT", label: "Alacak Ekle" },
+    TOTAL_DEBTS: { kind: "modal", modal: "DEBT", label: "Veresiye Ekle" },
 } as Record<StatType, QuickAction>;
 
 interface StatWidgetWrapperProps {

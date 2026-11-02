@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ShieldAlert, Cpu, AlertCircle, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Search, ShieldAlert, Cpu, AlertCircle, RefreshCw, CheckCircle2, Barcode as BarcodeIcon, History, ExternalLink, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,20 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    ServiceTicketLabelPrintArea,
+    buildServiceTicketLabelData,
+    type ServiceTicketLabelData
+} from "@/components/service/service-ticket-label-print";
+import Link from "next/link";
 
 export function WarrantySearchClient() {
     const [searchTerm, setSearchTerm] = useState("");
@@ -27,11 +41,20 @@ export function WarrantySearchClient() {
     const [returnReason, setReturnReason] = useState("");
     const [notes, setNotes] = useState("");
     const [submitLoading, setSubmitLoading] = useState(false);
+    const [serviceLabel, setServiceLabel] = useState<ServiceTicketLabelData | null>(null);
+
+    const handlePrintLabel = (ticket: any, useCurrentDate: boolean, showPrice: boolean) => {
+        setServiceLabel(buildServiceTicketLabelData(ticket, ticket.shop, {
+            useCurrentDate,
+            showPrice,
+            dateLabel: useCurrentDate ? "Güncel" : "Alış"
+        }));
+    };
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchTerm || searchTerm.length < 3) {
-            toast.error("Arama için en az 3 karakter giriniz");
+        if (!searchTerm || searchTerm.trim().length < 2) {
+            toast.error("Arama için en az 2 karakter giriniz");
             return;
         }
         setLoading(true);
@@ -97,7 +120,7 @@ export function WarrantySearchClient() {
                             <Input
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Servis Kodu (SRV-...) veya Telefon No ile garanti kontrolü yapın..."
+                                placeholder="Müşteri Adı Soyadı, Fiş Kodu (SRV-...) veya Telefon No ile arayın..."
                                 className="h-14 pl-12 bg-transparent border-none outline-none focus-visible:ring-0 shadow-none text-base placeholder:text-muted-foreground/60 w-full"
                             />
                         </div>
@@ -186,14 +209,75 @@ export function WarrantySearchClient() {
                                             )}
                                         </div>
 
-                                        <div className="flex-shrink-0 flex items-center justify-end">
+                                        <div className="flex-shrink-0 flex flex-wrap items-center justify-end gap-2">
+                                            {/* Barkod Yazdır Dropdown */}
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="rounded-xl border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold gap-1.5 h-10 px-3 text-xs"
+                                                        title="Barkod Etiketi Yazdır"
+                                                    >
+                                                        <BarcodeIcon className="h-4 w-4 text-amber-500 shrink-0" />
+                                                        <span>Barkod Yazdır</span>
+                                                        <ChevronDown className="h-3 w-3 opacity-60" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-[210px] bg-card border border-border/50 p-2 rounded-2xl shadow-xl z-50">
+                                                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 font-semibold">
+                                                        Güncel Barkod (Bugün)
+                                                    </DropdownMenuLabel>
+                                                    <DropdownMenuItem
+                                                        className="text-xs gap-2 p-2 cursor-pointer rounded-xl font-medium"
+                                                        onClick={() => handlePrintLabel(ticket, true, true)}
+                                                    >
+                                                        <BarcodeIcon className="h-3.5 w-3.5 text-amber-500" /> Güncel Fiyatlı
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-xs gap-2 p-2 cursor-pointer rounded-xl font-medium"
+                                                        onClick={() => handlePrintLabel(ticket, true, false)}
+                                                    >
+                                                        <BarcodeIcon className="h-3.5 w-3.5 text-muted-foreground" /> Güncel Fiyatsız
+                                                    </DropdownMenuItem>
+
+                                                    <DropdownMenuSeparator className="my-1 border-border/40" />
+
+                                                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 font-semibold">
+                                                        Eski Barkod ({ticket.createdAt ? format(new Date(ticket.createdAt), 'dd.MM.yyyy') : 'Kayıt'})
+                                                    </DropdownMenuLabel>
+                                                    <DropdownMenuItem
+                                                        className="text-xs gap-2 p-2 cursor-pointer rounded-xl font-medium"
+                                                        onClick={() => handlePrintLabel(ticket, false, true)}
+                                                    >
+                                                        <History className="h-3.5 w-3.5 text-blue-500" /> İlk Kayıt (Fiyatlı)
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-xs gap-2 p-2 cursor-pointer rounded-xl font-medium"
+                                                        onClick={() => handlePrintLabel(ticket, false, false)}
+                                                    >
+                                                        <History className="h-3.5 w-3.5 text-muted-foreground" /> İlk Kayıt (Fiyatsız)
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+
+                                            <Link href={`/servis/${ticket.id}`}>
+                                                <Button
+                                                    variant="outline"
+                                                    className="rounded-xl border-border/50 text-foreground h-10 px-3 text-xs gap-1.5"
+                                                    title="Servis Detayına Git"
+                                                >
+                                                    <ExternalLink className="h-3.5 w-3.5 text-blue-500" />
+                                                    <span>Detay</span>
+                                                </Button>
+                                            </Link>
+
                                             <Button
                                                 onClick={() => openReturnModal(ticket)}
                                                 disabled={ticket.status !== 'DELIVERED'}
                                                 variant={hasActiveWarranty ? "default" : "secondary"}
-                                                className="rounded-xl w-full md:w-auto"
+                                                className="rounded-xl h-10 px-4 text-xs font-semibold"
                                             >
-                                                <ShieldAlert className="h-4 w-4 mr-2" />
+                                                <ShieldAlert className="h-4 w-4 mr-1.5" />
                                                 Garanti / İade Başlat
                                             </Button>
                                         </div>
@@ -283,6 +367,11 @@ export function WarrantySearchClient() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <ServiceTicketLabelPrintArea
+                label={serviceLabel}
+                onPrinted={() => setServiceLabel(null)}
+            />
         </div>
     );
 }

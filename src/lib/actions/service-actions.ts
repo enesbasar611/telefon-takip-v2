@@ -1085,6 +1085,7 @@ export async function getServiceTicketById(id: string) {
         technician: true,
         logs: { orderBy: { createdAt: "desc" } },
         usedParts: { include: { product: true } },
+        shop: true,
       },
     });
     return serializePrisma(ticket);

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -49,7 +50,8 @@ import {
   Trash2,
   UserCircle,
   Loader2,
-  Barcode as BarcodeIcon
+  Barcode as BarcodeIcon,
+  History
 } from "lucide-react";
 import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
@@ -107,6 +109,11 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
   const [isDeleting, setIsDeleting] = useState(false);
   const [rowSelection, setRowSelection] = useState({});
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const assetLabel = getIndustryLabel(shop, "customerAsset");
   const identifierLabel = getIndustryLabel(shop, "serviceIdentifier");
@@ -266,19 +273,39 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   <BarcodeIcon className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-[180px] bg-card border border-border/50 p-2 rounded-2xl backdrop-blur-3xl shadow-2xl">
-                <DropdownMenuLabel className="text-xs text-gray-500 p-2">Etiket Yazdır</DropdownMenuLabel>
+              <DropdownMenuContent align="center" className="w-[210px] bg-card border border-border/50 p-2 rounded-2xl backdrop-blur-3xl shadow-2xl z-50">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 font-semibold">
+                  Güncel Barkod (Bugün)
+                </DropdownMenuLabel>
                 <DropdownMenuItem
-                  className="text-sm gap-3 p-3 cursor-pointer focus:bg-accent rounded-xl"
-                  onSelect={() => setServiceLabel({ ...buildServiceTicketLabelData(ticket, shop), showPrice: true })}
+                  className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                  onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: true, showPrice: true, dateLabel: "Güncel" }))}
                 >
-                  <BarcodeIcon className="h-4 w-4 text-amber-500" /> Fiyatlı Yazdır
+                  <BarcodeIcon className="h-3.5 w-3.5 text-amber-500" /> Güncel Fiyatlı
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="text-sm gap-3 p-3 cursor-pointer focus:bg-accent rounded-xl"
-                  onSelect={() => setServiceLabel({ ...buildServiceTicketLabelData(ticket, shop), showPrice: false })}
+                  className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                  onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: true, showPrice: false, dateLabel: "Güncel" }))}
                 >
-                  <BarcodeIcon className="h-4 w-4 text-amber-500" /> Fiyatsız Yazdır
+                  <BarcodeIcon className="h-3.5 w-3.5 text-muted-foreground" /> Güncel Fiyatsız
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator className="my-1 border-border/40" />
+
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 font-semibold">
+                  Eski Barkod ({ticket.createdAt ? format(new Date(ticket.createdAt), 'dd.MM.yyyy') : 'Kayıt'})
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                  onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: false, showPrice: true, dateLabel: "Alış" }))}
+                >
+                  <History className="h-3.5 w-3.5 text-blue-500" /> İlk Kayıt (Fiyatlı)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                  onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: false, showPrice: false, dateLabel: "Alış" }))}
+                >
+                  <History className="h-3.5 w-3.5 text-muted-foreground" /> İlk Kayıt (Fiyatsız)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -584,18 +611,53 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                     >
                       <Wrench className="h-5 w-5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                      title="Barkod etiketi yazdır"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setServiceLabel(buildServiceTicketLabelData(ticket, shop));
-                      }}
-                    >
-                      <BarcodeIcon className="h-5 w-5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                          title="Barkod etiketi yazdır"
+                        >
+                          <BarcodeIcon className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[210px] bg-card border border-border/50 p-2 rounded-2xl shadow-xl z-50" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 font-semibold">
+                          Güncel Barkod (Bugün)
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                          className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                          onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: true, showPrice: true, dateLabel: "Güncel" }))}
+                        >
+                          <BarcodeIcon className="h-3.5 w-3.5 text-amber-500" /> Güncel Fiyatlı
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                          onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: true, showPrice: false, dateLabel: "Güncel" }))}
+                        >
+                          <BarcodeIcon className="h-3.5 w-3.5 text-muted-foreground" /> Güncel Fiyatsız
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator className="my-1 border-border/40" />
+
+                        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground px-2 py-1 font-semibold">
+                          Eski Barkod ({ticket.createdAt ? format(new Date(ticket.createdAt), 'dd.MM.yyyy') : 'Kayıt'})
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                          className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                          onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: false, showPrice: true, dateLabel: "Alış" }))}
+                        >
+                          <History className="h-3.5 w-3.5 text-blue-500" /> İlk Kayıt (Fiyatlı)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-xs gap-2 p-2 cursor-pointer focus:bg-accent rounded-xl font-medium"
+                          onSelect={() => setServiceLabel(buildServiceTicketLabelData(ticket, shop, { useCurrentDate: false, showPrice: false, dateLabel: "Alış" }))}
+                        >
+                          <History className="h-3.5 w-3.5 text-muted-foreground" /> İlk Kayıt (Fiyatsız)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Link href={`/musteriler/${ticket.customerId}`} onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
@@ -731,16 +793,23 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Floating Bulk Action Bar */}
-      {table.getFilteredSelectedRowModel().rows.length > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-5 duration-300">
-          <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-8 ring-1 ring-white/5">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Toplu İşlemler</span>
-              <span className="text-sm font-bold text-white">{table.getFilteredSelectedRowModel().rows.length} Cihaz Seçildi</span>
+      {/* Floating Bulk Action Bar (Portaled to document.body so it floats fixed on the viewport screen) */}
+      {mounted && table.getFilteredSelectedRowModel().rows.length > 0 && typeof document !== "undefined" && createPortal(
+        <div className="fixed bottom-24 sm:bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-bottom-6 zoom-in-95 duration-300 pointer-events-auto">
+          <div className="bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-white/15 dark:border-white/10 rounded-2xl sm:rounded-full px-5 py-3 sm:px-7 sm:py-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-wrap sm:flex-nowrap items-center justify-center gap-4 sm:gap-6 ring-1 ring-white/10">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-blue-500/40">
+                {table.getFilteredSelectedRowModel().rows.length}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">Toplu İşlemler</span>
+                <span className="text-xs sm:text-sm font-bold text-white whitespace-nowrap">
+                  {table.getFilteredSelectedRowModel().rows.length} Cihaz Seçildi
+                </span>
+              </div>
             </div>
 
-            <div className="h-8 w-px bg-white/10" />
+            <div className="hidden sm:block h-8 w-px bg-white/15" />
 
             <div className="flex items-center gap-2">
               <Button
@@ -757,7 +826,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   }
                   setIsBulkUpdating(false);
                 }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-6 rounded-xl gap-2 h-11"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 sm:px-6 rounded-xl sm:rounded-full gap-2 h-10 shadow-lg shadow-emerald-950/50"
               >
                 {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 HEPSİ HAZIR
@@ -778,7 +847,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   }
                   setIsBulkUpdating(false);
                 }}
-                className="bg-orange-500/10 text-orange-500 border-orange-500/20 hover:bg-orange-500 hover:text-white text-xs font-bold px-6 rounded-xl gap-2 h-11"
+                className="bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500 hover:text-white text-xs font-bold px-4 sm:px-6 rounded-xl sm:rounded-full gap-2 h-10 transition-all"
               >
                 <Wrench className="h-4 w-4" /> TAMİRE AL
               </Button>
@@ -787,13 +856,14 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                 disabled={isBulkUpdating}
                 variant="outline"
                 onClick={() => table.resetRowSelection()}
-                className="bg-white/5 border-white/10 text-white/60 hover:text-white text-xs font-bold px-6 rounded-xl h-11"
+                className="bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10 text-xs font-bold px-4 sm:px-5 rounded-xl sm:rounded-full h-10 transition-all"
               >
                 İPTAL
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div >
   );

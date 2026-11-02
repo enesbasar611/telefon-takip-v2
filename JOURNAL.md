@@ -1908,3 +1908,78 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
     - **Sorun**: `src/lib/actions/gemini-actions.ts` dosyası başında `"use server";` direktifi bulunduğu için Next.js derleyicisi bu dosyadan export edilen tüm fonksiyonların `async` olmasını bekliyordu. Senkron bir yardımcı fonksiyon olarak export edilen `parseNaturalLanguageQuery` derleme hatasına (`Server actions must be async functions`) yol açtı.
     - **Çözüm**: Sadece `semanticSearchWithAI` içerisinde kullanılan `parseNaturalLanguageQuery` fonksiyonunun başındaki `export` ifadesi kaldırılarak yerel (unexported) bir yardımcı fonksiyon haline getirildi.
     - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı. Next.js derleme hatası giderildi.
+
+- [x] 2026-11-02: Servis Detayı Güncel/Eski Barkod Çıktısı, Garanti & İade İsim/Soyisim Araması ve Doğrudan Barkod Yazdırma:
+    - **Kullanıcı Talebi**:
+        1. Servis kaydı detayındaki "Ekip & Operasyon" kartında müşteriye teslim edilen cihaz tekrar geldiğinde güncel tarihli barkod ve ilk kayıt tarihli eski barkod seçeneği olsun.
+        2. Garanti & İade sekmesinde sadece servis fiş no ile değil, müşteri isim soy isminden de servise erişilebilsin ve bu ekrandan da doğrudan barkod çıktısı alınabilsin.
+        3. Navbardaki arama kısmından servis detayına gidildiğinde güncel tarihli barkod çıktısı rahatça yeniden alınabilsin.
+    - **Yapılan İyileştirmeler**:
+        1. **Ekip & Operasyon Kartı ([`ServiceDetailActions`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/service/service-detail-actions.tsx)):**
+           - `ServiceDetailActions` bileşenine `GÜNCEL BARKOD` ve `ESKİ BARKOD` butonları ve açılır menüleri (dropdown) entegre edildi.
+           - `GÜNCEL BARKOD`: Cihazın bugünkü tarih ve saatiyle ("Güncel") etiket basar (Fiyatlı veya Fiyatsız seçenekleriyle).
+           - `ESKİ BARKOD`: Cihazın ilk servise kabul edildiği orijinal kayıt tarihiyle ("Alış") etiket basar (Fiyatlı veya Fiyatsız seçenekleriyle).
+           - Kartın altında görünmez `ServiceTicketLabelPrintArea` termal yazdırma alanı konumlandırıldı.
+        2. **Garanti & İade İsim-Soyisim Araması ([`warranty-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/warranty-actions.ts)):**
+           - `getTicketForWarranty`: Yalnızca fiş numarası ve telefonla sınırlı arama genişletilerek `customer.name` (büyük/küçük harf duyarsız `mode: "insensitive"`), `deviceBrand`, `deviceModel`, `imei` ve `serialNumber` aramaları dahil edildi.
+           - Arama eşiği 2 karaktere indirildi, sonuç limiti 25'e çıkarıldı ve etiket basımı için dükkan bilgisi (`shop: true`) eklendi.
+        3. **Garanti & İade Sonuçlarında Doğrudan Barkod Yazdırma ([`WarrantySearchClient`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/warranty/warranty-search-client.tsx)):**
+           - Arama kutusu placeholder'ı *"Müşteri Adı Soyadı, Fiş Kodu (SRV-...) veya Telefon No ile arayın..."* olarak güncellendi.
+           - Bulunan her servis kartına:
+             - **Barkod Yazdır** dropdown'ı: Hem güncel tarihli (fiyatlı/fiyatsız) hem de eski tarihli (fiyatlı/fiyatsız) barkod çıkarma eylemleri eklendi.
+             - **Detay** butonu: Doğrudan ilgili servis kaydının detayına (`/servis/[id]`) gitme linki yerleştirildi.
+        4. **Termal Barkod Motoru Geliştirmesi ([`service-ticket-label-print.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/service/service-ticket-label-print.tsx)):**
+           - `ServiceTicketLabelData` modeline `dateLabel` alanı eklendi.
+           - `buildServiceTicketLabelData` fonksiyonuna `options?: { useCurrentDate?: boolean; showPrice?: boolean; dateLabel?: string }` opsiyonları tanımlandı. Güncel etiket basılırken `useCurrentDate: true` verilerek bugünün anlık tarih/saati ve `Güncel` etiketi, eski etiket basılırken `Alış` ve `ticket.createdAt` basılması sağlandı.
+        5. **Servis Listesi ve Mobil Tablo Desteği ([`service-list-table.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/service/service-list-table.tsx)):**
+           - Hem masaüstü hem de mobil görünümdeki barkod butonları Güncel Barkod (Fiyatlı / Fiyatsız) ve Eski Barkod (Fiyatlı / Fiyatsız) seçeneklerini sunan açılır menüye dönüştürüldü.
+        6. **Servis Detayında Dükkan Bilgisi Çekilmesi ([`service-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/service-actions.ts)):**
+           - `getServiceTicketById` sorgusuna `shop: true` eklenerek etiket basılırken dükkan adı, adresi ve telefonunun eksiksiz gelmesi garanti altına alındı.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı. Hiçbir özellik ve veri akışı bozulmadı.
+
+- [x] 2026-11-02: Servis Tablosu Toplu İşlem Balonunun Viewport Ekrana Sabitlenmesi (Sticky Floating Bubble):
+    - **Kullanıcı Talebi**:
+        - `@servis` sayfasında servisler seçilince toplu işlem balonu sayfanın/tablonun altında kalıyor, kullanıcı ekranı kaydırdıkça göremiyor.
+        - Bu çubuğun anında ekrana yüzen bir "bubble" olarak gelmesi ve kullanıcı aşağı-yukarı kaydırdıkça ekranda sabit kalarak kullanıcıyla birlikte kayması (sticky/viewport-fixed) istendi.
+    - **Sorun Tespiti**:
+        - `ServiceListTable` bileşeni üst konteynerlerinde `TabsContent` (`animate-in slide-in-from-bottom-4` transform) ve `matte-card` (`overflow-hidden`) barındırıyordu.
+        - CSS spesifikasyonuna göre `transform` veya `overflow-hidden` barındıran bir atanın içerisindeki `position: fixed` elemanları viewport yerine bu ata öğeye göre konumlanır. Bu sebeple toplu işlem balonu ekran yerine tablonun en dibine hapsoluyor ve kaydırma esnasında ekranda görünmüyordu.
+    - **Yapılan İyileştirmeler**:
+        1. **React Portal Entegrasyonu ([`ServiceListTable`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/service/service-list-table.tsx)):**
+           - Toplu işlem balonu `createPortal(..., document.body)` kullanılarak doğrudan `document.body`'ye taşındı.
+           - Bu sayede tablo veya sekmelerdeki hiçbir `transform` veya `overflow` kısıtı balonu hapsedemez; doğrudan tarayıcı penceresine (viewport) sabitlendi.
+        2. **Yüzen Bubble (Floating Dock) Tasarımı:**
+           - `fixed bottom-24 sm:bottom-20 lg:bottom-8 left-1/2 -translate-x-1/2 z-[9999]` koordinatları ile hem masaüstünde hem de mobilde alt gezinme çubuğunun (`BottomNav`) üstünde konumlandırıldı.
+           - `rounded-2xl sm:rounded-full`, derin cam efekti (`backdrop-blur-2xl bg-slate-900/95 dark:bg-slate-950/95`), parlayan kenarlık ve güçlü gölgeler (`shadow-[0_20px_50px_rgba(0,0,0,0.6)]`) ile gerçek bir floating bubble görünümü kazandırıldı.
+           - Seçilen cihaz adedi mavi rozetle vurgulandı; "HEPSİ HAZIR", "TAMİRE AL" ve "İPTAL" aksiyonları tek tıkla erişilebilir kılındı.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
+- [x] 2026-11-02: Anasayfa "Veresiyeler" Kartı Yenilenmesi, Sık Kullanılan Bayiler Çerçevesi, Tek Tıkla Alacak Ekleme ve Detay Modalı:
+    - **Kullanıcı Talebi**:
+        1. Anasayfadaki "Alacaklarım" kartının "Veresiyeler" olarak güncellenmesi.
+        2. Bayilerin üzerine tıklandığında doğrudan o bayiye alacak eklenebilmesi.
+        3. Detaya basınca listenin aşağı doğru uzayıp anasayfa düzenini bozmaması; bunun yerine modal açılması ve tüm borç/tahsilat detaylarının bu modalda yönetilmesi.
+        4. Sık kullanılan bayilerin özel bir çerçeveye alınması, kullanıcının listeden/aramadan istediği bayiyi buraya sabitleyebilmesi (pin).
+        5. Anasayfadan veresiyelere tam erişim ve ultra hızlı işlem yapabilme yeteneği.
+    - **Yapılan İyileştirmeler**:
+        1. **Kart Başlığı & Tasarımı ([`ReceivablesClient`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/receivables-client.tsx)):**
+           - "Alacaklarım" başlığı **"VERESİYELER"** olarak güncellendi.
+           - Başlıkta canlı durum noktası, toplam açık bayi/müşteri sayısı rozeti, yeni veresiye ekleme butonu (`+`), arama butonu ve tüm veresiyeler modalını açma butonu yerleştirildi.
+        2. **Sık Kullanılan Bayiler Özel Çerçevesi (Pinned Favorite Dealers):**
+           - Kartın en üstüne kehribar/altın vurgulu (`border-amber-500/30 bg-amber-500/[0.04]`) özel bir çerçeve eklendi.
+           - `localStorage` üzerinde saklanan (`veresiye_pinned_dealers`) favori bayiler burada hızlı erişim kartları olarak listelenir.
+           - Kullanıcı hem listedeki her bayinin yanındaki yıldız (`⭐`) simgesine basarak hem de çerçevenin sağ üstündeki `+ Bayi Sabitle` menüsünden dilediği bayiyi ekleyip çıkarabilir.
+           - Sık kullanılan bayi kartına veya `+ Alacak` butonuna tıklandığında doğrudan o bayi seçili olarak alacak ekleme modalı açılır.
+        3. **Tek Tıkla Doğrudan Bayiye Alacak Ekleme:**
+           - Listedeki herhangi bir bayinin satırına tıklandığında veya `+ Alacak` butonuna basıldığında `AddDebtModal` ilgili bayinin adı ve telefonu hazır seçilmiş (`initialData`) olarak anında açılır.
+        4. **Aşağı Doğru Uzama Sorununun Çözümü & Zengin Müşteri Detay Modalı ([`CustomerVeresiyeModal`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/modals/customer-veresiye-modal.tsx)):**
+           - Kart içi genişleme (in-card expand) kaldırılarak kartın anasayfada sabit ve derli toplu kalması sağlandı.
+           - "Detay" butonuna basıldığında açılan `CustomerVeresiyeModal` geliştirildi:
+             - Üst panelde toplam TL ve USD borç bakiyeleri, açık işlem sayısı, telefon ve müşteri profili linki.
+             - **Hızlı Tahsilat Paneli**: Modal içinden ayrılmadan tek tıkla tutar, para birimi (TRY/USD) ve yöntem (Nakit/Kart/Havale) seçilerek anında tahsilat yapabilme.
+             - **Fiş & Ekstre Butonu**: `DebtReceiptModal` ile doğrudan termal/A4 fiş dökümü alabilme.
+             - **WhatsApp Ekstre Butonu**: Tek tıkla güncel borç ekstresini müşteriye WhatsApp'tan gönderebilme.
+             - **Açık İşlem Kalemleri**: Tarih, saat, satıştaki ürünler, vade uyarısı ve kalem bazında "Tahsil Et" aksiyonu.
+        5. **Hızlı Aksiyonlar ve Canlı Senkronizasyon:**
+           - `AddDebtModal` veya `CustomerVeresiyeModal` üzerinden yapılan her işlemde React Query önbellekleri (`dashboard-receivables`, `dashboard-veresiye-detail`, `finance-summary`) anında tazelenir.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı. Hiçbir özellik silinmedi.

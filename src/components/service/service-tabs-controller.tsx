@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { SERVICE_STATUS_GROUPS } from "@/lib/constants/service";
+import Link from "next/link";
 
 import { getIndustryLabel } from "@/lib/industry-utils";
 
@@ -229,9 +230,17 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                                                 <TableRow key={ticket.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                                                     <TableCell className="px-10 py-6 text-sm text-purple-400">#{ticket.ticketNumber}</TableCell>
                                                     <TableCell className="px-6 py-6 font-medium text-xs">
-                                                        <Badge variant="outline" className="font-mono bg-muted/30 border-border text-foreground">
-                                                            {ticket.serviceTicket?.ticketNumber || 'Silinmiş Fiş'}
-                                                        </Badge>
+                                                        {ticket.serviceTicket?.id ? (
+                                                            <Link href={`/servis/${ticket.serviceTicket.id}`}>
+                                                                <Badge variant="outline" className="font-mono bg-muted/30 border-border text-foreground hover:bg-blue-500/10 hover:border-blue-500/30 transition-colors cursor-pointer">
+                                                                    {ticket.serviceTicket?.ticketNumber}
+                                                                </Badge>
+                                                            </Link>
+                                                        ) : (
+                                                            <Badge variant="outline" className="font-mono bg-muted/30 border-border text-foreground">
+                                                                {ticket.serviceTicket?.ticketNumber || 'Silinmiş Fiş'}
+                                                            </Badge>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="px-6 py-6">
                                                         <div className="flex items-center gap-3 font-medium text-foreground">

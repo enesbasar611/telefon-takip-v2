@@ -12,6 +12,7 @@ export interface ServiceTicketLabelData {
   deviceModel: string;
   estimatedCost: number;
   createdAt: string | Date;
+  dateLabel?: string;
   shopName: string;
   shopPhone?: string;
   shopAddress?: string;
@@ -19,7 +20,12 @@ export interface ServiceTicketLabelData {
   showPrice?: boolean;
 }
 
-export function buildServiceTicketLabelData(ticket: any, shop?: any): ServiceTicketLabelData {
+export function buildServiceTicketLabelData(
+  ticket: any,
+  shop?: any,
+  options?: { useCurrentDate?: boolean; showPrice?: boolean; dateLabel?: string }
+): ServiceTicketLabelData {
+  const isCurrent = options?.useCurrentDate ?? false;
   return {
     ticketNumber: ticket?.ticketNumber || "",
     customerName: ticket?.customer?.name || ticket?.customerName || "-",
@@ -27,12 +33,13 @@ export function buildServiceTicketLabelData(ticket: any, shop?: any): ServiceTic
     deviceBrand: ticket?.deviceBrand || "GENEL",
     deviceModel: ticket?.deviceModel || "",
     estimatedCost: Number(ticket?.estimatedCost ?? ticket?.actualCost ?? 0),
-    createdAt: ticket?.createdAt || new Date().toISOString(),
+    createdAt: isCurrent ? new Date().toISOString() : (ticket?.createdAt || new Date().toISOString()),
+    dateLabel: options?.dateLabel || (isCurrent ? "Güncel" : "Alış"),
     shopName: shop?.name || shop?.companyName || "BAŞAR TEKNİK",
     shopPhone: shop?.phone || "",
     shopAddress: shop?.address || shop?.companyAddress || "",
     problemDesc: ticket?.problemDesc || "",
-    showPrice: true,
+    showPrice: options?.showPrice !== undefined ? options.showPrice : true,
   };
 }
 
@@ -132,7 +139,7 @@ export function ServiceTicketLabelPrintArea({ label, onPrinted }: ServiceTicketL
                   <strong>{formatCurrency(label.estimatedCost)} TL</strong>
                 </>
               )}
-              <span>Alış</span>
+              <span>{label.dateLabel || "Alış"}</span>
               <strong className="whitespace-normal leading-tight">
                 {new Date(label.createdAt).toLocaleDateString("tr-TR")}
                 <br />
