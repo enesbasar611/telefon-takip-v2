@@ -92,9 +92,7 @@ const ReceiptContent = ({
         return (d.type === 'DEBT' || !d.type) && !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0;
     });
 
-    const statementEntries = showPaid
-        ? buildDebtStatementEntries(displayDebts, currentUsdRate)
-        : buildOpenDebtStatementEntries(debts, currentUsdRate);
+    const statementEntries = buildDebtStatementEntries(displayDebts, currentUsdRate);
 
     const groups = statementEntries
         .reduce((groups: any, item: any) => {
@@ -141,21 +139,45 @@ const ReceiptContent = ({
                     const dailyUSD = groups[date]
                         .filter((entry: any) => entry.type !== 'PAYMENT' && entry.currency === 'USD')
                         .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
-                    const dailyPayment = groups[date]
-                        .filter((entry: any) => entry.type === 'PAYMENT')
+                    const dailyPaymentTRY = groups[date]
+                        .filter((entry: any) => entry.type === 'PAYMENT' && entry.currency !== 'USD')
                         .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
+                    const dailyPaymentUSD = groups[date]
+                        .filter((entry: any) => entry.type === 'PAYMENT' && entry.currency === 'USD')
+                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
+                    const hasPayment = (dailyPaymentTRY + dailyPaymentUSD) > 0;
 
                     return (
-                        <div key={date}>
-                            <div className="flex items-center justify-between gap-2 mb-2">
+                        <div key={date} className={cn(
+                            "rounded-lg p-1 transition-colors",
+                            hasPayment ? "bg-emerald-50/80 border border-emerald-300" : ""
+                        )}>
+                            <div className={cn(
+                                "flex items-center justify-between gap-2 mb-1.5 pb-1 border-b",
+                                hasPayment ? "border-emerald-300 text-emerald-900" : "border-black/10 text-black"
+                            )}>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-black text-black uppercase tracking-[0.1em]">{date}</span>
-                                    <div className="h-[1px] w-6 bg-black" />
+                                    <span className={cn(
+                                        "text-[10px] font-black uppercase tracking-[0.05em]",
+                                        hasPayment ? "text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300" : "text-black"
+                                    )}>
+                                        {hasPayment ? `✓ ${date} • ÖDEME GÜNÜ` : date}
+                                    </span>
+                                    <div className={cn("h-[1px] w-6", hasPayment ? "bg-emerald-400" : "bg-black")} />
                                 </div>
-                                <div className="text-[9px] font-black text-black flex items-center gap-1.5">
+                                <div className="text-[9px] font-black flex items-center gap-1.5">
                                     {dailyTRY > 0 && <span>₺{dailyTRY.toLocaleString('tr-TR')}</span>}
                                     {dailyUSD > 0 && <span>${dailyUSD.toLocaleString('tr-TR')}</span>}
-                                    {dailyPayment > 0 && <span className="border border-black px-1">(-₺{dailyPayment.toLocaleString('tr-TR')})</span>}
+                                    {dailyPaymentTRY > 0 && (
+                                        <span className="bg-emerald-600 text-white px-1.5 py-0.5 rounded font-black">
+                                            -₺{dailyPaymentTRY.toLocaleString('tr-TR')} (TAHSİLAT)
+                                        </span>
+                                    )}
+                                    {dailyPaymentUSD > 0 && (
+                                        <span className="bg-emerald-600 text-white px-1.5 py-0.5 rounded font-black">
+                                            -${dailyPaymentUSD.toLocaleString('tr-TR')} (TAHSİLAT)
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -167,29 +189,42 @@ const ReceiptContent = ({
                                     const remainingAmount = Number(entry.remainingAmount || 0);
                                     const formatEntryCurrency = (amount: number) => entry.currency === 'USD' ? formatUSD(amount) : formatTRY(amount);
                                     return (
-                                        <div key={idx} className="flex justify-between items-start py-1.5 border-b border-black/5 last:border-0">
+                                        <div key={idx} className={cn(
+                                            "flex justify-between items-start py-1.5 border-b last:border-0",
+                                            isPayment ? "bg-emerald-100/70 -mx-1 px-1.5 rounded-md border border-emerald-300 my-0.5" : "border-black/5"
+                                        )}>
                                             <div className="flex flex-col flex-1 pr-4">
                                                 <span className={cn(
                                                     "text-[9px] font-black uppercase leading-tight block w-full break-words",
-                                                    isPayment ? "text-slate-700" : "text-black"
+                                                    isPayment ? "text-emerald-800" : "text-black"
                                                 )}>
-                                                    {isPayment && "[TAHSİLAT] "}
+                                                    {isPayment && "✓ [TAHSİLAT ALINDI] "}
                                                     {item.notes || item.description || (isPayment ? 'TAHSİLAT' : 'BORÇ KAYDI')}
-                                                    <span className="block text-[8px] font-bold text-black/60 mt-0.5">
-                                                        {!showPaid && !isPayment
-                                                            ? `Kalan: ${formatEntryCurrency(remainingAmount)}${paidAmount > 0 ? ` / Odenen: ${formatEntryCurrency(paidAmount)}` : ""}`
-                                                            : `Kalan: TL ${entry.runningTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${entry.runningUSD > 0 ? ` + $${entry.runningUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}`}
+                                                    <span className={cn(
+                                                        "block text-[8px] font-bold mt-0.5",
+                                                        isPayment ? "text-emerald-700" : "text-black/60"
+                                                    )}>
+                                                        {isPayment
+                                                            ? `Ödeme İşlendi • Kalan: TL ${entry.runningTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${entry.runningUSD > 0 ? ` + $${entry.runningUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}`
+                                                            : (!showPaid
+                                                                ? `Kalan: ${formatEntryCurrency(remainingAmount)}${paidAmount > 0 ? ` / Ödenen: ${formatEntryCurrency(paidAmount)}` : ""}`
+                                                                : `Kalan: TL ${entry.runningTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${entry.runningUSD > 0 ? ` + $${entry.runningUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}`
+                                                            )
+                                                        }
                                                     </span>
                                                 </span>
                                             </div>
                                             <div className="text-right whitespace-nowrap">
-                                                <div className="text-[10px] font-black text-black">
+                                                <div className={cn(
+                                                    "text-[10px] font-black",
+                                                    isPayment ? "text-emerald-800 bg-emerald-200/90 px-1.5 py-0.5 rounded border border-emerald-400" : "text-black"
+                                                )}>
                                                     {isPayment ? '-' : ''}{new Intl.NumberFormat(entry.currency === 'USD' ? 'en-US' : 'tr-TR', {
                                                         style: 'currency',
                                                         currency: entry.currency || 'TRY'
                                                     }).format(entry.amount)}
                                                     {isPayment && entry.currency === 'TRY' && (
-                                                        <span className="block text-[8px] font-bold text-black/55">
+                                                        <span className="block text-[8px] font-bold text-emerald-700 mt-0.5">
                                                             ({formatUSD(entry.amountUSD)})
                                                         </span>
                                                     )}

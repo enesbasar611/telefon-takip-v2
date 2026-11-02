@@ -11,7 +11,7 @@ import {
     Plus, Users, Search, Phone, Star, Building2, UserCircle, Eye,
     MoreHorizontal, Zap, Crown, ShieldCheck, Gem, Trash2,
     ChevronLeft, ChevronRight, Loader2, Sparkles,
-    AlertTriangle, CheckCircle2
+    AlertTriangle, CheckCircle2, Receipt
 } from "lucide-react";
 import {
     Dialog, DialogContent
@@ -32,6 +32,7 @@ import { deleteCustomer } from "@/lib/actions/customer-actions";
 import { toast } from "sonner";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { cn } from "@/lib/utils";
+import { CustomerHistoryModal } from "./customer-history-modal";
 
 const getTierColor = (color: string) => {
     switch (color) {
@@ -63,6 +64,7 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
         clearBalance: true,
     });
     const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<any | null>(null);
 
     const { data: pageData, isPending, isFetching } = useQuery({
         queryKey: ["customers-paginated", currentPage, debouncedSearch],
@@ -260,8 +262,17 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
                                                 </TableCell>
                                                 <TableCell className="px-8 text-right">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            onClick={() => setSelectedHistoryCustomer(customer)}
+                                                            className="h-9 w-9 p-0 rounded-xl border border-border/40 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                                                            title="İşlem Arşivi ve Fiş Çıktısı Al"
+                                                        >
+                                                            <Receipt className="h-4 w-4 text-emerald-500" />
+                                                        </Button>
                                                         <Link href={`/musteriler/${customer.id}`}>
-                                                            <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl border border-border/40 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/5 transition-all">
+                                                            <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl border border-border/40 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/5 transition-all" title="Müşteri Detayı">
                                                                 <Eye className="h-4 w-4" />
                                                             </Button>
                                                         </Link>
@@ -272,7 +283,14 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end" className="p-2 min-w-[200px]">
-                                                                <DropdownMenuLabel className="text-[10px] text-muted-foreground/60 p-3 text-center uppercase tracking-widest">Profil Yönetimi</DropdownMenuLabel>
+                                                                <DropdownMenuLabel className="text-[10px] text-muted-foreground/60 p-3 text-center uppercase tracking-widest">İşlem & Profil</DropdownMenuLabel>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    className="p-3 text-[10px] rounded-lg cursor-pointer flex gap-3 items-center text-foreground font-semibold"
+                                                                    onClick={() => setSelectedHistoryCustomer(customer)}
+                                                                >
+                                                                    <Receipt className="h-4 w-4 text-emerald-500" /> İşlem Arşivi & Fiş Çıkar
+                                                                </DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
                                                                 <Link href={`/musteriler/duzenle/${customer.id}`}>
                                                                     <DropdownMenuItem className="p-3 text-[10px] rounded-lg cursor-pointer flex gap-3 items-center text-foreground">
@@ -350,6 +368,15 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
                                                     <Eye className="h-4 w-4" /> Detayları Gör
                                                 </Button>
                                             </Link>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => setSelectedHistoryCustomer(customer)}
+                                                className="h-11 px-3 rounded-xl border border-border/40 gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 shrink-0"
+                                                title="İşlem Arşivi ve Fiş Çıktısı Al"
+                                            >
+                                                <Receipt className="h-4 w-4" /> Fiş Çıkar
+                                            </Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="outline" className="h-11 w-11 p-0 rounded-xl border border-border/40 text-muted-foreground">
@@ -357,6 +384,13 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="p-2 min-w-[200px]">
+                                                    <DropdownMenuItem
+                                                        className="p-3 text-[10px] rounded-lg cursor-pointer flex gap-3 items-center text-foreground font-semibold"
+                                                        onClick={() => setSelectedHistoryCustomer(customer)}
+                                                    >
+                                                        <Receipt className="h-4 w-4 text-emerald-500" /> İşlem Arşivi & Fiş Çıkar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
                                                     <Link href={`/musteriler/duzenle/${customer.id}`}>
                                                         <DropdownMenuItem className="p-3 text-[10px] rounded-lg cursor-pointer flex gap-3 items-center">
                                                             <UserCircle className="h-4 w-4 text-blue-500" /> Profili Düzenle
@@ -529,6 +563,15 @@ export function CustomerListClient({ currentPage, searchTerm }: Props) {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Customer History & Retroactive Receipt Modal */}
+            <CustomerHistoryModal
+                isOpen={!!selectedHistoryCustomer}
+                onClose={() => setSelectedHistoryCustomer(null)}
+                customerId={selectedHistoryCustomer?.id || null}
+                customerName={selectedHistoryCustomer?.name}
+                customerPhone={selectedHistoryCustomer?.phone}
+            />
         </div>
     );
 }

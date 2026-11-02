@@ -41,6 +41,47 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-02: Müşteriler Sayfası İşlem Arşivinden Geriye Dönük Fiş Çıktısı Alma Özelliği (Satışlar & Tamir/Servis Fişleri):
+  - **Talep:**
+    - `@musteriler` sayfasında daha önce iş yapılan müşterilerin işlem arşivinden geriye dönük fiş çıktısı (satış fişi, teknik servis/tamir fişi) alınabilmesi.
+  - **Uygulanan Mimari & Bileşenler:**
+    1. **Müşteri İşlem Arşivi ve Fiş Çıktı Bileşeni ([`customer-history-list.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/customer/customer-history-list.tsx)):**
+       - Müşterinin tüm geçmiş satışlarını ve servis/tamir kayıtlarını kronolojik olarak birleştiren, filtreleyen (Tümü, Satışlar, Servis) ve arama yapılabilen (işlem no, cihaz, ürün vb.) zengin liste bileşeni oluşturuldu.
+       - Her satış kaydına `Fiş Çıkar` butonu eklendi; tıklandığında `ReceiptModal` açılarak termal fiş, A4/yazıcı dökümü, PDF indirme ve WhatsApp ile gönderme desteği sağlandı.
+       - Her servis/tamir kaydına `Fiş Çıkar` butonu eklendi; tıklandığında `ServiceReceiptModal` açılarak cihaz arıza, tahmini/gerçek maliyet, barkod ve müşteri iletişim bilgilerini içeren teknik servis teslim/kabul fişi dökümü sağlandı.
+       - Müşteri bilgileri (`name`, `phone`, `email`) fiş modal şablonuna otomatik zenginleştirilerek bağlandı.
+    2. **Müşteri Detay Sayfası Entegrasyonu ([`page.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/app/(dashboard)/musteriler/[id]/page.tsx)):**
+       - Müşteri profilindeki *"İşlem arşivi"* (`TabsContent value="history"`) sekmesine `CustomerHistoryList` entegre edildi.
+    3. **Müşteriler Ana Sayfası Hızlı Fiş ve Arşiv Modalı ([`customer-history-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/customer/customer-history-modal.tsx) & [`customer-list-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/customer/customer-list-client.tsx)):**
+       - `/musteriler` listesinden sayfadan ayrılmadan herhangi bir müşterinin işlem arşivini açıp tek tıkla fiş almayı sağlayan `CustomerHistoryModal` geliştirildi.
+       - Masaüstü müşteri tablosundaki aksiyon sütununa ve açılır menüye *"İşlem Arşivi & Fiş Çıkar"* butonu eklendi.
+       - Mobil müşteri kartlarına hızlı *"Fiş Çıkar"* butonu eklendi.
+  - **Doğrulama:**
+    - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+
+- [x] 2026-11-02: Veresiye Ekstrelerinde Tahsilat Yapılan Günlerin ve Ödeme Satırlarının Yeşil Vurgulanması (PDF, Fiş, Ekstre ve WhatsApp):
+  - **Talep:**
+    - Veresiye sayfasında ekstrelerde tahsilat yapılan günlerin yeşil olarak belirtilmesi; müşteriye dekont, fiş veya PDF atıldığında ödeme yaptığı günün net ve belirgin şekilde görünmesi.
+  - **Tespit Edilen Eksiklik:**
+    - `DebtStatementModern` (PDF) ve `ReceiptContent` (Termal/Fiş) bileşenlerinde `showPaid` kapalıyken `buildOpenDebtStatementEntries` fonksiyonu çağrılıyor ve tahsilat kayıtları elendiği için müşteriye gönderilen açık ekstrede ödeme günleri çıkmıyordu.
+    - Tarih başlıklarında ve işlem satırlarında tahsilat günleri için özel bir ayırt edici renk (yeşil/emerald) bulunmuyordu.
+  - **Yapılan İyileştirmeler:**
+    1. **Modern A4 PDF Ekstresi ([`debt-statement-modern.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/debt-statement-modern.tsx)):**
+       - `filteredDebts` kronolojik olarak filtrelenip `buildDebtStatementEntries` ile işlendi; açık ekstrede dahi borçlar ve ilgili tahsilatlar birlikte yer alacak şekilde bağlandı.
+       - Tahsilat yapılan günlerde tarih sütunu `✓ ÖDEME GÜNÜ` rozeti ve zümrüt yeşili zemin (`bg-emerald-100 text-emerald-800 border-emerald-300`) ile vurgulandı.
+       - Tahsilat satırları açık yeşil arka plan (`bg-emerald-50/70 border-emerald-200`), yeşil `✓ TAHSİLAT ALINDI` başlığı, varsa ödeme yöntemi rozeti (Nakit/Kart/Banka) ve negatif yeşil tutar kutucuğu (`- ₺...`) ile belirginleştirildi.
+       - Dipnot alanına *"Yeşil renk ile vurgulanmış satırlar ve tarihler tahsilat (ödeme) yapılan günleri belirtmektedir."* bilgilendirmesi eklendi.
+    2. **Termal Fiş ve Dekont Şablonu ([`debt-receipt-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/debt-receipt-modal.tsx)):**
+       - Günlük tarih başlığı tahsilat yapılan günlerde yeşil arka plan, `✓ [Tarih] • ÖDEME GÜNÜ` rozeti ve ödenen toplam tutarın yeşil badge ile gösterimi ile zenginleştirildi.
+       - Tahsilat satırları yeşil renklendirme (`bg-emerald-100/70 text-emerald-800`) ile basılı fiş ve ekranda ayrıştırıldı.
+    3. **Veresiye Detay ve WhatsApp Ekstresi ([`veresiye-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/veresiye-client.tsx)):**
+       - Müşteri hareket geçmişi modalında tahsilat kartının tarih bilgisi yeşil rozet (`📅 ... • Tahsilat Günü`) olarak güncellendi.
+       - WhatsApp ekstre gönderimlerinde `includePayments: true` parametresi aktif edilerek müşteriye WhatsApp üzerinden giden metinde de yeşil daireli (`🟢 SON TAHSİLATLAR & ÖDEMELER`) ödeme günlerinin iletilmesi sağlandı.
+    4. **Doğrulama:**
+       - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+
 - [x] 2026-10-31: Gemini Yapay Zeka Model Adlarının `gemini-3.8-flash` Olarak Güncellenmesi:
   - **Talep:**
     - Kod tabanındaki (`src/` ve `.env` dosyaları) `gemini-2.5-flash` (ve eski `gemini-1.5`, `gemini-2.0`) model dizgilerinin mantık değiştirilmeden `gemini-3.8-flash` olarak güncellenmesi.

@@ -73,31 +73,21 @@ export const DebtStatementModern = ({
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     // Borç ve Tahsilat Hesaplamaları (Özet kutuları için filtrelenmiş veriden hesaplanır)
-    const statementEntries = showPaid
-        ? buildDebtStatementEntries(filteredDebts, currentUsdRate)
-        : buildOpenDebtStatementEntries(debts, currentUsdRate);
+    const statementEntries = buildDebtStatementEntries(filteredDebts, currentUsdRate);
     const debtSummaryEntries = statementEntries.filter((entry) => entry.type === 'DEBT');
     const paymentSummaryEntries = statementEntries.filter((entry) => entry.type === 'PAYMENT');
     const totalTRY = debtSummaryEntries
         .filter((entry) => entry.currency !== 'USD')
-        .reduce((sum, entry) => sum + money(showPaid ? entry.amount : entry.remainingAmount), 0);
+        .reduce((sum, entry) => sum + money(showPaid ? entry.amount : (entry.remainingAmount ?? entry.amount)), 0);
     const totalUSD = debtSummaryEntries
         .filter((entry) => entry.currency === 'USD')
-        .reduce((sum, entry) => sum + money(showPaid ? entry.amount : entry.remainingAmount), 0);
-    const totalTahsilatTRY = showPaid
-        ? paymentSummaryEntries
-            .filter((entry) => entry.currency !== 'USD')
-            .reduce((sum, entry) => sum + money(entry.amount), 0)
-        : debtSummaryEntries
-            .filter((entry) => entry.currency !== 'USD')
-            .reduce((sum, entry) => sum + money(entry.paidAmount), 0);
-    const totalTahsilatUSD = showPaid
-        ? paymentSummaryEntries
-            .filter((entry) => entry.currency === 'USD')
-            .reduce((sum, entry) => sum + money(entry.amount), 0)
-        : debtSummaryEntries
-            .filter((entry) => entry.currency === 'USD')
-            .reduce((sum, entry) => sum + money(entry.paidAmount), 0);
+        .reduce((sum, entry) => sum + money(showPaid ? entry.amount : (entry.remainingAmount ?? entry.amount)), 0);
+    const totalTahsilatTRY = paymentSummaryEntries
+        .filter((entry) => entry.currency !== 'USD')
+        .reduce((sum, entry) => sum + money(entry.amount), 0);
+    const totalTahsilatUSD = paymentSummaryEntries
+        .filter((entry) => entry.currency === 'USD')
+        .reduce((sum, entry) => sum + money(entry.amount), 0);
     const lastStatementEntry = statementEntries[statementEntries.length - 1];
     const remainingTRY = showPaid ? money(lastStatementEntry?.runningTRY) : totalTRY;
     const remainingUSD = showPaid ? money(lastStatementEntry?.runningUSD) : totalUSD;
@@ -223,7 +213,7 @@ export const DebtStatementModern = ({
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-900 text-white">
-                            <th className="w-24 py-3 px-4 text-[10px] font-black uppercase tracking-wider rounded-tl-lg">TARİH</th>
+                            <th className="w-32 py-3 px-4 text-[10px] font-black uppercase tracking-wider rounded-tl-lg">TARİH</th>
                             <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider">AÇIKLAMA / ÜRÜN DETAYI</th>
                             <th className="w-32 py-3 px-4 text-[10px] font-black uppercase tracking-wider text-right">İŞLEM TUTARI</th>
                             <th className="w-28 py-3 px-4 text-[10px] font-black uppercase tracking-wider text-right">KALAN TL</th>
@@ -233,6 +223,8 @@ export const DebtStatementModern = ({
                     <tbody className="border-x border-slate-200">
                         {sortedDates.map((date) => {
                             const dailyItems = groups[date];
+                            const hasPaymentOnThisDate = dailyItems.some((e: any) => e.type === 'PAYMENT');
+
                             return dailyItems.map((entry: any, idx: number) => {
                                 const item = entry.item;
                                 const isPayment = entry.type === 'PAYMENT';
@@ -241,48 +233,106 @@ export const DebtStatementModern = ({
                                 const formatEntryCurrency = (amount: number) => entry.currency === 'USD' ? formatUSD(amount) : formatTRY(amount);
 
                                 return (
-                                    <tr key={`${item.id || entry.date.getTime()}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
-                                        <td className="py-2.5 px-4 text-[11px] font-bold text-slate-400 tabular-nums align-top">
-                                            {idx === 0 ? format(new Date(date), 'dd.MM.yyyy') : ""}
+                                    <tr 
+                                        key={`${item.id || entry.date.getTime()}-${idx}`} 
+                                        className={cn(
+                                            "border-b transition-colors group",
+                                            isPayment 
+                                                ? "bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/50" 
+                                                : "border-slate-100 hover:bg-slate-50/50"
+                                        )}
+                                    >
+                                        <td className="py-2.5 px-4 text-[11px] font-bold align-top">
+                                            {idx === 0 ? (
+                                                hasPaymentOnThisDate ? (
+                                                    <div className="flex flex-col items-start gap-1">
+                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs whitespace-nowrap">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                            {format(new Date(date), 'dd.MM.yyyy')}
+                                                        </div>
+                                                        <span className="inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 whitespace-nowrap">
+                                                            ✓ ÖDEME GÜNÜ
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-500 tabular-nums">
+                                                        {format(new Date(date), 'dd.MM.yyyy')}
+                                                    </span>
+                                                )
+                                            ) : (
+                                                isPayment && (
+                                                    <span className="text-[8px] font-black uppercase text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                                                        TAHSİLAT
+                                                    </span>
+                                                )
+                                            )}
                                         </td>
                                         <td className="py-2.5 px-4 align-top">
                                             <div className="flex flex-col gap-0.5">
-                                                <span className={cn(
-                                                    "text-[12px] font-bold uppercase leading-normal tracking-tight",
-                                                    isPayment ? "text-emerald-600 font-black" : "text-slate-900"
-                                                )}>
-                                                    {isPayment && "✓ "}
-                                                    {item.notes || item.description || (isPayment ? 'TAHSİLAT' : 'ÜRÜN / HİZMET')}
-                                                </span>
-                                                {entry.currency === 'USD' && (
-                                                    <span className="text-[9px] font-bold text-blue-500 bg-blue-50 self-start px-1.5 rounded">
-                                                        ${item.amount.toLocaleString('tr-TR')} (₺{(item.amount * (item.rate || currentUsdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                                                    </span>
-                                                )}
-                                                {!showPaid && !isPayment && (
-                                                    <span className="text-[10px] font-black text-slate-500 self-start">
-                                                        Kalan: {formatEntryCurrency(remainingAmount)}
-                                                        {paidAmount > 0 ? ` / Odenen: ${formatEntryCurrency(paidAmount)}` : ""}
-                                                    </span>
+                                                {isPayment ? (
+                                                    <>
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <span className="text-[12px] font-black uppercase leading-normal tracking-tight text-emerald-700">
+                                                                ✓ TAHSİLAT ALINDI
+                                                            </span>
+                                                            {item.paymentMethod && (
+                                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase">
+                                                                    {item.paymentMethod === 'CASH' ? 'Nakit' : item.paymentMethod === 'CREDIT_CARD' ? 'Kredi Kartı' : item.paymentMethod === 'BANK' ? 'Havale/EFT' : item.paymentMethod}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {(item.notes || item.description) && (
+                                                            <span className="text-[11px] font-bold text-slate-800">
+                                                                {item.notes || item.description}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-[9px] font-bold text-emerald-600/90">
+                                                            Ödeme işlendi ve borç bakiyesinden düşüldü
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-[12px] font-bold uppercase leading-normal tracking-tight text-slate-900">
+                                                            {item.notes || item.description || 'ÜRÜN / HİZMET'}
+                                                        </span>
+                                                        {entry.currency === 'USD' && (
+                                                            <span className="text-[9px] font-bold text-blue-500 bg-blue-50 self-start px-1.5 rounded">
+                                                                ${item.amount.toLocaleString('tr-TR')} (₺{(item.amount * (item.rate || currentUsdRate)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                                            </span>
+                                                        )}
+                                                        {!showPaid && (
+                                                            <span className="text-[10px] font-black text-slate-500 self-start">
+                                                                Kalan: {formatEntryCurrency(remainingAmount)}
+                                                                {paidAmount > 0 ? ` / Ödenen: ${formatEntryCurrency(paidAmount)}` : ""}
+                                                            </span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="py-2.5 px-4 text-right align-top whitespace-nowrap">
-                                            <span className={cn(
-                                                "text-xs font-black tabular-nums",
-                                                isPayment ? "text-emerald-600" : "text-slate-900"
-                                            )}>
-                                                {isPayment ? "-" : "+"}
-                                                {new Intl.NumberFormat(entry.currency === 'USD' ? 'en-US' : 'tr-TR', {
-                                                    style: 'currency',
-                                                    currency: entry.currency || 'TRY'
-                                                }).format(entry.amount)}
-                                                {isPayment && entry.currency === 'TRY' && (
-                                                    <span className="block text-[10px] font-bold text-slate-500">
-                                                        ({formatUSD(entry.amountUSD)})
+                                            {isPayment ? (
+                                                <div className="flex flex-col items-end">
+                                                    <span className="inline-block text-xs font-black tabular-nums text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-md border border-emerald-300">
+                                                        - {new Intl.NumberFormat(entry.currency === 'USD' ? 'en-US' : 'tr-TR', {
+                                                            style: 'currency',
+                                                            currency: entry.currency || 'TRY'
+                                                        }).format(entry.amount)}
                                                     </span>
-                                                )}
-                                            </span>
+                                                    {entry.currency === 'TRY' && (
+                                                        <span className="block text-[10px] font-bold text-emerald-600/90 mt-0.5">
+                                                            ({formatUSD(entry.amountUSD)})
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs font-black tabular-nums text-slate-900">
+                                                    + {new Intl.NumberFormat(entry.currency === 'USD' ? 'en-US' : 'tr-TR', {
+                                                        style: 'currency',
+                                                        currency: entry.currency || 'TRY'
+                                                    }).format(entry.amount)}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="py-2.5 px-4 text-right align-top whitespace-nowrap">
                                             <span className="text-xs font-black text-slate-800 tabular-nums">
@@ -347,6 +397,7 @@ export const DebtStatementModern = ({
                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Önemli Bilgilendirme</div>
                     <p className="text-[10px] leading-relaxed text-slate-400 max-w-lg italic">
                         * Bu ekstre bilgilendirme amaçlıdır. Hata olduğunu düşünüyorsanız bildiriniz.<br />
+                        * Yeşil renk ile vurgulanmış satırlar ve tarihler tahsilat (ödeme) yapılan günleri belirtmektedir.<br />
                         * Dövizli işlemler işlem tarihindeki TCMB Döviz Satış kuru üzerinden bakiye toplamına dahil edilmiştir.
                     </p>
                 </div>

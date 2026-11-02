@@ -1209,7 +1209,7 @@ export function VeresiyeClient({
                 balanceTRY: Number(customer.balance || 0),
                 balanceUSD: Number(customer.balanceUsd || 0),
                 includePaid: false,
-                includePayments: false,
+                includePayments: true,
                 shopName: shop?.name || "Başar Teknik"
             });
 
@@ -1281,7 +1281,7 @@ export function VeresiyeClient({
                     balanceTRY: Number(customer.balance || 0),
                     balanceUSD: Number(customer.balanceUsd || 0),
                     includePaid: false,
-                    includePayments: false,
+                    includePayments: true,
                     shopName: shop?.name || "Başar Teknik"
                 });
 
@@ -2006,7 +2006,7 @@ export function VeresiyeClient({
                                         balanceTRY: Number(historyCustomer?.balance || 0),
                                         balanceUSD: Number(historyCustomer?.balanceUsd || 0),
                                         includePaid: false,
-                                        includePayments: false,
+                                        includePayments: true,
                                         shopName: shop?.name || "Başar Teknik"
                                     });
                                     setWhatsappMessageContent(message);
@@ -2398,9 +2398,12 @@ export function VeresiyeClient({
                                                                         </Badge>
                                                                     )}
                                                                 </div>
-                                                                <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 font-medium">
-                                                                    {formattedDate}
-                                                                </span>
+                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                                        {formattedDate} • Tahsilat Günü
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
 
