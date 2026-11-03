@@ -189,7 +189,7 @@ export function AdminDashboard({
         transactions: <RecentTransactionsStream shopId={shopId || ""} />,
         service_queue: <ServiceQueueStream title="Servis Kuyruğu" />,
         inventory: <TopProductsStream shopId={shopId || ""} />,
-        shortage_status: <ShortageStatusCard />,
+        shortage_status: <ShortageStatusCard categories={categories} />,
         receivables: <ReceivablesStream shopId={shopId || ""} />,
     };
 

@@ -41,6 +41,23 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-03: Ana Sayfadaki Kurye Takip Kartından Sipariş Girme ve Kurye Paneliyle Tam Senkronizasyon:
+  - **Talep:**
+    - "anasayfadaki kurye takip kartından kurye siparişi girebilelim bunu kurye sayfasıyla senkronize yap."
+  - **Yapılan İyileştirmeler:**
+    1. **Ana Sayfa Kurye Kartına Sipariş Giriş Entegrasyonu ([`shortage-status-card.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/widgets/shortage-status-card.tsx)):**
+       - Kart başlığına yenile butonunun hemen yanına `[+ Sipariş Gir]` butonu yerleştirildi.
+       - Boş durumda ("Aktif kurye siparişi yok") kullanıcıya `[+ Kurye Siparişi Gir]` hızlı aksiyon butonu sunuldu.
+       - Kart altındaki kontrol alanına `[+ Sipariş Gir]` ve `[Kurye Paneli ->]` olmak üzere 2'li şık kontrol eklendi.
+       - Tıklanıldığında `isAddOrderOpen` durumuyla modern, geniş ve scrollable `Dialog` açılarak `AddShortageForm` (`add-shortage-form.tsx`) formu modal içinde yüklendi.
+    2. **Kurye Paneli (`/kurye`) ile Tam Anlık Senkronizasyon:**
+       - Ana sayfadan girilen kurye siparişinin anında `/kurye` sayfasında ve ana sayfadaki kartta güncellenmesi için `handleOrderSuccess` içerisinde React Query query key'leri (`["shortages"]`, `["courier-tasks"]`, `["global-shortages"]`, `["couriers"]`, `["courier-notifications"]`, `["dashboard-data"]`, `["dashboard-init"]`) tek seferde geçersiz kılındı (`invalidateQueries`).
+       - `refetch()` ve Next.js `router.refresh()` çağrılarak sunucu etiketleri (`shortage-${shopId}`, `dashboard-${shopId}`) ile arayüz %100 senkronize hale getirildi.
+    3. **Admin Dashboard Entegrasyonu ([`admin-dashboard.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/admin-dashboard.tsx)):**
+       - `admin-dashboard.tsx` içerisindeki `shortage_status` widget'ına `categories={categories}` prop'u geçirilerek hızlı ürün ekleme modaliyle kusursuz çalışması sağlandı.
+    4. **Tip ve Derleme Kontrolü:**
+       - `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
 - [x] 2026-11-03: Veresiye Detay Modalında Seçili Kalemlere Özel Yazdır/WhatsApp/Fiş/PDF Filtrelemesi, İkon Rozetleri (Badges), Ana Sayfa 10 Kayıt Sayfalama ve 0-2.000$ Barlı Risk Limiti Sistemi:
   - **Talep:**
     - "veresiye detay modalında ürün seçince yazdır,whatsapp,fiş,pdf butonlarına basınca sadece seçili ürünleri göstersin,göndersin. ikonların üzerinde badges görünsün seçilen ürün sayısı kadar. ayrıca anasayfadaki veresiyeler kartında tüm veresiye sayfası aşşağı doğru akıp gidiyor bunun yerine 10 kayıt göster ve sayfalandır, sayfa yüklenirken tüm kayıtlar bianda geleceğine bu şekilde sayfa değişince gelsin. ve barlı bi sistem yap 0-2bin dolar limite göre her bayinin altında progress bar tarzı renkli barlar olsun."
