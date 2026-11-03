@@ -339,7 +339,9 @@ export function VeresiyeClient({
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const defaultCurrency = settings?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
-    const usdRate = rates?.usd || 1;
+    const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+    const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+    const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 1;
 
     // Payment States
     const [paymentAmount, setPaymentAmount] = useState("");
@@ -352,6 +354,7 @@ export function VeresiyeClient({
     const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
     const [whatsappCustomer, setWhatsappCustomer] = useState<any>(null);
     const [whatsappMessageContent, setWhatsappMessageContent] = useState<string>("");
+    const [whatsappStatementData, setWhatsappStatementData] = useState<any>(null);
 
 
     // Bulk WhatsApp States
@@ -1200,7 +1203,7 @@ export function VeresiyeClient({
                 return;
             }
 
-            const message = buildUnifiedWhatsAppStatement({
+            const statementData = {
                 customerName: customer.name,
                 debts: res.debts || [],
                 transactions: res.transactions || [],
@@ -1208,11 +1211,15 @@ export function VeresiyeClient({
                 defaultCurrency,
                 balanceTRY: Number(customer.balance || 0),
                 balanceUSD: Number(customer.balanceUsd || 0),
-                includePaid: false,
-                includePayments: true,
                 shopName: shop?.name || "Başar Teknik"
+            };
+            const message = buildUnifiedWhatsAppStatement({
+                ...statementData,
+                includePaid: false,
+                includePayments: true
             });
 
+            setWhatsappStatementData(statementData);
             setWhatsappMessageContent(message);
             setWhatsappModalOpen(true);
             toast.dismiss(toastId);
@@ -1997,7 +2004,7 @@ export function VeresiyeClient({
                                 title="WhatsApp Ekstre"
                                 onClick={async () => {
                                     if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-                                    const message = buildUnifiedWhatsAppStatement({
+                                    const stmt = {
                                         customerName: historyCustomer?.name || "Müşteri",
                                         debts: statementData.debts || [],
                                         transactions: statementData.transactions || [],
@@ -2005,10 +2012,14 @@ export function VeresiyeClient({
                                         defaultCurrency,
                                         balanceTRY: Number(historyCustomer?.balance || 0),
                                         balanceUSD: Number(historyCustomer?.balanceUsd || 0),
-                                        includePaid: false,
-                                        includePayments: true,
                                         shopName: shop?.name || "Başar Teknik"
+                                    };
+                                    const message = buildUnifiedWhatsAppStatement({
+                                        ...stmt,
+                                        includePaid: false,
+                                        includePayments: true
                                     });
+                                    setWhatsappStatementData(stmt);
                                     setWhatsappMessageContent(message);
                                     setWhatsappCustomer(historyCustomer);
                                     setWhatsappModalOpen(true);
@@ -2954,10 +2965,18 @@ export function VeresiyeClient({
                         onClose={() => {
                             setWhatsappModalOpen(false);
                             setWhatsappCustomer(null);
+                            setWhatsappStatementData(null);
                         }}
                         phone={whatsappCustomer.phone || ""}
                         customerName={whatsappCustomer.name}
                         initialMessage={whatsappMessageContent}
+                        onTogglePaidItems={whatsappStatementData ? (includePaid) => {
+                            return buildUnifiedWhatsAppStatement({
+                                ...whatsappStatementData,
+                                includePaid,
+                                includePayments: true
+                            });
+                        } : undefined}
                     />
                 )
             }

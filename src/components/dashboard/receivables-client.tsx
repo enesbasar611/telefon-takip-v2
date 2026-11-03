@@ -36,6 +36,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { getCustomerStatement } from "@/lib/actions/debt-actions";
+import { buildUnifiedWhatsAppStatement } from "@/lib/debt-statement-calculator";
+import { useDashboardData } from "@/lib/context/dashboard-data-context";
 
 interface Debt {
     id: string;
@@ -73,6 +76,7 @@ interface ReceivablesClientProps {
 export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows = 4 }: ReceivablesClientProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const queryClient = useQueryClient();
+    const { rates, defaultCurrency } = useDashboardData();
 
     // Search and filter states
     const [searchTerm, setSearchTerm] = useState("");
@@ -95,19 +99,67 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
     const [whatsappPhone, setWhatsappPhone] = useState("");
     const [whatsappCustomerName, setWhatsappCustomerName] = useState("");
     const [whatsappMessage, setWhatsappMessage] = useState("");
+    const [whatsappStatementData, setWhatsappStatementData] = useState<any>(null);
 
     // Pinned / Favorite Dealers
     const [pinnedCustomerIds, setPinnedCustomerIds] = useState<string[]>([]);
 
-    const openWhatsAppModal = (name: string, phone: string, totalTRY: number, totalUSD: number) => {
+    const openWhatsAppModal = async (name: string, phone: string, totalTRY: number, totalUSD: number, customerId?: string) => {
         setWhatsappCustomerName(name);
         setWhatsappPhone(phone.replace(/[^0-9]/g, ''));
 
-        let msg = `Merhaba ${name},\n\nBekleyen cari veresiye ödemeniz hakkında bilgi vermek istedim:\n\n`;
-        if (totalTRY > 0) msg += `💰 Güncel Borç (TL): ₺${totalTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}\n`;
-        if (totalUSD > 0) msg += `💵 Güncel Borç (USD): $${totalUSD.toFixed(2)}\n`;
-        msg += `\nİyi çalışmalar dileriz.`;
+        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
 
+        if (customerId) {
+            try {
+                const res = await getCustomerStatement(customerId);
+                if (res?.success) {
+                    const stmt = {
+                        customerName: name,
+                        debts: res.debts || [],
+                        transactions: res.transactions || [],
+                        usdRate,
+                        defaultCurrency: defaultCurrency || "TRY",
+                        balanceTRY: Number((res as any).customer?.balance || 0),
+                        balanceUSD: Number((res as any).customer?.balanceUsd || 0),
+                        shopName: shopName || "Başar Teknik"
+                    };
+                    const msg = buildUnifiedWhatsAppStatement({
+                        ...stmt,
+                        includePaid: false,
+                        includePayments: true
+                    });
+                    setWhatsappStatementData(stmt);
+                    setWhatsappMessage(msg);
+                    setWhatsappModalOpen(true);
+                    return;
+                }
+            } catch (err) {
+                console.error("Statement fetch error:", err);
+            }
+        }
+
+        const fallbackStmt = {
+            customerName: name,
+            debts: [
+                ...(totalTRY > 0 ? [{ amount: totalTRY, remainingAmount: totalTRY, currency: "TRY", notes: "Açık Bakiye" }] : []),
+                ...(totalUSD > 0 ? [{ amount: totalUSD, remainingAmount: totalUSD, currency: "USD", notes: "Açık Bakiye" }] : []),
+            ],
+            transactions: [],
+            usdRate,
+            defaultCurrency: defaultCurrency || "TRY",
+            balanceTRY: 0,
+            balanceUSD: 0,
+            shopName: shopName || "Başar Teknik"
+        };
+        const msg = buildUnifiedWhatsAppStatement({
+            ...fallbackStmt,
+            includePaid: false,
+            includePayments: true
+        });
+        setWhatsappStatementData(fallbackStmt);
         setWhatsappMessage(msg);
         setWhatsappModalOpen(true);
     };
@@ -530,7 +582,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                                                         type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD);
+                                                            openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD, agg.id);
                                                         }}
                                                         className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shrink-0"
                                                         title="WhatsApp Ekstre Gönder"
@@ -578,7 +630,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                 }}
                 onOpenWhatsApp={() => {
                     if (detailCustomer && detailCustomer.phone) {
-                        openWhatsAppModal(detailCustomer.name, detailCustomer.phone, detailCustomer.totalTRY, detailCustomer.totalUSD);
+                        openWhatsAppModal(detailCustomer.name, detailCustomer.phone, detailCustomer.totalTRY, detailCustomer.totalUSD, detailCustomer.id);
                     }
                 }}
             />
@@ -596,6 +648,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                     setAddDebtOpen(open);
                     if (!open) setAddDebtTarget(null);
                 }}
+                rates={rates}
                 initialData={addDebtTarget}
                 onSuccess={() => {
                     setAddDebtOpen(false);
@@ -624,10 +677,20 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
             {/* 5. WHATSAPP HATIRLATMA MODALI */}
             <WhatsAppConfirmModal
                 isOpen={whatsappModalOpen}
-                onClose={() => setWhatsappModalOpen(false)}
+                onClose={() => {
+                    setWhatsappModalOpen(false);
+                    setWhatsappStatementData(null);
+                }}
                 phone={whatsappPhone}
                 customerName={whatsappCustomerName}
                 initialMessage={whatsappMessage}
+                onTogglePaidItems={whatsappStatementData ? (includePaid) => {
+                    return buildUnifiedWhatsAppStatement({
+                        ...whatsappStatementData,
+                        includePaid,
+                        includePayments: true
+                    });
+                } : undefined}
             />
         </>
     );

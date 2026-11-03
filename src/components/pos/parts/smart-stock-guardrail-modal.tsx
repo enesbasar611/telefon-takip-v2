@@ -19,7 +19,9 @@ import {
     ArrowRight,
     Loader2,
     ShieldAlert,
-    Barcode
+    Barcode,
+    Eye,
+    ShoppingCart
 } from "lucide-react";
 import { updateProduct } from "@/lib/actions/product-actions";
 import { addShortageItem } from "@/lib/actions/shortage-actions";
@@ -30,6 +32,7 @@ interface SmartStockGuardrailModalProps {
     onOpenChange: (open: boolean) => void;
     product: any;
     onStockAddedAndAddToCart: (product: any, addedStock: number) => void;
+    onOnlyAddStock?: (product: any, addedStock: number) => void;
     onAllowZeroStockSale: (product: any) => void;
 }
 
@@ -38,14 +41,15 @@ export function SmartStockGuardrailModal({
     onOpenChange,
     product,
     onStockAddedAndAddToCart,
+    onOnlyAddStock,
     onAllowZeroStockSale,
 }: SmartStockGuardrailModalProps) {
-    const [quickQty, setQuickQty] = useState<number>(5);
+    const [quickQty, setQuickQty] = useState<number>(1);
     const [isPending, startTransition] = useTransition();
 
     if (!product) return null;
 
-    const handleQuickStockEntry = () => {
+    const handleQuickStockEntry = (addToCartAfter: boolean = true) => {
         if (quickQty <= 0) {
             toast.error("Lütfen geçerli bir stok adedi girin.");
             return;
@@ -58,11 +62,18 @@ export function SmartStockGuardrailModal({
                 const res = await updateProduct(product.id, { stock: newStock });
 
                 if (res?.success) {
-                    toast.success(`${quickQty} adet stok başarıyla eklendi ve sepete aktarıldı.`);
-                    onStockAddedAndAddToCart(
-                        { ...product, stock: newStock },
-                        quickQty
-                    );
+                    if (addToCartAfter) {
+                        toast.success(`${quickQty} adet stok başarıyla eklendi ve sepete aktarıldı.`);
+                        onStockAddedAndAddToCart(
+                            { ...product, stock: newStock },
+                            quickQty
+                        );
+                    } else {
+                        toast.success(`${product.name} için +${quickQty} adet stok başarıyla eklendi.`);
+                        if (onOnlyAddStock) {
+                            onOnlyAddStock({ ...product, stock: newStock }, quickQty);
+                        }
+                    }
                     onOpenChange(false);
                 } else {
                     toast.error(res?.error || "Stok güncellenemedi.");
@@ -107,43 +118,52 @@ export function SmartStockGuardrailModal({
                 {/* Header warning strip */}
                 <div className="bg-amber-500/10 dark:bg-amber-500/15 border-b border-amber-500/20 p-6 flex items-start gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/25">
-                        <ShieldAlert className="w-6 h-6" />
+                        <Eye className="w-6 h-6 animate-pulse" />
                     </div>
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
-                                Akıllı Göz • Stok Koruması
+                    <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                <ShieldAlert className="w-3.5 h-3.5" />
+                                Akıllı Göz • Hızlı Stok Girişi
                             </span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-amber-500/30 text-amber-600 bg-amber-500/10 font-bold">
-                                0 Stok Uyarısı
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-rose-500/30 text-rose-600 bg-rose-500/10 font-bold">
+                                0 Stok (Tükendi)
                             </Badge>
                         </div>
-                        <DialogTitle className="text-base font-black text-foreground">
+                        <DialogTitle className="text-base font-black text-foreground truncate">
                             {product.name}
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-muted-foreground">
-                            Sistemde kayıtlı stok tükenmiş görünüyor. Satış akışını kesmeden hızlı aksiyon alabilirsiniz:
+                        <DialogDescription className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                            {product.category?.name && (
+                                <span className="font-semibold text-foreground/80">{product.category.name}</span>
+                            )}
+                            {product.barcode && (
+                                <>
+                                    <span>•</span>
+                                    <span className="font-mono text-[11px] text-muted-foreground">{product.barcode}</span>
+                                </>
+                            )}
                         </DialogDescription>
                     </div>
                 </div>
 
                 <div className="p-6 space-y-4">
                     {/* Option 1: Quick Stock Input (Recommended) */}
-                    <div className="p-4 rounded-2xl border-2 border-indigo-500/30 bg-indigo-500/[0.03] space-y-3">
+                    <div className="p-4 rounded-2xl border-2 border-indigo-500/30 bg-indigo-500/[0.03] space-y-3.5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <PackagePlus className="w-4 h-4 text-indigo-500" />
                                 <span className="text-xs font-black text-foreground uppercase tracking-tight">
-                                    Hızlı Stok Girişi Yap (Tavsiye Edilen)
+                                    Hızlı Stok Ekle
                                 </span>
                             </div>
                             <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                                Sayfadan Ayrılmadan
+                                Anında Güncelle
                             </span>
                         </div>
 
                         <p className="text-[11px] text-muted-foreground leading-relaxed">
-                            Yeni mal kabulü yapıldıysa veya rafta sayım fazlası ürün varsa anında stoğa işletin:
+                            Yeni mal kabulü yapıldıysa veya rafta ürün varsa eklemek istediğiniz adedi seçin:
                         </p>
 
                         <div className="flex items-center gap-2">
@@ -152,10 +172,10 @@ export function SmartStockGuardrailModal({
                                 min={1}
                                 value={quickQty}
                                 onChange={(e) => setQuickQty(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="h-10 w-24 text-center font-bold text-sm bg-background border-border rounded-xl"
+                                className="h-10 w-20 text-center font-bold text-sm bg-background border-border rounded-xl shrink-0"
                             />
-                            <div className="flex items-center gap-1.5 flex-1">
-                                {[1, 3, 5, 10].map((qty) => (
+                            <div className="flex items-center gap-1.5 flex-1 flex-wrap">
+                                {[1, 2, 3, 5, 10, 20].map((qty) => (
                                     <button
                                         key={qty}
                                         type="button"
@@ -172,14 +192,25 @@ export function SmartStockGuardrailModal({
                             </div>
                         </div>
 
-                        <Button
-                            onClick={handleQuickStockEntry}
-                            disabled={isPending}
-                            className="w-full h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-2 shadow-md shadow-indigo-600/20"
-                        >
-                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                            <span>{quickQty} Adet Giriş Yap & Sepete Ekle</span>
-                        </Button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                            <Button
+                                onClick={() => handleQuickStockEntry(true)}
+                                disabled={isPending}
+                                className="w-full h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5 shadow-md shadow-indigo-600/20"
+                            >
+                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />}
+                                <span>+{quickQty} & Sepete Ekle</span>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => handleQuickStockEntry(false)}
+                                disabled={isPending}
+                                className="w-full h-10 rounded-xl border-indigo-500/40 hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-xs gap-1.5"
+                            >
+                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
+                                <span>Sadece Stoğa Ekle</span>
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Secondary Actions Grid */}

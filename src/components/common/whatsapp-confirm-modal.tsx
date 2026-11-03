@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send, Smartphone, CheckCheck, Sparkles, Loader2, Globe, Monitor, Users, FileText, Download } from "lucide-react";
+import { Send, Smartphone, CheckCheck, Sparkles, Loader2, Globe, Monitor, Users, FileText, Download, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { sendWhatsAppClientSide } from "@/lib/utils/notifications";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,8 @@ interface WhatsAppConfirmModalProps {
         description?: string;
     };
     onBeforeSend?: () => void | Promise<void>;
+    onTogglePaidItems?: (includePaid: boolean) => string | Promise<string>;
+    initialIncludePaid?: boolean;
 }
 
 const EMPTY_PHONES: string[] = [];
@@ -35,9 +37,12 @@ export function WhatsAppConfirmModal({
     initialMessage,
     mode = "single",
     attachment,
-    onBeforeSend
+    onBeforeSend,
+    onTogglePaidItems,
+    initialIncludePaid = false
 }: WhatsAppConfirmModalProps) {
     const [message, setMessage] = useState(initialMessage);
+    const [includePaid, setIncludePaid] = useState<boolean>(initialIncludePaid);
     const [isSending, setIsSending] = useState(false);
     const [isRefining, setIsRefining] = useState(false);
 
@@ -79,11 +84,12 @@ export function WhatsAppConfirmModal({
     useEffect(() => {
         if (isOpen) {
             setMessage(initialMessage);
+            setIncludePaid(initialIncludePaid);
             if (mode === "selection" || mode === "single") {
                 setSelectedPhone(phone || phones[0] || "");
             }
         }
-    }, [isOpen, initialMessage, phone, phonesKey, mode]);
+    }, [isOpen, initialMessage, initialIncludePaid, phone, phonesKey, mode]);
 
     const targetPhones = mode === "bulk" ? phones : [selectedPhone].filter(Boolean) as string[];
 
@@ -191,8 +197,42 @@ export function WhatsAppConfirmModal({
                             placeholder="Mesajınızı yazın..."
                             autoFocus
                         />
-                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-black/5 dark:border-white/5">
-                            <div className="flex gap-1">
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-black/5 dark:border-white/5 flex-wrap gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                {onTogglePaidItems && (
+                                    <Button
+                                        type="button"
+                                        onClick={async () => {
+                                            const next = !includePaid;
+                                            setIncludePaid(next);
+                                            const res = await onTogglePaidItems(next);
+                                            if (typeof res === "string") {
+                                                setMessage(res);
+                                            }
+                                        }}
+                                        disabled={isSending}
+                                        variant="outline"
+                                        className={cn(
+                                            "h-7 px-2.5 rounded-lg text-[10px] font-bold gap-1.5 transition-all shadow-xs border",
+                                            includePaid
+                                                ? "bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/40 hover:bg-amber-500/30"
+                                                : "bg-white/80 dark:bg-black/25 text-emerald-800 dark:text-emerald-300 border-emerald-600/30 hover:bg-emerald-500/20"
+                                        )}
+                                        title={includePaid ? "Ödenen kalemleri gizleyip sadece açık borçları göster" : "Ödenmiş geçmiş kalemleri de mesaja ekle"}
+                                    >
+                                        {includePaid ? (
+                                            <>
+                                                <EyeOff className="h-3 w-3" />
+                                                <span>Ödenenleri Gizle</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Eye className="h-3 w-3" />
+                                                <span>Ödenenleri Göster</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
                                 <Button
                                     onClick={() => handleRefine("professional")}
                                     disabled={isRefining || isSending}
@@ -211,7 +251,7 @@ export function WhatsAppConfirmModal({
                                     SAMİMİ
                                 </Button>
                             </div>
-                            <div className="flex items-center gap-1 opacity-60">
+                            <div className="flex items-center gap-1 opacity-60 ml-auto">
                                 <span className="text-[9px] text-black/60 dark:text-white/60 font-medium">Şimdi</span>
                                 <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
                             </div>

@@ -1400,8 +1400,31 @@ export function POSInterface({ initialSaleId }: {
         onOpenChange={setGuardrailOpen}
         product={guardrailProduct}
         onStockAddedAndAddToCart={(updatedProduct) => {
+          queryClient.setQueryData(["pos-initial-data"], (old: any) => {
+            if (!old || !old.products) return old;
+            return {
+              ...old,
+              products: old.products.map((p: any) =>
+                p.id === updatedProduct.id ? { ...p, stock: updatedProduct.stock } : p
+              )
+            };
+          });
           queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
+          queryClient.invalidateQueries({ queryKey: ["products"] });
           addToCart(updatedProduct, true);
+        }}
+        onOnlyAddStock={(updatedProduct) => {
+          queryClient.setQueryData(["pos-initial-data"], (old: any) => {
+            if (!old || !old.products) return old;
+            return {
+              ...old,
+              products: old.products.map((p: any) =>
+                p.id === updatedProduct.id ? { ...p, stock: updatedProduct.stock } : p
+              )
+            };
+          });
+          queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
+          queryClient.invalidateQueries({ queryKey: ["products"] });
         }}
         onAllowZeroStockSale={(prod) => {
           addToCart(prod, true);

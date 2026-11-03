@@ -215,19 +215,19 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
     balanceTRY = 0,
     balanceUSD = 0,
     includePaid = false,
-    includePayments = false,
+    includePayments = true,
     shopName = "Başar Teknik",
   } = options;
 
-  const safeRate = Number.isFinite(Number(usdRate)) && Number(usdRate) > 0 ? Number(usdRate) : 1;
-  const isUsdDefault = defaultCurrency === "USD";
+  let safeRate = 1;
+  if (typeof usdRate === "string") {
+    const parsed = parseFloat((usdRate as string).replace(",", "."));
+    if (Number.isFinite(parsed) && parsed > 0) safeRate = parsed;
+  } else if (typeof usdRate === "number" && Number.isFinite(usdRate) && usdRate > 0) {
+    safeRate = usdRate;
+  }
 
-  // Filter open debts or all debts
-  const openDebts = debts.filter((d: any) => {
-    if (includePaid) return true;
-    const remaining = Number(d.remainingAmount ?? d.amount ?? 0);
-    return !d.isPaid && remaining > 0.01;
-  });
+  const isUsdDefault = defaultCurrency === "USD";
 
   // Calculate current real remaining totals
   let totalRemainingTRY = 0;
@@ -246,80 +246,34 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
   totalRemainingUSD = money(totalRemainingUSD);
 
   // Relevant payments:
-  // Only process if includePayments is true
-  const now = Date.now();
-  const paymentCutoff = includePaid ? 0 : now - 45 * 24 * 60 * 60 * 1000;
-  const validPayments = includePayments
-    ? transactions
-        .filter((t: any) => {
-          if (t.paymentMethod === "DEBT") return false;
-          const tTime = new Date(t.createdAt || t.date).getTime();
-          return !Number.isNaN(tTime) && tTime >= paymentCutoff;
-        })
-        .sort((a, b) => new Date(a.createdAt || a.date).getTime() - new Date(b.createdAt || b.date).getTime())
-    : [];
+  const validPayments = (transactions || [])
+    .filter((t: any) => t.paymentMethod !== "DEBT" && Number(t.amount || 0) > 0)
+    .sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
 
+  let totalCollectedTRY = 0;
+  let totalCollectedUSD = 0;
+  validPayments.forEach((p: any) => {
+    const amt = Number(p.amount || 0);
+    if (p.currency === "USD") totalCollectedUSD += amt;
+    else totalCollectedTRY += amt;
+  });
+  totalCollectedTRY = money(totalCollectedTRY);
+  totalCollectedUSD = money(totalCollectedUSD);
+
+  const lastPayment = validPayments[0];
+
+  // Header
   let message = `*${shopName}* - Hesap Ekstresi\n`;
   message += `👤 *Müşteri:* ${customerName.trim().toUpperCase()}\n\n`;
 
-  if (openDebts.length > 0) {
-    message += includePaid ? `*📋 BORÇ / İŞLEM HAREKETLERİ:*\n` : `*📋 AÇIK BORÇ KALEMLERİ:*\n`;
-    openDebts.forEach((debt: any) => {
-      const totalAmount = money(debt.amount || 0);
-      const remainingAmount = money(debt.remainingAmount ?? totalAmount);
-      const title = debt.notes || debt.description || (debt.sale?.items?.map((i: any) => i.product?.name || "Ürün").join(", ")) || "Hizmet / Ürün";
-      const isPaid = debt.isPaid || remainingAmount <= 0.01;
-
-      // Açık borç listesinde ödenmiş kalemler istenmiyorsa atla
-      if (isPaid && !includePaid) return;
-
-      const dDate = new Date(debt.createdAt || debt.date);
-      const dateStr = !Number.isNaN(dDate.getTime())
-        ? `${dDate.getDate().toString().padStart(2, "0")}.${(dDate.getMonth() + 1).toString().padStart(2, "0")}.${dDate.getFullYear()}`
-        : "";
-
-      // Açık borç kaleminin güncel borç tutarını göster
-      const currentDebt = remainingAmount > 0.01 ? remainingAmount : totalAmount;
-      let line = `• ${dateStr ? `[${dateStr}] ` : ""}${title}: ${formatDebtMoney(currentDebt, debt.currency)}`;
-      if (isPaid) {
-        line += ` ✅ (Ödendi)`;
-      } else if (remainingAmount < totalAmount - 0.01) {
-        line += ` _(Kalan)_`;
-      }
-      message += `${line}\n`;
-    });
-    message += `\n`;
-  }
-
-  if (includePayments && validPayments.length > 0) {
-    message += `*🟢 SON TAHSİLATLAR & ÖDEMELER:*\n`;
-    validPayments.forEach((p: any) => {
-      const amount = money(p.amount || 0);
-      const desc = p.description || p.notes || "Tahsilat";
-      const pDate = new Date(p.createdAt || p.date);
-      const dateStr = !Number.isNaN(pDate.getTime())
-        ? `${pDate.getDate().toString().padStart(2, "0")}.${(pDate.getMonth() + 1).toString().padStart(2, "0")}.${pDate.getFullYear()}`
-        : "";
-      message += `• ${dateStr ? `[${dateStr}] ` : ""}${desc}: ${formatDebtMoney(amount, p.currency || "TRY")}\n`;
-    });
-    message += `\n`;
-  }
-
-  const emanetTRY = money(balanceTRY);
-  const emanetUSD = money(balanceUSD);
-  if (emanetTRY > 0 || emanetUSD > 0) {
-    message += `*🎁 MEVCUT EMANET / AVANSINIZ:*\n`;
-    if (emanetTRY > 0) message += `• TL Emanet: ₺${emanetTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-    if (emanetUSD > 0) message += `• USD Emanet: $${emanetUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-    message += `\n`;
-  }
-
-  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `*🔴 GÜNCEL BORÇ DURUMU:*\n`;
-
+  // --- 1. GÜNCEL BORÇ DURUMU (KULLANICI TALEBİ: EN BAŞTA) ---
   if (totalRemainingTRY <= 0 && totalRemainingUSD <= 0) {
+    message += `*🟢 GÜNCEL BORÇ DURUMU:*\n`;
     message += `✅ *Açık borcunuz bulunmamaktadır.* Bizi tercih ettiğiniz için teşekkür ederiz.\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `_İyi çalışmalar dileriz._\n\n`;
   } else {
+    message += `*🔴 GÜNCEL BORÇ DURUMU:*\n`;
     if (totalRemainingTRY > 0) {
       message += `• Toplam TL: ₺${totalRemainingTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
     }
@@ -339,10 +293,89 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
         message += `   (Yaklaşık $${netEquivUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
       }
     }
+
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `_İyi çalışmalar dileriz._\n\n`;
   }
 
-  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `_İyi çalışmalar dileriz._`;
+  // --- 2. MEVCUT EMANET / AVANS (VARSA) ---
+  const emanetTRY = money(balanceTRY);
+  const emanetUSD = money(balanceUSD);
+  if (emanetTRY > 0 || emanetUSD > 0) {
+    message += `*🎁 MEVCUT EMANET / AVANSINIZ:*\n`;
+    if (emanetTRY > 0) message += `• TL Emanet: ₺${emanetTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    if (emanetUSD > 0) message += `• USD Emanet: $${emanetUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    message += `\n`;
+  }
 
-  return message;
+  // --- 3. TAHSİLAT & ÖDEME BİLGİSİ (SON TAHSİLAT TARİHİ VE TOPLAM TAHSİLAT) ---
+  if (lastPayment) {
+    const lDate = new Date(lastPayment.createdAt || lastPayment.date);
+    const lDateStr = !Number.isNaN(lDate.getTime())
+      ? `${lDate.getDate().toString().padStart(2, "0")}.${(lDate.getMonth() + 1).toString().padStart(2, "0")}.${lDate.getFullYear()}`
+      : "";
+    const lAmountStr = formatDebtMoney(Number(lastPayment.amount || 0), lastPayment.currency || "TRY");
+
+    message += `*🟢 TAHSİLAT & ÖDEME BİLGİSİ:*\n`;
+    message += `• Son Yapılan Tahsilat: ${lDateStr ? `[${lDateStr}] ` : ""}${lAmountStr}\n`;
+
+    const collParts: string[] = [];
+    if (totalCollectedUSD > 0) collParts.push(`$${totalCollectedUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    if (totalCollectedTRY > 0) collParts.push(`₺${totalCollectedTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    if (collParts.length > 0) {
+      message += `• Toplam Yapılan Tahsilat: ${collParts.join(" + ")}\n`;
+    }
+    message += `\n`;
+  }
+
+  // --- 4. AÇIK BORÇ KALEMLERİ (SADECE ÖDENMEMİŞ OLANLAR) ---
+  const openDebts = debts.filter((d: any) => {
+    const remaining = Number(d.remainingAmount ?? d.amount ?? 0);
+    return !d.isPaid && remaining > 0.01;
+  });
+
+  if (openDebts.length > 0) {
+    message += `*📋 AÇIK BORÇ KALEMLERİ:*\n`;
+    openDebts.forEach((debt: any) => {
+      const remainingAmount = money(debt.remainingAmount ?? debt.amount ?? 0);
+      const totalAmount = money(debt.amount ?? remainingAmount);
+      const title = debt.notes || debt.description || (debt.sale?.items?.map((i: any) => i.product?.name || "Ürün").join(", ")) || "Hizmet / Ürün";
+      const dDate = new Date(debt.createdAt || debt.date);
+      const dateStr = !Number.isNaN(dDate.getTime())
+        ? `${dDate.getDate().toString().padStart(2, "0")}.${(dDate.getMonth() + 1).toString().padStart(2, "0")}.${dDate.getFullYear()}`
+        : "";
+
+      let line = `• ${dateStr ? `[${dateStr}] ` : ""}${title}: ${formatDebtMoney(remainingAmount, debt.currency)}`;
+      if (remainingAmount < totalAmount - 0.01) {
+        line += ` _(Kalan / Toplam: ${formatDebtMoney(totalAmount, debt.currency)})_`;
+      }
+      message += `${line}\n`;
+    });
+    message += `\n`;
+  }
+
+  // --- 5. ÖDENEN ÜRÜNLER (KULLANICI 'ÖDENENLERİ GÖSTER' SEÇTİYSE) ---
+  if (includePaid) {
+    const paidDebts = debts.filter((d: any) => {
+      const remaining = Number(d.remainingAmount ?? d.amount ?? 0);
+      return d.isPaid || remaining <= 0.01;
+    });
+
+    if (paidDebts.length > 0) {
+      message += `*✅ ÖDENMİŞ GEÇMİŞ KALEMLER:*\n`;
+      paidDebts.forEach((debt: any) => {
+        const totalAmount = money(debt.amount || 0);
+        const title = debt.notes || debt.description || (debt.sale?.items?.map((i: any) => i.product?.name || "Ürün").join(", ")) || "Hizmet / Ürün";
+        const dDate = new Date(debt.createdAt || debt.date);
+        const dateStr = !Number.isNaN(dDate.getTime())
+          ? `${dDate.getDate().toString().padStart(2, "0")}.${(dDate.getMonth() + 1).toString().padStart(2, "0")}.${dDate.getFullYear()}`
+          : "";
+
+        message += `• ${dateStr ? `[${dateStr}] ` : ""}${title}: ${formatDebtMoney(totalAmount, debt.currency)} ✅ (Ödendi)\n`;
+      });
+      message += `\n`;
+    }
+  }
+
+  return message.trimEnd();
 }

@@ -41,6 +41,63 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-03: Veresiye WhatsApp Mesajı TL Çeviri Uyumsuzluğunun Çözümü, Mesaj Şablonunun En Başa Alınması ve "Ödenenleri Göster / Gizle" Butonu:
+  - **Talep:**
+    - Başka dükkana veya panele girildiğinde WhatsApp mesajındaki TL çevirisinin hatalı görünmesi (örn. 858,7$ borç 50 TL kur ile 43.635 TL yerine 28.607,75 TL görünmesi) probleminin nedeni ve kesin çözümü.
+    - WhatsApp mesajında `*🔴 GÜNCEL BORÇ DURUMU:* ... 👉 *NET GENEL TOPLAM:* ... _İyi çalışmalar dileriz._` özetinin mesajın EN BAŞINDA yer alması; sonradan açık borç kalemlerinin listelenmesi.
+    - Mesajda varsayılan olarak ödenen ürünlerin görünmemesi, sadece ödenmemiş açık borçların ve son yapılan tahsilat tarihi ile tahsilat toplamının yer alması.
+    - WhatsApp onay modalında (`WhatsAppConfirmModal`) kullanıcının tek tıkla ödenen ürünleri mesaja ekleyip çıkarabileceği "Ödenenleri Göster / Gizle" butonunun bulunması.
+  - **Tespit Edilen Kök Neden:**
+    - `AddDebtModal` ([`add-debt-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/add-debt-modal.tsx)) bileşeninde `rates` prop'u tanımlıydı ancak ana sayfa (`receivables-client.tsx`) ve bazı kartlar modalı çağırırken `rates` prop'unu aktarmıyordu.
+    - `AddDebtModal` içinde `const usdRate = rates?.usd || 32.5;` şeklinde eski bir `32.5` fallback'i bulunuyordu ve `useDashboardData()` kancasından `rates` okunmuyordu. Bu sebeple kullanıcı panelden borç eklediğinde sistem güncel 50 TL kuru yerine 32.5 ile çarpıyor ($858,70 * 32.5 + 700 = 28.607,75 TL) ve eski hardcoded şablonu kullanıyordu.
+    - `buildUnifiedWhatsAppStatement` fonksiyonu ise özeti mesajın en altında veriyordu ve ödenen ürünleri dinamik olarak açıp kapatan bir modal butonuna sahip değildi.
+  - **Yapılan İyileştirmeler:**
+    1. **Merkezi ve Güvenli Döviz Kuru Entegrasyonu ([`add-debt-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/add-debt-modal.tsx), [`receivables-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/receivables-client.tsx), [`veresiye-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/veresiye-client.tsx)):**
+       - `AddDebtModal` doğrudan `useDashboardData()` üzerinden dükkanın gerçek ve güncel kurunu okuyacak şekilde güncellendi; `rates?.usd || 32.5` kaldırıldı.
+       - Borç eklendikten sonra eski hardcoded WhatsApp mesajı yerine `getCustomerStatement` ile güncel hesap çekilip doğrudan `buildUnifiedWhatsAppStatement` üzerinden standart, hatasız mesaj üretilmesi sağlandı.
+       - `receivables-client.tsx` ana sayfa bileşeni `rates={rates}` parametresini aktaracak ve müşteri WhatsApp ekstrelerinde `buildUnifiedWhatsAppStatement` motorunu çalıştıracak şekilde eşitlendi.
+    2. **WhatsApp Mesaj Şablonu Mimarisi ([`debt-statement-calculator.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/debt-statement-calculator.ts)):**
+       - Kullanıcı talebi doğrultusunda **`*🔴 GÜNCEL BORÇ DURUMU:*`**, **`👉 *NET GENEL TOPLAM:*`** ve **`_İyi çalışmalar dileriz._`** blokları mesajın **EN BAŞINA** taşındı.
+       - Alt kısıma son tahsilat bilgisi (`*🟢 TAHSİLAT & ÖDEME BİLGİSİ:* Son Yapılan Tahsilat: [Tarih] - Tutar, Toplam Yapılan Tahsilat: ...`) eklendi.
+       - Ardından sadece açık/ödenmemiş borç kalemleri (`*📋 AÇIK BORÇ KALEMLERİ:*`) listelendi; ödenen ürünler gizlendi.
+       - `includePaid: true` olduğunda ise `*✅ ÖDENMİŞ GEÇMİŞ KALEMLER:*` başlığı altında ödenenler gösterilecek şekilde dinamik şablon oluşturuldu.
+    3. **WhatsApp Modalında "Ödenenleri Göster / Gizle" Butonu ([`whatsapp-confirm-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/common/whatsapp-confirm-modal.tsx)):**
+       - Modalın içine `onTogglePaidItems` desteği eklendi.
+       - Chat balonunun alt barına `Eye` / `EyeOff` ikonlu **"Ödenenleri Göster"** / **"Ödenenleri Gizle"** butonu yerleştirildi.
+       - Kullanıcı butona bastığında mesaj anında yeniden hesaplanarak textarea içine yansıtılır.
+    4. **Doğrulama:**
+       - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+
+- [x] 2026-11-03: POS Ekranında Tükendi Olarak Görünen Ürünlere Tıklayınca "Akıllı Göz • Hızlı Stok Girişi" Modalı Açılması ve Anında Stok Ekleme:
+  - **Talep:**
+    - POS ekranında tükendi olarak görünen ürünlerin üzerine basınca "Akıllı Göz" açılsın ve sayfadan ayrılmadan anında stok eklenebilsin.
+  - **Tespit Edilen Kök Neden:**
+    - `ProductCard` ([`product-card.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/parts/product-card.tsx)) bileşeninde bento ızgara kartında `disabled={isOutOfStock}` özelliği bulunuyordu ve DOM seviyesinde tıklama olaylarını tamamen engelliyordu.
+    - Kompakt görünümde `onClick={() => !isOutOfStock && onAdd(product)}` kontrolü tıklamayı engelliyordu.
+    - Kart görünümü `opacity-45 grayscale cursor-not-allowed` stilinde kilitli kalıyordu.
+    - Arka planda `pos-interface.tsx` içerisindeki `addToCart` fonksiyonu sıfır stoklu ürünler için zaten `SmartStockGuardrailModal` ("Akıllı Göz • Stok Koruması") modalını tetikleyecek şekilde tasarlanmıştı, ancak kartın `disabled` olması nedeniyle tetiklenemiyordu.
+  - **Yapılan İyileştirmeler:**
+    1. **POS Ürün Kartı Etkileşimi ([`product-card.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/parts/product-card.tsx)):**
+       - Bento kart üzerindeki `disabled={isOutOfStock}` kaldırıldı, `whileHover` ve `whileTap` animasyonları her zaman aktif kılındı.
+       - Tükendi durumunda kart stili `border-amber-500/30 bg-amber-500/[0.03] hover:border-amber-500/60 hover:bg-amber-500/[0.06] cursor-pointer` olarak güncellendi.
+       - Kartın sağ altındaki mikro buton tükendi ürünler için amber renkli `Eye` ikonu ve `Stok Ekle` rozetine dönüştürüldü (`bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-white`).
+       - Kompakt liste görünümünde de `isOutOfStock` engeli kaldırılarak `Eye` ikonu ve `Stok Ekle` mikro aksiyon butonu eklendi.
+    2. **Akıllı Göz Stok Giriş Modalı ([`smart-stock-guardrail-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/parts/smart-stock-guardrail-modal.tsx)):**
+       - Modal başlığı `Akıllı Göz • Hızlı Stok Girişi` olarak güçlendirildi; ürünün kategorisi ve barkod bilgisi eklendi.
+       - Hızlı adet butonları `+1`, `+2`, `+3`, `+5`, `+10`, `+20` olarak zenginleştirildi; el ile istenen sayı girilebilmesi korundu.
+       - İki yönlü aksiyon sunuldu:
+         - `+{quickQty} & Sepete Ekle` (Stoğu anında veritabanında artırır ve POS sepetine ekler)
+         - `Sadece Stoğa Ekle` (Stoğu artırır, sepete atmadan hızlıca raf/envanter stoğunu tamamlar).
+       - Sayım fazlası / rafta fiziki mevcut kabul ederek satışa devam etme (`handleForceAdd`) ve Kurye/Tedarikçi havuzuna eksik bildirme (`handleAddToShortage`) seçenekleri korundu.
+    3. **Anlık Önbellek & POS Senkronizasyonu ([`pos-interface.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/pos-interface.tsx)):**
+       - `onStockAddedAndAddToCart` ve `onOnlyAddStock` tetiklendiğinde `queryClient.setQueryData(["pos-initial-data"])` ile POS ürün listesindeki stok miktarı gecikmesiz, anında güncellenir.
+       - Eş zamanlı olarak `["pos-initial-data"]` ve `["products"]` sorguları arka planda tazelenir.
+       - Ürün stoğu güncellendiği anda POS ekranındaki `• TÜKENDİ` rozeti anında ilgili yeni stok adedine (örn. `5 ADET`) dönüşür.
+  - **Doğrulama:**
+    - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+
 - [x] 2026-11-02: Müşteriler Sayfası İşlem Arşivinden Geriye Dönük Fiş Çıktısı Alma Özelliği (Satışlar & Tamir/Servis Fişleri):
   - **Talep:**
     - `@musteriler` sayfasında daha önce iş yapılan müşterilerin işlem arşivinden geriye dönük fiş çıktısı (satış fişi, teknik servis/tamir fişi) alınabilmesi.
