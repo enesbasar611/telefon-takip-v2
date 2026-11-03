@@ -817,7 +817,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                         key={product.id}
                                         className={cn(
                                             "group flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-card p-3 hover:border-blue-500/30 transition-all",
-                                            isOutOfStock && "opacity-75 bg-muted/20 border-rose-500/20"
+                                            isOutOfStock && "opacity-40 grayscale contrast-75 hover:opacity-100 hover:grayscale-0 hover:contrast-100 hover:border-amber-500/40"
                                         )}
                                     >
                                         {/* Product Details */}
@@ -873,7 +873,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                                 className={cn(
                                                     "h-8 w-8 rounded-lg text-white shadow-sm transition-all",
                                                     isOutOfStock
-                                                        ? "bg-amber-600/90 hover:bg-amber-500"
+                                                        ? "bg-muted text-muted-foreground/50 border border-border/60 hover:bg-amber-500 hover:text-white"
                                                         : "bg-blue-600 hover:bg-blue-500"
                                                 )}
                                                 onClick={() => addToCart(product)}

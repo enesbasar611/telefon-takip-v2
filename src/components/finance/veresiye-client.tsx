@@ -339,7 +339,7 @@ export function VeresiyeClient({
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const defaultCurrency = settings?.find((s: any) => s.key === "defaultCurrency")?.value || "TRY";
-    const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+    const rawUsdRate = rates?.usd || (rates as any)?.USD;
     const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
     const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 1;
 
@@ -380,7 +380,7 @@ export function VeresiyeClient({
     const [receiptDebts, setReceiptDebts] = useState<any[]>([]);
     const [receiptShowPaid, setReceiptShowPaid] = useState(false);
     const [receiptAutoPDF, setReceiptAutoPDF] = useState(false);
-    
+
     // Payment Allocation Modal State
     const [allocationModalTx, setAllocationModalTx] = useState<any>(null);
     const [allocations, setAllocations] = useState<PaymentAllocation[]>([]);
@@ -474,27 +474,27 @@ export function VeresiyeClient({
         debtsToProcess.forEach((debt: any) => {
             const debtCurrency = debt.currency || "TRY";
             if (debt.sale?.items && debt.sale.items.length > 0) {
-	                debt.sale.items
-	                    .filter((si: any) => getReturnedSaleItemAmount(debt, si, returnSource) <= 0)
-	                    .forEach((si: any) => {
-                    // Avoid double counting if specific items are also selected
-                    if (!selectedSaleItemIds.includes(si.id)) {
-                        returnItems.push({
-                            productId: si.productId,
-                            name: si.product?.name || si.productName || "Ürün",
-                            quantity: si.quantity,
-                            maxQuantity: si.quantity,
-                            refundAmount: Number(si.unitPrice) * si.quantity,
-                            refundCurrency: debtCurrency,
-                            unitPrice: Number(si.unitPrice),
-                            saleNumber: debt.sale?.saleNumber,
-                            soldAt: debt.sale?.createdAt,
-                            debtId: debt.id,
-                            saleId: debt.saleId,
-                            processImmediately: true,
-                        });
-	                    }
-	                });
+                debt.sale.items
+                    .filter((si: any) => getReturnedSaleItemAmount(debt, si, returnSource) <= 0)
+                    .forEach((si: any) => {
+                        // Avoid double counting if specific items are also selected
+                        if (!selectedSaleItemIds.includes(si.id)) {
+                            returnItems.push({
+                                productId: si.productId,
+                                name: si.product?.name || si.productName || "Ürün",
+                                quantity: si.quantity,
+                                maxQuantity: si.quantity,
+                                refundAmount: Number(si.unitPrice) * si.quantity,
+                                refundCurrency: debtCurrency,
+                                unitPrice: Number(si.unitPrice),
+                                saleNumber: debt.sale?.saleNumber,
+                                soldAt: debt.sale?.createdAt,
+                                debtId: debt.id,
+                                saleId: debt.saleId,
+                                processImmediately: true,
+                            });
+                        }
+                    });
             } else {
                 returnItems.push({
                     productId: debt.productId || undefined,
@@ -513,26 +513,26 @@ export function VeresiyeClient({
         if (selectedSaleItemIds.length > 0) {
             debtSource.forEach((debt: any) => {
                 if (debt.sale?.items) {
-	                    debt.sale.items
-	                        .filter((si: any) => getReturnedSaleItemAmount(debt, si, returnSource) <= 0)
-	                        .forEach((si: any) => {
-                        if (selectedSaleItemIds.includes(si.id)) {
-                            returnItems.push({
-                                productId: si.productId,
-                                name: si.product?.name || si.productName || "Ürün",
-                                quantity: si.quantity,
-                                maxQuantity: si.quantity,
-                                refundAmount: Number(si.unitPrice) * si.quantity,
-                                refundCurrency: debt.currency || "TRY",
-                                unitPrice: Number(si.unitPrice),
-                                saleNumber: debt.sale?.saleNumber,
-                                soldAt: debt.sale?.createdAt,
-                                debtId: debt.id,
-                                saleId: debt.saleId,
-                                processImmediately: true,
-                            });
-	                        }
-	                    });
+                    debt.sale.items
+                        .filter((si: any) => getReturnedSaleItemAmount(debt, si, returnSource) <= 0)
+                        .forEach((si: any) => {
+                            if (selectedSaleItemIds.includes(si.id)) {
+                                returnItems.push({
+                                    productId: si.productId,
+                                    name: si.product?.name || si.productName || "Ürün",
+                                    quantity: si.quantity,
+                                    maxQuantity: si.quantity,
+                                    refundAmount: Number(si.unitPrice) * si.quantity,
+                                    refundCurrency: debt.currency || "TRY",
+                                    unitPrice: Number(si.unitPrice),
+                                    saleNumber: debt.sale?.saleNumber,
+                                    soldAt: debt.sale?.createdAt,
+                                    debtId: debt.id,
+                                    saleId: debt.saleId,
+                                    processImmediately: true,
+                                });
+                            }
+                        });
                 }
             });
         }
@@ -960,13 +960,13 @@ export function VeresiyeClient({
     const historyTotals = useMemo(() => {
         if (!historyCustomer) return { try: 0, usd: 0 };
         const custId = historyCustomer.customerId || historyCustomer.id;
-        
+
         // Get all debts for this customer from the main debts array
         const rawCustomerDebts = debts.filter((d: any) => d.customer?.id === custId);
-        
+
         // Use activeReturns from statementData to adjust debts for returns
         const returns = statementData?.activeReturns || [];
-        
+
         // Process through getPrintableDebts and filter out the ones that became fully paid/returned
         const printableDebts = getPrintableDebts(rawCustomerDebts, returns).filter((d: any) => !d.isPaid);
 
@@ -1353,15 +1353,15 @@ export function VeresiyeClient({
         }
     };
 
-	    const exportRowsForCustomer = (section: any) => {
-	        const { customer, debts, payments } = section;
-	        const outputTotalTRY = (debts || [])
-	            .filter((debt: any) => (debt.currency || "TRY") !== "USD")
-	            .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
-	        const outputTotalUSD = (debts || [])
-	            .filter((debt: any) => debt.currency === "USD")
-	            .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
-	        const statementRows = buildDebtStatementEntries([
+    const exportRowsForCustomer = (section: any) => {
+        const { customer, debts, payments } = section;
+        const outputTotalTRY = (debts || [])
+            .filter((debt: any) => (debt.currency || "TRY") !== "USD")
+            .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
+        const outputTotalUSD = (debts || [])
+            .filter((debt: any) => debt.currency === "USD")
+            .reduce((sum: number, debt: any) => sum + getSafeDebtRemaining(debt), 0);
+        const statementRows = buildDebtStatementEntries([
             ...(debts || []).map((d: any) => ({ ...d, type: 'DEBT' })),
             ...(payments || []).map((p: any) => ({
                 ...p,
@@ -1791,7 +1791,7 @@ export function VeresiyeClient({
                                                             const res = await getCustomerStatement(item.customerId);
                                                             if (res.success) {
                                                                 const combined = [
-	                                                                    ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                                    ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
                                                                     ...(res.transactions || []).map((t: any) => ({
                                                                         ...t,
                                                                         type: 'PAYMENT',
@@ -1932,164 +1932,222 @@ export function VeresiyeClient({
                         </div>
                         {/* Icon-only action buttons with tooltips */}
                         <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Yeni Borç Ekle */}
-                            {historyCustomer && (
-                                <AddDebtModal rates={rates as any} initialData={{ name: historyCustomer.name, phone: historyCustomer.phone || "" }}>
-                                    <button
-                                        title="Yeni Alacak Ekle"
-                                        className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
-                                    >
-                                        <PlusCircle className="w-4 h-4" />
-                                        <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Yeni Alacak Ekle</span>
-                                    </button>
-                                </AddDebtModal>
-                            )}
-                            {/* Excel */}
-                            <button
-                                title="Ekstre (Excel)"
-                                onClick={async () => {
-                                    if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-                                    const includePaidItems = await requestIncludePaidItemsInOutput();
-	                                    const printableDebts = filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems);
-	                                    const data = [
-	                                        ...printableDebts.map((d: any) => {
-                                            const date = new Date(d.createdAt);
-                                            const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy") : "-";
-                                            return { Tarih: dateStr, İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" };
-                                        }),
-                                        ...statementData.transactions.map((t: any) => {
-                                            const date = new Date(t.createdAt);
-                                            const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy") : "-";
-                                            return { Tarih: dateStr, İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" };
-                                        })
-                                    ].sort((a, b) => {
-                                        if (a.Tarih === "-" || b.Tarih === "-") return 0;
-                                        // Standard sort might be tricky with strings but we'll keep it simple for now as it was before
-                                        return b.Tarih.localeCompare(a.Tarih);
-                                    });
-                                    const statementExcelRows = buildDebtStatementEntries([
-	                                        ...printableDebts.map((d: any) => ({ ...d, type: 'DEBT' })),
-                                        ...(statementData.transactions || []).map((t: any) => ({
-                                            ...t,
-                                            type: 'PAYMENT',
-                                            notes: t.description || 'Tahsilat / Odeme',
-                                            amount: t.amount,
-                                            currency: t.currency || "TRY",
-                                        })),
-                                    ], rates?.usd || 1).map((entry: any) => ({
-                                        Tarih: safeExportDate(entry.item.createdAt),
-                                        Tip: entry.type === 'PAYMENT' ? "TAHSILAT" : "BORC",
-                                        Islem: getStatementItemTitle(entry.item),
-                                        Tutar: entry.amount,
-                                        ParaBirim: entry.currency,
-                                        "USD Karsiligi": entry.type === 'PAYMENT' && entry.currency === 'TRY' ? entry.amountUSD : "",
-                                        "TL'ye Uygulanan": entry.appliedTRY,
-                                        "USD'ye Uygulanan": entry.appliedUSD,
-                                        "Kalan TL": entry.runningTRY,
-                                        "Kalan USD": entry.runningUSD,
-                                    }));
-                                    const XLSX = await import("xlsx");
-                                    const ws = XLSX.utils.json_to_sheet(statementExcelRows);
-                                    const wb = XLSX.utils.book_new();
-                                    XLSX.utils.book_append_sheet(wb, ws, "Ekstre");
-                                    XLSX.writeFile(wb, `${historyCustomer?.name}_Ekstre.xlsx`);
-                                }}
-                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-muted/60 text-foreground hover:bg-muted border border-border/50 transition-all"
-                            >
-                                <Download className="w-4 h-4" />
-                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Ekstre (Excel)</span>
-                            </button>
-                            {/* WhatsApp */}
-                            <button
-                                title="WhatsApp Ekstre"
-                                onClick={async () => {
-                                    if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
-                                    const stmt = {
-                                        customerName: historyCustomer?.name || "Müşteri",
-                                        debts: statementData.debts || [],
-                                        transactions: statementData.transactions || [],
-                                        usdRate,
-                                        defaultCurrency,
-                                        balanceTRY: Number(historyCustomer?.balance || 0),
-                                        balanceUSD: Number(historyCustomer?.balanceUsd || 0),
-                                        shopName: shop?.name || "Başar Teknik"
-                                    };
-                                    const message = buildUnifiedWhatsAppStatement({
-                                        ...stmt,
-                                        includePaid: false,
-                                        includePayments: true
-                                    });
-                                    setWhatsappStatementData(stmt);
-                                    setWhatsappMessageContent(message);
-                                    setWhatsappCustomer(historyCustomer);
-                                    setWhatsappModalOpen(true);
-                                }}
-                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/20 transition-all"
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">WhatsApp Ekstre</span>
-                            </button>
-                            {/* PDF */}
-                            <button
-                                title="PDF Ekstre"
-                                onClick={async () => {
-                                    if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
-                                    const includePaidItems = await requestIncludePaidItemsInOutput();
-                                    const combined = [
-	                                        ...filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
-                                        ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
-                                    ];
-                                    setReceiptCustomer({ id: historyCustomer.customerId || historyCustomer.id, customerId: historyCustomer.customerId || historyCustomer.id, name: historyCustomer.name, phone: historyCustomer.phone });
-                                    setReceiptDebts(combined);
-                                    setReceiptShowPaid(includePaidItems);
-                                    setReceiptAutoPDF(false);
-                                }}
-                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all"
-                            >
-                                <FileText className="w-4 h-4" />
-                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">PDF Ekstre</span>
-                            </button>
-                            {/* Mutabakat Ekle */}
-                            <button
-                                title="Mutabakat Ekle"
-                                onClick={() => setReconciliationCustomer(historyCustomer)}
-                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white border border-orange-500/10 transition-all"
-                            >
-                                <CheckCircle2 className="w-4 h-4" />
-                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Mutabakat Ekle</span>
-                            </button>
-                            {/* Fiş Yazdır */}
-                            <button
-                                title="Fiş Yazdır"
-                                onClick={async () => {
-                                    if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
-                                    const includePaidItems = await requestIncludePaidItemsInOutput();
-                                    const combined = [
-	                                        ...filterPaidForOutput(getPrintableDebts(statementData.debts || [], statementData.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: 'DEBT' })),
-                                        ...(statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount }))
-                                    ];
-                                    setReceiptCustomer({ id: historyCustomer.customerId || historyCustomer.id, customerId: historyCustomer.customerId || historyCustomer.id, name: historyCustomer.name, phone: historyCustomer.phone });
-                                    setReceiptDebts(combined);
-                                    setReceiptShowPaid(includePaidItems);
-                                    setReceiptAutoPDF(false);
-                                }}
-                                className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
-                            >
-                                <Printer className="w-4 h-4" />
-                                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Fiş Yazdır</span>
-                            </button>
+                            {(() => {
+                                const selectedCount = selectedDebtIds.length + selectedSaleItemIds.length;
+                                const isSelectedMode = selectedCount > 0;
+
+                                return (
+                                    <>
+                                        {/* Yeni Borç Ekle */}
+                                        {historyCustomer && (
+                                            <AddDebtModal rates={rates as any} initialData={{ name: historyCustomer.name, phone: historyCustomer.phone || "" }}>
+                                                <button
+                                                    title="Yeni Alacak Ekle"
+                                                    className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
+                                                >
+                                                    <PlusCircle className="w-4 h-4" />
+                                                    <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Yeni Alacak Ekle</span>
+                                                </button>
+                                            </AddDebtModal>
+                                        )}
+                                        {/* Excel */}
+                                        <button
+                                            title={isSelectedMode ? `Seçili ${selectedCount} Kalemi Excel Olarak İndir` : "Ekstre (Excel)"}
+                                            onClick={async () => {
+                                                if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
+                                                const includePaidItems = isSelectedMode ? true : await requestIncludePaidItemsInOutput();
+                                                const allPrintable = getPrintableDebts(statementData.debts || [], statementData.activeReturns || []);
+                                                const targetPrintable = isSelectedMode
+                                                    ? allPrintable.filter((d: any) => selectedDebtIds.includes(d.id) || d.sale?.items?.some((si: any) => selectedSaleItemIds.includes(si.id)))
+                                                    : allPrintable;
+                                                const printableDebts = filterPaidForOutput(targetPrintable, includePaidItems);
+                                                const data = [
+                                                    ...printableDebts.map((d: any) => {
+                                                        const date = new Date(d.createdAt);
+                                                        const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy") : "-";
+                                                        return { Tarih: dateStr, İşlem: d.notes || "Borç", Tip: "BORÇ", Tutar: d.amount, ParaBirim: d.currency, Durum: d.isPaid ? "Ödendi" : "Açık" };
+                                                    }),
+                                                    ...(isSelectedMode ? [] : (statementData.transactions || []).map((t: any) => {
+                                                        const date = new Date(t.createdAt);
+                                                        const dateStr = !isNaN(date.getTime()) ? format(date, "dd.MM.yyyy") : "-";
+                                                        return { Tarih: dateStr, İşlem: t.description || "Tahsilat", Tip: "TAHSİLAT", Tutar: t.amount, ParaBirim: t.currency || "TRY", Durum: "-" };
+                                                    }))
+                                                ].sort((a, b) => {
+                                                    if (a.Tarih === "-" || b.Tarih === "-") return 0;
+                                                    return b.Tarih.localeCompare(a.Tarih);
+                                                });
+                                                const statementExcelRows = buildDebtStatementEntries([
+                                                    ...printableDebts.map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                    ...(isSelectedMode ? [] : (statementData.transactions || []).map((t: any) => ({
+                                                        ...t,
+                                                        type: 'PAYMENT',
+                                                        notes: t.description || 'Tahsilat / Odeme',
+                                                        amount: t.amount,
+                                                        currency: t.currency || "TRY",
+                                                    }))),
+                                                ], rates?.usd || 1).map((entry: any) => ({
+                                                    Tarih: safeExportDate(entry.item.createdAt),
+                                                    Tip: entry.type === 'PAYMENT' ? "TAHSILAT" : "BORC",
+                                                    Islem: getStatementItemTitle(entry.item),
+                                                    Tutar: entry.amount,
+                                                    ParaBirim: entry.currency,
+                                                    "USD Karsiligi": entry.type === 'PAYMENT' && entry.currency === 'TRY' ? entry.amountUSD : "",
+                                                    "TL'ye Uygulanan": entry.appliedTRY,
+                                                    "USD'ye Uygulanan": entry.appliedUSD,
+                                                    "Kalan TL": entry.runningTRY,
+                                                    "Kalan USD": entry.runningUSD,
+                                                }));
+                                                const XLSX = await import("xlsx");
+                                                const ws = XLSX.utils.json_to_sheet(statementExcelRows);
+                                                const wb = XLSX.utils.book_new();
+                                                XLSX.utils.book_append_sheet(wb, ws, "Ekstre");
+                                                XLSX.writeFile(wb, `${historyCustomer?.name}_${isSelectedMode ? "Secili_" : ""}Ekstre.xlsx`);
+                                            }}
+                                            className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-muted/60 text-foreground hover:bg-muted border border-border/50 transition-all"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            {selectedCount > 0 && (
+                                                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-black flex items-center justify-center shadow-md border border-background animate-in zoom-in pointer-events-none">
+                                                    {selectedCount}
+                                                </span>
+                                            )}
+                                            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                                                {isSelectedMode ? `Seçili Excel (${selectedCount})` : "Ekstre (Excel)"}
+                                            </span>
+                                        </button>
+                                        {/* WhatsApp */}
+                                        <button
+                                            title={isSelectedMode ? `Seçili ${selectedCount} Kalemi WhatsApp ile Gönder` : "WhatsApp Ekstre"}
+                                            onClick={async () => {
+                                                if (!statementData) { toast.error("Veriler yükleniyor, lütfen bekleyin..."); return; }
+                                                const targetDebts = isSelectedMode
+                                                    ? (statementData.debts || []).filter((d: any) => selectedDebtIds.includes(d.id) || d.sale?.items?.some((si: any) => selectedSaleItemIds.includes(si.id)))
+                                                    : (statementData.debts || []);
+
+                                                const stmt = {
+                                                    customerName: historyCustomer?.name || "Müşteri",
+                                                    debts: targetDebts,
+                                                    transactions: isSelectedMode ? [] : (statementData.transactions || []),
+                                                    usdRate,
+                                                    defaultCurrency,
+                                                    balanceTRY: isSelectedMode ? 0 : Number(historyCustomer?.balance || 0),
+                                                    balanceUSD: isSelectedMode ? 0 : Number(historyCustomer?.balanceUsd || 0),
+                                                    shopName: shop?.name || "Başar Teknik"
+                                                };
+                                                const message = buildUnifiedWhatsAppStatement({
+                                                    ...stmt,
+                                                    includePaid: false,
+                                                    includePayments: !isSelectedMode
+                                                });
+                                                setWhatsappStatementData(stmt);
+                                                setWhatsappMessageContent(message);
+                                                setWhatsappCustomer(historyCustomer);
+                                                setWhatsappModalOpen(true);
+                                            }}
+                                            className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/20 transition-all"
+                                        >
+                                            <MessageCircle className="w-4 h-4" />
+                                            {selectedCount > 0 && (
+                                                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-black flex items-center justify-center shadow-md border border-background animate-in zoom-in pointer-events-none">
+                                                    {selectedCount}
+                                                </span>
+                                            )}
+                                            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                                                {isSelectedMode ? `Seçili WhatsApp (${selectedCount})` : "WhatsApp Ekstre"}
+                                            </span>
+                                        </button>
+                                        {/* PDF */}
+                                        <button
+                                            title={isSelectedMode ? `Seçili ${selectedCount} Kalem için PDF Ekstre` : "PDF Ekstre"}
+                                            onClick={async () => {
+                                                if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
+                                                const includePaidItems = isSelectedMode ? true : await requestIncludePaidItemsInOutput();
+                                                const allPrintable = getPrintableDebts(statementData.debts || [], statementData.activeReturns || []);
+                                                const targetPrintable = isSelectedMode
+                                                    ? allPrintable.filter((d: any) => selectedDebtIds.includes(d.id) || d.sale?.items?.some((si: any) => selectedSaleItemIds.includes(si.id)))
+                                                    : allPrintable;
+                                                const printableDebts = filterPaidForOutput(targetPrintable, includePaidItems);
+                                                const combined = [
+                                                    ...printableDebts.map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                    ...(isSelectedMode
+                                                        ? []
+                                                        : (statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount })))
+                                                ];
+                                                setReceiptCustomer({ id: historyCustomer.customerId || historyCustomer.id, customerId: historyCustomer.customerId || historyCustomer.id, name: historyCustomer.name, phone: historyCustomer.phone });
+                                                setReceiptDebts(combined);
+                                                setReceiptShowPaid(includePaidItems);
+                                                setReceiptAutoPDF(false);
+                                            }}
+                                            className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-500/10 transition-all"
+                                        >
+                                            <FileText className="w-4 h-4" />
+                                            {selectedCount > 0 && (
+                                                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-black flex items-center justify-center shadow-md border border-background animate-in zoom-in pointer-events-none">
+                                                    {selectedCount}
+                                                </span>
+                                            )}
+                                            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                                                {isSelectedMode ? `Seçili PDF (${selectedCount})` : "PDF Ekstre"}
+                                            </span>
+                                        </button>
+                                        {/* Mutabakat Ekle */}
+                                        <button
+                                            title="Mutabakat Ekle"
+                                            onClick={() => setReconciliationCustomer(historyCustomer)}
+                                            className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white border border-orange-500/10 transition-all"
+                                        >
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">Mutabakat Ekle</span>
+                                        </button>
+                                        {/* Fiş Yazdır */}
+                                        <button
+                                            title={isSelectedMode ? `Seçili ${selectedCount} Kalem için Fiş Yazdır` : "Fiş Yazdır"}
+                                            onClick={async () => {
+                                                if (!statementData) { toast.error("Veriler yükleniyor..."); return; }
+                                                const includePaidItems = isSelectedMode ? true : await requestIncludePaidItemsInOutput();
+                                                const allPrintable = getPrintableDebts(statementData.debts || [], statementData.activeReturns || []);
+                                                const targetPrintable = isSelectedMode
+                                                    ? allPrintable.filter((d: any) => selectedDebtIds.includes(d.id) || d.sale?.items?.some((si: any) => selectedSaleItemIds.includes(si.id)))
+                                                    : allPrintable;
+                                                const printableDebts = filterPaidForOutput(targetPrintable, includePaidItems);
+                                                const combined = [
+                                                    ...printableDebts.map((d: any) => ({ ...d, type: 'DEBT' })),
+                                                    ...(isSelectedMode
+                                                        ? []
+                                                        : (statementData.transactions || []).filter((t: any) => t.paymentMethod !== 'DEBT').map((t: any) => ({ ...t, type: 'PAYMENT', notes: t.description || 'Tahsilat / Ödeme', amount: t.amount, remainingAmount: t.amount })))
+                                                ];
+                                                setReceiptCustomer({ id: historyCustomer.customerId || historyCustomer.id, customerId: historyCustomer.customerId || historyCustomer.id, name: historyCustomer.name, phone: historyCustomer.phone });
+                                                setReceiptDebts(combined);
+                                                setReceiptShowPaid(includePaidItems);
+                                                setReceiptAutoPDF(false);
+                                            }}
+                                            className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border border-indigo-500/10 transition-all"
+                                        >
+                                            <Printer className="w-4 h-4" />
+                                            {selectedCount > 0 && (
+                                                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-black flex items-center justify-center shadow-md border border-background animate-in zoom-in pointer-events-none">
+                                                    {selectedCount}
+                                                </span>
+                                            )}
+                                            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-popover border border-border px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                                                {isSelectedMode ? `Seçili Fiş (${selectedCount})` : "Fiş Yazdır"}
+                                            </span>
+                                        </button>
+                                    </>
+                                );
+                            })()}
                             {/* Tümünü Seç */}
                             <button
                                 title="Tümünü Seç"
                                 onClick={() => {
-	                                    const selectableDebts = getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => !d.isPaid);
+                                    const selectableDebts = getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => !d.isPaid);
                                     const allSelectableIds = selectableDebts.map((d: any) => d.id);
                                     const allItemIds: string[] = [];
                                     selectableDebts.forEach((d: any) => {
                                         if (d.sale?.items) {
-	                                            d.sale.items
-	                                                .filter((si: any) => getReturnedSaleItemAmount(d, si, statementData?.activeReturns || []) <= 0)
-	                                                .forEach((si: any) => allItemIds.push(si.id));
+                                            d.sale.items
+                                                .filter((si: any) => getReturnedSaleItemAmount(d, si, statementData?.activeReturns || []) <= 0)
+                                                .forEach((si: any) => allItemIds.push(si.id));
                                         }
                                     });
 
@@ -2103,7 +2161,7 @@ export function VeresiyeClient({
                                 }}
                                 className={cn(
                                     "group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all border",
-	                                    selectedDebtIds.length > 0 && selectedDebtIds.length === (getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => !d.isPaid).length || 0)
+                                    selectedDebtIds.length > 0 && selectedDebtIds.length === (getPrintableDebts(statementData?.debts || [], statementData?.activeReturns || []).filter((d: any) => !d.isPaid).length || 0)
                                         ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20"
                                         : "bg-muted/60 text-foreground hover:bg-muted border-border/50"
                                 )}
@@ -2165,7 +2223,7 @@ export function VeresiyeClient({
                                                 key={`debt-${item.id}`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-	                                                    if (item.isPaid || getReturnedDebtAmount(item, statementData?.activeReturns || []) >= Number(item.amount || 0) - 0.01) return;
+                                                    if (item.isPaid || getReturnedDebtAmount(item, statementData?.activeReturns || []) >= Number(item.amount || 0) - 0.01) return;
                                                     setSelectedDebtIds(prev =>
                                                         prev.includes(item.id)
                                                             ? prev.filter(id => id !== item.id)
@@ -2174,14 +2232,14 @@ export function VeresiyeClient({
                                                 }}
                                                 className={cn(
                                                     "flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group",
-	                                                    (item.isPaid || getReturnedDebtAmount(item, statementData?.activeReturns || []) >= Number(item.amount || 0) - 0.01) ? "bg-muted/50 opacity-60 grayscale cursor-default" :
+                                                    (item.isPaid || getReturnedDebtAmount(item, statementData?.activeReturns || []) >= Number(item.amount || 0) - 0.01) ? "bg-muted/50 opacity-60 grayscale cursor-default" :
                                                         selectedDebtIds.includes(item.id)
                                                             ? "bg-indigo-500/5 dark:bg-indigo-500/10 border-indigo-500/30"
                                                             : "bg-muted/20 border-border/50 hover:border-indigo-500/20"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-4">
-	                                                    {!item.isPaid && getReturnedDebtAmount(item, statementData?.activeReturns || []) < Number(item.amount || 0) - 0.01 ? (
+                                                    {!item.isPaid && getReturnedDebtAmount(item, statementData?.activeReturns || []) < Number(item.amount || 0) - 0.01 ? (
                                                         <div className={cn(
                                                             "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
                                                             selectedDebtIds.includes(item.id)
@@ -2205,10 +2263,10 @@ export function VeresiyeClient({
                                                             {item.sale && (
                                                                 <span className="text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 rounded-full font-black border border-indigo-500/10">POS SATIŞI</span>
                                                             )}
-	                                                            {getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 && (
-	                                                                <span className="text-[9px] px-2 py-0.5 bg-orange-500/10 text-orange-600 rounded-full font-black border border-orange-500/10">iade edildi</span>
-	                                                            )}
-	                                                            {Number(item.amount) !== getSafeDebtRemaining(item) && (
+                                                            {getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 && (
+                                                                <span className="text-[9px] px-2 py-0.5 bg-orange-500/10 text-orange-600 rounded-full font-black border border-orange-500/10">iade edildi</span>
+                                                            )}
+                                                            {Number(item.amount) !== getSafeDebtRemaining(item) && (
                                                                 <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded italic">
                                                                     Orijinal: {item.currency === 'USD' ? '$' : '₺'}{Number(item.amount).toLocaleString('tr-TR')}
                                                                 </span>
@@ -2220,17 +2278,17 @@ export function VeresiyeClient({
                                                                     const itemCurrency = item.currency || "TRY";
                                                                     const returnAlreadyActive = hasActiveReturn(item.id, item.saleId || item.sale?.id, si.productId);
                                                                     const isItemUSD = itemCurrency === "USD";
-	                                                                    const unitPrice = Number(si.unitPrice);
-	                                                                    const altPrice = isItemUSD ? (unitPrice * usdRate) : (unitPrice / usdRate);
-	                                                                    const isDefaultUSD = defaultCurrency === "USD";
-	                                                                    const returnedItemAmount = getReturnedSaleItemAmount(item, si, statementData?.activeReturns || []);
+                                                                    const unitPrice = Number(si.unitPrice);
+                                                                    const altPrice = isItemUSD ? (unitPrice * usdRate) : (unitPrice / usdRate);
+                                                                    const isDefaultUSD = defaultCurrency === "USD";
+                                                                    const returnedItemAmount = getReturnedSaleItemAmount(item, si, statementData?.activeReturns || []);
 
                                                                     return (
                                                                         <div
                                                                             key={sidx}
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-	                                                                                if (item.isPaid || returnedItemAmount > 0) return;
+                                                                                if (item.isPaid || returnedItemAmount > 0) return;
                                                                                 setSelectedSaleItemIds(prev =>
                                                                                     prev.includes(si.id) ? prev.filter(id => id !== si.id) : [...prev, si.id]
                                                                                 );
@@ -2241,7 +2299,7 @@ export function VeresiyeClient({
                                                                             )}
                                                                         >
                                                                             <div className="flex items-center gap-2 min-w-0">
-	                                                                                {!item.isPaid && returnedItemAmount <= 0 && (
+                                                                                {!item.isPaid && returnedItemAmount <= 0 && (
                                                                                     <div className={cn(
                                                                                         "w-3 h-3 rounded border flex items-center justify-center transition-all shrink-0",
                                                                                         selectedSaleItemIds.includes(si.id) ? "bg-indigo-500 border-indigo-500" : "border-border bg-card"
@@ -2250,12 +2308,12 @@ export function VeresiyeClient({
                                                                                     </div>
                                                                                 )}
                                                                                 <span className="w-1 h-1 rounded-full bg-indigo-500/40 shrink-0" />
-	                                                                                <span className="font-bold text-foreground/80">{si.quantity}x</span>
-	                                                                                <span className="truncate max-w-[160px]">{si.product?.name}</span>
-	                                                                                {returnedItemAmount > 0 && (
-	                                                                                    <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 border border-orange-500/10 text-[8px] font-black uppercase shrink-0">iade edildi</span>
-	                                                                                )}
-	                                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                                <span className="font-bold text-foreground/80">{si.quantity}x</span>
+                                                                                <span className="truncate max-w-[160px]">{si.product?.name}</span>
+                                                                                {returnedItemAmount > 0 && (
+                                                                                    <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 border border-orange-500/10 text-[8px] font-black uppercase shrink-0">iade edildi</span>
+                                                                                )}
+                                                                                <div className="flex items-center gap-1.5 shrink-0">
                                                                                     <span className="font-black text-foreground">
                                                                                         {isDefaultUSD
                                                                                             ? `$${(isItemUSD ? unitPrice : (unitPrice / usdRate)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -2272,7 +2330,7 @@ export function VeresiyeClient({
                                                                                 <Button
                                                                                     variant="ghost"
                                                                                     size="sm"
-	                                                                                    disabled={returnAlreadyActive || returnedItemAmount > 0}
+                                                                                    disabled={returnAlreadyActive || returnedItemAmount > 0}
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
                                                                                         if (returnAlreadyActive) {
@@ -2311,7 +2369,7 @@ export function VeresiyeClient({
                                                 <div className="text-right flex items-center gap-4">
                                                     <div className="flex flex-col items-end">
                                                         <div className="flex items-center gap-2">
-	                                                            <span className={cn("text-[9px] font-bold uppercase tracking-tighter", getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 ? "text-rose-500" : "text-muted-foreground")}>{getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 ? "\u0130ADE ED\u0130LD\u0130" : item.isPaid ? "\u00D6DEND\u0130" : "KALAN"}:</span>
+                                                            <span className={cn("text-[9px] font-bold uppercase tracking-tighter", getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 ? "text-rose-500" : "text-muted-foreground")}>{getReturnedDebtAmount(item, statementData?.activeReturns || []) > 0 ? "\u0130ADE ED\u0130LD\u0130" : item.isPaid ? "\u00D6DEND\u0130" : "KALAN"}:</span>
                                                             <div className="flex flex-col items-end">
                                                                 <span className={cn("text-2xl font-black tabular-nums leading-none tracking-tight", item.currency === 'USD' ? "text-blue-600" : "text-emerald-600")}>
                                                                     {defaultCurrency === "USD"
@@ -2326,7 +2384,7 @@ export function VeresiyeClient({
                                                             </div>
                                                         </div>
                                                     </div>
-	                                                    {!item.isPaid && getReturnedDebtAmount(item, statementData?.activeReturns || []) < Number(item.amount || 0) - 0.01 && (
+                                                    {!item.isPaid && getReturnedDebtAmount(item, statementData?.activeReturns || []) < Number(item.amount || 0) - 0.01 && (
                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             {(() => {
                                                                 const returnAlreadyActive = hasActiveReturn(item.id);
@@ -2938,7 +2996,7 @@ export function VeresiyeClient({
                                         phone: cust.phone || ""
                                     });
                                     const mergedDebts = [
-	                                        ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: "DEBT" })),
+                                        ...filterPaidForOutput(getPrintableDebts(res.debts || [], res.activeReturns || []), includePaidItems).map((d: any) => ({ ...d, type: "DEBT" })),
                                         ...(res.transactions || []).map((t: any) => ({
                                             ...t,
                                             type: "PAYMENT",
@@ -3136,10 +3194,10 @@ export function VeresiyeClient({
                                                 if (isGroupedReceivable) setStatsCustomerDetail(item);
                                             }}
                                             className={cn(
-                                            "group flex items-center gap-3 p-2.5 sm:p-3 bg-card border border-border/50 shadow-2xs hover:shadow-xs rounded-xl transition-all relative overflow-hidden",
-                                            isGroupedReceivable ? "cursor-pointer" : "cursor-default",
-                                            statsViewMode === 'grid' ? "w-full" : ""
-                                        )}>
+                                                "group flex items-center gap-3 p-2.5 sm:p-3 bg-card border border-border/50 shadow-2xs hover:shadow-xs rounded-xl transition-all relative overflow-hidden",
+                                                isGroupedReceivable ? "cursor-pointer" : "cursor-default",
+                                                statsViewMode === 'grid' ? "w-full" : ""
+                                            )}>
                                             <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-100/50 dark:border-indigo-500/20">
                                                 <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
                                                     {item.customer?.name?.[0].toUpperCase()}

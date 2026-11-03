@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Users,
     ChevronRight,
+    ChevronLeft,
     Wallet,
     Calendar,
     Search,
@@ -288,6 +289,22 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
         );
     }, [allAggregates, searchTerm]);
 
+    // 10 Kayıt Sayfalandırma Sistemi
+    const ITEMS_PER_PAGE = 10;
+    const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredCustomerAggregates.length / ITEMS_PER_PAGE));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+
+    const paginatedCustomers = useMemo(() => {
+        const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+        return filteredCustomerAggregates.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredCustomerAggregates, safeCurrentPage]);
+
     return (
         <>
             <Card ref={cardRef} className="h-full flex flex-col border border-border/40 bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl dark:border-white/[0.08] shadow-sm rounded-2xl overflow-hidden font-sans group/card transition-all duration-300 hover:shadow-md animate-in fade-in">
@@ -413,75 +430,108 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
 
                         {pinnedAggregates.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {pinnedAggregates.map(pinned => (
-                                    <div
-                                        key={pinned.id}
-                                        onClick={() => handleOpenAddDebt(pinned)}
-                                        className="p-2.5 rounded-xl bg-background/80 hover:bg-background border border-amber-500/20 hover:border-amber-500/40 shadow-xs transition-all flex items-center justify-between gap-2 group/pin cursor-pointer"
-                                        title={`${pinned.name} için doğrudan alacak ekle (Tıkla)`}
-                                    >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <div className={cn(
-                                                "h-7 w-7 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shrink-0 shadow-xs",
-                                                getAvatarColor(pinned.name)
-                                            )}>
-                                                {pinned.name.charAt(0).toUpperCase()}
+                                {pinnedAggregates.map(pinned => {
+                                    const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+                                    const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+                                    const currentUsdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+                                    const pinnedDebtUSD = Number(pinned.totalUSD || 0) + (Number(pinned.totalTRY || 0) / currentUsdRate);
+                                    const pinnedPercent = Math.min(Math.round((pinnedDebtUSD / 2000) * 100), 100);
+                                    const isPinnedOver = pinnedDebtUSD > 2000;
+
+                                    return (
+                                        <div
+                                            key={pinned.id}
+                                            onClick={() => handleOpenAddDebt(pinned)}
+                                            className="p-2.5 rounded-xl bg-background/80 hover:bg-background border border-amber-500/20 hover:border-amber-500/40 shadow-xs transition-all flex flex-col justify-between gap-1.5 group/pin cursor-pointer"
+                                            title={`${pinned.name} için doğrudan alacak ekle (Tıkla)`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2 w-full">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className={cn(
+                                                        "h-7 w-7 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shrink-0 shadow-xs",
+                                                        getAvatarColor(pinned.name)
+                                                    )}>
+                                                        {pinned.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h5 className="text-xs font-bold text-foreground truncate group-hover/pin:text-amber-500 transition-colors">
+                                                            {pinned.name}
+                                                        </h5>
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-semibold">
+                                                            {pinned.totalTRY > 0 && (
+                                                                <span className="text-foreground">
+                                                                    ₺{pinned.totalTRY.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                                                </span>
+                                                            )}
+                                                            {pinned.totalUSD > 0 && (
+                                                                <span className="text-blue-500 font-bold">
+                                                                    ${pinned.totalUSD.toFixed(2)}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenAddDebt(pinned);
+                                                        }}
+                                                        className="h-6 px-1.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all text-[9px] font-bold flex items-center gap-0.5"
+                                                        title="Alacak Ekle"
+                                                    >
+                                                        <Plus className="h-2.5 w-2.5" />
+                                                        <span>Alacak</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenCustomerDetail(pinned);
+                                                        }}
+                                                        className="h-6 px-1.5 rounded-md bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground text-[9px] font-bold flex items-center gap-0.5"
+                                                        title="Tüm Detayları Modalda Aç"
+                                                    >
+                                                        <FileText className="h-2.5 w-2.5 text-blue-500" />
+                                                        <span>Detay</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => togglePinCustomer(pinned.id, pinned.name, e)}
+                                                        className="p-1 rounded-md text-amber-500 hover:text-rose-500 transition-colors"
+                                                        title="Sabitlemeyi kaldır"
+                                                    >
+                                                        <Star className="h-3 w-3 fill-amber-500" />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <h5 className="text-xs font-bold text-foreground truncate group-hover/pin:text-amber-500 transition-colors">
-                                                    {pinned.name}
-                                                </h5>
-                                                <div className="flex items-center gap-1.5 text-[10px] font-semibold">
-                                                    {pinned.totalTRY > 0 && (
-                                                        <span className="text-foreground">
-                                                            ₺{pinned.totalTRY.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                                                        </span>
-                                                    )}
-                                                    {pinned.totalUSD > 0 && (
-                                                        <span className="text-blue-500 font-bold">
-                                                            ${pinned.totalUSD.toFixed(2)}
-                                                        </span>
-                                                    )}
+
+                                            {/* Pinned Mini Progress Bar */}
+                                            <div className="w-full mt-0.5 pt-1.5 border-t border-border/20 flex flex-col gap-0.5">
+                                                <div className="flex items-center justify-between text-[8px] font-bold">
+                                                    <span className="text-muted-foreground/60 uppercase">Limit $2k</span>
+                                                    <span className={cn(
+                                                        "tabular-nums",
+                                                        isPinnedOver ? "text-rose-500 font-black" : pinnedPercent >= 60 ? "text-orange-500" : pinnedPercent >= 25 ? "text-amber-500" : "text-emerald-500"
+                                                    )}>
+                                                        ${pinnedDebtUSD.toFixed(0)} (%{Math.round((pinnedDebtUSD / 2000) * 100)})
+                                                    </span>
+                                                </div>
+                                                <div className="w-full h-1 rounded-full bg-muted/60 dark:bg-white/10 overflow-hidden">
+                                                    <div
+                                                        className={cn(
+                                                            "h-full rounded-full transition-all duration-500",
+                                                            isPinnedOver ? "bg-rose-500" : pinnedPercent >= 60 ? "bg-orange-500" : pinnedPercent >= 25 ? "bg-amber-500" : "bg-emerald-500"
+                                                        )}
+                                                        style={{ width: `${pinnedPercent}%` }}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleOpenAddDebt(pinned);
-                                                }}
-                                                className="h-6 px-1.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all text-[9px] font-bold flex items-center gap-0.5"
-                                                title="Alacak Ekle"
-                                            >
-                                                <Plus className="h-2.5 w-2.5" />
-                                                <span>Alacak</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleOpenCustomerDetail(pinned);
-                                                }}
-                                                className="h-6 px-1.5 rounded-md bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground text-[9px] font-bold flex items-center gap-0.5"
-                                                title="Tüm Detayları Modalda Aç"
-                                            >
-                                                <FileText className="h-2.5 w-2.5 text-blue-500" />
-                                                <span>Detay</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => togglePinCustomer(pinned.id, pinned.name, e)}
-                                                className="p-1 rounded-md text-amber-500 hover:text-rose-500 transition-colors"
-                                                title="Sabitlemeyi kaldır"
-                                            >
-                                                <Star className="h-3 w-3 fill-amber-500" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <p className="text-[10px] text-muted-foreground/70 italic py-1">
@@ -490,110 +540,232 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                         )}
                     </div>
 
-                    {/* TÜM BAYİLER VE MÜŞTERİLER LİSTESİ */}
-                    <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
+                    {/* TÜM BAYİLER VE MÜŞTERİLER LİSTESİ (10 Kayıt Sayfalandırma & 0-2.000$ Barlı Sistem) */}
+                    <div className="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar flex-1">
                         {filteredCustomerAggregates.length > 0 ? (
                             <>
-                                {filteredCustomerAggregates.map((agg) => {
+                                {paginatedCustomers.map((agg) => {
                                     const isPinned = pinnedCustomerIds.includes(agg.id);
+                                    const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+                                    const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+                                    const currentUsdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+
+                                    const LIMIT_USD = 2000;
+                                    const totalDebtInUSD = Number(agg.totalUSD || 0) + (Number(agg.totalTRY || 0) / currentUsdRate);
+                                    const percentage = Math.min(Math.round((totalDebtInUSD / LIMIT_USD) * 100), 100);
+                                    const isOverLimit = totalDebtInUSD > LIMIT_USD;
+
+                                    const barColor = isOverLimit
+                                        ? "bg-rose-500 shadow-xs shadow-rose-500/40"
+                                        : percentage >= 60
+                                            ? "bg-orange-500 shadow-xs shadow-orange-500/40"
+                                            : percentage >= 25
+                                                ? "bg-amber-500"
+                                                : "bg-emerald-500";
+
+                                    const textColor = isOverLimit
+                                        ? "text-rose-500 font-black"
+                                        : percentage >= 60
+                                            ? "text-orange-500 font-bold"
+                                            : percentage >= 25
+                                                ? "text-amber-500 font-bold"
+                                                : "text-emerald-500 font-bold";
 
                                     return (
                                         <div
                                             key={agg.id}
                                             onClick={() => handleOpenAddDebt(agg)}
-                                            className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-muted/20 hover:bg-muted/30 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-all border border-border/40 hover:border-amber-500/30 group text-left cursor-pointer"
+                                            className="w-full flex flex-col p-2.5 sm:p-3 rounded-xl bg-muted/20 hover:bg-muted/30 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-all border border-border/40 hover:border-amber-500/30 group text-left cursor-pointer shadow-2xs"
                                             title={`${agg.name} üzerine tıklayarak doğrudan alacak ekleyin`}
                                         >
-                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                {/* Pin Toggle Button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => togglePinCustomer(agg.id, agg.name, e)}
-                                                    className="p-1 rounded-md hover:bg-muted/50 transition-colors shrink-0"
-                                                    title={isPinned ? "Sık kullanılanlardan çıkar" : "Sık kullanılanlara sabitle"}
-                                                >
-                                                    <Star className={cn(
-                                                        "h-3.5 w-3.5 transition-colors",
-                                                        isPinned ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30 hover:text-amber-500"
-                                                    )} />
-                                                </button>
+                                            {/* Üst Kısım: Bayi Bilgisi & Butonlar */}
+                                            <div className="w-full flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    {/* Pin Toggle Button */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => togglePinCustomer(agg.id, agg.name, e)}
+                                                        className="p-1 rounded-md hover:bg-muted/50 transition-colors shrink-0"
+                                                        title={isPinned ? "Sık kullanılanlardan çıkar" : "Sık kullanılanlara sabitle"}
+                                                    >
+                                                        <Star className={cn(
+                                                            "h-3.5 w-3.5 transition-colors",
+                                                            isPinned ? "fill-amber-500 text-amber-500" : "text-muted-foreground/30 hover:text-amber-500"
+                                                        )} />
+                                                    </button>
 
-                                                {/* Avatar */}
-                                                <div className={cn(
-                                                    "h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-xs",
-                                                    getAvatarColor(agg.name)
-                                                )}>
-                                                    {agg.name.charAt(0).toUpperCase()}
+                                                    {/* Avatar */}
+                                                    <div className={cn(
+                                                        "h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-xs",
+                                                        getAvatarColor(agg.name)
+                                                    )}>
+                                                        {agg.name.charAt(0).toUpperCase()}
+                                                    </div>
+
+                                                    {/* Dealer Info */}
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-xs font-semibold tracking-tight text-foreground truncate group-hover:text-amber-500 transition-colors">
+                                                            {agg.name}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                                                            {agg.count} İşlem Bekliyor
+                                                        </span>
+                                                    </div>
                                                 </div>
 
-                                                {/* Dealer Info */}
-                                                <div className="flex flex-col min-w-0">
-                                                    <span className="text-xs font-semibold tracking-tight text-foreground truncate group-hover:text-amber-500 transition-colors">
-                                                        {agg.name}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground uppercase tracking-tight">
-                                                        {agg.count} İşlem Bekliyor
-                                                    </span>
-                                                </div>
-                                            </div>
+                                                {/* Balances & Action Buttons */}
+                                                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                                    <div className="flex flex-col items-end mr-1">
+                                                        {agg.totalTRY > 0 && (
+                                                            <RevealFinancial amount={agg.totalTRY} className="text-xs sm:text-sm font-bold tabular-nums tracking-tight leading-tight text-foreground" />
+                                                        )}
+                                                        {agg.totalUSD > 0 && (
+                                                            <RevealFinancial amount={agg.totalUSD} prefix="$" className="text-[10px] font-semibold text-blue-500 tracking-tight tabular-nums leading-tight" />
+                                                        )}
+                                                    </div>
 
-                                            {/* Balances & Action Buttons */}
-                                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                                <div className="flex flex-col items-end mr-1">
-                                                    {agg.totalTRY > 0 && (
-                                                        <RevealFinancial amount={agg.totalTRY} className="text-xs sm:text-sm font-bold tabular-nums tracking-tight leading-tight text-foreground" />
-                                                    )}
-                                                    {agg.totalUSD > 0 && (
-                                                        <RevealFinancial amount={agg.totalUSD} prefix="$" className="text-[10px] font-semibold text-blue-500 tracking-tight tabular-nums leading-tight" />
-                                                    )}
-                                                </div>
-
-                                                {/* Hızlı Alacak Ekle Butonu */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleOpenAddDebt(agg);
-                                                    }}
-                                                    className="h-7 px-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all text-[10px] font-bold flex items-center gap-1 shrink-0"
-                                                    title={`${agg.name} için alacak ekle`}
-                                                >
-                                                    <Plus className="h-3 w-3" />
-                                                    <span className="hidden sm:inline">Alacak</span>
-                                                </button>
-
-                                                {/* Detay Butonu (MODAL AÇAR - Kartı uzatmaz) */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleOpenCustomerDetail(agg);
-                                                    }}
-                                                    className="h-7 px-2 rounded-lg bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 transition-all text-[10px] font-bold flex items-center gap-1 shrink-0"
-                                                    title="Veresiye Detaylarını Modalda Aç"
-                                                >
-                                                    <FileText className="h-3 w-3 text-blue-500" />
-                                                    <span>Detay</span>
-                                                </button>
-
-                                                {/* WhatsApp Butonu */}
-                                                {agg.phone && (
+                                                    {/* Hızlı Alacak Ekle Butonu */}
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD, agg.id);
+                                                            handleOpenAddDebt(agg);
                                                         }}
-                                                        className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shrink-0"
-                                                        title="WhatsApp Ekstre Gönder"
+                                                        className="h-7 px-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all text-[10px] font-bold flex items-center gap-1 shrink-0"
+                                                        title={`${agg.name} için alacak ekle`}
                                                     >
-                                                        <MessageCircle className="h-3.5 w-3.5" />
+                                                        <Plus className="h-3 w-3" />
+                                                        <span className="hidden sm:inline">Alacak</span>
                                                     </button>
-                                                )}
+
+                                                    {/* Detay Butonu (MODAL AÇAR) */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenCustomerDetail(agg);
+                                                        }}
+                                                        className="h-7 px-2 rounded-lg bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 transition-all text-[10px] font-bold flex items-center gap-1 shrink-0"
+                                                        title="Veresiye Detaylarını Modalda Aç"
+                                                    >
+                                                        <FileText className="h-3 w-3 text-blue-500" />
+                                                        <span>Detay</span>
+                                                    </button>
+
+                                                    {/* WhatsApp Butonu */}
+                                                    {agg.phone && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openWhatsAppModal(agg.name, agg.phone!, agg.totalTRY, agg.totalUSD, agg.id);
+                                                            }}
+                                                            className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shrink-0"
+                                                            title="WhatsApp Ekstre Gönder"
+                                                        >
+                                                            <MessageCircle className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Alt Kısım: 0 - 2.000$ Barlı Risk Limiti Sistemi */}
+                                            <div className="w-full mt-2 pt-1.5 border-t border-border/20 flex flex-col gap-1">
+                                                <div className="flex items-center justify-between text-[10px]">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/75">
+                            Risk Limiti: $2.000
+                                                        </span>
+                                                        {isOverLimit && (
+                                                            <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/25 animate-pulse">
+                                                                Limit Aşımı
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className={cn("text-[10px] tabular-nums font-bold", textColor)}>
+                                                        ${totalDebtInUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / $2.000 (%{Math.round((totalDebtInUSD / LIMIT_USD) * 100)})
+                                                    </span>
+                                                </div>
+                                                <div className="w-full h-1.5 rounded-full bg-muted/60 dark:bg-white/10 overflow-hidden">
+                                                    <div
+                                                        className={cn("h-full rounded-full transition-all duration-500", barColor)}
+                                                        style={{ width: `${percentage}%` }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     );
                                 })}
+
+                                {/* 10'lu Sayfalama Kontrolleri */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-border/30 text-xs shrink-0 px-1">
+                                        <div className="text-[10px] font-semibold text-muted-foreground">
+                                            <span>{filteredCustomerAggregates.length} Bayi</span>
+                                            <span className="mx-1">•</span>
+                                            <span>Sayfa {safeCurrentPage} / {totalPages}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={safeCurrentPage <= 1}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCurrentPage(p => Math.max(1, p - 1));
+                                                }}
+                                                className="h-7 px-2 rounded-lg text-xs font-bold gap-0.5 border-border/50 hover:bg-muted"
+                                            >
+                                                <ChevronLeft className="h-3 w-3" />
+                                                <span className="hidden sm:inline">Önceki</span>
+                                            </Button>
+
+                                            <div className="flex items-center gap-1 px-0.5">
+                                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                    .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                                                    .map((p, idx, arr) => {
+                                                        const prev = arr[idx - 1];
+                                                        return (
+                                                            <React.Fragment key={p}>
+                                                                {prev && p - prev > 1 && (
+                                                                    <span className="text-[10px] text-muted-foreground px-0.5 select-none">...</span>
+                                                                )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setCurrentPage(p);
+                                                                    }}
+                                                                    className={cn(
+                                                                        "h-7 min-w-7 px-1.5 rounded-lg text-[11px] font-bold transition-all",
+                                                                        safeCurrentPage === p
+                                                                            ? "bg-amber-500 text-white shadow-xs"
+                                                                            : "hover:bg-muted text-muted-foreground hover:text-foreground border border-transparent hover:border-border/40"
+                                                                    )}
+                                                                >
+                                                                    {p}
+                                                                </button>
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
+                                            </div>
+
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={safeCurrentPage >= totalPages}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCurrentPage(p => Math.min(totalPages, p + 1));
+                                                }}
+                                                className="h-7 px-2 rounded-lg text-xs font-bold gap-0.5 border-border/50 hover:bg-muted"
+                                            >
+                                                <span className="hidden sm:inline">Sonraki</span>
+                                                <ChevronRight className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <button
                                     type="button"

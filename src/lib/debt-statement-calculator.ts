@@ -379,3 +379,102 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
 
   return message.trimEnd();
 }
+
+export interface NewDebtWhatsAppReceiptOptions {
+  date?: Date | string;
+  items: {
+    title: string;
+    amount: number;
+    currency: "TRY" | "USD" | string;
+    quantity?: number;
+  }[];
+  totalRemainingTRY: number;
+  totalRemainingUSD: number;
+  usdRate: number;
+  defaultCurrency?: string;
+}
+
+/**
+ * Alacak eklendikten sonra müşteriye gönderilen kompakt WhatsApp fiş mesajı.
+ * Sadece tarih, son alınan ürünler/fiyatlar ve güncel kalan borcu içerir; bayi/dükkan adı içermez.
+ */
+export function buildNewDebtWhatsAppReceipt(options: NewDebtWhatsAppReceiptOptions): string {
+  const {
+    date = new Date(),
+    items = [],
+    totalRemainingTRY = 0,
+    totalRemainingUSD = 0,
+    usdRate = 1,
+    defaultCurrency = "TRY",
+  } = options;
+
+  let safeRate = 1;
+  if (typeof usdRate === "string") {
+    const parsed = parseFloat((usdRate as string).replace(",", "."));
+    if (Number.isFinite(parsed) && parsed > 0) safeRate = parsed;
+  } else if (typeof usdRate === "number" && Number.isFinite(usdRate) && usdRate > 0) {
+    safeRate = usdRate;
+  }
+
+  const isUsdDefault = defaultCurrency === "USD";
+  const remTRY = money(totalRemainingTRY);
+  const remUSD = money(totalRemainingUSD);
+
+  const d = typeof date === "string" ? new Date(date) : date;
+  const dateStr = !Number.isNaN(d.getTime())
+    ? `${d.getDate().toString().padStart(2, "0")}.${(d.getMonth() + 1).toString().padStart(2, "0")}.${d.getFullYear()} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`
+    : "";
+
+  let message = "";
+  if (dateStr) {
+    message += `📅 *${dateStr}*\n\n`;
+  }
+
+  // 1. En son alınan ürünler ve fiyatları
+  message += `📦 *ALINAN ÜRÜNLER:*\n`;
+  if (items.length > 0) {
+    items.forEach((item) => {
+      const isUSD = item.currency === "USD";
+      const symbol = isUSD ? "$" : "₺";
+      const amtStr = `${symbol}${Number(item.amount || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const qtyStr = item.quantity && Number(item.quantity) > 1 ? ` (${item.quantity} Adet)` : "";
+      message += `• ${item.title}${qtyStr}: ${amtStr}\n`;
+    });
+  } else {
+    message += `• Yeni Ürün / Hizmet Alımı\n`;
+  }
+  message += `\n`;
+
+  // 2. Güncel Kalan Borç
+  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `*🔴 GÜNCEL KALAN BORÇ:*\n`;
+
+  if (remTRY <= 0 && remUSD <= 0) {
+    message += `✅ Kalan borcunuz bulunmamaktadır.\n`;
+  } else if (remTRY > 0 && remUSD > 0) {
+    message += `• Toplam TL: ₺${remTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    message += `• Toplam USD: $${remUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+
+    const netEquivTRY = money(remTRY + remUSD * safeRate);
+    const netEquivUSD = money(remUSD + remTRY / safeRate);
+
+    if (isUsdDefault) {
+      message += `\n👉 *NET GENEL TOPLAM: $${netEquivUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n`;
+      message += `   (Yaklaşık ₺${netEquivTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+    } else {
+      message += `\n👉 *NET GENEL TOPLAM: ₺${netEquivTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n`;
+      message += `   (Yaklaşık $${netEquivUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+    }
+  } else if (remUSD > 0) {
+    message += `• Toplam USD: $${remUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    const netEquivTRY = money(remUSD * safeRate);
+    message += `   (Yaklaşık ₺${netEquivTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
+  } else {
+    message += `• Toplam TL: ₺${remTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+  }
+
+  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `_İyi çalışmalar dileriz._`;
+
+  return message;
+}

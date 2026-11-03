@@ -42,7 +42,7 @@ export const ProductCard = React.memo(({
                 className={cn(
                     "group flex cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card/80 hover:bg-card px-3.5 py-2.5 transition-all duration-200 hover:shadow-xs active:scale-[0.99]",
                     categoryTheme.cardBorder,
-                    isOutOfStock && "border-amber-500/30 bg-amber-500/[0.02] hover:border-amber-500/60 hover:bg-amber-500/[0.05]"
+                    isOutOfStock && "opacity-40 grayscale contrast-75 hover:opacity-100 hover:grayscale-0 hover:contrast-100 hover:border-amber-500/40"
                 )}
                 onClick={() => onAdd(product)}
                 title={isOutOfStock ? "Tükendi • Akıllı Göz ile Hızlı Stok Ekle" : undefined}
@@ -94,7 +94,7 @@ export const ProductCard = React.memo(({
                     <div className={cn(
                         "flex h-8 items-center justify-center rounded-xl border transition-all duration-200 px-2 text-[10px] font-bold",
                         isOutOfStock
-                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 group-hover:bg-amber-500 group-hover:text-white gap-1"
+                            ? "bg-muted text-muted-foreground/50 border-border/60 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500/40 gap-1"
                             : categoryTheme.addButton + " w-8"
                     )}>
                         {isOutOfStock ? (
@@ -123,7 +123,7 @@ export const ProductCard = React.memo(({
             className={cn(
                 "group relative flex flex-col justify-between text-left rounded-2xl border bg-card/85 dark:bg-[#0c121d]/85 p-3.5 sm:p-4 backdrop-blur-xl transition-all duration-300 shadow-xs hover:shadow-md select-none overflow-hidden h-full min-h-[148px] sm:min-h-[160px] cursor-pointer",
                 categoryTheme.cardBorder,
-                isOutOfStock && "border-amber-500/30 bg-amber-500/[0.03] hover:border-amber-500/60 hover:bg-amber-500/[0.06]"
+                isOutOfStock && "opacity-40 grayscale contrast-75 hover:opacity-100 hover:grayscale-0 hover:contrast-100 hover:border-amber-500/40"
             )}
         >
             {/* Top Row: Category & Stock Status */}
@@ -173,7 +173,7 @@ export const ProductCard = React.memo(({
                 <div className={cn(
                     "flex items-center gap-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-1 rounded-xl transition-all duration-200 shrink-0 shadow-xs",
                     isOutOfStock
-                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-white"
+                        ? "bg-muted text-muted-foreground/50 border border-border/60 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500/40"
                         : categoryTheme.addButton
                 )}>
                     {isOutOfStock ? (

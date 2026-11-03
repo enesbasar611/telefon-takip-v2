@@ -29,7 +29,7 @@ import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
-import { buildUnifiedWhatsAppStatement } from "@/lib/debt-statement-calculator";
+import { buildNewDebtWhatsAppReceipt } from "@/lib/debt-statement-calculator";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface AddDebtModalProps {
@@ -344,61 +344,42 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
             if (!anyFailed) {
                 toast({ title: "Başarılı", description: `${debtItems.length} adet alacak kaydı ve ilgili stok hareketleri oluşturuldu.` });
 
-                // Construct WhatsApp Message
+                // Construct WhatsApp Message (Kullanıcı Talebi: Sadece tarih, son alınan ürünler ve güncel kalan borç; bayi adı vs. yok)
                 try {
-                    let message = "";
-                    let statementData: any = null;
+                    let totalRemainingTRY = 0;
+                    let totalRemainingUSD = 0;
 
-                    // Fetch customer statement to get full open debt and payment history
+                    // Güncel toplam kalan borcu belirlemek için hesap ekstresini çek
                     const stmtRes = await getCustomerStatement(customerRes.customerId);
-                    if (stmtRes?.success) {
-                        statementData = {
-                            customerName: data.customerName,
-                            debts: stmtRes.debts || [],
-                            transactions: stmtRes.transactions || [],
-                            usdRate,
-                            defaultCurrency,
-                            balanceTRY: Number((stmtRes as any).customer?.balance || 0),
-                            balanceUSD: Number((stmtRes as any).customer?.balanceUsd || 0),
-                            shopName: tenant?.name || "Başar Teknik"
-                        };
-                        message = buildUnifiedWhatsAppStatement({
-                            ...statementData,
-                            includePaid: false,
-                            includePayments: true
+                    if (stmtRes?.success && Array.isArray(stmtRes.debts)) {
+                        stmtRes.debts.forEach((d: any) => {
+                            if (!d.isPaid) {
+                                const rem = Number(d.remainingAmount ?? d.amount ?? 0);
+                                if (rem > 0.001) {
+                                    if (d.currency === "USD") totalRemainingUSD += rem;
+                                    else totalRemainingTRY += rem;
+                                }
+                            }
                         });
                     } else if (finalAfter) {
-                        const remTRY = Number(finalAfter.totalRemainingTRY || 0);
-                        const remUSD = Number(finalAfter.totalRemainingUSD || 0);
-                        const netEquivTRY = remTRY + (remUSD * usdRate);
-                        const netEquivUSD = remUSD + (remTRY / usdRate);
-                        const isUsdDefault = defaultCurrency === "USD";
-
-                        message = `*${tenant?.name || "Başar Teknik"}* - Hesap Ekstresi\n`;
-                        message += `👤 *Müşteri:* ${data.customerName.trim().toUpperCase()}\n\n`;
-                        message += `*🔴 GÜNCEL BORÇ DURUMU:*\n`;
-                        if (remTRY > 0) message += `• Toplam TL: ₺${remTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-                        if (remUSD > 0) message += `• Toplam USD: $${remUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-
-                        if (isUsdDefault) {
-                            message += `\n👉 *NET GENEL TOPLAM: $${netEquivUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n`;
-                            message += `   (Yaklaşık ₺${netEquivTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
-                        } else {
-                            message += `\n👉 *NET GENEL TOPLAM: ₺${netEquivTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n`;
-                            if (remUSD > 0) {
-                                message += `   (Yaklaşık $${netEquivUSD.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})\n`;
-                            }
-                        }
-                        message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-                        message += `_İyi çalışmalar dileriz._\n\n`;
-
-                        message += `*📋 YENİ EKLENEN KALEMLER:*\n`;
-                        debtItems.forEach(item => {
-                            const isUSD = item.currency === "USD";
-                            const symbol = isUSD ? '$' : '₺';
-                            message += `• ${item.title}: ${symbol}${item.amount.toLocaleString('tr-TR')}\n`;
-                        });
+                        totalRemainingTRY = Number(finalAfter.totalRemainingTRY || 0);
+                        totalRemainingUSD = Number(finalAfter.totalRemainingUSD || 0);
                     }
+
+                    // Sadece en son alınan ürünler, fiyatları, tarihi ve güncel kalan borcu içeren kompakt fiş mesajı
+                    const message = buildNewDebtWhatsAppReceipt({
+                        date: new Date(),
+                        items: debtItems.map(item => ({
+                            title: item.title,
+                            amount: item.amount,
+                            currency: item.currency,
+                            quantity: item.quantity
+                        })),
+                        totalRemainingTRY,
+                        totalRemainingUSD,
+                        usdRate,
+                        defaultCurrency: normalizedDefaultCurrency
+                    });
 
                     const sanitizedPhone = data.customerPhone.replace(/\D/g, "");
                     const finalPhone = sanitizedPhone.startsWith('90') ? sanitizedPhone : `90${sanitizedPhone}`;
@@ -571,8 +552,8 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                                                                 disabled={isOutOfStock}
                                                                 className={cn(
                                                                     "w-full text-left p-2 rounded-lg transition-all flex justify-between items-center text-xs disabled:cursor-not-allowed",
-                                                                    isOutOfStock 
-                                                                        ? "bg-rose-500/5 text-rose-500/70 border border-rose-500/10" 
+                                                                    isOutOfStock
+                                                                        ? "bg-rose-500/5 text-rose-500/70 border border-rose-500/10"
                                                                         : "hover:bg-indigo-500 hover:text-white"
                                                                 )}
                                                             >
@@ -704,13 +685,6 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                 phone={whatsappData.phone}
                 customerName={whatsappData.customerName}
                 initialMessage={whatsappData.message}
-                onTogglePaidItems={whatsappData.statementData ? (includePaid) => {
-                    return buildUnifiedWhatsAppStatement({
-                        ...whatsappData.statementData,
-                        includePaid,
-                        includePayments: true
-                    });
-                } : undefined}
             />
         </>
     );

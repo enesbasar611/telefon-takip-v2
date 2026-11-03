@@ -41,6 +41,72 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-03: Veresiye Detay Modalında Seçili Kalemlere Özel Yazdır/WhatsApp/Fiş/PDF Filtrelemesi, İkon Rozetleri (Badges), Ana Sayfa 10 Kayıt Sayfalama ve 0-2.000$ Barlı Risk Limiti Sistemi:
+  - **Talep:**
+    - "veresiye detay modalında ürün seçince yazdır,whatsapp,fiş,pdf butonlarına basınca sadece seçili ürünleri göstersin,göndersin. ikonların üzerinde badges görünsün seçilen ürün sayısı kadar. ayrıca anasayfadaki veresiyeler kartında tüm veresiye sayfası aşşağı doğru akıp gidiyor bunun yerine 10 kayıt göster ve sayfalandır, sayfa yüklenirken tüm kayıtlar bianda geleceğine bu şekilde sayfa değişince gelsin. ve barlı bi sistem yap 0-2bin dolar limite göre her bayinin altında progress bar tarzı renkli barlar olsun."
+    - Kullanıcının ilettiği ekran görüntüsünde (`media_1793720930554_6888d1f1.png`), veresiye detay modalında ("WEBFONE" bayisi) 4 kalemin seçili olduğu (`4 Kalem Seçili`), üst barda ise `[+]` `[Download]` `[WhatsApp]` `[PDF]` `[Fiş]` butonlarının yer aldığı görüldü.
+  - **Yapılan İyileştirmeler:**
+    1. **Veresiye Detay Modalı Seçili Kalem Filtrelemesi & Badges ([`veresiye-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/veresiye-client.tsx)):**
+       - Modalda 1 veya daha fazla ürün/kalem seçildiğinde (`selectedCount > 0`), üst bardaki **Excel İndir, WhatsApp Ekstre, PDF Ekstre ve Fiş Yazdır** butonlarının sağ üst köşesine dinamik sayaç rozeti (`badge`) yerleştirildi.
+       - Bu butonlara basıldığında, tüm açık hesap yerine **sadece seçilen ürünler/borçlar** filtrelenerek işleme alınır:
+         - **WhatsApp:** Yalnızca seçili kalemleri ve bunların genel toplamını içeren mesaj üretip onay penceresini açar.
+         - **Fiş & PDF:** Sadece seçilen borç kalemlerini termal fiş veya PDF ekstresine aktarır.
+         - **Excel:** Yalnızca seçili kalemleri Excel formatında indirir.
+       - Hiçbir ürün seçili değilken (`selectedCount === 0`) butonlar rozetsiz görünür ve tüm cari hesabı kapsayan genel döküm davranışına döner.
+    2. **Ana Sayfa Veresiyeler Kartında 10 Kayıt Sayfalandırma ([`receivables-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/receivables-client.tsx)):**
+       - Kartın aşağıya doğru uzayıp gitmesi engellendi; sayfa başına 10 bayi (`ITEMS_PER_PAGE = 10`) gösterimi uygulandı.
+       - Arama yapıldığında sayfa numarasını otomatik 1'e çeken ve toplam bayi sayısı ile sayfa indeksini gösteren şık, kompakt sayfalama navigasyonu (`Önceki`, `Sayfa Numaraları`, `Sonraki`) eklendi.
+    3. **0 - 2.000$ Barlı Risk Limiti Sistemi ([`receivables-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/receivables-client.tsx)):**
+       - Her bayinin toplam borcu güncel USD kuruyla eşdeğer dolara dönüştürülerek 0 - 2.000$ sınırına göre hesaplandı.
+       - Her bayi kartının altına renk geçişli progress bar eklendi:
+         - **0 - $500 (< %25):** Zümrüt Yeşili (Güvenli)
+         - **$500 - $1.200 (%25 - %60):** Kehribar Sarısı (Orta)
+         - **$1.200 - $2.000 (%60 - %100):** Turuncu (Yüksek)
+         - **> $2.000 (> %100):** Kırmızı / Gül rengi ve animasyonlu *"Limit Aşımı"* rozeti.
+       - Barın üzerinde `$Bakiye / $2.000 (%Oran)` net şekilde gösterildi.
+       - Sık kullanılan bayiler paneline de bu barlı sistemin mini bir versiyonu entegre edilerek tasarım bütünlüğü sağlandı.
+    4. **Tip Kontrolü:**
+       - `npx tsc --noEmit` çalıştırılarak 0 hata ile doğrulandı.
+
+- [x] 2026-11-03: Alacak Ekleme Sonrası WhatsApp Mesaj Şablonunun Sadeleştirilmesi (Sadece Tarih, Son Alınan Ürünler/Fiyatlar ve Güncel Kalan Borç; Bayi/Dükkan Adı Olmadan):
+  - **Talep:**
+    - "alacak eklendikten sorna çıkan whatsapp modalındada sadece en son aldığı ürünler fiyatları tarihi ve güncel kalan borç yazsın bayi adı vs. yazmasın"
+  - **Yapılan İyileştirmeler:**
+    1. **Özel Kompakt Fiş Motoru Geliştirildi ([`debt-statement-calculator.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/debt-statement-calculator.ts)):**
+       - `buildNewDebtWhatsAppReceipt` fonksiyonu yazıldı.
+       - Bu fonksiyon tam hesap ekstresi yerine yalnızca:
+         - **İşlem Tarihi ve Saati** (`📅 03.11.2026 18:55`)
+         - **Yeni Alınan Ürünler & Fiyatları** (`📦 *ALINAN ÜRÜNLER:* • Ürün Adı (Adet): Fiyat`)
+         - **Güncel Kalan Borç Durumu** (`*🔴 GÜNCEL KALAN BORÇ:*` TL, USD ve döviz kurlu Net Genel Toplam)
+         - Saygılı kapanış (`_İyi çalışmalar dileriz._`)
+         üretir.
+       - Bayi adı (`👤 *Müşteri:* ...`), dükkan adı (`*Başar Teknik* - Hesap Ekstresi`) veya geçmişten kalan eski alacak listeleri mesaja KESİNLİKLE dahil edilmez.
+    2. **Alacak Ekleme Modalı Entegrasyonu ([`add-debt-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/finance/add-debt-modal.tsx)):**
+       - Borç/alacak kaydı tamamlandıktan sonra müşteriye sunulacak WhatsApp önizlemesi doğrudan `buildNewDebtWhatsAppReceipt` ile oluşturulacak şekilde bağlandı.
+       - Müşterinin en güncel kalan borcu (bu son alım dahil) `getCustomerStatement` üzerinden net şekilde hesaplanarak mesaja yansıtıldı.
+       - Bu işlem-özel fiş yapısı sayesinde modalda gereksiz geçmiş ödenenler toggle butonu kaldırıldı ve sade bir gönderim sağlandı.
+    3. **Tip & Derleme Kontrolü:**
+       - `npx tsc --noEmit` çalıştırılarak 0 hata ile doğrulandı.
+
+- [x] 2026-11-03: POS Akıllı Göz Modalı Genişlik & Tipografi İyileştirmesi ve Tükenen Ürünlerin Soluk/İnaktif Görünüm & Kesintisiz Tıklanabilirlik Güncellemesi:
+  - **Talep:**
+    - "akıllı göz modalı sıkışık olmuş bunu düzelt. ayrıca tükenen ürünler sanki tıklanmıyomuş gibi soluk olsun ama stoğa ekleme yapılabilsin."
+    - Kullanıcının ilettiği ekran görüntüsünde (`media_1793720212151_51c24f93.png`), modalın dar (`max-w-[480px]`) olması nedeniyle butonların (`[ +1 & Sepete Ekle ]` ve `[ Sadece Stoğ... ]`) taştığı/kırpıldığı, uzun ürün isimlerinin (`MOSGOO Infinix Hot 50i...`) tek satıra sıkışıp `truncate` olduğu ve alt butonların basık durduğu tespit edildi.
+    - POS grid/liste ekranında tükenen (0 stoklu) ürünlerin varsayılan halde tıklanmıyormuş gibi soluk (dimmed/grayscale) görünmesi; ancak üzerine gelindiğinde/tıklandığında kesintisiz şekilde interaktif kalıp doğrudan Akıllı Göz modalını açarak stoğa ekleme yapabilmesi istendi.
+  - **Yapılan İyileştirmeler:**
+    1. **Akıllı Göz Modalı Ferahlatıldı ([`smart-stock-guardrail-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/parts/smart-stock-guardrail-modal.tsx)):**
+       - Modal genişliği `max-w-[480px]` seviyesinden `w-[95vw] sm:max-w-[580px] md:max-w-[620px]` boyutuna çıkarıldı.
+       - Başlık kısmı `truncate` yerine `break-words` ve ferah satır yüksekliğiyle güncellendi; çok modelli uzun parça isimleri (Infinix, Spark vb.) artık eksiksiz ve net okunabiliyor.
+       - Hızlı Stok Ekleme kutucuğunda buton grid'i genişletildi (`gap-2.5 sm:gap-3`), buton yükseklikleri `h-11`, etiketler `whitespace-nowrap` yapıldı. `+{quickQty} Adet & Sepete Ekle` ve `Sadece Stoğa Ekle` butonları hiçbir çözünürlükte taşmadan veya kırpılmadan yan yana tam sığıyor.
+       - "Rafta Var, Satışa Ekle" ve "Kurye/Tedarike Yaz" ikincil aksiyon kartları `h-12` yüksekliğinde, ikon ve alt açıklamalarıyla orantılı ferah bir yapıya kavuşturuldu.
+    2. **Tükenen Ürünlerin Görünümü Soluklaştırıldı & Kesintisiz Tıklanabilirlik Korundu ([`product-card.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/parts/product-card.tsx), [`pos-compact.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/pos/pos-compact.tsx)):**
+       - Hem Bento grid hem de Kompakt liste görünümünde sıfır stoklu ürün kartlarına `opacity-40 grayscale contrast-75` uygulandı; böylece ürünler dinlenme halinde sanki tıklanamazmış gibi soluk ve inaktif bir tonda duruyor.
+       - Üzerine gelindiğinde (`hover:opacity-100 hover:grayscale-0 hover:contrast-100 hover:border-amber-500/40`) kart pürüzsüz bir animasyonla canlanıyor.
+       - Mikro aksiyon butonu dinlenme anında soluk nötr tonda (`bg-muted text-muted-foreground/50`), hover anında ise kehribar parlamasıyla (`group-hover:bg-amber-500 group-hover:text-white`) Akıllı Göz simgesini (`Stok Ekle`) belirginleştiriyor.
+       - HTML `disabled` özelliği bilinçli olarak verilmedi ve `cursor-pointer` korundu; karta veya butona tıklandığında anında Akıllı Göz modalı açılıyor ve kullanıcı 1 tıkla stoğa ekleme yapabiliyor.
+    3. **Tip & Derleme Kontrolü:**
+       - `add-debt-modal.tsx` ve `veresiye-client.tsx`'teki TypeScript uyumsuzlukları giderildi, `npx tsc --noEmit` ile 0 hata doğrulaması sağlandı.
+
 - [x] 2026-11-03: Veresiye WhatsApp Mesajı TL Çeviri Uyumsuzluğunun Çözümü, Mesaj Şablonunun En Başa Alınması ve "Ödenenleri Göster / Gizle" Butonu:
   - **Talep:**
     - Başka dükkana veya panele girildiğinde WhatsApp mesajındaki TL çevirisinin hatalı görünmesi (örn. 858,7$ borç 50 TL kur ile 43.635 TL yerine 28.607,75 TL görünmesi) probleminin nedeni ve kesin çözümü.
