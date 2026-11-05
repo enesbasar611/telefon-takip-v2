@@ -41,6 +41,59 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-05: Servis Yönetimi (/servis) Mobil Görünüm ve Modalların Tam Kapsamlı Refactorü (Sadeleştirme, Taşma ve Sıkışıklık Giderimi):
+  - **Talep:**
+    - "@servis sayfasınıda mobil görünüm için refactor yap modallar tam görünmüyor mobilden giren kullanıcılar uygulamanın çok karışık olduğunu söylüyor gereksiz boşlukları kaldır ve ferah bi kullanım sun. @[.agents/skills/superdesign/SKILL.md] @[.agents/skills/superpowers-brainstorm/SKILL.md]"
+    - Kullanıcılar mobil cihazlardan giriş yaptıklarında servis yönetim modallarının ekranın dışına taştığını, alt kısımdaki işlem ve teslimat butonlarına erişilemediğini, çift scrollbar oluştuğunu ve aşırı boşluk/kalabalık nedeniyle sayfanın karışık hissettirdiğini belirtti.
+  - **Uygulanan Tasarım ve Mimari Çözümler:**
+    1. **Servis Yönetim Modalı (`service-management-modal.tsx`):**
+       - Modala mobil görünüm için özel 3 sekmeli temiz navigasyon eklendi: `[ 🔧 İşlem & Parça ]`, `[ 📱 Cihaz & Müşteri ]`, `[ ⏱️ Tarihçe ]`. Masaüstünde 2 sütunlu tam operasyonel workstation korunurken, mobilde her sekme odaklı ve ferah bir içerik sunacak şekilde izole edildi.
+       - Finansal istasyon (İşçilik, Genel Toplam ve Teslimat Butonları) mobilde `shrink-0 z-40 sticky bottom-0` olarak konumlandırıldı; "Tahsil & Teslim" ve "Veresiye" butonlarının ekran dışına taşması veya kaybolması engellendi.
+       - Modal boyutu mobilde `h-[100dvh] rounded-none`, masaüstünde `md:h-[92vh] md:rounded-[2.5rem]` olarak dinamik viewporte uyarlandı.
+       - Başlık yüksekliği mobilde `h-16`, masaüstünde `md:h-24` olarak ayarlandı; "Hazır" durumu hızlı butonu mobilde de dokunulabilir kılındı.
+    2. **Yeni Servis Kaydı Modalı (`create-service-modal.tsx`):**
+       - Mobilde giriş inputlarının birbirini sıkıştırmasını önlemek için Müşteri (Ad-Soyad, Telefon) ve Cihaz (Marka, Model) alanları `grid-cols-2` yerine mobilde `grid-cols-1 sm:grid-cols-2` olarak tam genişliğe genişletildi.
+       - Modal yüksekliği `h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col` yapıldı, p-8 gibi büyük paddingler mobilde `p-4 sm:p-6 md:p-8` olarak sadeleştirildi.
+    3. **Servis Detay & AI Analiz Modalları (`service-details-modal.tsx` & `technical-service-analysis-modal.tsx`):**
+       - Sabit `h-[75vh]` scroll area kaldırıldı; `flex-1 overflow-y-auto` ve sticky header/footer mimarisine geçilerek butonların ekran dışına taşması önlendi.
+       - Başlık ve gövde paddingleri mobilde ferahlatıldı (`p-4 sm:p-8`).
+    4. **Durum Güncelleme & Fiş Modalları (`service-status-modal.tsx` & `receipt-modal-wrapper.tsx`):**
+       - `max-w-md` ve `max-w-[500px]` modallarına mobilde `w-[95vw]` ve `rounded-2xl` sınırları verildi, buton alanları esnek wrap yapısına kavuşturuldu.
+    5. **Servis Kazanç Kartları (`service-profit-cards.tsx`):**
+       - Tarih filtre butonları mobilde yatay kaydırılabilir (horizontal pill) forma getirildi, buton boyutları ve fontları optimize edildi.
+       - 4 KPI kartı mobilde 2x2 grid formunda tutulup değerlerin kutu içine sığması sağlandı (`text-sm sm:text-2xl font-black`).
+    6. **Servis Tab Bar ve Liste Tablosu (`service-tabs-controller.tsx` & `service-list-table.tsx`):**
+       - Durum filtre barındaki `mx-8 mt-8` boşluğu mobilde `mx-3 mt-3` seviyesine çekilerek ekrandan 64px alan kazanıldı.
+       - Mobil servis kartlarındaki `p-8 matte-card rounded-[2.5rem]` aşırı genişliği `p-3.5 sm:p-5 rounded-2xl` olarak kompaktlaştırıldı.
+       - Arıza beyanı kutusu ve işlem aksiyon butonları (`h-9 w-9`) zarif ve dokunmatik uyumlu hale getirildi.
+  - **Doğrulama:**
+    - `npx tsc --noEmit` çalıştırıldı ve 0 hata ile başarıyla doğrulandı.
+    - Proje kuralına uygun olarak dev server çalışırken `npm run build` komutu çalıştırılmadı.
+
+- [x] 2026-11-05: Ana Sayfa Trend Ürünler Widgetı ve Kurye Sayfası Mobil Optimizasyonu, Fazlalık Çerçeve/Inline Kaldırma ve Taşma Düzeltmesi:
+  - **Talep:**
+    - "dashboard sayfasındaki trend ürünler chartını mobil görünümde düzenle, @kurye sayfasınıda aynı şekilde mobilde düzenle gereksiz tüm boşlukları kaldır, birsürü inline var onlarıda kaldır."
+    - Kullanıcının ilettiği ekran görüntülerinde:
+      1. `media_1793894108646_a2eb7d22.png`: Trend Ürünler kartında mobilde `grid-cols-4` zorlanması nedeniyle kartların 75px genişliğe sıkıştığı, ürün isimlerinin ("GE...", "REPA..."), kategorilerin ve fiyatların kesildiği; "148 SATIŞ" ve "KRİTİK" rozetlerinin kart dışına taşarak üst üste bindiği görüldü.
+      2. `media_1793894206632_c1d95d38.png` & `media_1793894225027_662569e0.png`: Kurye sayfasında (`/kurye`) 4-5 katmanlı iç içe çerçeveler (Card > div > section > button group), aşırı dikey ve yatay paddingler nedeniyle içerik alanının daraldığı; adet sayacı ve `[ATA]` butonunun ekranın sağına taşarak kesildiği görüldü.
+  - **Yapılan İyileştirmeler:**
+    1. **Ana Sayfa Trend Ürünler Mobil Grid Düzenlemesi ([`top-products-stream.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/dashboard/streamed/top-products-stream.tsx)):**
+       - Mobilde kartların 4 sütun halinde sıkışmasını önlemek için responsive grid tanımlandı: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`.
+       - Mobilde her ürün kartına ferah ~160px alan sağlandı; ürün isimleri `line-clamp-2` yapılarak 2 satıra kadar tam okunur hale getirildi.
+       - Rozetler (`KRİTİK`, `X Satış`) ve Fiyat (`₺150,00`) alanları kart sınırları içine tam oturacak şekilde optimize edildi, taşmalar tamamen önlendi.
+    2. **Kurye Sayfası Mobil Alan ve Çerçeve Sadeleştirmesi ([`courier-dashboard-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/courier/courier-dashboard-client.tsx)):**
+       - Sayfa kapsayıcısı boşlukları mobilde `px-3 sm:px-4 pt-3 sm:pt-6 space-y-4 sm:space-y-6` yapılarak kenar boşlukları sıkılaştırıldı.
+       - Hızlı Sipariş Kartı içerisindeki gereksiz çift katmanlı arka plan ve çerçeve kutusu (`bg-zinc-100 dark:bg-white/5 p-4 rounded-2xl border`) mobilde sıfırlanarak (`bg-transparent p-0 border-0`) tek ve ferah kart yapısına dönüştürüldü.
+       - 3 Adet büyük dikey stat kartı (`GÜNCEL`, `TAMAM`, `KALAN`), mobilde tek satırda 3 sütunlu kompakt göstergeye (`grid grid-cols-3 gap-2`) dönüştürülerek 250px'den fazla dikey ekran alanı geri kazanıldı.
+       - Tarih seçici, arama çubuğu ve butonlar mobilde `h-11 sm:h-14` olarak kompaktlaştırıldı.
+       - Kategori gruplarındaki `style={{ animationDelay }}` inline stili kaldırıldı; görev listesi sol girintisi mobilde `ml-1.5 pl-2.5 sm:ml-4 sm:pl-6` yapılarak sola yaslanma ferahlatıldı.
+    3. **Hızlı Sipariş Formu ve [ATA] Butonu Taşma Düzeltmesi ([`add-shortage-form.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/shortage/add-shortage-form.tsx)):**
+       - Form sütun boşlukları `gap-3 sm:gap-6`, panel iç boşlukları `p-3 sm:p-4 rounded-xl sm:rounded-2xl` olarak optimize edildi.
+       - Sipariş Veren (`DÜKKAN/BAYİ/YENİ`), Kurye Seçimi ve Öncelik butonları mobilde tam dokunmatik uyumlu yapıldı.
+       - Ürün ve Miktar satırında adet sayacı (`h-10`, `w-8`), sepete ekle butonu (`h-10 w-10`) ve `[ATA]` butonu (`flex-1 h-10 px-3 min-w-0`) yeniden boyutlandırıldı. `[ATA]` butonunun ekran dışına taşması ve kesilmesi sorunu tamamen giderildi.
+    4. **Tip ve Derleme Kontrolü:**
+       - `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
 - [x] 2026-11-05: Raporlar Sayfası Mobil Uyumluluk, Excel Satış Notu / Açıklama Düzenlemesi ve Profesyonel Vektörel PDF Çıktısı:
   - **Talep:**
     - "raporlar-page-client.tsx sayfasında da mobil uyuma göre düzenle gereksiz boşlukları kaldır fiyatlar kutunun içine sığacak şekilde düzenle. buradan çıkartılan excelde açıklama bölümü satış esnasında yazılan açıklama/not kısmına yazılan yazsın eğer boşsa cash yerine nakit satış yazsın. PDF çıktısınıda düzenle şuanda tüm sayfanın ekran görüntüsünü alıyor. bunun yerine amaca uygun bi pdf çıktısı istiyorum chartlar vs satışlar en çok satan ürünler. detaylı bi analiz."

@@ -86,8 +86,8 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[95vh] p-0 overflow-hidden bg-card border-none shadow-2xl rounded-[1.5rem] md:rounded-[2rem]">
-        <DialogHeader className="p-6 md:p-8 bg-muted/30 pb-4">
+      <DialogContent className="w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col p-0 overflow-hidden bg-card border-none shadow-2xl rounded-none sm:rounded-[2rem]">
+        <DialogHeader className="p-4 sm:p-6 md:p-8 bg-muted/30 pb-3 sm:pb-4 shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="bg-blue-500/10 p-3 rounded-2xl">
@@ -106,7 +106,7 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
           </div>
         </DialogHeader>
 
-        <ScrollArea className="px-6 md:px-8 py-2 h-[75vh]">
+        <div className="px-4 sm:px-6 md:px-8 py-2 flex-1 overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 py-6">
 
             {/* Left Column: Customer & Device & AI */}
@@ -270,9 +270,9 @@ export function ServiceDetailsModal({ ticket, isOpen, onClose }: ServiceDetailsM
               </section>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
-        <DialogFooter className="p-6 md:p-8 bg-muted/30 border-t border-border/50">
+        <DialogFooter className="p-3 sm:p-6 md:p-8 bg-muted/30 border-t border-border/50 shrink-0">
           <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-6 w-full sm:w-auto">
               <div className="flex flex-col">

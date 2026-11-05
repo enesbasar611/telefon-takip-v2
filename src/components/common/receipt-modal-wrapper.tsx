@@ -110,7 +110,7 @@ export function ReceiptModalWrapper({
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-[500px] p-0 gap-0 bg-[#0F172A] border border-border/50 rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <DialogContent className="w-[95vw] sm:max-w-[500px] p-0 gap-0 bg-[#0F172A] border border-border/50 rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-2xl">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border/30 bg-muted/30 pr-14 text-foreground">
                     <div className="flex items-center gap-3">
@@ -130,7 +130,7 @@ export function ReceiptModalWrapper({
                 </div>
 
                 {/* Preview Area - Thermal paper simulation */}
-                <div className="bg-slate-200 dark:bg-[#0F172A] p-6 border-y-4 border-slate-300 dark:border-zinc-800">
+                <div className="bg-slate-200 dark:bg-[#0F172A] p-3 sm:p-6 border-y-4 border-slate-300 dark:border-zinc-800">
                     <div className="max-h-[55vh] overflow-y-auto rounded-2xl bg-white shadow-2xl custom-scrollbar flex justify-center py-6">
                         {children(receiptRef, widthClass)}
                     </div>
@@ -146,7 +146,7 @@ export function ReceiptModalWrapper({
                 )}
 
                 {/* Bottom Actions - Monochrome neutral buttons */}
-                <div className="p-5 flex flex-wrap items-center gap-3 bg-muted/20 border-t border-border/30">
+                <div className="p-3 sm:p-5 flex flex-wrap items-center gap-2 sm:gap-3 bg-muted/20 border-t border-border/30">
                     <Button
                         variant="destructive"
                         onClick={onClose}

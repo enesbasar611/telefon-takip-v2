@@ -815,14 +815,14 @@ export function CourierDashboardClient({
                 </div>
             )}
 
-            <div className="px-4 pt-6 space-y-6 max-w-[1600px] mx-auto">
+            <div className="px-3 sm:px-4 pt-3 sm:pt-6 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
                 {!isCourierOnly && (
                     <PageHeader
                         title="Kurye Kontrol"
                         description="Görev yönetimi ve eksik listesi takibi."
                         icon={ListTodo}
                         badge={
-                            <Badge className="bg-blue-500 text-black border-none px-4 py-1 text-[10px] uppercase font-black tracking-widest shadow-lg">
+                            <Badge className="bg-blue-500 text-black border-none px-3 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[10px] uppercase font-black tracking-widest shadow-lg">
                                 {stats.remaining} AKTİF
                             </Badge>
                         }
@@ -830,37 +830,37 @@ export function CourierDashboardClient({
                 )}
 
                 {(isAdmin || isCourierOnly) && (
-                    <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-3.5 sm:gap-6">
                         {/* Quick Add Form Card - ONLY FOR ADMIN */}
                         {isAdmin && (
                             <>
-                                <Card className="rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-visible group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-50 xl:col-span-9 lg:col-span-1">
-                                    <div className="p-6 space-y-4">
+                                <Card className="rounded-2xl sm:rounded-3xl border-none bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-xl overflow-visible group hover:bg-card/80 dark:hover:bg-card/50 transition-all border border-zinc-200 dark:border-white/5 relative z-50 xl:col-span-9 lg:col-span-1">
+                                    <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                                    <Plus className="w-5 h-5 text-blue-500" />
+                                            <div className="flex items-center gap-2.5 sm:gap-3">
+                                                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                                    <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-lg font-black uppercase tracking-tight">Yeni Sipariş</h3>
-                                                    <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">HIZLI SİPARİŞ KARTI</p>
+                                                    <h3 className="text-base sm:text-lg font-black uppercase tracking-tight">Yeni Sipariş</h3>
+                                                    <p className="text-[8.5px] sm:text-[9px] text-muted-foreground uppercase font-black tracking-widest opacity-60">HIZLI SİPARİŞ KARTI</p>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => setIsCourierControlOpen(true)}
-                                                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 hover:border-orange-500/40 transition-all group/kcbtn relative"
+                                                className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 hover:border-orange-500/40 transition-all group/kcbtn relative"
                                             >
-                                                <User className="w-4 h-4 text-orange-500" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">Kurye Kontrolü</span>
+                                                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500" />
+                                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-orange-500">Kurye Kontrolü</span>
                                                 {activeCourierNotifications.length > 0 && (
-                                                    <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-orange-500 text-white text-[8px] font-black flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
+                                                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-orange-500 text-white text-[7.5px] sm:text-[8px] font-black flex items-center justify-center shadow-lg shadow-orange-500/30 animate-pulse">
                                                         {activeCourierNotifications.length}
                                                     </span>
                                                 )}
                                             </button>
                                         </div>
 
-                                        <div className="bg-zinc-100 dark:bg-white/5 p-4 rounded-2xl border border-zinc-200 dark:border-white/5">
+                                        <div className="bg-transparent sm:bg-zinc-100 dark:sm:bg-white/5 p-0 sm:p-4 rounded-xl sm:rounded-2xl border-0 sm:border border-zinc-200 dark:border-white/5">
                                             <AddShortageForm categories={categories} />
                                         </div>
                                     </div>
@@ -961,25 +961,25 @@ export function CourierDashboardClient({
                                     </DialogContent>
                                 </Dialog>
 
-                                <div className="xl:col-span-3 lg:col-span-2 flex flex-col md:flex-row xl:flex-col gap-4">
+                                <div className="xl:col-span-3 lg:col-span-2 grid grid-cols-3 md:flex md:flex-row xl:flex-col gap-2 sm:gap-4">
                                     {[
                                         { label: "GÜNCEL", val: stats.total, color: "blue", icon: Package },
                                         { label: "TAMAM", val: stats.taken, color: "emerald", icon: CheckCircle2 },
                                         { label: "KALAN", val: stats.remaining, color: "orange", icon: Clock }
                                     ].map((s, i) => (
-                                        <Card key={i} className="rounded-3xl border-none shadow-xl bg-card/80 dark:bg-card/60 backdrop-blur-xl overflow-hidden group hover:scale-[1.01] transition-all p-1 border border-zinc-200 dark:border-white/5 flex-1 min-h-[100px]">
-                                            <CardContent className="h-full p-6 flex items-center gap-6">
+                                        <Card key={i} className="rounded-xl sm:rounded-3xl border-none shadow-xl bg-card/80 dark:bg-card/60 backdrop-blur-xl overflow-hidden group hover:scale-[1.01] transition-all p-0.5 sm:p-1 border border-zinc-200 dark:border-white/5 flex-1 min-h-0 sm:min-h-[100px]">
+                                            <CardContent className="h-full p-2.5 sm:p-6 flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1.5 sm:gap-6 text-center sm:text-left">
                                                 <div className={cn(
-                                                    "h-14 w-14 rounded-2xl flex items-center justify-center transition-all shadow-lg",
+                                                    "h-8 w-8 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all shadow-lg shrink-0",
                                                     s.color === "blue" ? "bg-blue-500 text-white shadow-blue-500/20" :
                                                         s.color === "emerald" ? "bg-emerald-500 text-white shadow-emerald-500/20" :
                                                             "bg-orange-500 text-white shadow-orange-500/20"
                                                 )}>
-                                                    <s.icon className="w-7 h-7" />
+                                                    <s.icon className="w-4 h-4 sm:w-7 sm:h-7" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50 mb-1">{s.label}</p>
-                                                    <h3 className="font-black text-3xl tracking-tighter leading-tight">{s.val}</h3>
+                                                    <p className="text-[8px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest opacity-50 mb-0.5 sm:mb-1">{s.label}</p>
+                                                    <h3 className="font-black text-base sm:text-3xl tracking-tighter leading-tight">{s.val}</h3>
                                                 </div>
                                             </CardContent>
                                         </Card>
@@ -995,37 +995,37 @@ export function CourierDashboardClient({
                     <Button
                         onClick={handleFinishMyDay}
                         disabled={stats.total === 0}
-                        className="w-full h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20"
+                        className="w-full h-12 sm:h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20"
                     >
                         {stats.total > 0 ? "GÜNÜ BİTİR VE BİLDİR" : "SİPARİŞ YOK"}
                     </Button>
                 )}
 
                 {nextRouteItems.length > 0 && (
-                    <Card className="rounded-3xl border border-blue-500/10 bg-blue-500/[0.03] shadow-sm">
-                        <CardContent className="p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <Card className="rounded-2xl sm:rounded-3xl border border-blue-500/10 bg-blue-500/[0.03] shadow-sm">
+                        <CardContent className="p-3.5 sm:p-5 flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                    <ArrowUpCircle className="h-5 w-5 text-blue-500" />
+                                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                    <ArrowUpCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black uppercase tracking-tight">Onerilen Rota</h3>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-tight">Onerilen Rota</h3>
+                                    <p className="text-[8.5px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground">
                                         {highPriorityCount} oncelikli gorev sirada
                                     </p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1 lg:max-w-3xl">
                                 {nextRouteItems.map((item: any, index: number) => (
-                                    <div key={item.id} className="rounded-2xl bg-background/70 border border-border/60 p-3 min-w-0">
-                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div key={item.id} className="rounded-xl sm:rounded-2xl bg-background/70 border border-border/60 p-2.5 sm:p-3 min-w-0">
+                                        <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2">
                                             <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">#{index + 1}</span>
                                             <Badge variant="outline" className={cn("text-[8px] font-black border", getPriorityClassName(item.courierPriorityLabel))}>
                                                 {getPriorityLabel(item.courierPriorityLabel)}
                                             </Badge>
                                         </div>
                                         <p className="text-xs font-black uppercase truncate">{item.name}</p>
-                                        <p className="text-[9px] font-bold text-muted-foreground truncate mt-1">
+                                        <p className="text-[9px] font-bold text-muted-foreground truncate mt-0.5 sm:mt-1">
                                             {(item.courierPriorityReasons || []).join(" / ") || "Standart siralama"}
                                         </p>
                                     </div>
@@ -1035,10 +1035,10 @@ export function CourierDashboardClient({
                     </Card>
                 )}
 
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-center max-w-4xl mx-auto w-full group/search-container">
+                <div className="flex flex-col md:flex-row gap-2.5 sm:gap-4 items-center justify-center max-w-4xl mx-auto w-full group/search-container">
                     {isAdmin && (
-                        <div className="flex items-center bg-zinc-100 dark:bg-white/5 px-4 rounded-2xl border border-zinc-200 dark:border-white/5 h-14 min-w-[180px] w-full md:w-auto transition-all duration-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 shadow-sm hover:shadow-md">
-                            <span className="text-[10px] uppercase font-black text-muted-foreground mr-2 shrink-0">GÜN:</span>
+                        <div className="flex items-center bg-zinc-100 dark:bg-white/5 px-3 sm:px-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/5 h-11 sm:h-14 min-w-[150px] w-full md:w-auto transition-all duration-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 shadow-sm hover:shadow-md">
+                            <span className="text-[9px] sm:text-[10px] uppercase font-black text-muted-foreground mr-2 shrink-0">GÜN:</span>
                             <Input
                                 type="date"
                                 value={selectedDate}
@@ -1048,15 +1048,15 @@ export function CourierDashboardClient({
                         </div>
                     )}
                     <div className="relative flex-1 w-full">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within/search-container:text-blue-500 opacity-60" />
+                        <Search className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground transition-colors group-focus-within/search-container:text-blue-500 opacity-60" />
                         <Input
                             placeholder="ÜRÜN VEYA BAYİ ARA..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-14 pr-4 bg-background dark:bg-zinc-900 border-2 border-zinc-200 dark:border-white/10 rounded-2xl h-14 font-black uppercase text-xs tracking-widest transition-all duration-300 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:shadow-md hover:border-zinc-300 dark:hover:border-white/20"
+                            className="pl-11 sm:pl-14 pr-4 bg-background dark:bg-zinc-900 border-2 border-zinc-200 dark:border-white/10 rounded-xl sm:rounded-2xl h-11 sm:h-14 font-black uppercase text-xs tracking-widest transition-all duration-300 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm hover:shadow-md hover:border-zinc-300 dark:hover:border-white/20"
                         />
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto justify-center">
+                    <div className="flex gap-2 w-full md:w-auto justify-end sm:justify-center">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -1065,36 +1065,36 @@ export function CourierDashboardClient({
                                 if (isSelectionMode) setSelectedIds([]);
                             }}
                             className={cn(
-                                "rounded-xl h-14 w-14 shrink-0 transition-all",
+                                "rounded-xl h-11 w-11 sm:h-14 sm:w-14 shrink-0 transition-all",
                                 isSelectionMode ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-zinc-100 dark:bg-white/5 text-muted-foreground hover:text-indigo-500 border border-zinc-200 dark:border-white/5"
                             )}
                             title={isSelectionMode ? "Seçimi Kapat" : "Seçim Modunu Aç"}
                         >
-                            <CheckSquare className="h-6 w-6" />
+                            <CheckSquare className="h-5 w-5 sm:h-6 sm:w-6" />
                         </Button>
                         {isAdmin && (
-                            <div className="flex gap-2 bg-zinc-100 dark:bg-white/5 p-1 rounded-2xl border border-zinc-200 dark:border-white/5 h-14 items-center">
+                            <div className="flex gap-1.5 sm:gap-2 bg-zinc-100 dark:bg-white/5 p-1 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-white/5 h-11 sm:h-14 items-center">
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => setViewMode('single')}
                                     className={cn(
-                                        "rounded-xl h-11 w-11",
+                                        "rounded-lg sm:rounded-xl h-9 w-9 sm:h-11 sm:w-11",
                                         viewMode === 'single' ? "bg-white dark:bg-white/10 text-blue-600 dark:text-white shadow-sm" : "text-muted-foreground hover:text-blue-600 dark:hover:text-white"
                                     )}
                                 >
-                                    <StretchHorizontal className="h-5 w-5" />
+                                    <StretchHorizontal className="h-4 w-4 sm:h-5 sm:w-5" />
                                 </Button>
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => setViewMode('double')}
                                     className={cn(
-                                        "rounded-xl h-11 w-11",
+                                        "rounded-lg sm:rounded-xl h-9 w-9 sm:h-11 sm:w-11",
                                         viewMode === 'double' ? "bg-white dark:bg-white/10 text-blue-600 dark:text-white shadow-sm" : "text-muted-foreground hover:text-blue-600 dark:hover:text-white"
                                     )}
                                 >
-                                    <LayoutGrid className="h-5 w-5" />
+                                    <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
                                 </Button>
                             </div>
                         )}
@@ -1102,7 +1102,7 @@ export function CourierDashboardClient({
                 </div>
 
                 <div className={cn(
-                    "grid gap-8",
+                    "grid gap-4 sm:gap-8",
                     isAdmin && viewMode === "double" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
                 )}>
                     {(() => {
@@ -1122,24 +1122,24 @@ export function CourierDashboardClient({
                         });
 
                         return Array.from(groupsMap.values()).map((group, idx) => (
-                            <div key={idx} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${idx * 50}ms` }}>
-                                <div className="flex items-center justify-between px-2">
-                                    <div className="flex items-center gap-3">
+                            <div key={idx} className="space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex items-center justify-between px-1 sm:px-2">
+                                    <div className="flex items-center gap-2.5 sm:gap-3">
                                         <div className={cn(
-                                            "h-10 w-10 rounded-xl flex items-center justify-center border text-white font-black text-xs shadow-lg uppercase",
+                                            "h-9 w-9 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center border text-white font-black text-xs shadow-lg uppercase",
                                             getDeterministicColor(group.title)
                                         )}>
                                             {getInitials(group.title)}
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-black uppercase tracking-tight">
+                                            <h3 className="text-base sm:text-lg font-black uppercase tracking-tight">
                                                 {group.title}
                                             </h3>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {isAdmin && (
-                                            <div className="flex items-center bg-zinc-100 dark:bg-white/5 p-1 rounded-xl border border-zinc-200 dark:border-white/5 mr-2">
+                                            <div className="flex items-center bg-zinc-100 dark:bg-white/5 p-1 rounded-xl border border-zinc-200 dark:border-white/5 mr-1 sm:mr-2">
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -1148,7 +1148,7 @@ export function CourierDashboardClient({
                                                         toggleGroupSelect(idx.toString(), group.items);
                                                     }}
                                                     className={cn(
-                                                        "h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest",
+                                                        "h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest",
                                                         group.items.every((i: any) => selectedIds.includes(i.id))
                                                             ? "bg-blue-500 text-black shadow-lg shadow-blue-500/20"
                                                             : "text-muted-foreground hover:text-foreground"
@@ -1160,21 +1160,21 @@ export function CourierDashboardClient({
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => handleBulkDelete(group.items.map((i: any) => i.id))}
-                                                    className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all rounded-lg"
+                                                    className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all rounded-lg"
                                                 >
-                                                    <Trash className="h-4 w-4" />
+                                                    <Trash className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                 </Button>
                                             </div>
                                         )}
-                                        <Badge variant="secondary" className="bg-white/5 text-muted-foreground border-white/5 font-black text-[10px]">
+                                        <Badge variant="secondary" className="bg-white/5 text-muted-foreground border-white/5 font-black text-[9px] sm:text-[10px]">
                                             {group.items.length} KALEM
                                         </Badge>
                                     </div>
                                 </div>
 
                                 <div className={cn(
-                                    "flex flex-col gap-2 ml-4 pl-6 border-l-2 border-zinc-500/10", // Single list for items inside shop
-                                    !isAdmin && "grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ml-0 pl-0 border-none gap-3" // Cards for courier — wider gaps for mobile
+                                    "flex flex-col gap-2 ml-1.5 pl-2.5 sm:ml-4 sm:pl-6 border-l-2 border-zinc-500/10", // Single list for items inside shop
+                                    !isAdmin && "grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ml-0 pl-0 border-none gap-2.5 sm:gap-3" // Cards for courier — wider gaps for mobile
                                 )}>
                                     <AnimatePresence mode="popLayout">
                                         {group.items.map((item: any) => (

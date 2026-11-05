@@ -407,13 +407,13 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
   return (
     <div className="w-full space-y-4">
       {/* Status Filter Bar */}
-      <div className="flex items-center gap-2 p-2 bg-card/60 border border-border/50 rounded-2xl overflow-x-auto no-scrollbar mx-8 mt-8 shadow-inner backdrop-blur-xl">
+      <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-card/60 border border-border/50 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar mx-3 mt-3 sm:mx-8 sm:mt-8 shadow-inner backdrop-blur-xl">
         <Button
           variant={statusFilter === "ALL" ? "default" : "ghost"}
           size="sm"
           onClick={() => setStatusFilter("ALL")}
           className={cn(
-            "h-10 px-8 rounded-xl text-xs  transition-all",
+            "h-8 sm:h-10 px-3.5 sm:px-8 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all shrink-0",
             statusFilter === "ALL" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/50"
           )}
         >
@@ -428,7 +428,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
               size="sm"
               onClick={() => setStatusFilter(key)}
               className={cn(
-                "h-10 px-8 rounded-xl text-xs transition-all gap-3 shrink-0",
+                "h-8 sm:h-10 px-3.5 sm:px-8 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition-all gap-2 sm:gap-3 shrink-0",
                 statusFilter === key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30" : "text-muted-foreground/80 hover:text-foreground hover:bg-accent/50"
               )}
             >
@@ -438,20 +438,20 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
           ))}
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-6 md:p-8">
         <div className="flex-1 max-w-md relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={`Müşteri, Fiş No veya ${identifierLabel} Ara...`}
             value={globalFilter ?? ""}
             onChange={(event) => setGlobalFilter(event.target.value)}
-            className="pl-10 h-12 bg-accent/10 border-border/50 rounded-2xl text-xs text-foreground focus:bg-accent/20 transition-all"
+            className="pl-10 h-10 sm:h-12 bg-accent/10 border-border/50 rounded-xl sm:rounded-2xl text-xs text-foreground focus:bg-accent/20 transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2  text-xs h-12 bg-white/[0.02] border-border/50 px-6 rounded-2xl">
+              <Button variant="outline" className="gap-2 text-xs h-10 sm:h-12 bg-white/[0.02] border-border/50 px-4 sm:px-6 rounded-xl sm:rounded-2xl">
                 Sütunlar <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -543,7 +543,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
       />
 
       {/* Mobile View */}
-      <div className="lg:hidden space-y-4 px-6 pb-6">
+      <div className="lg:hidden space-y-3 sm:space-y-4 px-3 sm:px-6 pb-4 sm:pb-6">
         {table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => {
             const ticket = row.original;
@@ -553,7 +553,7 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
               <div
                 key={ticket.id}
                 className={cn(
-                  "p-8 matte-card rounded-[2.5rem] border border-border/50 bg-card/40 space-y-6 relative overflow-hidden",
+                  "p-3.5 sm:p-5 matte-card rounded-2xl sm:rounded-[2rem] border border-border/50 bg-card/40 space-y-3 sm:space-y-4 relative overflow-hidden shadow-sm transition-all active:scale-[0.99]",
                   highlightedId === ticket.id && "animate-blink-blue"
                 )}
                 onClick={() => {
@@ -562,33 +562,33 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                   setShowManagement(true);
                 }}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs  bg-card border border-border/10 text-blue-500 px-3 py-1 rounded w-fit">{ticket.ticketNumber}</span>
-                    <h3 className="font-medium text-foreground text-lg leading-tight">{ticket.deviceBrand} {ticket.deviceModel}</h3>
-                    <p className="text-xs text-muted-foreground/80 ">{ticket.customer?.name}</p>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-[10px] sm:text-xs font-mono bg-card border border-border/20 text-blue-400 px-2 py-0.5 rounded w-fit">{ticket.ticketNumber}</span>
+                    <h3 className="font-bold text-foreground text-sm sm:text-lg leading-tight truncate mt-0.5">{ticket.deviceBrand} {ticket.deviceModel}</h3>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{ticket.customer?.name}</p>
                   </div>
-                  <Badge className={`${config.color} border-none text-xs  px-3 py-1`}>
+                  <Badge className={cn("text-[10px] sm:text-xs font-semibold px-2.5 py-1 shrink-0 border-none", config.color)}>
                     {config.label}
                   </Badge>
                 </div>
 
-                <div className="bg-card/60 p-5 rounded-2xl border border-white/[0.03]">
-                  <p className="text-xs  text-slate-600 mb-2">{problemLabel}</p>
-                  <p className="text-xs text-foreground ">"{ticket.problemDesc}"</p>
+                <div className="bg-card/60 p-2.5 sm:p-3.5 rounded-xl border border-white/[0.04]">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">{problemLabel}</p>
+                  <p className="text-xs text-foreground/90 italic line-clamp-2">"{ticket.problemDesc}"</p>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                <div className="flex items-center justify-between pt-2.5 border-t border-border/40 gap-2">
                   <div className="flex flex-col">
-                    <span className="text-xs text-slate-600 ">Tahmini Ücret</span>
-                    <span className="text-xl  text-blue-500">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tahmini Tutar</span>
+                    <span className="text-base sm:text-xl font-black text-blue-400">₺{Number(ticket.estimatedCost).toLocaleString('tr-TR')}</span>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     {ticket.status === "READY" && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                        className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedTicket(ticket);
@@ -596,30 +596,30 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                           setShowManagement(true);
                         }}
                       >
-                        <ShoppingBag className="h-5 w-5" />
+                        <ShoppingBag className="h-4 w-4" />
                       </Button>
                     )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-12 w-12 rounded-2xl bg-card border border-border/10 text-muted-foreground"
+                      className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-card border border-border/20 text-muted-foreground hover:text-foreground shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedTicket(ticket);
                         setShowManagement(true);
                       }}
                     >
-                      <Wrench className="h-5 w-5" />
+                      <Wrench className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                          className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0"
                           title="Barkod etiketi yazdır"
                         >
-                          <BarcodeIcon className="h-5 w-5" />
+                          <BarcodeIcon className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-[210px] bg-card border border-border/50 p-2 rounded-2xl shadow-xl z-50" onClick={(e) => e.stopPropagation()}>
@@ -662,9 +662,9 @@ export function ServiceListTable({ data, allowedStatuses, shop }: ServiceListTab
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-12 w-12 rounded-2xl bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                        className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 shrink-0"
                       >
-                        <UserCircle className="h-5 w-5" />
+                        <UserCircle className="h-4 w-4" />
                       </Button>
                     </Link>
                   </div>

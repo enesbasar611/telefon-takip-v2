@@ -361,9 +361,9 @@ export function CreateServiceModal({
           </DialogTrigger>
         )}
 
-        <DialogContent className="w-full md:max-w-[700px] h-full md:h-auto md:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden md:rounded-[2.5rem] shadow-2xl flex flex-col">
+        <DialogContent className="w-full max-w-[700px] h-[100dvh] sm:h-auto sm:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden rounded-none sm:rounded-3xl shadow-2xl flex flex-col">
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
-            <div className="p-5 md:p-8 bg-card/50 border-b border-border/50">
+            <div className="p-4 sm:p-6 md:p-8 bg-card/50 border-b border-border/50 shrink-0">
               <DialogHeader>
                 <div className="flex items-center justify-between">
                   <DialogTitle className="font-medium text-xl md:text-2xl">{isSimpleMode ? "Hızlı İşlem Kaydı" : getIndustryLabel(shop, "serviceTicket") + " Kaydı"}</DialogTitle>
@@ -386,9 +386,9 @@ export function CreateServiceModal({
               </DialogHeader>
             </div>
 
-            <div className="p-5 md:p-8 space-y-6 overflow-y-auto flex-1 scrollbar-hide">
-              {/* Müşteri Bilgileri - Daima yan yana ve tam hizalı */}
-              <div className="grid grid-cols-2 gap-3 md:gap-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+              {/* Müşteri Bilgileri */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6">
                 <div className="space-y-2 relative">
                   <div className="flex items-center h-5">
                     <Label htmlFor="customerName" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
@@ -569,7 +569,7 @@ export function CreateServiceModal({
 
               {/* Basit Mod: Marka ve Model */}
               {isSimpleMode && (
-                <div className="grid grid-cols-2 gap-3 md:gap-6 animate-in fade-in slide-in-from-top-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6 animate-in fade-in slide-in-from-top-2">
                   <div className="space-y-2">
                     <Label htmlFor="deviceBrandSimple" className="font-medium text-[10px] text-muted-foreground uppercase tracking-widest pl-1">
                       {getIndustryLabel(shop, "brandLabel").toUpperCase()}
@@ -715,7 +715,7 @@ export function CreateServiceModal({
               )}
             </div>
 
-            <div className="p-5 md:p-8 bg-card/50 border-t border-border/50">
+            <div className="p-3 sm:p-6 md:p-8 bg-card/50 border-t border-border/50 shrink-0">
               <DialogFooter className="flex-row gap-3">
                 <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-12 md:h-14 rounded-xl md:rounded-2xl text-muted-foreground uppercase text-[11px] font-bold tracking-widest">Kapat</Button>
                 <Button

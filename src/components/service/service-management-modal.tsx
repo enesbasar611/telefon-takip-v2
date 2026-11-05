@@ -147,6 +147,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEnableLoyaltyConfirm, setShowEnableLoyaltyConfirm] = useState(false);
+    const [mobileTab, setMobileTab] = useState<"operation" | "device" | "logs">("operation");
 
     const { data: settings = [] } = useQuery({
         queryKey: ["settings"],
@@ -498,21 +499,21 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-full md:max-w-[98vw] md:w-[1500px] h-full md:h-[92vh] bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 p-0 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] md:rounded-[2.5rem] overflow-hidden text-slate-900 dark:text-white">
+            <DialogContent className="w-full max-w-[98vw] md:w-[1500px] h-[100dvh] md:h-[92vh] bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 p-0 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-none md:rounded-[2.5rem] overflow-hidden text-slate-900 dark:text-white">
                 {/* Premium Header */}
-                <div className="relative h-20 md:h-28 flex items-center justify-between px-6 md:px-12 bg-gradient-to-b from-slate-50 dark:from-white/[0.03] to-transparent border-b border-slate-200 dark:border-white/[0.05] shrink-0 z-50">
-                    <div className="flex items-center gap-6 md:gap-10">
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">
-                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 tracking-normal">#{ticket.ticketNumber}</span>
+                <div className="relative h-16 md:h-24 flex items-center justify-between px-3.5 md:px-10 bg-gradient-to-b from-slate-50 dark:from-white/[0.03] to-transparent border-b border-slate-200 dark:border-white/[0.05] shrink-0 z-50">
+                    <div className="flex items-center gap-3 md:gap-8 min-w-0">
+                        <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5 md:mb-1">
+                                <div className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 shrink-0">
+                                    <span className="text-[10px] md:text-xs font-bold text-blue-600 dark:text-blue-400 tracking-normal">#{ticket.ticketNumber}</span>
                                 </div>
-                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-normal">
+                                <span className="text-[10px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-normal truncate">
                                     {format(new Date(ticket.createdAt), "dd MMMM yyyy", { locale: tr })}
                                 </span>
                             </div>
-                            <h2 className="font-bold text-xl md:text-3xl text-slate-900 dark:text-white flex items-center gap-3">
-                                {ticket.deviceBrand} <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">{ticket.deviceModel}</span>
+                            <h2 className="font-bold text-base md:text-2xl text-slate-900 dark:text-white flex items-center gap-2 truncate">
+                                {ticket.deviceBrand} <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 truncate">{ticket.deviceModel}</span>
                             </h2>
                         </div>
                     </div>
@@ -558,31 +559,77 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         })}
                     </div>
 
-                    <div className="flex items-center gap-3 md:gap-6">
+                    <div className="flex items-center gap-2 md:gap-4 shrink-0">
                         {!isQuickDeliver && !["READY", "DELIVERED", "CANCELLED"].includes(ticket.status) && (
                             <button
                                 onClick={() => handleStatusUpdate("READY")}
-                                className="h-10 md:h-12 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-6 md:px-8 rounded-xl flex items-center gap-3 shadow-[0_0_20px_rgba(16,185,129,0.3)] transform transition-all active:scale-95 group"
+                                className="h-9 md:h-11 bg-emerald-500 hover:bg-emerald-400 text-white text-[11px] md:text-xs font-black px-3 sm:px-6 rounded-xl flex items-center gap-1.5 md:gap-2 shadow-md shadow-emerald-500/20 transform transition-all active:scale-95 group shrink-0"
                             >
                                 <Check className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                                <span className="hidden md:inline uppercase tracking-normal text-xs">Tamamla</span>
+                                <span className="uppercase tracking-normal">Hazır</span>
                             </button>
                         )}
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="h-10 w-10 md:h-14 md:w-14 rounded-2xl hover:bg-rose-500/10 text-rose-500 dark:text-rose-500/50 hover:text-rose-500 transition-colors"
+                            className="h-9 w-9 md:h-11 md:w-11 rounded-xl hover:bg-rose-500/10 text-rose-500 dark:text-rose-500/50 hover:text-rose-500 transition-colors shrink-0"
                         >
-                            <Trash2 className="h-5 w-5 md:h-6 md:w-6" />
+                            <Trash2 className="h-4 w-4 md:h-5 md:w-5" />
                         </Button>
                     </div>
                 </div>
 
+                {/* Mobile Tab Switcher */}
+                <div className="flex items-center border-b border-slate-200 dark:border-white/[0.08] bg-slate-100/90 dark:bg-black/40 p-1.5 gap-1 shrink-0 md:hidden z-40">
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab("operation")}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-bold transition-all",
+                            mobileTab === "operation"
+                                ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        )}
+                    >
+                        <Wrench className="h-3.5 w-3.5" />
+                        <span>İşlem & Parça</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab("device")}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-bold transition-all",
+                            mobileTab === "device"
+                                ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        )}
+                    >
+                        <Smartphone className="h-3.5 w-3.5" />
+                        <span>Cihaz & Müşteri</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab("logs")}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-bold transition-all",
+                            mobileTab === "logs"
+                                ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        )}
+                    >
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Tarihçe</span>
+                    </button>
+                </div>
+
                 <div className="flex-1 flex flex-col md:grid md:grid-cols-[340px_1fr] overflow-hidden bg-slate-50 dark:bg-[#0D111C]">
                     {/* Left Pane: Identity & Context */}
-                    <div className="border-r border-slate-200 dark:border-white/5 flex flex-col overflow-y-auto no-scrollbar bg-slate-50/50 dark:bg-white/[0.01]">
-                        <div className="p-5 space-y-6">
+                    <div className={cn(
+                        "border-r border-slate-200 dark:border-white/5 flex-col overflow-y-auto no-scrollbar bg-slate-50/50 dark:bg-white/[0.01]",
+                        mobileTab === "device" ? "flex flex-1" : "hidden md:flex"
+                    )}>
+                        <div className="p-4 md:p-5 space-y-4 md:space-y-6 pb-28 md:pb-6">
                             {/* Device Context */}
                             <section className="space-y-1.5">
                                 <div className="flex items-center gap-2 px-1">
@@ -684,8 +731,11 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
 
                     {/* Right Pane: Workshop & Workflow (Merged from Center & Right) */}
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-5 md:p-8 space-y-6 md:space-y-8">
+                    <div className={cn(
+                        "flex-1 flex flex-col overflow-hidden",
+                        mobileTab !== "device" ? "flex" : "hidden md:flex"
+                    )}>
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-3.5 sm:p-5 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 pb-32 md:pb-8">
                             {/* Problem Highlight */}
                             <div className="p-4 bg-amber-500/5 dark:bg-gradient-to-br dark:from-amber-500/[0.08] dark:via-amber-500/[0.02] dark:to-transparent border border-amber-200 dark:border-amber-500/20 rounded-2xl relative overflow-hidden group shadow-xl">
                                 <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700">
@@ -699,9 +749,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     "{ticket.problemDesc}"
                                 </p>
                             </div>
-                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-8">
+                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4 sm:gap-8">
                                 {/* Center Pane: Workshop */}
-                                <div className="space-y-8">
+                                <div className={cn("space-y-4 sm:space-y-8", mobileTab === "logs" ? "hidden md:block" : "block")}>
                                     {/* Parts Search */}
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between px-1">
@@ -829,9 +879,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                 </div>
 
                                 {/* Right Side: Actions & Logs */}
-                                <div className="space-y-10 border-l border-slate-200 dark:border-white/5 pl-0 xl:pl-10">
+                                <div className="space-y-6 sm:space-y-10 border-l-0 xl:border-l border-slate-200 dark:border-white/5 pl-0 xl:pl-10">
                                     {/* Status & Technical Note */}
-                                    <div className="space-y-6">
+                                    <div className={cn("space-y-4 sm:space-y-6", mobileTab === "logs" ? "hidden md:block" : "block")}>
                                         <div className="flex items-center justify-between px-1">
                                             <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30">İŞLEM MERKEZİ</h3>
                                             {selectedStatus && <span className="text-[10px] text-amber-500 animate-bounce font-black uppercase">Onay Bekliyor</span>}
@@ -881,7 +931,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                     </div>
 
                                     {/* Timeline Context */}
-                                    <div className="space-y-6">
+                                    <div className={cn("space-y-4 sm:space-y-6", mobileTab === "operation" ? "hidden md:block" : "block")}>
                                         <div className="flex items-center justify-between px-1">
                                             <h3 className="text-xs font-extrabold uppercase tracking-normal text-slate-500 dark:text-white/30">DİJİTAL SEYİR DEFTERİ</h3>
                                             <span className="text-[10px] font-bold text-slate-500 dark:text-white/30 uppercase bg-slate-200 dark:bg-white/5 px-3 py-1 rounded-full">{ticket.logs?.length || 0} ADIM</span>
@@ -941,99 +991,106 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
 
                         {/* Financial Footer Workstation */}
-                        <div className="h-32 md:h-40 bg-white dark:bg-[#0F172A]/80 border-t border-slate-200 dark:border-white/[0.05] p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-2xl shrink-0">
-                            <div className="flex items-center gap-10">
-                                <div className="space-y-1.5">
-                                    <p className="text-xs font-black text-slate-500 dark:text-white/30 uppercase tracking-normal ml-1">KODLAMA & İŞÇİLİK</p>
-                                    <div className="relative group">
-                                        <PriceInput
-                                            value={laborCost}
-                                            onChange={(v) => {
-                                                setLaborCost(v);
-                                                updateServiceCost(ticket.id, Math.round(Number(ticket.estimatedCost) * 100) / 100, Math.round(v * 100) / 100);
+                        <div className="bg-white/95 dark:bg-[#0F172A]/95 border-t border-slate-200 dark:border-white/[0.08] p-3 sm:p-4 md:p-8 backdrop-blur-2xl shrink-0 z-40">
+                            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-8">
+                                <div className="flex items-center justify-between md:justify-start gap-3 md:gap-10">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] md:text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-normal">İŞÇİLİK</p>
+                                        <div className="relative group">
+                                            <PriceInput
+                                                value={laborCost}
+                                                onChange={(v) => {
+                                                    setLaborCost(v);
+                                                    updateServiceCost(ticket.id, Math.round(Number(ticket.estimatedCost) * 100) / 100, Math.round(v * 100) / 100);
+                                                }}
+                                                className="h-9 md:h-14 w-28 md:w-44 bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl md:rounded-2xl pl-7 md:pl-10 pr-3 md:pr-6 text-sm md:text-lg font-black text-slate-900 dark:text-white focus:ring-blue-500/20"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="h-8 md:h-12 w-px bg-slate-200 dark:bg-white/[0.08]" />
+
+                                    <div className="space-y-0.5 md:space-y-1 flex flex-col items-end md:items-start">
+                                        <p className="text-[10px] md:text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-normal">GENEL TOPLAM</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-xl sm:text-2xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">{formatCurrency(grandTotal, true)}</span>
+                                            {applyLoyaltyDiscount && (
+                                                <span className="text-xs font-bold text-rose-500/60 line-through">{formatCurrency(subtotal, true)}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+                                    {ticket.customer?.loyaltyPoints > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!loyaltySettings.enabled) {
+                                                    setShowEnableLoyaltyConfirm(true);
+                                                    return;
+                                                }
+                                                setApplyLoyaltyDiscount(!applyLoyaltyDiscount);
                                             }}
-                                            className="h-14 w-44 bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-2xl pl-10 pr-6 text-lg font-black text-slate-900 dark:text-white focus:ring-blue-500/20"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="hidden md:block h-12 w-px bg-slate-200 dark:bg-white/[0.03]" />
-
-                                <div className="space-y-1.5 flex flex-col items-center md:items-start">
-                                    <p className="text-xs font-black text-blue-600 dark:text-blue-500/40 uppercase tracking-normal">HAKEDİŞ ÖZETİ</p>
-                                    <div className="flex items-baseline gap-3">
-                                        <span className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter tabular-nums">{formatCurrency(grandTotal, true)}</span>
-                                        {applyLoyaltyDiscount && (
-                                            <span className="text-sm font-bold text-rose-500/60 line-through">{formatCurrency(subtotal, true)}</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-4 w-full md:w-auto">
-                                {ticket.customer?.loyaltyPoints > 0 && (
-                                    <button
-                                        onClick={() => {
-                                            if (!loyaltySettings.enabled) {
-                                                setShowEnableLoyaltyConfirm(true);
-                                                return;
-                                            }
-                                            setApplyLoyaltyDiscount(!applyLoyaltyDiscount);
-                                        }}
-                                        className={cn(
-                                            "h-16 px-8 rounded-3xl border transition-all flex flex-col items-center justify-center gap-1 group",
-                                            applyLoyaltyDiscount
-                                                ? "bg-blue-600 border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.3)] text-white"
-                                                : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 hover:bg-slate-100 dark:hover:bg-white/10"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles className={cn("h-4 w-4", applyLoyaltyDiscount ? "text-white" : "text-blue-500")} />
-                                            <span className="text-xs font-extrabold uppercase tracking-normal">
-                                                Cüzdan: {ticket.customer.loyaltyPoints} Puan
-                                            </span>
-                                        </div>
-                                        {applyLoyaltyDiscount ? (
-                                            <span className="text-[9px] font-bold opacity-60">-{formatCurrency(loyaltyDiscountAmount, true)} İndirim</span>
-                                        ) : (
-                                            <span className="text-[9px] font-bold opacity-40">+{loyaltyDiscountAmount || ticket.customer.loyaltyPoints * loyaltySettings.pointValue} TL Mevcut</span>
-                                        )}
-                                    </button>
-                                )}
-
-                                <div className="flex gap-3 relative flex-1 md:flex-none">
-                                    {(!hasNewModifications && ticket.status === "DELIVERED") && (
-                                        <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/60 shadow-inner backdrop-blur-md z-[60] rounded-[2rem] flex items-center justify-center border border-dashed border-slate-200 dark:border-white/20">
-                                            <div className="flex items-center gap-3">
-                                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                                                <span className="text-xs font-black text-white uppercase tracking-normal">İŞLEM TAHSİL EDİLDİ</span>
+                                            className={cn(
+                                                "h-10 md:h-16 px-3 md:px-8 rounded-xl md:rounded-3xl border transition-all flex flex-col items-center justify-center gap-0.5 md:gap-1 group shrink-0",
+                                                applyLoyaltyDiscount
+                                                    ? "bg-blue-600 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.3)] text-white"
+                                                    : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/50 hover:bg-slate-100 dark:hover:bg-white/10"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-1.5">
+                                                <Sparkles className={cn("h-3.5 w-3.5", applyLoyaltyDiscount ? "text-white" : "text-blue-500")} />
+                                                <span className="text-[10px] md:text-xs font-bold uppercase tracking-normal">
+                                                    {ticket.customer.loyaltyPoints} P
+                                                </span>
                                             </div>
-                                        </div>
+                                            {applyLoyaltyDiscount ? (
+                                                <span className="text-[8px] md:text-[9px] font-bold opacity-75">-{formatCurrency(loyaltyDiscountAmount, true)}</span>
+                                            ) : (
+                                                <span className="text-[8px] md:text-[9px] font-bold opacity-60">İndirim</span>
+                                            )}
+                                        </button>
                                     )}
-                                    <Button
-                                        onClick={() => handleStatusUpdate("DELIVERED", "CASH", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
-                                        disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
-                                        className={cn(
-                                            "h-16 px-10 rounded-3xl transition-all font-black text-xs uppercase tracking-normal gap-4",
-                                            ticket.status === "READY"
-                                                ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                                                : "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed"
+
+                                    <div className="flex gap-2 md:gap-3 relative flex-1 md:flex-none">
+                                        {(!hasNewModifications && ticket.status === "DELIVERED") && (
+                                            <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/60 shadow-inner backdrop-blur-md z-[60] rounded-xl md:rounded-[2rem] flex items-center justify-center border border-dashed border-slate-200 dark:border-white/20">
+                                                <div className="flex items-center gap-2">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                                    <span className="text-[11px] md:text-xs font-black text-white uppercase tracking-normal">TAHSİL EDİLDİ</span>
+                                                </div>
+                                            </div>
                                         )}
-                                    >
-                                        <Check className="h-5 w-5" /> TAHSİL & TESLİM
-                                    </Button>
-                                    <Button
-                                        onClick={() => handleStatusUpdate("DELIVERED", "DEBT", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
-                                        disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
-                                        className={cn(
-                                            "h-16 px-10 rounded-3xl transition-all font-black text-xs uppercase tracking-normal gap-4",
-                                            ticket.status === "READY"
-                                                ? "bg-amber-600 hover:bg-amber-500 text-white shadow-2xl shadow-amber-500/20"
-                                                : "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed"
-                                        )}
-                                    >
-                                        <Wallet className="h-5 w-5" /> VERESİYE
-                                    </Button>
+                                        <Button
+                                            type="button"
+                                            onClick={() => handleStatusUpdate("DELIVERED", "CASH", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
+                                            disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
+                                            className={cn(
+                                                "h-10 md:h-16 flex-1 md:flex-none px-3 sm:px-6 md:px-10 rounded-xl md:rounded-3xl transition-all font-black text-[11px] md:text-xs uppercase tracking-wider gap-2 md:gap-4",
+                                                ticket.status === "READY"
+                                                    ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20"
+                                                    : "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed"
+                                            )}
+                                        >
+                                            <Check className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+                                            <span>TAHSİL & TESLİM</span>
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            onClick={() => handleStatusUpdate("DELIVERED", "DEBT", applyLoyaltyDiscount ? loyaltyDiscountAmount : 0)}
+                                            disabled={ticket.status !== "READY" || (!hasNewModifications && ticket.status === "DELIVERED")}
+                                            className={cn(
+                                                "h-10 md:h-16 flex-1 md:flex-none px-3 sm:px-6 md:px-10 rounded-xl md:rounded-3xl transition-all font-black text-[11px] md:text-xs uppercase tracking-wider gap-2 md:gap-4",
+                                                ticket.status === "READY"
+                                                    ? "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-500/20"
+                                                    : "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-400 dark:text-white/20 cursor-not-allowed"
+                                            )}
+                                        >
+                                            <Wallet className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+                                            <span>VERESİYE</span>
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

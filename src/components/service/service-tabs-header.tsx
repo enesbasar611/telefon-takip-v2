@@ -32,13 +32,13 @@ export function ServiceTabsHeader() {
             description={`Dükkandaki tüm ${serviceLabel.toLowerCase()} süreçlerini, iadeleri ve teslimatları tek bir ekrandan yönetin.`}
             icon={Zap}
             badge={
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2.5 bg-emerald-500/[0.08] px-4 py-2 rounded-2xl border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)] transition-all hover:bg-emerald-500/[0.12] group">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 bg-emerald-500/[0.08] px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-500/20 shadow-sm transition-all hover:bg-emerald-500/[0.12] group">
                         <div className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </div>
-                        <span className="text-[10px] font-black text-emerald-400/90 uppercase tracking-[0.1em]">{activeCount} AKTİF İŞLEM</span>
+                        <span className="text-[10px] font-black text-emerald-400/90 uppercase tracking-[0.1em] whitespace-nowrap">{activeCount} AKTİF İŞLEM</span>
                     </div>
 
                     <TechnicalServiceAnalysisModal />

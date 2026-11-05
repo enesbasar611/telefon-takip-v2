@@ -152,18 +152,18 @@ export function ServiceProfitCards() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 rounded-2xl border border-emerald-500/40 bg-white/[0.02] p-4 shadow-[0_0_30px_-10px_rgba(16,185,129,0.15)] lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 rounded-xl sm:rounded-2xl border border-emerald-500/30 bg-white/[0.02] p-3 sm:p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-sm font-black uppercase tracking-[0.18em] text-foreground">
-            Servis Kazanc Ozeti
+          <h2 className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-foreground">
+            Servis Kazanç Özeti
           </h2>
-          <p className="mt-1 text-xs font-medium text-muted-foreground">
-            Teslim edilen servislerden gelir, parca kullanimi ve net kazanci takip edin.
+          <p className="mt-0.5 text-[11px] sm:text-xs font-medium text-muted-foreground">
+            Teslim edilen servislerden gelir, parça kullanımı ve net kazancı takip edin.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 lg:items-end">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2.5 lg:items-end">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
             {presets.map((item) => (
               <Button
                 key={item.key}
@@ -172,11 +172,11 @@ export function ServiceProfitCards() {
                 size="sm"
                 onClick={() => setPreset(item.key)}
                 className={cn(
-                  "h-9 rounded-xl px-3 text-[11px] font-black uppercase tracking-widest",
-                  preset === item.key && "bg-blue-600 text-white hover:bg-blue-500"
+                  "h-8 sm:h-9 shrink-0 rounded-lg sm:rounded-xl px-2.5 sm:px-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider",
+                  preset === item.key && "bg-blue-600 text-white hover:bg-blue-500 shadow-md shadow-blue-600/20"
                 )}
               >
-                <item.icon className="mr-2 h-3.5 w-3.5" />
+                <item.icon className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 {item.label}
               </Button>
             ))}
@@ -188,46 +188,46 @@ export function ServiceProfitCards() {
                 type="date"
                 value={customStart}
                 onChange={(event) => setCustomStart(event.target.value)}
-                className="h-10 w-full rounded-xl border-border/60 bg-background/60 text-xs sm:w-40"
+                className="h-9 sm:h-10 w-full rounded-lg sm:rounded-xl border-border/60 bg-background/60 text-xs sm:w-40"
               />
               <Input
                 type="date"
                 value={customEnd}
                 onChange={(event) => setCustomEnd(event.target.value)}
-                className="h-10 w-full rounded-xl border-border/60 bg-background/60 text-xs sm:w-40"
+                className="h-9 sm:h-10 w-full rounded-lg sm:rounded-xl border-border/60 bg-background/60 text-xs sm:w-40"
               />
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <Card
             key={stat.title}
             className={cn(
-              "relative overflow-hidden rounded-xl sm:rounded-2xl border bg-card/40 p-3 sm:p-5 shadow-none transition-colors",
+              "relative overflow-hidden rounded-xl sm:rounded-2xl border bg-card/40 p-2.5 sm:p-5 shadow-none transition-colors",
               stat.border
             )}
           >
-            <div className={cn("absolute right-0 top-0 h-16 w-16 sm:h-20 sm:w-20 rounded-full blur-2xl sm:blur-3xl", stat.bg)} />
-            <div className="relative z-10 flex items-start justify-between gap-2 sm:gap-4">
-              <div className="min-w-0">
-                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground truncate">
+            <div className={cn("absolute right-0 top-0 h-14 w-14 sm:h-20 sm:w-20 rounded-full blur-xl sm:blur-3xl", stat.bg)} />
+            <div className="relative z-10 flex items-start justify-between gap-1.5 sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground truncate">
                   {stat.title}
                 </p>
-                <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-2">
-                  <p className="truncate text-base sm:text-2xl font-black tracking-tight text-foreground">
+                <div className="mt-1 sm:mt-3 flex items-center gap-1 sm:gap-2">
+                  <p className="truncate text-sm sm:text-2xl font-black tracking-tight text-foreground">
                     {stat.value}
                   </p>
-                  {isFetching && <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 shrink-0 animate-spin text-muted-foreground" />}
+                  {isFetching && <Loader2 className="h-2.5 w-2.5 sm:h-4 sm:w-4 shrink-0 animate-spin text-muted-foreground" />}
                 </div>
-                <p className="mt-1.5 sm:mt-3 text-[10px] sm:text-xs font-medium text-muted-foreground line-clamp-1">
+                <p className="mt-1 sm:mt-3 text-[9px] sm:text-xs font-medium text-muted-foreground line-clamp-1">
                   {stat.detail}
                 </p>
               </div>
-              <div className={cn("rounded-lg sm:rounded-xl p-2 sm:p-3 shrink-0", stat.bg)}>
-                <stat.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", stat.color)} />
+              <div className={cn("rounded-md sm:rounded-xl p-1.5 sm:p-3 shrink-0", stat.bg)}>
+                <stat.icon className={cn("h-3.5 w-3.5 sm:h-5 sm:w-5", stat.color)} />
               </div>
             </div>
           </Card>

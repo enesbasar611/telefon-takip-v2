@@ -85,8 +85,8 @@ export function ServiceStatusModal({ ticket, isOpen, onClose }: ServiceStatusMod
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-card border-none shadow-none p-0 overflow-hidden">
-        <DialogHeader className="p-6 bg-muted/30 pb-4">
+      <DialogContent className="w-[95vw] sm:max-w-md bg-card border border-border/50 shadow-xl p-0 overflow-hidden rounded-2xl sm:rounded-3xl">
+        <DialogHeader className="p-4 sm:p-6 bg-muted/30 pb-3 sm:pb-4">
           <div className="flex items-center gap-3">
             <div className="bg-orange-500/10 p-2 rounded-xl">
               <Wrench className="h-5 w-5 text-orange-500" />
@@ -100,7 +100,7 @@ export function ServiceStatusModal({ ticket, isOpen, onClose }: ServiceStatusMod
           </div>
         </DialogHeader>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           <div className="space-y-3">
             <Label className="font-medium text-xs  text-muted-foreground ml-1">Yeni Durum Seçin</Label>
             <Select value={status} onValueChange={(val) => setStatus(val as ServiceStatus)}>

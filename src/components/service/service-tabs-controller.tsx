@@ -79,7 +79,7 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
     }
 
     return (
-        <div className="flex flex-col gap-8 w-full mt-6 relative">
+        <div className="flex flex-col gap-4 sm:gap-8 w-full mt-3 sm:mt-6 relative">
             {isTicketsFetching && (
                 <div className="absolute -top-12 right-0 flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full animate-in fade-in zoom-in duration-300">
                     <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
@@ -87,27 +87,27 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                 </div>
             )}
             <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="flex items-center w-full h-14 bg-white/[0.02] border border-border/50 rounded-2xl p-1 gap-1 shadow-2xl overflow-x-auto no-scrollbar">
-                    <TabsTrigger value="active" className="flex-1 rounded-xl h-full  text-[11px] data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-2 transition-all px-3 whitespace-nowrap">
-                        <Activity className="h-3.5 w-3.5" /> Devam Edenler ({activeTickets.length})
+                <TabsList className="flex items-center w-full h-11 sm:h-14 bg-white/[0.02] border border-border/50 rounded-xl sm:rounded-2xl p-1 gap-1 shadow-xl overflow-x-auto no-scrollbar">
+                    <TabsTrigger value="active" className="flex-1 rounded-lg sm:rounded-xl h-full text-[10px] sm:text-[11px] font-semibold data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5 sm:gap-2 transition-all px-2.5 sm:px-3 whitespace-nowrap">
+                        <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" /> Devam Edenler ({activeTickets.length})
                     </TabsTrigger>
-                    <TabsTrigger value="ready" className="flex-1 rounded-xl h-full  text-[11px] data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-2 transition-all px-3 whitespace-nowrap">
-                        <History className="h-3.5 w-3.5" /> Hazır ({readyTickets.length})
+                    <TabsTrigger value="ready" className="flex-1 rounded-lg sm:rounded-xl h-full text-[10px] sm:text-[11px] font-semibold data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5 sm:gap-2 transition-all px-2.5 sm:px-3 whitespace-nowrap">
+                        <History className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" /> Hazır ({readyTickets.length})
                     </TabsTrigger>
-                    <TabsTrigger value="delivered" className="flex-1 rounded-xl h-full  text-[11px] data-[state=active]:bg-green-700 data-[state=active]:text-white data-[state=active]:shadow-lg gap-2 transition-all px-3 whitespace-nowrap">
-                        <ShoppingBag className="h-3.5 w-3.5" /> Teslimatlar ({deliveredTickets.length})
+                    <TabsTrigger value="delivered" className="flex-1 rounded-lg sm:rounded-xl h-full text-[10px] sm:text-[11px] font-semibold data-[state=active]:bg-green-700 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5 sm:gap-2 transition-all px-2.5 sm:px-3 whitespace-nowrap">
+                        <ShoppingBag className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" /> Teslimatlar ({deliveredTickets.length})
                     </TabsTrigger>
-                    <TabsTrigger value="cancelled" className="flex-1 rounded-xl h-full  text-[11px] data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-2 transition-all px-3 whitespace-nowrap">
-                        <AlertCircle className="h-3.5 w-3.5" /> İptaller ({cancelledTickets.length})
+                    <TabsTrigger value="cancelled" className="flex-1 rounded-lg sm:rounded-xl h-full text-[10px] sm:text-[11px] font-semibold data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5 sm:gap-2 transition-all px-2.5 sm:px-3 whitespace-nowrap">
+                        <AlertCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" /> İptaller ({cancelledTickets.length})
                     </TabsTrigger>
-                    <TabsTrigger value="warranty" className="flex-1 rounded-xl h-full  text-[11px] data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-2 transition-all px-3 whitespace-nowrap">
-                        <ShieldCheck className="h-3.5 w-3.5" /> Garanti & İade
+                    <TabsTrigger value="warranty" className="flex-1 rounded-lg sm:rounded-xl h-full text-[10px] sm:text-[11px] font-semibold data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5 sm:gap-2 transition-all px-2.5 sm:px-3 whitespace-nowrap">
+                        <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" /> Garanti & İade
                     </TabsTrigger>
                 </TabsList>
 
                 {/* 1. DEVAM EDENLER */}
-                <TabsContent value="active" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <TabsContent value="active" className="mt-4 sm:mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="matte-card p-0 rounded-2xl sm:rounded-[2.5rem] border border-border/50 overflow-hidden shadow-lg sm:shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={activeTickets}
                             allowedStatuses={SERVICE_STATUS_GROUPS.ACTIVE}
@@ -117,8 +117,8 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                 </TabsContent>
 
                 {/* 2. HAZIR */}
-                <TabsContent value="ready" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <TabsContent value="ready" className="mt-4 sm:mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="matte-card p-0 rounded-2xl sm:rounded-[2.5rem] border border-border/50 overflow-hidden shadow-lg sm:shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={readyTickets}
                             allowedStatuses={["READY"]}
@@ -128,8 +128,8 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                 </TabsContent>
 
                 {/* 3. TESLİMATLAR */}
-                <TabsContent value="delivered" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <TabsContent value="delivered" className="mt-4 sm:mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="matte-card p-0 rounded-2xl sm:rounded-[2.5rem] border border-border/50 overflow-hidden shadow-lg sm:shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={deliveredTickets}
                             allowedStatuses={["DELIVERED"]}
@@ -139,8 +139,8 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                 </TabsContent>
 
                 {/* 4. İPTALLER */}
-                <TabsContent value="cancelled" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="matte-card p-0 rounded-[2.5rem] border border-border/50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <TabsContent value="cancelled" className="mt-4 sm:mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="matte-card p-0 rounded-2xl sm:rounded-[2.5rem] border border-border/50 overflow-hidden shadow-lg sm:shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         <ServiceListTable
                             data={cancelledTickets}
                             allowedStatuses={["CANCELLED"]}
@@ -150,44 +150,44 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                 </TabsContent>
 
                 {/* 3. GARANTİ & İADE SEKMESİ */}
-                <TabsContent value="warranty" className="mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex flex-col gap-10">
+                <TabsContent value="warranty" className="mt-4 sm:mt-8 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex flex-col gap-4 sm:gap-10">
                         {/* Stats Cards */}
-                        <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                            <Card className="rounded-[2rem] border-emerald-500/10 bg-emerald-500/5 shadow-none pb-0">
-                                <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
+                        <div className="grid gap-3 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                            <Card className="rounded-xl sm:rounded-[2rem] border-emerald-500/10 bg-emerald-500/5 shadow-none pb-0">
+                                <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-8 pb-2 sm:pb-4">
                                     <CardTitle className="font-medium text-sm  text-emerald-500">Aktif Garantiler</CardTitle>
                                     <ShieldCheck className="h-6 w-6 text-emerald-500" />
                                 </CardHeader>
-                                <CardContent className="p-8 pt-0">
-                                    <div className="text-5xl font-extrabold text-emerald-500">{warrantyStats.activeWarranties}</div>
+                                <CardContent className="p-4 sm:p-8 pt-0">
+                                    <div className="text-3xl sm:text-5xl font-extrabold text-emerald-500">{warrantyStats.activeWarranties}</div>
                                     <p className="text-xs text-emerald-500/60 font-medium mt-3">Süresi devam eden {assetLabel.toLowerCase()}lar</p>
                                 </CardContent>
                             </Card>
-                            <Card className="rounded-[2rem] border-amber-500/10 bg-amber-500/5 shadow-none pb-0">
-                                <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
+                            <Card className="rounded-xl sm:rounded-[2rem] border-amber-500/10 bg-amber-500/5 shadow-none pb-0">
+                                <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-8 pb-2 sm:pb-4">
                                     <CardTitle className="font-medium text-sm  text-amber-500">Biten Garantiler</CardTitle>
                                     <History className="h-6 w-6 text-amber-500" />
                                 </CardHeader>
-                                <CardContent className="p-8 pt-0">
-                                    <div className="text-5xl font-extrabold text-amber-500">{warrantyStats.expiredWarranties}</div>
+                                <CardContent className="p-4 sm:p-8 pt-0">
+                                    <div className="text-3xl sm:text-5xl font-extrabold text-amber-500">{warrantyStats.expiredWarranties}</div>
                                     <p className="text-xs text-amber-500/60 font-medium mt-3">Süresi dolan eski {serviceLabel.toLowerCase()}lar</p>
                                 </CardContent>
                             </Card>
-                            <Card className="rounded-[2rem] border-purple-500/10 bg-purple-500/5 shadow-none pb-0">
-                                <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
+                            <Card className="rounded-xl sm:rounded-[2rem] border-purple-500/10 bg-purple-500/5 shadow-none pb-0">
+                                <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-8 pb-2 sm:pb-4">
                                     <CardTitle className="font-medium text-sm  text-purple-500">İade Talepleri</CardTitle>
                                     <AlertCircle className="h-6 w-6 text-purple-500" />
                                 </CardHeader>
-                                <CardContent className="p-8 pt-0">
-                                    <div className="text-5xl font-extrabold text-purple-500">{warrantyStats.returnRequests}</div>
+                                <CardContent className="p-4 sm:p-8 pt-0">
+                                    <div className="text-3xl sm:text-5xl font-extrabold text-purple-500">{warrantyStats.returnRequests}</div>
                                     <p className="text-xs text-purple-500/60 font-medium mt-3">Toptancıya iade bekleyen parçalar</p>
                                 </CardContent>
                             </Card>
                         </div>
 
                         {/* Yeni Garanti İşlemi */}
-                        <div className="matte-card p-10 rounded-[2.5rem] border border-border/50">
+                        <div className="matte-card p-4 sm:p-10 rounded-2xl sm:rounded-[2.5rem] border border-border/50">
                             <h2 className="font-medium text-lg mb-6 text-foreground flex items-center gap-3">
                                 <Activity className="h-5 w-5 text-blue-500" />
                                 Yeni İade veya Garanti Süreci Başlat
@@ -196,8 +196,8 @@ export function ServiceTabsController({ tickets: initialTickets, warrantyStats: 
                         </div>
 
                         {/* Son İade Hareketleri */}
-                        <div className="matte-card px-0 py-6 rounded-[2.5rem] border border-border/50 shadow-2xl overflow-hidden">
-                            <div className="px-10 pb-6 border-b border-border/50">
+                        <div className="matte-card px-0 py-4 sm:py-6 rounded-2xl sm:rounded-[2.5rem] border border-border/50 shadow-xl overflow-hidden">
+                            <div className="px-4 sm:px-10 pb-4 sm:pb-6 border-b border-border/50">
                                 <h2 className="font-medium text-xl font-extrabold text-foreground">Son İade Hareketleri</h2>
                                 <p className="text-sm font-medium text-muted-foreground/80 mt-1">Sisteme girilen son garanti/iade kayıtları</p>
                             </div>

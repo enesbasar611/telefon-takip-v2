@@ -76,15 +76,15 @@ export function TechnicalServiceAnalysisModal({ trigger }: { trigger?: React.Rea
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl overflow-hidden border-none bg-transparent p-0 shadow-none outline-none ring-0 focus:ring-0">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full overflow-hidden border-none bg-transparent p-0 shadow-none outline-none ring-0 focus:ring-0">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative max-h-[85vh] w-full overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0B0C10] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]"
+          className="relative max-h-[92vh] sm:max-h-[85vh] w-full overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-white/10 bg-[#0B0C10] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] flex flex-col"
         >
           {/* Header Section */}
-          <div className="relative border-b border-white/[0.06] bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-transparent p-8">
+          <div className="relative border-b border-white/[0.06] bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-transparent p-4 sm:p-8 shrink-0">
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
               <div className="absolute -top-24 -left-24 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px]" />
               <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px]" />
@@ -111,7 +111,7 @@ export function TechnicalServiceAnalysisModal({ trigger }: { trigger?: React.Rea
           </div>
 
           {/* Content Area */}
-          <div className="max-h-[55vh] overflow-y-auto bg-black/20 p-6 md:p-8 custom-scrollbar">
+          <div className="flex-1 max-h-[60vh] sm:max-h-[55vh] overflow-y-auto bg-black/20 p-4 sm:p-6 md:p-8 custom-scrollbar">
             <AnimatePresence mode="wait">
               {loading ? (
                 <motion.div
@@ -176,7 +176,7 @@ export function TechnicalServiceAnalysisModal({ trigger }: { trigger?: React.Rea
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-white/[0.06] bg-slate-950/50 p-6 px-10">
+          <div className="flex items-center justify-between border-t border-white/[0.06] bg-slate-950/50 p-3 sm:p-6 px-4 sm:px-10 shrink-0">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">SİSTEM ÇEVRİMİÇİ</span>
