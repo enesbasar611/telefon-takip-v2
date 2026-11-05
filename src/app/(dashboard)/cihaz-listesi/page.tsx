@@ -34,7 +34,7 @@ export const dynamic = "force-dynamic";
 
 function DeviceHubSkeleton() {
   return (
-    <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto p-0 sm:p-8">
+    <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto px-3.5 py-4 sm:p-8">
       {/* Header Skeleton */}
       <div className="flex flex-col gap-3">
         <Skeleton className="h-10 w-56 rounded-xl" />
@@ -184,14 +184,14 @@ async function DeviceHubData({ month, startDateParam, endDateParam, deviceId }: 
   });
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto p-0 sm:p-8">
+    <div className="flex flex-col gap-4 sm:gap-8 max-w-7xl mx-auto px-3.5 py-4 sm:p-8">
       <PageHeader
         title={`${assetLabel} Merkezi`}
         description="Envanter yönetimi, finansal takip ve alım-satım süreçlerinin merkezi."
         icon={MonitorSmartphone}
         iconColor="text-blue-500"
         actions={
-          <>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <DeviceDateRangeSelector initialMonth={month} />
             <DeviceImportModal />
             <DeviceExportButton
@@ -200,7 +200,7 @@ async function DeviceHubData({ month, startDateParam, endDateParam, deviceId }: 
               selectedMonth={month}
             />
             <CreateDeviceModal categories={categories} />
-          </>
+          </div>
         }
       />
 

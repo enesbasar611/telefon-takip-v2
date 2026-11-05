@@ -189,10 +189,31 @@ export async function getCashflowReport() {
 export async function getDetailedExportData() {
   try {
     const shopId = await getShopId();
-    const [sales, tickets, inventory] = await Promise.all([
+    const paymentLabelMap: Record<string, string> = {
+      CASH: "Nakit Satış",
+      CREDIT_CARD: "Kredi Kartı",
+      TRANSFER: "Havale / EFT",
+      BANK_TRANSFER: "Banka Havalesi",
+      DEBT: "Veresiye",
+      SPLIT: "Parçalı Ödeme"
+    };
+
+    const [shop, sales, tickets, inventory] = await Promise.all([
+      prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { id: true, name: true, phone: true, address: true, email: true }
+      }),
       prisma.sale.findMany({
         where: { shopId },
-        include: { customer: true },
+        include: {
+          customer: true,
+          transaction: true,
+          items: {
+            include: {
+              product: true
+            }
+          }
+        },
         orderBy: { createdAt: 'desc' },
         take: 1000
       }),
@@ -210,12 +231,25 @@ export async function getDetailedExportData() {
     ]);
 
     return serializePrisma({
-      sales: sales.map(s => ({
-        Tarih: format(new Date(s.createdAt), 'dd.MM.yyyy HH:mm'),
-        Müşteri: s.customer?.name || 'Hızlı Satış',
-        Açıklama: s.paymentMethod || '-',
-        Tutar: Number(s.finalAmount)
-      })),
+      shop,
+      sales: sales.map(s => {
+        const rawDesc = s.transaction?.description?.trim();
+        const defaultPayment = paymentLabelMap[s.paymentMethod] || (s.paymentMethod === "CASH" ? "Nakit Satış" : s.paymentMethod);
+        const aciklama = (rawDesc && rawDesc !== "CASH" && rawDesc !== "CREDIT_CARD" && rawDesc !== "TRANSFER" && rawDesc !== "DEBT" && rawDesc !== "-")
+          ? rawDesc
+          : defaultPayment;
+        const urunler = s.items?.map(it => `${it.product?.name || 'Ürün'} (${it.quantity} adet)`).join(", ") || '-';
+
+        return {
+          Fiş_No: s.saleNumber || '-',
+          Tarih: format(new Date(s.createdAt), 'dd.MM.yyyy HH:mm'),
+          Müşteri: s.customer?.name || 'Hızlı Satış',
+          Ürünler: urunler,
+          Ödeme_Türü: defaultPayment,
+          Açıklama: aciklama,
+          Tutar: Number(s.finalAmount)
+        };
+      }),
       tickets: tickets.map(t => ({
         İş_Emri_No: t.ticketNumber,
         Tarih: format(new Date(t.createdAt), 'dd.MM.yyyy'),

@@ -1,7 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { serializePrisma } from "@/lib/utils";
-import { formatTitleCase, formatProperCase, formatUppercase } from "@/lib/formatters";
+import { formatTitleCase, formatProperCase, formatUppercase, formatPhoneRaw } from "@/lib/formatters";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getShopId, getUserId } from "@/lib/auth";
 
@@ -227,10 +227,38 @@ export async function createDeviceEntry(data: any) {
         }
       });
 
+      // 4. Sync seller to Customer table (if name or phone provided)
+      if (sellerName || data.sellerPhone) {
+        const sanitizedPhone = data.sellerPhone ? formatPhoneRaw(data.sellerPhone) : "";
+        let existingCustomer = null;
+        if (sanitizedPhone) {
+          existingCustomer = await tx.customer.findFirst({
+            where: { shopId, phone: sanitizedPhone }
+          });
+        }
+        if (!existingCustomer && sellerName) {
+          existingCustomer = await tx.customer.findFirst({
+            where: { shopId, name: { equals: sellerName.trim(), mode: 'insensitive' } }
+          });
+        }
+        if (!existingCustomer && sellerName) {
+          await tx.customer.create({
+            data: {
+              name: sellerName,
+              phone: sanitizedPhone || null,
+              shopId,
+              notes: data.sellerTC ? `TC: ${data.sellerTC}` : undefined
+            }
+          });
+        }
+      }
+
       return product;
     });
 
     revalidateTag("device-list");
+    revalidateTag(`customers-${shopId}`);
+    revalidatePath("/musteriler");
     revalidatePath("/satis/kasa");
     revalidatePath("/stok");
     revalidatePath("/dashboard");
@@ -458,7 +486,37 @@ export async function updateDeviceEntry(productId: string, data: any) {
       }
     });
 
+    // Sync seller to Customer table (if name or phone provided)
+    if (sellerName || data.sellerPhone) {
+      const sanitizedPhone = data.sellerPhone ? formatPhoneRaw(data.sellerPhone) : "";
+      let existingCustomer = null;
+      if (sanitizedPhone) {
+        existingCustomer = await prisma.customer.findFirst({
+          where: { shopId, phone: sanitizedPhone }
+        });
+      }
+      if (!existingCustomer && sellerName) {
+        existingCustomer = await prisma.customer.findFirst({
+          where: { shopId, name: { equals: sellerName.trim(), mode: 'insensitive' } }
+        });
+      }
+      if (!existingCustomer && sellerName) {
+        await prisma.customer.create({
+          data: {
+            name: sellerName,
+            phone: sanitizedPhone || null,
+            shopId,
+            notes: data.sellerTC ? `TC: ${data.sellerTC}` : undefined
+          }
+        });
+        revalidateTag(`customers-${shopId}`);
+        revalidatePath("/musteriler");
+      }
+    }
+
     revalidateTag("device-list");
+    revalidateTag(`customers-${shopId}`);
+    revalidatePath("/musteriler");
     return { success: true };
   } catch (error) {
     console.error("Update device error:", error);

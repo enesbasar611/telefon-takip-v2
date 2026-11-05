@@ -41,6 +41,50 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-05: Raporlar Sayfası Mobil Uyumluluk, Excel Satış Notu / Açıklama Düzenlemesi ve Profesyonel Vektörel PDF Çıktısı:
+  - **Talep:**
+    - "raporlar-page-client.tsx sayfasında da mobil uyuma göre düzenle gereksiz boşlukları kaldır fiyatlar kutunun içine sığacak şekilde düzenle. buradan çıkartılan excelde açıklama bölümü satış esnasında yazılan açıklama/not kısmına yazılan yazsın eğer boşsa cash yerine nakit satış yazsın. PDF çıktısınıda düzenle şuanda tüm sayfanın ekran görüntüsünü alıyor. bunun yerine amaca uygun bi pdf çıktısı istiyorum chartlar vs satışlar en çok satan ürünler. detaylı bi analiz."
+    - Kullanıcının ilettiği ekran görüntüsünde (`media_1793883697085_0de0dd2f.jpg`), mobilde (iPhone SE) "Bu Ay Net Satış" kartında tutarın (`₺23.537,8...`) kutudan taştığı ve dikey boşlukların gereksiz geniş olduğu görüldü.
+  - **Yapılan İyileştirmeler:**
+    1. **Raporlar Mobil Uyumluluk ve Kart Ferahlığı ([`raporlar-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/reports/raporlar-client.tsx), [`raporlar-page-client.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/app/(dashboard)/raporlar/raporlar-page-client.tsx)):**
+       - Kart içi boşluklar mobilde `p-3.5 sm:p-6` olarak optimize edildi; fazladan 20px genişlik kazanılarak fiyat taşmaları engellendi.
+       - Tutar yazı boyutları responsive yapılarak `text-base sm:text-2xl lg:text-3xl font-black tracking-tight truncate` haline getirildi; 6-7 basamaklı tutarlar dahi mobil ekranda kesilmeden, tam sığacak şekilde gösterildi.
+       - Kartların dikey yüksekliği `min-h-[105px] sm:min-h-[145px]` olarak sıkılaştırıldı; sayfa içi gereksiz dikey boşluklar `space-y-4 sm:space-y-8` seviyesine çekilerek ekrandaki aşırı karanlık boşluklar giderildi.
+       - Skeleton yükleme kartları mobil ekran boyutuna göre senkronize edildi.
+    2. **Excel Dışa Aktarımında Satış Notu ve "Nakit Satış" Çevirisi ([`report-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/report-actions.ts)):**
+       - `getDetailedExportData()` fonksiyonunda satış sorgusuna `transaction` ve `items.product` ilişkileri dahil edildi.
+       - `Açıklama` kolonuna önceden doğrudan dökülen ham `"CASH"` enum değeri yerine, satış esnasında girilen özel açıklama/not (`s.transaction.description`) yazıldı.
+       - Açıklama girilmemişse veya boşsa, `"CASH"` yerine Türkçe `"Nakit Satış"`, `"CREDIT_CARD"` yerine `"Kredi Kartı"`, `"TRANSFER"` yerine `"Havale / EFT"` yazılması sağlandı.
+       - Excel'e `Fiş_No`, `Tarih`, `Müşteri`, `Ürünler`, `Ödeme_Türü`, `Açıklama`, `Tutar` kolonları ve otomatik kolon genişlikleri uygulandı.
+    3. **Amaca Uygun, Profesyonel ve Vektörel PDF Çıktısı ([`export-buttons.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/reports/export-buttons.tsx), [`pdf-utils.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/utils/pdf-utils.ts)):**
+       - Sayfanın tamamının ekran görüntüsünü alan ve kartları ortadan bölen eski `html2canvas` mantığı kaldırıldı.
+       - `jsPDF` ve `jspdf-autotable` tabanlı, A4 kurumsal formatında çok sayfalı rapor oluşturucu geliştirildi.
+       - **1. Sayfa:** Mağaza kurumsal başlığı (Dükkan adı, iletişim, tarih/saat), 4'lü Renkli Yönetici KPI Özet Kartları (Net Satış, Servis, Müşteri, Kritik Stok), Yüksek çözünürlüklü Satış Trendi ve Nakit Akışı grafik görüntüleri, "En Çok Satan Ürünler (Top 6)" tablosu (Ürün adı, kategori, satış adedi, birim fiyat, tahmini gelir) ve "Teknik Servis Durum Dağılımı" tablosu yerleştirildi.
+       - **2+ Sayfalar:** "Detaylı Satış ve Tahsilat Hareketleri" tablosuyla son satışların fiş numarası, müşteri adı, ürün listesi, ödeme yöntemi, satış notu/açıklaması ve tutarları sayfalandırılmış vektörel tabloda listelendi. Altına genel toplam hasılat satırı eklendi.
+       - Tüm sayfalara kurumsal sayfa altlığı (`Sayfa X / Y`, Mağaza adı) eklendi ve `fixTurkish` fonksiyonu ile Türkçe karakterlerin (ı, İ, ş, ğ, vb.) PDF'te bozulmadan standart fontla kusursuz çıkması sağlandı.
+    4. **Tip ve Derleme Kontrolü:**
+       - `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
+- [x] 2026-11-05: Cihaz Listesi Sayfası ve Cihaz Ekleme Modalının Mobil Uyumluluğu & Satıcı Bilgilerini Müşteri Sistemiyle Senkronize Etme:
+  - **Talep:**
+    - "cihaz-listesi/page.tsx sayfasında mobilde cihaz ekleme modalında inputlar iç içe girmiş durumda . bu sayfayı genel olarak mobil uyumlu hale getir. satıcı bilgileri kısmını müşteri sayfamızla senkronize et buraya girilen ad soyad veya telefon numarası önce sistemden taransın eğer yoksa hızlı kayıt yapılsın."
+  - **Yapılan İyileştirmeler:**
+    1. **Cihaz Ekleme / Düzenleme Modalı Mobil Düzeni ([`create-device-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/device-hub/create-device-modal.tsx), [`update-device-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/device-hub/update-device-modal.tsx)):**
+       - Modalın mobil ekranda inputları iç içe geçiren ve sütunları daraltan CSS Grid hatası giderildi: `grid-cols-1 md:grid-cols-2` içerisinde `col-span-2` ve `col-span-3` kullanıldığında mobilde oluşturulan örtük (implicit) sütunlar kaldırıldı; responsive `col-span-1 sm:col-span-2` ve `col-span-1 md:col-span-3` sınıfları uygulandı.
+       - `DialogContent` üzerinde `flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] overflow-hidden` yapısı kurularak mobil tarayıcılarda kaydırma alanı ve yapışkan alt buton (Sticky Footer) sağlandı.
+       - RAM, Dahili Depolama, Renk, Alış / Satış Fiyatı, Ödeme Hesabı ve Kondisyon kartları mobilde tek sütun halinde ferahlatıldı.
+    2. **Satıcı Bilgilerinin Müşteri Sayfasıyla Canlı Senkronizasyonu ([`create-device-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/device-hub/create-device-modal.tsx)):**
+       - "Satıcı (Müşteri) Bilgileri" kartına kayıtlı müşterilerde hızlı canlı arama (debounce autocomplete) özelliği eklendi.
+       - Arama kutusundan müşteri seçildiğinde ad ve telefon alanları otomatik doldurulur, "Kayıtlı Müşteri Eşleşti" rozeti görüntülenir.
+       - Kullanıcı yeni bir isim veya telefon girdiğinde sistem anlık kontrol eder; eşleşme yoksa "Yeni Müşteri Kaydı Açılacak" rozeti ile tek tıkla `[Müşteriyi Şimdi Kaydet]` butonu sunulur.
+    3. **Backend Otomatik Müşteri Oluşturma ([`device-hub-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/device-hub-actions.ts)):**
+       - `createDeviceEntry` ve `updateDeviceEntry` işlemlerinde girilen satıcı adı veya telefon numarası sistemde mevcut değilse `prisma.customer` tablosuna otomatik olarak müşteri kaydı eklenmesi sağlandı.
+       - `customers` ve `customers-paginated` cache anahtarları ile `/musteriler` yolu anında revalidate edilerek sayfalar arası tam senkronizasyon sağlandı.
+    4. **Cihaz Listesi Sayfası Mobil Optimizasyonu ([`page.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/app/(dashboard)/cihaz-listesi/page.tsx)):**
+       - Sayfa kapsayıcısına mobilde ekran kenarlarına yapışmayı önleyen `px-3.5 py-4 sm:p-8` boşlukları verildi; üst menüdeki aksiyon butonlarının mobilde düzgün sarılması (`flex-wrap`) sağlandı.
+    5. **Tip ve Derleme Doğrulaması:**
+       - `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı.
+
 - [x] 2026-11-03: Ana Sayfadaki Kurye Takip Kartından Sipariş Girme ve Kurye Paneliyle Tam Senkronizasyon:
   - **Talep:**
     - "anasayfadaki kurye takip kartından kurye siparişi girebilelim bunu kurye sayfasıyla senkronize yap."

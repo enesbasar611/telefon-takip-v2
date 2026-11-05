@@ -305,7 +305,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
 
                 <div className="space-y-4 pt-2">
                   <h4 className="font-medium text-[10px]  text-muted-foreground/80 uppercase tracking-[0.2em] pl-1">Donanım & Görünüm</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
                       <Label className="font-medium text-[11px]  text-muted-foreground ml-1">Hafıza (GB)</Label>
                       <Input {...register("storage")} placeholder="128GB" className="h-12 bg-card border-border rounded-xl " />
@@ -487,7 +487,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
                   </div>
                   <h4 className="font-medium text-[10px]  text-emerald-400 uppercase tracking-widest pl-1">Satıcı (Müşteri) Bilgileri</h4>
                 </div>
-                <div className="grid grid-cols-2 gap-4 border border-emerald-500/10 p-5 rounded-2xl bg-emerald-500/5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 border border-emerald-500/10 p-4 sm:p-5 rounded-2xl bg-emerald-500/5">
                   <div className="space-y-2">
                     <Label className="font-medium text-[11px]  text-muted-foreground ml-1">Ad Soyad</Label>
                     <Input {...register("sellerName")} className="h-11 bg-card border-border rounded-xl " placeholder="Müşteri Adı" />
@@ -496,7 +496,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
                     <Label className="font-medium text-[11px]  text-muted-foreground ml-1">TC Kimlik No</Label>
                     <Input {...register("sellerTC")} maxLength={11} className="h-11 bg-card border-border rounded-xl " placeholder="11 Haneli" />
                   </div>
-                  <div className="col-span-2 space-y-2">
+                  <div className="col-span-1 sm:col-span-2 space-y-2">
                     <Label className="font-medium text-[11px]  text-muted-foreground ml-1">Telefon</Label>
                     <Input {...register("sellerPhone")} className="h-11 bg-card border-border rounded-xl  font-mono" placeholder="05xx..." />
                   </div>

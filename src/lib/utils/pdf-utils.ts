@@ -4,9 +4,10 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
 // Helper to replace Turkish characters for environments where custom fonts aren't supported
-const fixTurkish = (text: string) => {
-    if (!text) return "";
-    return text
+export const fixTurkish = (text: any) => {
+    if (text === null || text === undefined) return "";
+    const str = String(text);
+    return str
         .replace(/ı/g, 'i').replace(/İ/g, 'I')
         .replace(/ş/g, 's').replace(/Ş/g, 'S')
         .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')

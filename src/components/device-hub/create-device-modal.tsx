@@ -17,10 +17,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2, Search, Info, ShieldCheck, AlertCircle, Wallet, Banknote, Sparkles, ScanLine,
+  Plus, BadgeCheck, RotateCcw, Globe, X, Camera, FileText, Loader2, Upload, CheckCircle2, Search, Info, ShieldCheck, AlertCircle, Wallet, Banknote, Sparkles, ScanLine, UserPlus, UserCheck, Check,
 } from "lucide-react";
 import { createDeviceEntry } from "@/lib/actions/device-hub-actions";
 import { getAccounts, createAccount } from "@/lib/actions/finance-actions";
+import { getCustomersPaginated, createCustomerMuted } from "@/lib/actions/customer-actions";
+import { Badge } from "@/components/ui/badge";
 import { analyzeDeviceImageWithAI } from "@/lib/actions/gemini-actions";
 import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
@@ -200,6 +202,15 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const queryClient = useQueryClient();
 
+  // Customer search & sync state
+  const [customerSearchText, setCustomerSearchText] = useState("");
+  const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [matchedCustomer, setMatchedCustomer] = useState<any>(null);
+  const [isQuickRegisteringCustomer, setIsQuickRegisteringCustomer] = useState(false);
+  const customerSearchContainerRef = useRef<HTMLDivElement>(null);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const aiPhotoInputRef = useRef<HTMLInputElement>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
@@ -237,6 +248,91 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const selectedColor = watch("color");
   const sim1NotUsed = watch("sim1NotUsed");
   const sim2NotUsed = watch("sim2NotUsed");
+  const sellerNameValue = watch("sellerName");
+  const sellerPhoneValue = watch("sellerPhone");
+
+  // Click outside to close customer search dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (customerSearchContainerRef.current && !customerSearchContainerRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Debounced customer search
+  useEffect(() => {
+    if (!customerSearchText || customerSearchText.trim().length < 2) {
+      setCustomerSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingCustomer(true);
+      try {
+        const res = await getCustomersPaginated({ search: customerSearchText.trim(), limit: 5 });
+        setCustomerSearchResults(res?.data || []);
+        setShowCustomerDropdown(true);
+      } catch (err) {
+        console.error("Error searching customers:", err);
+      } finally {
+        setIsSearchingCustomer(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [customerSearchText]);
+
+  // Select customer from dropdown
+  const handleSelectCustomer = (customer: any) => {
+    setMatchedCustomer(customer);
+    setValue("sellerName", customer.name || "", { shouldValidate: true });
+    setValue("sellerPhone", customer.phone || "", { shouldValidate: true });
+    setCustomerSearchText("");
+    setShowCustomerDropdown(false);
+    toast.success(`Kayıtlı müşteri seçildi: ${customer.name}`);
+  };
+
+  const handleClearSelectedCustomer = () => {
+    setMatchedCustomer(null);
+    setValue("sellerName", "");
+    setValue("sellerPhone", "");
+    setValue("sellerTC", "");
+    setCustomerSearchText("");
+  };
+
+  // Quick register customer
+  const handleQuickRegisterCustomer = async () => {
+    const name = watch("sellerName")?.trim();
+    const phone = watch("sellerPhone")?.trim();
+    if (!name && !phone) {
+      toast.error("Lütfen en az bir ad soyad veya telefon numarası giriniz.");
+      return;
+    }
+    setIsQuickRegisteringCustomer(true);
+    try {
+      const res = await createCustomerMuted({
+        name: name || "Müşteri",
+        phone: phone || undefined,
+      });
+      if (res.success && res.customer) {
+        setMatchedCustomer(res.customer);
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: ["customers-paginated"] });
+        if (res.alreadyExisted) {
+          toast.info(`Müşteri sistemde zaten mevcut: ${res.customer.name}`);
+        } else {
+          toast.success(`"${res.customer.name}" müşteriler sayfasına kaydedildi!`);
+        }
+      } else {
+        toast.error(res.error || "Müşteri kaydedilemedi.");
+      }
+    } catch {
+      toast.error("Kayıt sırasında hata oluştu.");
+    } finally {
+      setIsQuickRegisteringCustomer(false);
+    }
+  };
 
   const isNew = condition === "NEW";
   const isIntl = condition === "INTERNATIONAL";
@@ -431,6 +527,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
         queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: ["customers-paginated"] });
 
         toast.success("Cihaz başarıyla envantere eklendi.");
         setOpen(false);
@@ -440,6 +538,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         setSellerIdFront(null);
         setSellerIdBack(null);
         setWarrantyMode("months");
+        setMatchedCustomer(null);
+        setCustomerSearchText("");
+        setCustomerSearchResults([]);
       } else {
         toast.error(result.error ?? "İşlem başarısız.");
       }
@@ -586,20 +687,20 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         onChange={handleAiImageUpload}
       />
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
         <BorderBeam size="sm" colorVariant="colorful" strength={0.8} className="rounded-2xl inline-flex">
         <Button
           type="button"
           onClick={() => aiPhotoInputRef.current?.click()}
           disabled={isAiAnalyzing}
-          className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white gap-2.5 h-12 px-5 sm:px-6 rounded-2xl transition-all shadow-xl shadow-indigo-500/25 text-[13px] font-bold tracking-wide group flex items-center border border-indigo-400/30 active:scale-[0.98]"
+          className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white gap-2.5 h-10 sm:h-12 px-4 sm:px-6 rounded-2xl transition-all shadow-xl shadow-indigo-500/25 text-xs sm:text-[13px] font-bold tracking-wide group flex items-center border border-indigo-400/30 active:scale-[0.98]"
         >
           {isAiAnalyzing ? (
-            <Loader2 className="h-5 w-5 animate-spin text-white" />
+            <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-white" />
           ) : (
             <div className="relative flex items-center justify-center">
-              <Camera className="h-5 w-5 group-hover:scale-110 transition-transform text-white" />
-              <Sparkles className="h-3 w-3 text-amber-300 absolute -top-1.5 -right-2 animate-pulse" />
+              <Camera className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform text-white" />
+              <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-amber-300 absolute -top-1.5 -right-2 animate-pulse" />
             </div>
           )}
           <span className="font-extrabold tracking-normal">
@@ -612,35 +713,35 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           <DialogTrigger asChild>
             <Button
               variant="outline"
-              className="bg-card hover:bg-muted text-foreground gap-1.5 h-12 px-4 sm:px-5 rounded-2xl transition-all border border-border/80 text-[13px] font-semibold flex items-center shadow-sm"
+              className="bg-card hover:bg-muted text-foreground gap-1.5 h-10 sm:h-12 px-3 sm:px-5 rounded-2xl transition-all border border-border/80 text-xs sm:text-[13px] font-semibold flex items-center shadow-sm"
             >
               <Plus className="h-4 w-4 text-blue-500" />
-              <span className="hidden sm:inline">Manuel Ekle</span>
+              <span>Manuel Ekle</span>
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="sm:max-w-[820px] max-w-full w-full h-full sm:h-auto sm:max-h-[95vh] p-0 bg-background text-foreground border border-border shadow-2xl rounded-none sm:rounded-2xl overflow-y-auto">
+          <DialogContent className="sm:max-w-[820px] max-w-full w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] p-0 bg-background text-foreground border-0 sm:border sm:border-border shadow-2xl rounded-none sm:rounded-2xl flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="px-7 pt-6 pb-4 flex justify-between items-start border-b border-border/60">
+            <div className="px-4 sm:px-7 pt-4 sm:pt-6 pb-3 sm:pb-4 flex justify-between items-start border-b border-border/60 shrink-0">
               <div>
-                <DialogTitle className="font-medium text-[21px] text-foreground leading-tight flex items-center gap-2">
+                <DialogTitle className="font-bold text-lg sm:text-[21px] text-foreground leading-tight flex items-center gap-2 flex-wrap">
                   <span>Yeni Cihaz Kaydı</span>
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                     <Sparkles className="h-3 w-3" /> BAŞAR AI Destekli
                   </span>
                 </DialogTitle>
-                <p className="text-[12px] text-muted-foreground/80 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
+                <p className="text-[11px] sm:text-[12px] text-muted-foreground/80 font-medium mt-0.5">Kategori otomatik atanır · Sıfır / 2. El / Yurtdışı</p>
               </div>
             </div>
 
             {/* Quick in-modal AI Scan Banner */}
-            <div className="mx-7 mt-5 p-3.5 rounded-2xl bg-gradient-to-r from-violet-950/40 via-indigo-950/30 to-purple-950/40 border border-indigo-500/30 flex items-center justify-between gap-3 shadow-inner">
+            <div className="mx-4 sm:mx-7 mt-3 sm:mt-5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-violet-950/40 via-indigo-950/30 to-purple-950/40 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner shrink-0">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0">
                   <Camera className="h-5 w-5 text-indigo-300" />
                 </div>
-                <div>
-                  <p className="text-[12px] font-bold text-indigo-100 flex items-center gap-1.5">
+                <div className="min-w-0">
+                  <p className="text-[12px] font-bold text-indigo-100 flex items-center gap-1.5 flex-wrap">
                     Kutu Etiketi veya Cihaz Fotoğrafı Yükle
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-300 font-normal">Hızlı Doldur</span>
                   </p>
@@ -652,20 +753,20 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 size="sm"
                 disabled={isAiAnalyzing}
                 onClick={() => aiPhotoInputRef.current?.click()}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl gap-1.5 shrink-0 px-3.5 h-8 shadow-md shadow-indigo-600/30 transition-all"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl gap-1.5 shrink-0 px-3.5 h-8 shadow-md shadow-indigo-600/30 transition-all w-full sm:w-auto justify-center"
               >
                 {isAiAnalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                 {isAiAnalyzing ? "Okunuyor..." : "Fotoğraf Seç"}
               </Button>
             </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
-          <div className="overflow-y-auto flex-1 px-7 py-5 space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="overflow-y-auto flex-1 px-4 sm:px-7 py-4 sm:py-5 space-y-4 sm:space-y-5 custom-scrollbar">
 
             {/* Condition Selection */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <Label className={labelCls}>Cihaz Kondisyonu</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <ConditionCard type="NEW" icon={BadgeCheck} title="Sıfır" desc="Distribütör garantili" color="emerald" />
                 <ConditionCard type="USED" icon={RotateCcw} title="2. El" desc="Kullanılmış, ekspertizli" color="amber" />
                 <ConditionCard type="INTERNATIONAL" icon={Globe} title="Yurdışı" desc="Kısıtlı ithal cihaz" color="purple" />
@@ -675,7 +776,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             {/* Temel Bilgiler */}
             <div className={sectionCls}>
               <p className={labelCls}>Cihaz Bilgileri</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {/* Brand Dropdown */}
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Marka</Label>
@@ -713,7 +814,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Input {...register("serialNumber")} placeholder="SN / EID / Seri Numarası" className={inputCls} />
                 </div>
 
-                <div className="col-span-2 space-y-1.5">
+                <div className="col-span-1 sm:col-span-2 space-y-1.5">
                   <Label className={labelCls}>Renk Seçimi</Label>
                   <div className="space-y-3">
                     <div className="relative">
@@ -801,14 +902,14 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <>
                   <div className="flex items-center bg-background rounded-xl p-1 border border-border w-fit gap-1">
                     <button type="button" onClick={() => setWarrantyMode("months")}
-                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-muted-foreground/80 hover:text-white"}`}>
+                      className={`px-4 py-1.5 text-xs rounded-lg transition-all ${warrantyMode === "months" ? "bg-slate-700 text-white" : "text-muted-foreground/80 hover:text-white"}`}>
                       Ay Seç
                     </button>
                     <button
                       type="button"
                       disabled={isNew}
                       onClick={() => setWarrantyMode("date")}
-                      className={`px-4 py-1.5 text-xs  rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-muted-foreground/80 hover:text-white"}`}>
+                      className={`px-4 py-1.5 text-xs rounded-lg transition-all ${isNew ? "opacity-30 cursor-not-allowed" : ""} ${warrantyMode === "date" ? "bg-slate-700 text-white" : "text-muted-foreground/80 hover:text-white"}`}>
                       Tarih Gir
                     </button>
                   </div>
@@ -850,7 +951,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
               )}
 
               {isIntl && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between mb-1">
                       <Label className={labelCls}>Sim 1 Bitiş Tarihi</Label>
@@ -860,7 +961,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                           checked={sim1NotUsed}
                           onCheckedChange={(checked) => setValue("sim1NotUsed", checked === true)}
                         />
-                        <Label htmlFor="sim1NotUsed" className="font-medium text-[10px]  text-muted-foreground/80 cursor-pointer">Kullanılmadı</Label>
+                        <Label htmlFor="sim1NotUsed" className="font-medium text-[10px] text-muted-foreground/80 cursor-pointer">Kullanılmadı</Label>
                       </div>
                     </div>
                     <Input {...register("sim1ExpirationDate")} type="date" className={inputCls} disabled={sim1NotUsed} />
@@ -874,7 +975,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                           checked={sim2NotUsed}
                           onCheckedChange={(checked) => setValue("sim2NotUsed", checked === true)}
                         />
-                        <Label htmlFor="sim2NotUsed" className="font-medium text-[10px]  text-muted-foreground/80 cursor-pointer">Kullanılmadı</Label>
+                        <Label htmlFor="sim2NotUsed" className="font-medium text-[10px] text-muted-foreground/80 cursor-pointer">Kullanılmadı</Label>
                       </div>
                     </div>
                     <Input
@@ -884,7 +985,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       disabled={sim2NotUsed}
                     />
                   </div>
-                  <div className="col-span-2 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 text-[11px] text-purple-300 font-medium ">
+                  <div className="col-span-1 sm:col-span-2 p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 text-[11px] text-purple-300 font-medium ">
                     💡 Yurtdışı cihazlarda her SIM için yıllık 120 gün kullanım hakkı verilir. BTK'dan kalan süreleri öğrenip manuel tarih olarak giriniz.
                   </div>
                 </div>
@@ -894,12 +995,12 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             {/* Ekspertiz */}
             <div className={`${sectionCls} transition-opacity ${isNew ? "opacity-40 pointer-events-none" : ""}`}>
               <p className={labelCls}>Ekspertiz &amp; Kondisyon</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Pil Sağlığı</Label>
                   <div className="relative">
                     <Input {...register("batteryHealth")} type="number" min={1} max={100} placeholder="100" className={inputCls} />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px]  text-muted-foreground/80">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground/80">%</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -918,22 +1019,120 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="col-span-1 sm:col-span-2 space-y-1.5">
                   <Label className={labelCls}>Değiştirilen / Onarılan Parçalar</Label>
                   <Textarea {...register("replacedParts")} placeholder="Örn: Ön cam, batarya değişimi" className="bg-background border-border rounded-xl min-h-[70px] text-[13px] font-medium placeholder:text-slate-600 resize-none p-3" />
                 </div>
               </div>
             </div>
 
-            {/* Seller Info (Müşteri Bilgileri) - NEW Section */}
+            {/* Seller Info (Müşteri Bilgileri) - With Live Search & Auto-Sync */}
             <div className={`${sectionCls} border-emerald-500/20 bg-emerald-500/5`}>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="h-5 w-5 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                  <Plus className="h-3 w-3 text-emerald-400" />
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                    <UserPlus className="h-3.5 w-3.5 text-emerald-400" />
+                  </div>
+                  <p className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
                 </div>
-                <p className="text-[10px]  text-emerald-400 uppercase tracking-widest italic">Satıcı (Müşteri) Bilgileri - Opsiyonel</p>
+                {matchedCustomer ? (
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold gap-1">
+                    <UserCheck className="w-3 h-3 text-emerald-400" />
+                    Kayıtlı Müşteri Eşleşti
+                  </Badge>
+                ) : (sellerNameValue || sellerPhoneValue) ? (
+                  <Badge className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[9px] font-bold gap-1">
+                    <Sparkles className="w-3 h-3 text-blue-400" />
+                    Yeni Müşteri Kaydı Açılacak
+                  </Badge>
+                ) : null}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+              {/* Registered Customer Quick Search / Autocomplete */}
+              <div className="relative" ref={customerSearchContainerRef}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+                  <Input
+                    value={customerSearchText}
+                    onChange={(e) => {
+                      setCustomerSearchText(e.target.value);
+                      setShowCustomerDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (customerSearchResults.length > 0) setShowCustomerDropdown(true);
+                    }}
+                    placeholder="Sistemdeki kayıtlı müşterilerde ara (Ad Soyad veya Telefon)..."
+                    className={`${inputCls} pl-9 h-10 text-xs bg-background/80`}
+                  />
+                  {isSearchingCustomer && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                    </div>
+                  )}
+                  {customerSearchText && !isSearchingCustomer && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerSearchText("");
+                        setShowCustomerDropdown(false);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown Results */}
+                {showCustomerDropdown && customerSearchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-card border border-border shadow-2xl rounded-xl p-1.5 max-h-48 overflow-y-auto space-y-1 backdrop-blur-xl">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1">Eşleşen Müşteriler</p>
+                    {customerSearchResults.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleSelectCustomer(c)}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-500/10 transition-colors flex items-center justify-between group"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-foreground group-hover:text-emerald-400 truncate">{c.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{c.phone || "Telefon Kayıtlı Değil"}</p>
+                        </div>
+                        <Badge variant="outline" className="text-[9px] border-emerald-500/30 text-emerald-400 shrink-0 ml-2">
+                          Seç & Doldur
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Active Selected Customer Bar */}
+              {matchedCustomer && (
+                <div className="flex items-center justify-between p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-emerald-400 truncate">{matchedCustomer.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{matchedCustomer.phone || "Telefon Yok"}</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearSelectedCustomer}
+                    className="h-7 px-2 text-[10px] text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 gap-1"
+                  >
+                    <X className="w-3 h-3" /> Değiştir
+                  </Button>
+                </div>
+              )}
+
+              {/* Direct Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label className={labelCls}>Ad Soyad</Label>
                   <Input {...register("sellerName")} placeholder="Örn: Enes Başar" className={inputCls} />
@@ -946,28 +1145,52 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Label className={labelCls}>Telefon</Label>
                   <Input {...register("sellerPhone")} placeholder="05xx..." className={inputCls} />
                 </div>
-                <div className="col-span-3 space-y-3">
+
+                {/* Unregistered Customer Info & Quick Action */}
+                {!matchedCustomer && (sellerNameValue || sellerPhoneValue) && (
+                  <div className="col-span-1 sm:col-span-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
+                      <p className="text-[11px] text-blue-200">
+                        Bu satıcı sistemde yeni. Cihaz kaydedildiğinde <strong>müşteri listesine otomatik eklenecektir</strong>.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isQuickRegisteringCustomer}
+                      onClick={handleQuickRegisterCustomer}
+                      className="h-7 px-3 text-[10px] font-bold rounded-lg border-blue-500/30 text-blue-300 hover:bg-blue-500/20 shrink-0 self-start sm:self-auto gap-1"
+                    >
+                      {isQuickRegisteringCustomer ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserPlus className="w-3 h-3" />}
+                      Müşteriyi Şimdi Kaydet
+                    </Button>
+                  </div>
+                )}
+
+                <div className="col-span-1 sm:col-span-3 space-y-2">
                   <Label className={labelCls}>Kimlik Fotoğrafları (Ön & Arka)</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     <input ref={sellerIdFrontInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSellerIdFrontChange} />
                     <input ref={sellerIdBackInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleSellerIdBackChange} />
 
                     <button
                       type="button"
                       onClick={() => sellerIdFrontInputRef.current?.click()}
-                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdFront ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-background border-border text-muted-foreground/80 hover:text-foreground"}`}
+                      className={`h-12 sm:h-14 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-all px-3 ${sellerIdFront ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-background border-border text-muted-foreground/80 hover:text-foreground"}`}
                     >
-                      {sellerIdFront ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                      <span className="text-[9px]  uppercase tracking-tight">{sellerIdFront ? "ÖN YÜZ TAMAM ✅" : "ÖN YÜZ ÇEK"}</span>
+                      {sellerIdFront ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Camera className="h-4 w-4 shrink-0" />}
+                      <span className="text-[10px] font-bold uppercase tracking-tight">{sellerIdFront ? "Ön Yüz Yüklendi ✓" : "Ön Yüz Çek"}</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => sellerIdBackInputRef.current?.click()}
-                      className={`h-14 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 transition-all ${sellerIdBack ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-background border-border text-muted-foreground/80 hover:text-foreground"}`}
+                      className={`h-12 sm:h-14 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-all px-3 ${sellerIdBack ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-background border-border text-muted-foreground/80 hover:text-foreground"}`}
                     >
-                      {sellerIdBack ? <CheckCircle2 className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-                      <span className="text-[9px]  uppercase tracking-tight">{sellerIdBack ? "ARKA YÜZ TAMAM ✅" : "ARKA YÜZ ÇEK"}</span>
+                      {sellerIdBack ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Camera className="h-4 w-4 shrink-0" />}
+                      <span className="text-[10px] font-bold uppercase tracking-tight">{sellerIdBack ? "Arka Yüz Yüklendi ✓" : "Arka Yüz Çek"}</span>
                     </button>
                   </div>
                 </div>
@@ -975,9 +1198,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             </div>
 
             {/* Fiyat & Ödeme Hesabı */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
-              <div className="col-span-2 space-y-2 pb-2">
-                <div className="flex items-center justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl bg-blue-900/10 border border-blue-500/20">
+              <div className="col-span-1 sm:col-span-2 space-y-2 pb-2">
+                <div className="flex items-center justify-between flex-wrap gap-1">
                   <Label className="font-medium text-[9px] text-blue-400 uppercase tracking-widest pl-0.5">Ödeme Hesabı (Alış Fiyatı Bu Hesaptan Düşülecek)</Label>
                   <button
                     type="button"
@@ -1008,7 +1231,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                       </div>
                       <p className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Hızlı Hesap Oluştur</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="space-y-1">
                         <Label className="text-[8px] text-muted-foreground/80 uppercase tracking-widest">Hesap Adı</Label>
                         <Input
@@ -1068,12 +1291,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                           if (result.success && result.account) {
                             const newId = result.account.id;
                             toast.success(`"${quickAccountName}" hesabı oluşturuldu!`);
-
-                            // Set this as pending, the useEffect will pick it up after refetch
                             setPendingAccountId(newId);
-
                             await refetchAccounts();
-
                             setQuickAccountName("Merkez Kasa");
                             setQuickAccountBalance("");
                           } else {
@@ -1136,54 +1355,54 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="font-medium text-[9px]  text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
+                <Label className="font-medium text-[9px] text-blue-400 uppercase tracking-widest pl-0.5">Alış Fiyatı *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]  text-blue-500">₺</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-blue-500 font-bold">₺</span>
                   <Input
                     {...register("buyPrice")}
                     id="buyPriceInput"
                     placeholder="0"
-                    className="bg-background border-border rounded-xl h-11 text-[15px] pl-8 text-foreground"
+                    className="bg-background border-border rounded-xl h-11 text-[15px] pl-8 text-foreground w-full"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("buyPrice", formatted, { shouldValidate: true });
                     }}
                   />
                 </div>
-                {errors.buyPrice && <p className="text-[10px] text-rose-500  mt-1">{errors.buyPrice.message}</p>}
+                {errors.buyPrice && <p className="text-[10px] text-rose-500 mt-1">{errors.buyPrice.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="font-medium text-[9px]  text-emerald-400 uppercase tracking-widest pl-0.5">Satış Fiyatı * (≥ Alış)</Label>
+                <Label className="font-medium text-[9px] text-emerald-400 uppercase tracking-widest pl-0.5">Satış Fiyatı * (≥ Alış)</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px]  text-emerald-500">₺</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-emerald-500 font-bold">₺</span>
                   <Input
                     {...register("sellPrice")}
                     placeholder="0"
-                    className="bg-background border-border rounded-xl h-11 text-[15px]  pl-8 text-emerald-400"
+                    className="bg-background border-border rounded-xl h-11 text-[15px] pl-8 text-emerald-400 w-full"
                     onChange={(e) => {
                       const formatted = formatCurrencyInput(e.target.value);
                       setValue("sellPrice", formatted, { shouldValidate: true });
                     }}
                   />
                 </div>
-                {errors.sellPrice && <p className="text-[10px] text-rose-500  mt-1">{errors.sellPrice.message}</p>}
+                {errors.sellPrice && <p className="text-[10px] text-rose-500 mt-1">{errors.sellPrice.message}</p>}
               </div>
             </div>
 
             {/* Dosya Yükleme */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label className={labelCls}>Cihaz Fotoğrafları (maks 5)</Label>
                 <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoChange} />
                 <button type="button" onClick={() => photoInputRef.current?.click()}
-                  className="w-full h-24 border-2 border-dashed border-border/80 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-card/50 transition-colors">
+                  className="w-full h-20 sm:h-24 border-2 border-dashed border-border/80 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-1.5 bg-card/50 transition-colors">
                   <Camera className="h-5 w-5 text-muted-foreground/80" />
-                  <span className="text-[11px]  text-muted-foreground/80">Fotoğraf Seç</span>
+                  <span className="text-[11px] text-muted-foreground/80 font-medium">Fotoğraf Seç</span>
                 </button>
                 {photoFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {photoFiles.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-[10px]  text-foreground">
+                      <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-[10px] text-foreground">
                         <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                         {f.name.slice(0, 12)}...
                         <button type="button" onClick={() => removePhoto(i)} className="ml-1 text-muted-foreground/80 hover:text-rose-400"><X className="h-3 w-3" /></button>
@@ -1196,14 +1415,14 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                 <Label className={labelCls}>Fatura / PDF Belgesi</Label>
                 <input ref={invoiceInputRef} type="file" accept="application/pdf,image/*" className="hidden" onChange={handleInvoiceChange} />
                 <button type="button" onClick={() => invoiceInputRef.current?.click()}
-                  className="w-full h-24 border-2 border-dashed border-border/80 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 bg-card/50 transition-colors">
+                  className="w-full h-20 sm:h-24 border-2 border-dashed border-border/80 hover:border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-1.5 bg-card/50 transition-colors">
                   <FileText className="h-5 w-5 text-muted-foreground/80" />
-                  <span className="text-[11px]  text-muted-foreground/80">Fatura Seç</span>
+                  <span className="text-[11px] text-muted-foreground/80 font-medium">Fatura Seç</span>
                 </button>
                 {invoiceFile && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted text-[11px]  text-foreground">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted text-[11px] text-foreground">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                    {invoiceFile.name.slice(0, 20)}
+                    <span className="truncate">{invoiceFile.name.slice(0, 20)}</span>
                     <button type="button" onClick={() => setInvoiceFile(null)} className="ml-auto text-muted-foreground/80 hover:text-rose-400"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 )}
@@ -1212,15 +1431,15 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           </div>
 
           {/* Footer */}
-          <div className="px-7 py-5 border-t border-border bg-background/80 backdrop-blur-sm flex sm:flex-row flex-col gap-4 justify-between items-center sm:sticky bottom-0 z-50">
-            <p className="text-[11px] text-slate-600 font-medium sm:text-left text-center">
+          <div className="px-4 sm:px-7 py-3 sm:py-4 border-t border-border bg-card/90 sm:bg-background/80 backdrop-blur-md flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center shrink-0">
+            <p className="text-[11px] text-muted-foreground/80 font-medium sm:text-left text-center">
               Otomatik kategori:{" "}
-              <span className="text-muted-foreground ">
+              <span className="text-foreground font-semibold">
                 Telefonlar &gt; {condition === "NEW" ? "Sıfır" : condition === "USED" ? "2. El" : "Yurtdışı"}
               </span>
             </p>
             <Button type="submit" disabled={isMutationPending || isUploading}
-              className="bg-blue-600 hover:bg-blue-500 text-white  text-[13px] h-12 w-full sm:w-auto sm:h-11 px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
+              className="bg-blue-600 hover:bg-blue-500 text-white text-[13px] font-bold h-11 w-full sm:w-auto px-8 rounded-xl shadow-lg shadow-blue-500/20 transition-all gap-2">
               {(isMutationPending || isUploading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Kaydı Tamamla
             </Button>

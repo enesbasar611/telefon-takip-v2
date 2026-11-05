@@ -31,23 +31,23 @@ const statusLabels: Record<string, string> = {
 
 function RaporlarSkeleton() {
   return (
-    <div className="flex flex-col gap-6 animate-pulse">
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-10 w-40 rounded-xl" />
-        <Skeleton className="h-4 w-60 rounded-lg" />
+    <div className="flex flex-col gap-4 sm:gap-6 animate-pulse">
+      <div className="flex flex-col gap-2 sm:gap-3">
+        <Skeleton className="h-8 sm:h-10 w-40 rounded-xl" />
+        <Skeleton className="h-3.5 sm:h-4 w-60 rounded-lg" />
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[150px] rounded-[2rem]" />
+          <Skeleton key={i} className="h-[105px] sm:h-[150px] rounded-2xl sm:rounded-[2rem]" />
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Skeleton className="lg:col-span-2 h-[410px] rounded-[2rem]" />
-        <Skeleton className="h-[410px] rounded-[2rem]" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-6">
+        <Skeleton className="lg:col-span-2 h-[280px] sm:h-[410px] rounded-2xl sm:rounded-[2rem]" />
+        <Skeleton className="h-[280px] sm:h-[410px] rounded-2xl sm:rounded-[2rem]" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Skeleton className="lg:col-span-2 h-[410px] rounded-[2rem]" />
-        <Skeleton className="h-[410px] rounded-[2rem]" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-6">
+        <Skeleton className="lg:col-span-2 h-[280px] sm:h-[410px] rounded-2xl sm:rounded-[2rem]" />
+        <Skeleton className="h-[280px] sm:h-[410px] rounded-2xl sm:rounded-[2rem]" />
       </div>
     </div>
   );
