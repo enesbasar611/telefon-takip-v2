@@ -42,6 +42,7 @@ interface VeresiyePaymentModalProps {
     isPending: boolean;
     onConfirm: () => void;
     rates: any;
+    ignoreBalance?: boolean;
     setIgnoreBalance: (val: boolean) => void;
 }
 
@@ -62,6 +63,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
     isPending,
     onConfirm,
     rates,
+    ignoreBalance = false,
     setIgnoreBalance
 }) => {
     if (!paymentCustomer) return null;
@@ -83,6 +85,40 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
     const totalExpected = paymentCurrency === 'TRY'
         ? remTRY + (remUSD * usdRate)
         : remUSD + (remTRY / usdRate);
+
+    const numAmount = Number(paymentAmount) || 0;
+
+    // Canlı borç düşüm simülasyonu
+    let simulatedDeductTRY = 0;
+    let simulatedDeductUSD = 0;
+
+    if (numAmount > 0) {
+        let remPayment = numAmount;
+        if (paymentCurrency === 'TRY') {
+            if (remTRY > 0) {
+                simulatedDeductTRY = Math.min(remPayment, remTRY);
+                remPayment -= simulatedDeductTRY;
+            }
+            if (remPayment > 0 && remUSD > 0) {
+                const usdDebtInTRY = remUSD * usdRate;
+                const appliedTRY = Math.min(remPayment, usdDebtInTRY);
+                simulatedDeductUSD = Math.min(remUSD, appliedTRY / usdRate);
+            }
+        } else {
+            if (remUSD > 0) {
+                simulatedDeductUSD = Math.min(remPayment, remUSD);
+                remPayment -= simulatedDeductUSD;
+            }
+            if (remPayment > 0 && remTRY > 0) {
+                const tryDebtInUSD = remTRY / usdRate;
+                const appliedUSD = Math.min(remPayment, tryDebtInUSD);
+                simulatedDeductTRY = Math.min(remTRY, appliedUSD * usdRate);
+            }
+        }
+    }
+
+    const simRemainingTRY = Math.max(0, remTRY - simulatedDeductTRY);
+    const simRemainingUSD = Math.max(0, remUSD - simulatedDeductUSD);
 
     return (
         <AlertDialog open={!!paymentCustomer} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -156,7 +192,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                                     type="button"
                                     variant="secondary"
                                     onClick={() => {
-                                        onAmountChange(paymentCurrency === 'TRY' ? String(Math.ceil(totalExpected)) : totalExpected.toFixed(2));
+                                        onAmountChange(totalExpected.toFixed(2));
                                         setIgnoreBalance(true);
                                     }}
                                     className="h-8 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 text-[10px] font-black transition-all uppercase tracking-wider shadow-2xs"
@@ -165,12 +201,91 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                                 </Button>
                             </div>
                         </div>
-                        {Number(paymentAmount) > totalExpected && (
-                            <div className="mt-2 flex items-start gap-2 bg-amber-500/10 text-amber-600 dark:text-amber-500 p-2.5 rounded-xl border border-amber-500/20 text-xs">
-                                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                                <div className="text-[11px] font-medium">
-                                    <strong className="font-bold block uppercase tracking-wider text-[10px]">Emanet Bakiye Oluşacak</strong>
-                                    Fark ({paymentCurrency === 'TRY' ? '₺' : '$'}{(Number(paymentAmount) - totalExpected).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) emanet bakiyeye eklenecektir.
+                        {ignoreBalance ? (
+                            <div className="mt-2 flex items-center justify-between bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-2.5 rounded-xl border border-emerald-500/20 text-xs animate-in fade-in">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                                    <span className="text-[11px] font-bold truncate">
+                                        Borcu Kapat Aktif: Tüm açık borçlar kapatılacak, emanete kuruş aktarılmayacaktır.
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIgnoreBalance(false)}
+                                    className="text-[10px] underline font-semibold text-muted-foreground hover:text-foreground shrink-0 ml-2"
+                                >
+                                    İptal
+                                </button>
+                            </div>
+                        ) : (
+                            Number(paymentAmount) > totalExpected + 0.05 && (
+                                <div className="mt-2 flex items-start gap-2 bg-amber-500/10 text-amber-600 dark:text-amber-500 p-2.5 rounded-xl border border-amber-500/20 text-xs animate-in fade-in">
+                                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                    <div className="text-[11px] font-medium flex-1">
+                                        <strong className="font-bold block uppercase tracking-wider text-[10px]">Emanet Bakiye Oluşacak</strong>
+                                        Fark ({paymentCurrency === 'TRY' ? '₺' : '$'}{(Number(paymentAmount) - totalExpected).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) emanet bakiyeye eklenecektir.
+                                        <button
+                                            type="button"
+                                            onClick={() => setIgnoreBalance(true)}
+                                            className="mt-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline block"
+                                        >
+                                            Fazla tutarı emanete ekleme (Borcu tam kapat)
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        )}
+                        {/* Canlı Borç Düşüm Önizleme Kartı */}
+                        {numAmount > 0 && (
+                            <div className="mt-2.5 p-3 rounded-xl bg-muted/30 border border-border/60 space-y-2 text-xs animate-in fade-in">
+                                <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                                    <span>Tahsilat Dağılımı ve Borç Düşümü</span>
+                                    <span className="text-foreground">Kur: 1$ = {usdRate.toFixed(2)}₺</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                                    {/* Düşülecek Tutarlar */}
+                                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex flex-col gap-1">
+                                        <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                                            Borçtan Düşecek
+                                        </span>
+                                        <div className="flex flex-col gap-0.5 text-xs font-black text-emerald-600 dark:text-emerald-400">
+                                            {simulatedDeductTRY > 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>TL:</span>
+                                                    <span>-₺{simulatedDeductTRY.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
+                                            {simulatedDeductUSD > 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>USD:</span>
+                                                    <span>-${simulatedDeductUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
+                                            {simulatedDeductTRY === 0 && simulatedDeductUSD === 0 && (
+                                                <span className="text-muted-foreground font-normal">Borç bulunmuyor</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Kalan Güncel Borç */}
+                                    <div className="p-2.5 rounded-lg bg-card border border-border/60 flex flex-col gap-1">
+                                        <span className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">
+                                            Kalan Borç
+                                        </span>
+                                        <div className="flex flex-col gap-0.5 text-xs font-black text-foreground">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground font-medium">TL:</span>
+                                                <span>₺{simRemainingTRY.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                            {remUSD > 0 && (
+                                                <div className="flex items-center justify-between text-blue-500">
+                                                    <span className="text-muted-foreground font-medium">USD:</span>
+                                                    <span>${simRemainingUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}

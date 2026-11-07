@@ -1127,6 +1127,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                 isPending={isPaymentPending}
                 onConfirm={handleCollectPayment}
                 rates={rates}
+                ignoreBalance={ignoreBalance}
                 setIgnoreBalance={setIgnoreBalance}
             />
 

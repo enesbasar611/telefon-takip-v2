@@ -715,7 +715,23 @@ export function VeresiyeClient({
                 if (diffUSD > 0) impactMsg += ` Borç: +$${diffUSD.toLocaleString('tr-TR')}`;
 
                 toast.success(impactMsg);
+
+                // Update active historyCustomer state if open
+                if (historyCustomer && res.after) {
+                    const afterData = res.after;
+                    setHistoryCustomer((prev: any) => ({
+                        ...prev,
+                        totalRemainingTRY: afterData.totalRemainingTRY,
+                        totalRemainingUSD: afterData.totalRemainingUSD,
+                        balance: afterData.balance,
+                        balanceUsd: afterData.balanceUsd,
+                    }));
+                }
+
                 invalidateReceivables();
+                await queryClient.refetchQueries({ queryKey: ["customer-statement"] });
+                await queryClient.refetchQueries({ queryKey: ["debts"] });
+                await queryClient.refetchQueries({ queryKey: ["dashboard-receivables"] });
                 router.refresh();
             } else {
                 toast.error(res.error || "İşlem geri alınamadı.");
@@ -979,6 +995,54 @@ export function VeresiyeClient({
         });
         return { try: tryDebt, usd: usdDebt };
     }, [debts, historyCustomer, statementData]);
+
+    const selectedTotals = useMemo(() => {
+        if (!historyCustomer) return { try: 0, usd: 0, count: 0, hasSelection: false };
+        const hasSelection = selectedDebtIds.length > 0 || selectedSaleItemIds.length > 0;
+        if (!hasSelection) {
+            return { try: 0, usd: 0, count: 0, hasSelection: false };
+        }
+
+        const candidateDebts = [
+            ...(statementData?.debts || []),
+            ...((historyCustomer as any)?.debtItems || [])
+        ];
+        const debtMap = new Map<string, any>();
+        candidateDebts.forEach((d: any) => {
+            if (d?.id && !debtMap.has(d.id)) {
+                debtMap.set(d.id, d);
+            }
+        });
+
+        let sumTRY = 0;
+        let sumUSD = 0;
+        let count = 0;
+
+        debtMap.forEach((d: any) => {
+            if (selectedDebtIds.includes(d.id)) {
+                count++;
+                const remaining = getSafeDebtRemaining(d);
+                if (d.currency === 'USD') sumUSD += remaining;
+                else sumTRY += remaining;
+            } else if (d.sale?.items) {
+                d.sale.items.forEach((si: any) => {
+                    if (selectedSaleItemIds.includes(si.id)) {
+                        count++;
+                        const itemTotal = Number(si.unitPrice || 0) * Number(si.quantity || 1);
+                        if (d.currency === 'USD') sumUSD += itemTotal;
+                        else sumTRY += itemTotal;
+                    }
+                });
+            }
+        });
+
+        return {
+            try: sumTRY,
+            usd: sumUSD,
+            count,
+            hasSelection: true,
+        };
+    }, [historyCustomer, statementData, selectedDebtIds, selectedSaleItemIds]);
 
     // --- Actions ---
     const handleCurrencySwitch = (newCurrency: "TRY" | "USD") => {
@@ -1894,6 +1958,7 @@ export function VeresiyeClient({
                 isPending={isPending}
                 onConfirm={handleCollectPayment}
                 rates={rates}
+                ignoreBalance={ignoreBalance}
                 setIgnoreBalance={setIgnoreBalance}
             />
 
@@ -2647,34 +2712,15 @@ export function VeresiyeClient({
                             {(selectedDebtIds.length > 0 || selectedSaleItemIds.length > 0) && (
                                 <Button
                                     onClick={() => {
-                                        let sumTRY = 0;
-                                        let sumUSD = 0;
-
-                                        // Process Debts
-                                        (historyCustomer?.debtItems || []).forEach((d: any) => {
-                                            if (selectedDebtIds.includes(d.id)) {
-                                                if (d.currency === 'USD') sumUSD += getSafeDebtRemaining(d);
-                                                else sumTRY += getSafeDebtRemaining(d);
-                                            } else if (d.sale?.items) {
-                                                // Process specific items within non-selected debts
-                                                d.sale.items.forEach((si: any) => {
-                                                    if (selectedSaleItemIds.includes(si.id)) {
-                                                        if (d.currency === 'USD') sumUSD += Number(si.unitPrice) * si.quantity;
-                                                        else sumTRY += Number(si.unitPrice) * si.quantity;
-                                                    }
-                                                });
-                                            }
-                                        });
-
                                         setPaymentCustomer(historyCustomer);
                                         const isDefaultUSD = defaultCurrency === "USD";
                                         setPaymentCurrency(isDefaultUSD ? "USD" : "TRY");
 
                                         if (isDefaultUSD) {
-                                            const totalInUSD = sumUSD + (sumTRY / (rates?.usd || 1));
+                                            const totalInUSD = selectedTotals.usd + (selectedTotals.try / (rates?.usd || 1));
                                             setPaymentAmount(totalInUSD.toFixed(2));
                                         } else {
-                                            const totalInTRY = Math.round(sumTRY + (sumUSD * (rates?.usd || 1)));
+                                            const totalInTRY = Math.round(selectedTotals.try + (selectedTotals.usd * (rates?.usd || 1)));
                                             setPaymentAmount(String(totalInTRY));
                                         }
                                         setHistoryCustomer(null);
@@ -2696,24 +2742,60 @@ export function VeresiyeClient({
                             )}
                         </div>
 
-                        {/* Sağ: Borç özeti */}
-                        <div className="flex items-center gap-4 px-4 py-2.5 bg-muted/30 rounded-2xl border border-border/40">
+                        {/* Sağ: Borç / Seçilen Ürünler Özeti */}
+                        <div className={cn(
+                            "flex items-center gap-4 px-4 py-2.5 rounded-2xl border transition-all duration-300",
+                            selectedTotals.hasSelection
+                                ? "bg-indigo-500/10 dark:bg-indigo-500/15 border-indigo-500/35 shadow-sm shadow-indigo-500/5 ring-1 ring-indigo-500/20"
+                                : "bg-muted/30 border-border/40"
+                        )}>
                             <div className="flex flex-col items-end">
-                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">TL BORCU</span>
-                                <span className="text-lg font-black text-emerald-600 leading-none">₺{historyTotals.try.toLocaleString('tr-TR')}</span>
-                                <span className="text-[10px] font-bold text-muted-foreground/50 uppercase mt-0.5">~${Math.round(historyTotals.try / usdRate).toLocaleString('tr-TR')}</span>
+                                <span className={cn(
+                                    "text-[8px] font-black uppercase tracking-widest leading-none mb-1",
+                                    selectedTotals.hasSelection ? "text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-muted-foreground"
+                                )}>
+                                    {selectedTotals.hasSelection ? "SEÇİLEN TL" : "TL BORCU"}
+                                </span>
+                                <span className="text-lg font-black text-emerald-600 leading-none">
+                                    ₺{(selectedTotals.hasSelection ? selectedTotals.try : historyTotals.try).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                </span>
+                                <span className="text-[10px] font-bold text-muted-foreground/50 uppercase mt-0.5">
+                                    ~${Math.round((selectedTotals.hasSelection ? selectedTotals.try : historyTotals.try) / usdRate).toLocaleString('tr-TR')}
+                                </span>
                             </div>
                             <div className="flex flex-col items-end border-l border-border/40 pl-4">
-                                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">USD BORCU</span>
-                                <span className="text-lg font-black text-blue-600 leading-none">${historyTotals.usd.toLocaleString('tr-TR')}</span>
-                                <span className="text-[10px] font-bold text-muted-foreground/50 uppercase mt-0.5">~₺{(historyTotals.usd * usdRate).toLocaleString('tr-TR')}</span>
+                                <span className={cn(
+                                    "text-[8px] font-black uppercase tracking-widest leading-none mb-1",
+                                    selectedTotals.hasSelection ? "text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-muted-foreground"
+                                )}>
+                                    {selectedTotals.hasSelection ? "SEÇİLEN USD" : "USD BORCU"}
+                                </span>
+                                <span className="text-lg font-black text-blue-600 leading-none">
+                                    ${(selectedTotals.hasSelection ? selectedTotals.usd : historyTotals.usd).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span className="text-[10px] font-bold text-muted-foreground/50 uppercase mt-0.5">
+                                    ~₺{Math.round((selectedTotals.hasSelection ? selectedTotals.usd : historyTotals.usd) * usdRate).toLocaleString('tr-TR')}
+                                </span>
                             </div>
                             <div className="h-8 w-px bg-border/40" />
                             <div className="flex flex-col items-end">
-                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1">GENEL TOPLAM</span>
-                                <span className="text-2xl font-black text-indigo-600 tracking-tighter leading-none">
-                                    ₺{Math.round(historyTotals.try + (historyTotals.usd * usdRate)).toLocaleString('tr-TR')}
+                                <span className={cn(
+                                    "text-[10px] font-black uppercase tracking-widest leading-none mb-1",
+                                    selectedTotals.hasSelection ? "text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-indigo-600"
+                                )}>
+                                    {selectedTotals.hasSelection ? "SEÇİLEN TOPLAM" : "GENEL TOPLAM"}
                                 </span>
+                                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter leading-none">
+                                    ₺{Math.round(
+                                        (selectedTotals.hasSelection ? selectedTotals.try : historyTotals.try) +
+                                        ((selectedTotals.hasSelection ? selectedTotals.usd : historyTotals.usd) * usdRate)
+                                    ).toLocaleString('tr-TR')}
+                                </span>
+                                {selectedTotals.hasSelection && (
+                                    <span className="text-[9px] font-bold text-muted-foreground/60 uppercase mt-0.5">
+                                        (Genel Borç: ₺{Math.round(historyTotals.try + (historyTotals.usd * usdRate)).toLocaleString('tr-TR')})
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>

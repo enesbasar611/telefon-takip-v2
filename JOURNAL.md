@@ -41,6 +41,47 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-07: Veresiye Tahsilat İptali (Geri Alma) FIFO Borç Geri Yükleme ve Tahsilat Modalı Canlı Çapraz Kur Düşüm Simülasyonu:
+  - **Talep:**
+    - "ayrıca yapılan tahsilatı iptal edince önceki ödemeleri silme problemi oluyor. yani bakiye düzelmiyor. diyelimki 300dolar borç var 100 dolar ödeme yapıldı. 200 dolar kaldı tahsilatı bi kaç gün sonra veya aynı gün iptal edersek tahsilatın ödendiği FIFO ları tekrar ödenmemiş olarak göster. bakiye aynı şekilde güncellensin veya tl ödeme yapılınca düşecek dolar miktarı tahsilat ekranında yazsın ve bu şekilde bakiyeden düşelsin. hesap hatası asla istemiyorum."
+  - **Tespit Edilen Sorunlar:**
+    1. Tahsilat iptal edildiğinde (`deleteCustomerPayment`), borçların hangi ödeme tarafından ne kadar kapatıldığı net tespit edilmeden ters sırada genel düşüm yapılıyordu. Bu durum çoklu ödeme veya çapraz dövizli ödemelerde ödenmemiş borçların yanlış geri yüklenmesine veya bakiyenin bozulmasına neden oluyordu. Ayrıca ödeme emanet bakiye artığı yaratmışsa bu emanetin geri alınması güvenli değildi.
+    2. Tahsilat modalında müşteri örneğin USD borcuna karşılık TL ödeme girdiğinde, girdiği TL'nin borçtan kaç USD düşeceği ve ödeme sonrası tam olarak ne kadar borç kalacağı tahsilat yapılmadan önce ekranda net olarak simüle edilmiyordu.
+  - **Uygulanan Çözümler:**
+    1. **`debt-actions.ts` - Hedefli FIFO Tahsilat İptali ve Emanet Düzeltmesi:**
+       - `calculatePaymentAllocations(transactionId, allCustomerDebts, allCustomerTxs, safeUsdRate)` kullanılarak silinen işlemin tam olarak hangi borçları (ve ne kadar USD/TRY) kapattığı matematiksel olarak tespit edildi.
+       - Silinen işlemin kapattığı borçların `remainingAmount`'ları tam olarak o ödemenin düşürdüğü miktar kadar artırıldı ve `isPaid: false` yapıldı. İlişkisiz diğer borçlara asla dokunulmadı.
+       - İşlem esnasında emanet bakiye oluşmuşsa (`excessAmount = rawTxAmount - totalRestoredInTxCurrency`), müşterinin `balance` / `balanceUsd` bakiyesinden bu fazla tutar eksiltilerek kasa-emanet mutabakatı sağlandı.
+       - İlgili finans hesabı (Kasa/Banka) güvenli şekilde düşüldü ve işlem silindi.
+    2. **`veresiye-client.tsx` - İptal Sonrası Anlık UI ve Query Güncellemesi:**
+       - İşlem silindiğinde dönen güncel borç ve bakiye (`res.after`) doğrudan açık olan `historyCustomer` state'ine enjekte edildi; ekran yeniden yüklenmeden hesap hareketleri tablosu, kartlar ve sayfa anında sıfır gecikmeyle güncellendi.
+    3. **`veresiye-payment-modal.tsx` - Canlı Çapraz Döviz Düşüm Simülasyon Kartı:**
+       - Kullanıcı tutar girerken (örn. USD borcu varken TL tutar yazdığında):
+         - `Borçtan Düşecek:` -$X.XX (-₺Y.YY)
+         - `Uygulanan Kur:` 1 $ = Z ₺
+         - `Kalan Borç:` $A.AA / ₺B.BB
+         bilgilerini anlık olarak hesaplayan şık bir simülasyon kartı eklendi.
+  - **Doğrulama:**
+    - `npx tsc --noEmit` çalıştırıldı ve sıfır (0) hata ile doğrulandı.
+
+- [x] 2026-11-07: Veresiye Tahsilat Modalı "Borcu Kapat" Sıfır Emanet Garantisi & Hesap Hareketleri Seçilen Ürünler Toplamı Gösterimi:
+  - **Talep:**
+    - "sen düzeltme yapma ben manuel yapıcam. @veresiye sayfasında tahsilat modalında borcu kapat butonuna basınca emanete kuruş dahi aktarılmaması lazım. hesap hareketlerinde seçilen ürünlerin fiyatları aşşağıda toplamı yazsın."
+  - **Tespit Edilen Sorunlar:**
+    1. Tahsilat modalında (`veresiye-payment-modal.tsx`) "Borcu Kapat" butonuna tıklandığında `Math.ceil(totalExpected)` kullanıldığı için örneğin 127.067,28 ₺ olan tutar 127.068 ₺'ye yuvarlanıyor; kalan 0,72 ₺ için ekranda "Emanet Bakiye Oluşacak: Fark (₺0,72) emanet bakiyeye eklenecektir" uyarısı çıkıyor ve tahsilatta emanete kuruş ekleniyordu.
+    2. Hesap Hareketleri modalında ürünler seçildiğinde (örneğin 108 kalem veya 2 kalem), alt sağ panelde sadece müşterinin genel toplam borcu (`historyTotals`) görüntüleniyor, seçilen ürünlerin kendi toplam tutarları (TL/USD/Genel) hesaplanıp gösterilmiyordu.
+  - **Uygulanan Çözümler:**
+    1. **"Borcu Kapat" Sıfır Emanet Garantisi (`veresiye-payment-modal.tsx` & `debt-actions.ts`):**
+       - "Borcu Kapat" tıklandığında `Math.ceil` kaldırıldı, tam kuruş hassasiyetiyle `totalExpected.toFixed(2)` aktarıldı ve `setIgnoreBalance(true)` aktif edildi.
+       - Modalda `ignoreBalance` aktifken yanıltıcı "Emanet Bakiye Oluşacak" sarı uyarısı gizlendi; yerine "Borcu Kapat Aktif: Tüm açık borçlar kapatılacak, emanete kuruş aktarılmayacaktır" güvencesi sunuldu.
+       - Backend tarafında (`debt-actions.ts`) `amountToApplyFromPayment` borcun kurşununa ulaştığında (`>= debtRemaining - 0.05`) borç tam kapatıldı kabul edilerek `remainingAmount: 0` ve `isPaid: true` yapıldı. Kuruş yuvarlama artığı (<= 0.05) veya `ignoreExcess: true` durumunda emanet kasaya 1 kuruş dahi yazılması kesin olarak engellendi.
+    2. **Hesap Hareketlerinde Seçilen Ürünlerin Toplam Tutarı (`veresiye-client.tsx`):**
+       - `selectedTotals` memo'su tanımlandı; `selectedDebtIds` ve `selectedSaleItemIds` içindeki tüm seçili borç ve satış kalemlerinin kalan TL ve USD toplamları dinamik olarak hesaplandı.
+       - Alt sağ taraftaki özet kutusu akıllı hale getirildi: Hiçbir ürün seçili değilken genel borç (`TL BORCU`, `USD BORCU`, `GENEL TOPLAM`) gösterilir; ürün/kalem seçildiğinde kutu özel indigo vurgu ile parlar ve seçilen ürünlerin toplamını (`SEÇİLEN TL`, `SEÇİLEN USD`, `SEÇİLEN TOPLAM`) ve parantez içinde genel borcu gösterir.
+       - "Seçilenleri Öde" butonu da doğrudan bu hesaplanan `selectedTotals` ile entegre edildi.
+  - **Doğrulama:**
+    - `npx tsc --noEmit` çalıştırıldı ve 0 hata ile doğrulandı. Dev server açıkken `npm run build` çalıştırılmadı.
+
 - [x] 2026-11-07: Ana Sayfa Dashboard Veresiyeler Kartı Tahsilat Senkronizasyonu, Banka/Kasa Hesap Seçimi ve USD/TRY Kur Hesaplama Düzeltmesi:
   - **Talep:**
     - "@dashboard anasayfadaki veresiyeler kartından tahsilat yapınca bakiyeyi sıfırlayıp emanet kasaya yazıyor. ama hesaplamayı yanlış yapıyor. örneğin 516.88 dolar borcu olan müşteriden 10 bin tl tahsilat yapınca borcu sıfırlayıp emanet kasaya 9483 dolar ekledi. bu sistemi normal veresiye sayfasındaki gibi senkronize et. sorunu analiz et ve çöz. anasaytfadaki veresiyeler kartında tahsilat alırken banka seçimi vs olsun kısaca @veresiye sayfasıyla senkron çalışcak."
