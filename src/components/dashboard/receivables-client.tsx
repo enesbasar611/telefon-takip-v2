@@ -36,10 +36,15 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { getCustomerStatement } from "@/lib/actions/debt-actions";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { getCustomerStatement, collectGlobalCustomerPayment } from "@/lib/actions/debt-actions";
+import { getAccounts } from "@/lib/actions/finance-actions";
 import { buildUnifiedWhatsAppStatement } from "@/lib/debt-statement-calculator";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { VeresiyePaymentModal } from "@/components/finance/veresiye/veresiye-payment-modal";
+import { VeresiyePaymentSummaryModal, type PaymentSummary } from "@/components/finance/veresiye/veresiye-payment-summary-modal";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 interface Debt {
     id: string;
@@ -101,6 +106,26 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
     const [whatsappCustomerName, setWhatsappCustomerName] = useState("");
     const [whatsappMessage, setWhatsappMessage] = useState("");
     const [whatsappStatementData, setWhatsappStatementData] = useState<any>(null);
+
+    // Accounts Query for Bank / POS / Cash Selection
+    const { data: accountsData } = useQuery({
+        queryKey: ["accounts"],
+        queryFn: () => getAccounts(),
+        staleTime: 1000 * 60 * 5,
+    });
+    const accounts = accountsData || [];
+
+    // Veresiye Payment Modal States (Synchronized with /veresiye)
+    const [paymentCustomer, setPaymentCustomer] = useState<any | null>(null);
+    const [paymentAmount, setPaymentAmount] = useState("");
+    const [paymentCurrency, setPaymentCurrency] = useState<"TRY" | "USD">("TRY");
+    const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
+    const [selectedAccountId, setSelectedAccountId] = useState("");
+    const [paymentNotes, setPaymentNotes] = useState("");
+    const [ignoreBalance, setIgnoreBalance] = useState(false);
+    const [isPaymentPending, setIsPaymentPending] = useState(false);
+    const [selectedDebtIds, setSelectedDebtIds] = useState<string[]>([]);
+    const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
 
     // Pinned / Favorite Dealers
     const [pinnedCustomerIds, setPinnedCustomerIds] = useState<string[]>([]);
@@ -182,6 +207,187 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
     const handleOpenReceiptForCustomer = (customer: any) => {
         setReceiptCustomer(customer);
         setReceiptOpen(true);
+    };
+
+    const handleCurrencySwitch = (newCurrency: "TRY" | "USD") => {
+        if (paymentCurrency === newCurrency) return;
+        setIgnoreBalance(false);
+
+        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+        const currentAmount = Number(paymentAmount) || 0;
+
+        let converted = 0;
+        if (newCurrency === "USD" && paymentCurrency === "TRY") {
+            converted = currentAmount / usdRate;
+        } else if (newCurrency === "TRY" && paymentCurrency === "USD") {
+            converted = currentAmount * usdRate;
+        }
+
+        setPaymentCurrency(newCurrency);
+        setPaymentAmount(converted > 0 ? (newCurrency === "USD" ? converted.toFixed(2) : String(Math.round(converted))) : "");
+    };
+
+    const handleOpenPayment = (customer: any, specificDebt?: any) => {
+        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+
+        setPaymentCustomer(customer);
+        setPaymentNotes(specificDebt ? `${specificDebt.notes || specificDebt.description || "Borç"} tahsilatı` : "Cari hesap veresiye tahsilatı");
+        setIgnoreBalance(false);
+        setPaymentMethod("CASH");
+
+        // Otomatik varsayılan nakit kasayı seç
+        const cashAcc = (accounts || []).find((a: any) => a.type === "CASH");
+        if (cashAcc) {
+            setSelectedAccountId(cashAcc.id);
+        } else if ((accounts || []).length > 0) {
+            setSelectedAccountId(accounts[0].id);
+        } else {
+            setSelectedAccountId("");
+        }
+
+        if (specificDebt) {
+            setSelectedDebtIds([specificDebt.id]);
+            const curr = specificDebt.currency === "USD" ? "USD" : "TRY";
+            setPaymentCurrency(curr);
+            setPaymentAmount(Number(specificDebt.remainingAmount).toString());
+        } else {
+            setSelectedDebtIds([]);
+            const remTRY = Number(customer.totalRemainingTRY ?? customer.totalTRY ?? 0);
+            const remUSD = Number(customer.totalRemainingUSD ?? customer.totalUSD ?? 0);
+            const isDefaultUSD = defaultCurrency === "USD" || (remTRY <= 0 && remUSD > 0);
+            const curr = isDefaultUSD ? "USD" : "TRY";
+            setPaymentCurrency(curr);
+
+            if (curr === "USD") {
+                const totalUSD = remUSD + (remTRY / usdRate);
+                setPaymentAmount(totalUSD > 0 ? totalUSD.toFixed(2) : "");
+            } else {
+                const totalTRY = Math.round(remTRY + (remUSD * usdRate));
+                setPaymentAmount(totalTRY > 0 ? String(totalTRY) : "");
+            }
+        }
+    };
+
+    const handleCollectPayment = async () => {
+        if (!paymentCustomer || !paymentAmount) return;
+        const amount = parseFloat(paymentAmount);
+        if (isNaN(amount) || amount <= 0) {
+            toast.error("Lütfen geçerli bir tutar giriniz.");
+            return;
+        }
+
+        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+
+        setIsPaymentPending(true);
+        try {
+            const res = await collectGlobalCustomerPayment({
+                customerId: paymentCustomer.customerId || paymentCustomer.id,
+                paymentAmount: amount,
+                paymentCurrency,
+                paymentMethod,
+                accountId: selectedAccountId || undefined,
+                usdRate,
+                notes: paymentNotes || undefined,
+                debtIds: selectedDebtIds.length > 0 ? selectedDebtIds : undefined,
+                ignoreExcess: ignoreBalance,
+            });
+
+            if (res.success && res.before && res.after) {
+                toast.success("Ödeme başarıyla tahsil edildi.");
+                queryClient.invalidateQueries({ queryKey: ["dashboard-receivables"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard-veresiye-detail"] });
+                queryClient.invalidateQueries({ queryKey: ["debts"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+                queryClient.invalidateQueries({ queryKey: ["accounts"] });
+
+                // Müşterinin telefonu varsa WhatsApp tahsilat makbuzunu hazırla
+                if (paymentCustomer.phone) {
+                    const { before, after, paidAmount, currency } = res;
+                    const isUSD = currency === "USD";
+                    const symbol = isUSD ? "$" : "₺";
+
+                    let msg = `*${paymentCustomer.name} - Tahsilat Makbuzu*\n\n`;
+                    msg += `✅ *Ödeme Alındı:* ${symbol}${paidAmount.toLocaleString('tr-TR')}\n`;
+                    msg += `📅 *Tarih:* ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: tr })}\n\n`;
+                    msg += `*📊 Borç Durum Özeti:*\n`;
+                    msg += `--------------------\n`;
+
+                    const afterTotal = after.totalRemainingTRY + (after.totalRemainingUSD * usdRate);
+
+                    if (before.totalRemainingTRY > 0 || after.totalRemainingTRY > 0) {
+                        msg += `*Türk Lirası (₺):*\n`;
+                        msg += `• Önceki Bakiye: ₺${before.totalRemainingTRY.toLocaleString('tr-TR')}\n`;
+                        msg += `• Ödenen Tutarı: ${!isUSD ? '₺' + paidAmount.toLocaleString('tr-TR') : '-'}\n`;
+                        msg += `• Kalan Bakiye: ₺${after.totalRemainingTRY.toLocaleString('tr-TR')}\n\n`;
+                    }
+
+                    if (before.totalRemainingUSD > 0 || after.totalRemainingUSD > 0) {
+                        msg += `*Amerikan Doları ($):*\n`;
+                        msg += `• Önceki Bakiye: $${before.totalRemainingUSD.toLocaleString('tr-TR')}\n`;
+                        msg += `• Ödenen Tutarı: ${isUSD ? '$' + paidAmount.toLocaleString('tr-TR') : '-'}\n`;
+                        msg += `• Kalan Bakiye: $${after.totalRemainingUSD.toLocaleString('tr-TR')}\n\n`;
+                    }
+
+                    if (after.balance > 0 || after.balanceUsd > 0) {
+                        msg += `*🎁 Emanet Bakiye:*\n`;
+                        if (after.balance > 0) msg += `• TL Emanet: ₺${after.balance.toLocaleString('tr-TR')}\n`;
+                        if (after.balanceUsd > 0) msg += `• USD Emanet: $${after.balanceUsd.toLocaleString('tr-TR')}\n`;
+                        msg += `\n`;
+                    }
+
+                    msg += `--------------------\n`;
+                    if (after.totalRemainingTRY <= 0 && after.totalRemainingUSD <= 0) {
+                        msg += `✅ *Borcunuz tamamen kapanmıştır.* Teşekkür ederiz.\n`;
+                    } else {
+                        msg += `*GÜNCEL TOPLAM:* ₺${Math.round(afterTotal).toLocaleString('tr-TR')}\n`;
+                    }
+                    msg += `\n_Hayırlı işler dileriz._`;
+
+                    setWhatsappCustomerName(paymentCustomer.name);
+                    setWhatsappPhone(paymentCustomer.phone.replace(/[^0-9]/g, ''));
+                    setWhatsappMessage(msg);
+                    setWhatsappStatementData(null);
+                    setWhatsappModalOpen(true);
+                }
+
+                const debtItems = paymentCustomer?.debts || [];
+                const itemsNames = selectedDebtIds.length > 0
+                    ? debtItems.filter((d: any) => selectedDebtIds.includes(d.id)).map((d: any) => d.notes || d.description || "İsimsiz Borç")
+                    : ["Genel Tahsilat"];
+
+                setPaymentSummary({
+                    customerId: paymentCustomer.customerId || paymentCustomer.id,
+                    customerName: paymentCustomer.name,
+                    items: itemsNames,
+                    paidAmount: amount,
+                    currency: paymentCurrency,
+                    previousTRY: res.before.totalRemainingTRY,
+                    previousUSD: res.before.totalRemainingUSD,
+                    remainingTRY: res.after.totalRemainingTRY,
+                    remainingUSD: res.after.totalRemainingUSD
+                });
+
+                setPaymentCustomer(null);
+                setPaymentAmount("");
+                setPaymentNotes("");
+                setSelectedAccountId("");
+                setSelectedDebtIds([]);
+                setIsCustomerModalOpen(false);
+            } else {
+                toast.error(res.error || "Tahsilat sırasında bir hata oluştu.");
+            }
+        } catch (error) {
+            console.error("Payment error:", error);
+            toast.error("İşlem sırasında bir hata oluştu.");
+        } finally {
+            setIsPaymentPending(false);
+        }
     };
 
     const AVATAR_COLORS = [
@@ -477,6 +683,18 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                                                         type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
+                                                            handleOpenPayment(pinned);
+                                                        }}
+                                                        className="h-6 px-1.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all text-[9px] font-bold flex items-center gap-0.5"
+                                                        title="Tahsilat Al"
+                                                    >
+                                                        <Wallet className="h-2.5 w-2.5" />
+                                                        <span>Tahsilat</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
                                                             handleOpenAddDebt(pinned);
                                                         }}
                                                         className="h-6 px-1.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all text-[9px] font-bold flex items-center gap-0.5"
@@ -623,6 +841,20 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                                                             <RevealFinancial amount={agg.totalUSD} prefix="$" className="text-[10px] font-semibold text-blue-500 tracking-tight tabular-nums leading-tight" />
                                                         )}
                                                     </div>
+
+                                                    {/* Hızlı Tahsilat Butonu */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenPayment(agg);
+                                                        }}
+                                                        className="h-7 px-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all text-[10px] font-bold flex items-center gap-1 shrink-0"
+                                                        title={`${agg.name} için tahsilat al`}
+                                                    >
+                                                        <Wallet className="h-3 w-3" />
+                                                        <span className="hidden sm:inline">Tahsilat</span>
+                                                    </button>
 
                                                     {/* Hızlı Alacak Ekle Butonu */}
                                                     <button
@@ -805,6 +1037,9 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                         openWhatsAppModal(detailCustomer.name, detailCustomer.phone, detailCustomer.totalTRY, detailCustomer.totalUSD, detailCustomer.id);
                     }
                 }}
+                onStartPayment={(cust, specificDebt) => {
+                    handleOpenPayment(cust, specificDebt);
+                }}
             />
 
             {/* 2. TÜM DÜKKAN GENEL VERESİYE DETAY MODALI */}
@@ -864,6 +1099,54 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                     });
                 } : undefined}
             />
+
+            {/* 6. VERESİYE TAHSİLAT MODALI (/veresiye ile tam senkronize) */}
+            <VeresiyePaymentModal
+                paymentCustomer={paymentCustomer}
+                onClose={() => setPaymentCustomer(null)}
+                paymentAmount={paymentAmount}
+                onAmountChange={setPaymentAmount}
+                paymentCurrency={paymentCurrency}
+                onCurrencyChange={(curr) => handleCurrencySwitch(curr as "TRY" | "USD")}
+                paymentMethod={paymentMethod}
+                onMethodChange={(method) => {
+                    setPaymentMethod(method);
+                    const fa = accounts.filter((acc: any) =>
+                        method === "CASH" ? acc.type === "CASH" :
+                            method === "CARD" ? (acc.type === "POS" || acc.type === "BANK") :
+                                (acc.type === "BANK")
+                    );
+                    if (fa.length > 0) setSelectedAccountId(fa[0].id);
+                    else setSelectedAccountId("");
+                }}
+                paymentNotes={paymentNotes}
+                onNotesChange={setPaymentNotes}
+                selectedAccountId={selectedAccountId}
+                onAccountChange={setSelectedAccountId}
+                accounts={accounts}
+                isPending={isPaymentPending}
+                onConfirm={handleCollectPayment}
+                rates={rates}
+                setIgnoreBalance={setIgnoreBalance}
+            />
+
+            {/* 7. TAHSİLAT ÖZETİ & MAKBUZ MODALI */}
+            {paymentSummary && (
+                <VeresiyePaymentSummaryModal
+                    paymentSummary={paymentSummary}
+                    onClose={() => setPaymentSummary(null)}
+                    isPending={false}
+                    onPrintReceipt={async () => {
+                        const targetCustomer = paymentCustomer || {
+                            id: paymentSummary.customerId,
+                            name: paymentSummary.customerName,
+                            phone: "",
+                            debts: [],
+                        };
+                        handleOpenReceiptForCustomer(targetCustomer);
+                    }}
+                />
+            )}
         </>
     );
 }

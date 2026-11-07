@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { recordAuditLog } from "./audit-actions";
 import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
+import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
 
 const normalizeMoney = (value: unknown) => {
   const amount = Number(value);
@@ -572,7 +573,22 @@ export async function collectGlobalCustomerPayment(data: {
       return { success: false, error: "Geçerli bir ödeme tutarı giriniz." };
     }
 
-    const usdRate = initialUsdRate || 1;
+    let usdRate = initialUsdRate;
+    if (!usdRate || usdRate <= 1) {
+      try {
+        const liveRates = await getCurrentExchangeRates();
+        const foundUsd = (liveRates as any)?.usd || (liveRates as any)?.USD;
+        const parsed = typeof foundUsd === "string" ? parseFloat(foundUsd.replace(",", ".")) : Number(foundUsd);
+        if (Number.isFinite(parsed) && parsed > 1) {
+          usdRate = parsed;
+        }
+      } catch (e) {
+        console.error("Error fetching live rates in collectGlobalCustomerPayment fallback:", e);
+      }
+    }
+    if (!usdRate || usdRate <= 1) {
+      usdRate = 34.5;
+    }
 
     // 1. Capture Balance BEFORE
     const beforeSummary = await getCustomerDebtSummary(customerId);

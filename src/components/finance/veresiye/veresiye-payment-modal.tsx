@@ -66,11 +66,23 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
 }) => {
     if (!paymentCustomer) return null;
 
-    const filteredAccounts = accounts.filter((acc: any) =>
+    const safeAccounts = Array.isArray(accounts) ? accounts : [];
+    const filteredAccounts = safeAccounts.filter((acc: any) =>
         paymentMethod === 'CASH' ? acc.type === 'CASH' :
             paymentMethod === 'CARD' ? (acc.type === 'POS' || acc.type === 'BANK') :
                 (acc.type === 'BANK')
     );
+
+    const remTRY = Number(paymentCustomer?.totalRemainingTRY ?? paymentCustomer?.totalTRY ?? 0);
+    const remUSD = Number(paymentCustomer?.totalRemainingUSD ?? paymentCustomer?.totalUSD ?? 0);
+
+    const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
+    const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
+    const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+
+    const totalExpected = paymentCurrency === 'TRY'
+        ? remTRY + (remUSD * usdRate)
+        : remUSD + (remTRY / usdRate);
 
     return (
         <AlertDialog open={!!paymentCustomer} onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -89,10 +101,10 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                         </div>
                         <AlertDialogDescription className="text-muted-foreground text-xs font-medium flex flex-wrap items-center gap-1.5 pt-0.5">
                             <span className="font-bold text-foreground">{paymentCustomer?.name}</span> •
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md text-[10px] font-bold">₺{paymentCustomer?.totalRemainingTRY?.toLocaleString('tr-TR')}</span>
-                            {paymentCustomer?.totalRemainingUSD > 0 && (
+                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md text-[10px] font-bold">₺{remTRY.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                            {remUSD > 0 && (
                                 <span className="px-2 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-md text-[10px] font-bold">
-                                    ${paymentCustomer?.totalRemainingUSD?.toLocaleString('tr-TR')}
+                                    ${remUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             )}
                         </AlertDialogDescription>
@@ -144,10 +156,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                                     type="button"
                                     variant="secondary"
                                     onClick={() => {
-                                        const total = paymentCurrency === 'TRY'
-                                            ? (paymentCustomer?.totalRemainingTRY + (paymentCustomer?.totalRemainingUSD * (rates?.usd || 1)))
-                                            : (paymentCustomer?.totalRemainingUSD + (paymentCustomer?.totalRemainingTRY / (rates?.usd || 1)));
-                                        onAmountChange(String(Math.ceil(total)));
+                                        onAmountChange(paymentCurrency === 'TRY' ? String(Math.ceil(totalExpected)) : totalExpected.toFixed(2));
                                         setIgnoreBalance(true);
                                     }}
                                     className="h-8 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 text-[10px] font-black transition-all uppercase tracking-wider shadow-2xs"
@@ -156,20 +165,12 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                                 </Button>
                             </div>
                         </div>
-                        {Number(paymentAmount) > (
-                            paymentCurrency === 'TRY'
-                                ? (paymentCustomer?.totalRemainingTRY || 0) + ((paymentCustomer?.totalRemainingUSD || 0) * (rates?.usd || 1))
-                                : (paymentCustomer?.totalRemainingUSD || 0) + ((paymentCustomer?.totalRemainingTRY || 0) / (rates?.usd || 1))
-                        ) && (
+                        {Number(paymentAmount) > totalExpected && (
                             <div className="mt-2 flex items-start gap-2 bg-amber-500/10 text-amber-600 dark:text-amber-500 p-2.5 rounded-xl border border-amber-500/20 text-xs">
                                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                                 <div className="text-[11px] font-medium">
                                     <strong className="font-bold block uppercase tracking-wider text-[10px]">Emanet Bakiye Oluşacak</strong>
-                                    Fark ({
-                                        paymentCurrency === 'TRY' ? '₺' : '$'
-                                    }{(Number(paymentAmount) - (paymentCurrency === 'TRY'
-                                        ? (paymentCustomer?.totalRemainingTRY || 0) + ((paymentCustomer?.totalRemainingUSD || 0) * (rates?.usd || 1))
-                                        : (paymentCustomer?.totalRemainingUSD || 0) + ((paymentCustomer?.totalRemainingTRY || 0) / (rates?.usd || 1)))).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) emanet bakiyeye eklenecektir.
+                                    Fark ({paymentCurrency === 'TRY' ? '₺' : '$'}{(Number(paymentAmount) - totalExpected).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) emanet bakiyeye eklenecektir.
                                 </div>
                             </div>
                         )}

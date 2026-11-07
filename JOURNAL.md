@@ -41,6 +41,30 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-07: Ana Sayfa Dashboard Veresiyeler Kartı Tahsilat Senkronizasyonu, Banka/Kasa Hesap Seçimi ve USD/TRY Kur Hesaplama Düzeltmesi:
+  - **Talep:**
+    - "@dashboard anasayfadaki veresiyeler kartından tahsilat yapınca bakiyeyi sıfırlayıp emanet kasaya yazıyor. ama hesaplamayı yanlış yapıyor. örneğin 516.88 dolar borcu olan müşteriden 10 bin tl tahsilat yapınca borcu sıfırlayıp emanet kasaya 9483 dolar ekledi. bu sistemi normal veresiye sayfasındaki gibi senkronize et. sorunu analiz et ve çöz. anasaytfadaki veresiyeler kartında tahsilat alırken banka seçimi vs olsun kısaca @veresiye sayfasıyla senkron çalışcak."
+  - **Kök Neden Analizi:**
+    1. `src/lib/actions/debt-actions.ts` içerisindeki `collectGlobalCustomerPayment` fonksiyonunda `usdRate: initialUsdRate = 1` şeklinde varsayılan değer tanımlanmıştı. Ana sayfadan veya parametresiz çağrıldığında kur 1.0 alınıyor; 516.88 USD borç 516.88 TL olarak hesaplanıyor, 10.000 TL tahsil edildiğinde borç kapanıp kalan 9.483 TL (veya USD döviz seçiliyse USD emanete) yanlışlıkla devasa bir emanet bakiye olarak yazılıyordu.
+    2. Ana sayfadaki Veresiyeler kartında (`receivables-client.tsx`) doğrudan tahsilat butonu bulunmuyordu; müşteri detay modalı (`customer-veresiye-modal.tsx`) ise banka/kasa hesap seçicisi ve döviz kuru dönüştürücüsünden yoksundu.
+    3. `VeresiyePaymentModal` bileşeni yalnızca `totalRemainingTRY`/`totalRemainingUSD` alanlarını okuyordu, ana sayfadaki özet nesnesi ise `totalTRY`/`totalUSD` alanlarını kullanıyordu.
+  - **Uygulanan Çözümler ve Değişiklikler:**
+    1. **`debt-actions.ts` - Kur Güvenliği ve Otomatik Fallback:**
+       - `collectGlobalCustomerPayment` fonksiyonunda `usdRate` 1 veya tanımsız geldiğinde veritabanından/canlı API'den güncel kur (`getCurrentExchangeRates()`) dinamik olarak çekildi; kur hiçbir koşulda 1.0 olarak kabul edilmeyip güvenli kur mekanizmasına bağlandı.
+       - Çapraz kur çevrimleri (TL ödeme ile USD borç kapatma veya tersi) kur üzerinden kusursuz hale getirildi.
+    2. **`veresiye-payment-modal.tsx` - Çift Veri Formatı Desteği ve Güvenli Hesap Listesi:**
+       - Kalan tutarlar `remTRY = Number(customer?.totalRemainingTRY ?? customer?.totalTRY ?? 0)` ve `remUSD = Number(customer?.totalRemainingUSD ?? customer?.totalUSD ?? 0)` şeklinde normalize edildi.
+       - "Borcu Kapat" butonu ve emanet uyarısı hesaplamaları normalize edilmiş değerlerle senkronize edildi. `accounts` dizisi güvenli array formatına alındı.
+    3. **`receivables-client.tsx` - /veresiye Sayfasıyla Tam Senkronizasyon:**
+       - `useQuery` ile `getAccounts()` çağrılarak Nakit Kasa, POS ve Banka hesapları çekildi.
+       - Sık kullanılan sabit bayiler (`pinnedAggregates`) ve sayfalanan bayi listesindeki her müşteriye doğrudan yeşil `[Tahsilat]` butonu eklendi.
+       - Ödeme modalı (`VeresiyePaymentModal`) entegre edildi: Banka/Kasa/POS seçimi, Nakit/Havale/Kart filtrelemesi, TRY/USD döviz anahtarı, anlık kur dönüşümü ve "Borcu Kapat" fonksiyonu aktif edildi.
+       - Tahsilat sonrasında müşteri telefonuna sahipse /veresiye sayfasıyla birebir aynı formatta WhatsApp tahsilat makbuzu modalı (`WhatsAppConfirmModal`) ve başarı özeti (`VeresiyePaymentSummaryModal`) açılması sağlandı.
+    4. **`customer-veresiye-modal.tsx` - Ortak Tahsilat Modalı Delegasyonu:**
+       - `onStartPayment` prop'u tanımlanarak detay modalı içerisinden yapılan "Tahsilat Al" ve borç satırındaki "Tahsil Et" aksiyonları merkezi `VeresiyePaymentModal`'a devredildi.
+    5. **Doğrulama:**
+       - `npx tsc --noEmit` çalıştırıldı ve sıfır (0) hata ile başarıyla doğrulandı. Dev server çalışırken `npm run build` kesinlikle çalıştırılmadı.
+
 - [x] 2026-11-05: Servis Yönetimi (/servis) Mobil Görünüm ve Modalların Tam Kapsamlı Refactorü (Sadeleştirme, Taşma ve Sıkışıklık Giderimi):
   - **Talep:**
     - "@servis sayfasınıda mobil görünüm için refactor yap modallar tam görünmüyor mobilden giren kullanıcılar uygulamanın çok karışık olduğunu söylüyor gereksiz boşlukları kaldır ve ferah bi kullanım sun. @[.agents/skills/superdesign/SKILL.md] @[.agents/skills/superpowers-brainstorm/SKILL.md]"

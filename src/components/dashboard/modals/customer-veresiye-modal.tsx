@@ -54,6 +54,7 @@ interface CustomerVeresiyeModalProps {
     onAddDebt: (customer: { name: string; phone?: string }) => void;
     onOpenReceipt: () => void;
     onOpenWhatsApp: () => void;
+    onStartPayment?: (customer: any, specificDebt?: any) => void;
 }
 
 export function CustomerVeresiyeModal({
@@ -63,6 +64,7 @@ export function CustomerVeresiyeModal({
     onAddDebt,
     onOpenReceipt,
     onOpenWhatsApp,
+    onStartPayment,
 }: CustomerVeresiyeModalProps) {
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
@@ -76,6 +78,10 @@ export function CustomerVeresiyeModal({
 
     // Initial payment form setup
     const handleStartPayment = (specificDebt?: any) => {
+        if (onStartPayment) {
+            onStartPayment(customer, specificDebt);
+            return;
+        }
         if (specificDebt) {
             setSelectedDebtId(specificDebt.id);
             setPaymentAmount(Number(specificDebt.remainingAmount).toString());
