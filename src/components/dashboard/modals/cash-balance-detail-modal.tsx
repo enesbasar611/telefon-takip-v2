@@ -33,6 +33,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { getCashBalanceMonthlyDetails } from "@/lib/actions/dashboard-detail-actions";
@@ -205,7 +206,7 @@ export function CashBalanceDetailModal({ isOpen, onClose }: CashBalanceDetailMod
                       </div>
                     </div>
                     <div className="text-base sm:text-xl font-black text-foreground tracking-tight">
-                      {formatCurrency(data.openingBalance)}
+                      <KasaBalanceText balance={data.openingBalance} />
                     </div>
                     <p className="text-[10px] text-muted-foreground font-medium">
                       1 {data.monthLabel.split(" ")[0]} devir bakiyesi
@@ -259,7 +260,7 @@ export function CashBalanceDetailModal({ isOpen, onClose }: CashBalanceDetailMod
                       </div>
                     </div>
                     <div className="text-base sm:text-xl font-black text-primary tracking-tight">
-                      {formatCurrency(data.currentCashBalance)}
+                      <KasaBalanceText balance={data.currentCashBalance} />
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
                       <span>Aylık Net:</span>

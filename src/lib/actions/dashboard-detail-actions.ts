@@ -110,6 +110,7 @@ export async function getCollectionDetails() {
             where: {
                 shopId,
                 type: "INCOME",
+                paymentMethod: { not: "DEBT" },
                 createdAt: {
                     gte: startOfDay(today),
                     lte: endOfDay(today)

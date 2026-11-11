@@ -19,6 +19,7 @@ import {
 import { Loader2, Plus, ChevronRight, ArrowRight, Wallet, Landmark, CreditCard, User, Package, Wrench, ShoppingCart, Banknote, Clock, CheckCircle2, AlertTriangle, ArrowDownCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
@@ -435,10 +436,10 @@ export function StatDetailModal({ type, isOpen, onClose, statsData }: StatDetail
                                                                 <p className="text-[10px]  text-muted-foreground/60 uppercase tracking-widest mb-1">TUTAR</p>
                                                                 <p className={cn(
                                                                     "text-base  tracking-tight",
-                                                                    type === "REPAIR_INCOME" || type === "CASH_BALANCE" ? "text-emerald-500" : "text-foreground"
+                                                                    (type === "REPAIR_INCOME" || (type === "CASH_BALANCE" && Number(value) >= 0)) ? "text-emerald-500" : "text-foreground"
                                                                 )}>
                                                                     {type === "REPAIR_INCOME" ? "+" : ""}
-                                                                    ₺{Number(value).toLocaleString('tr-TR')}
+                                                                    {type === "CASH_BALANCE" ? <KasaBalanceText balance={value} currency={item.currency || "TRY"} accountType={item.type} minimumFractionDigits={0} maximumFractionDigits={2} /> : `₺${Number(value).toLocaleString('tr-TR')}`}
                                                                 </p>
                                                             </div>
                                                         )}

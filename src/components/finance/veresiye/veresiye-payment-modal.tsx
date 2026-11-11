@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import React from "react";
 import {
     Wallet,
@@ -381,7 +383,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                                                 <p className="text-[9px] text-muted-foreground uppercase">{acc.type === 'CASH' ? 'Nakit Kasa' : acc.type === 'POS' ? 'POS Cihazı' : 'Banka Hesabı'}</p>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <p className="text-xs font-bold text-foreground tabular-nums">₺{Number(acc.balance).toLocaleString('tr-TR')}</p>
+                                                <p className="text-xs font-bold text-foreground tabular-nums"><KasaBalanceText balance={acc.balance} currency={(acc as any).currency || "TRY"} accountType={acc.type} minimumFractionDigits={0} maximumFractionDigits={2} /></p>
                                                 <p className="text-[9px] text-muted-foreground/60">Bakiye</p>
                                             </div>
                                             {selectedAccountId === acc.id && (

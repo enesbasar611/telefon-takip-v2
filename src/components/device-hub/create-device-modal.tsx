@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1329,7 +1331,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     <SelectContent className="bg-card border-border">
                       {accounts.map((acc: any) => (
                         <SelectItem key={acc.id} value={acc.id}>
-                          {acc.name} - <span className="text-blue-400">{Number(acc.balance).toLocaleString("tr-TR")} ₺</span>
+                          {acc.name} - <span className="text-blue-400"><KasaBalanceText balance={acc.balance} currency={(acc as any).currency || "TRY"} accountType={(acc as any).type} minimumFractionDigits={0} maximumFractionDigits={2} /></span>
                         </SelectItem>
                       ))}
                     </SelectContent>

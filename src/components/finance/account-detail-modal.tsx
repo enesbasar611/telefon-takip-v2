@@ -12,6 +12,7 @@ import { getAccountAnalytics } from "@/lib/actions/finance-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { KasaBalanceText } from "./kasa-balance-text";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { convertTransactionAmount, type TransactionCurrency } from "@/lib/finance/transaction-currency";
 
@@ -113,16 +114,20 @@ export function AccountDetailModal({ account }: { account: Account }) {
                             <p className="text-[11px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">
                                 {account.type === 'CREDIT_CARD' ? 'GÜNCEL BORÇ' : 'GÜNCEL BAKİYE'}
                             </p>
-                            <p className={cn("text-4xl tracking-tight", account.balance < 0 ? "text-rose-500" : "text-foreground")}>
-                                {formatMoney(convertTryToDisplay(Number(account.balance)), displayCurrency)}
+                            <p className={cn("text-4xl tracking-tight", account.type === "CREDIT_CARD" && account.balance < 0 ? "text-rose-500" : "text-foreground")}>
+                                <KasaBalanceText
+                                    balance={convertTryToDisplay(Number(account.balance))}
+                                    currency={displayCurrency}
+                                    accountType={account.type}
+                                />
                             </p>
-                            <p className={cn("hidden text-4xl  tracking-tight", account.balance < 0 ? "text-rose-500" : "text-foreground")}>
+                            <p className={cn("hidden text-4xl  tracking-tight", account.type === "CREDIT_CARD" && account.balance < 0 ? "text-rose-500" : "text-foreground")}>
                                 ₺{Number(account.balance).toLocaleString('tr-TR')}
                             </p>
-                            <div className="flex justify-end gap-3 mt-1 opacity-60">
-                                <span className="text-xs font-medium text-muted-foreground">~{formatMoney(Number(account.balance), "TRY")}</span>
-                                <span className="text-xs font-medium text-muted-foreground">~{formatMoney(Number(account.balance) / usdRate, "USD")}</span>
-                                <span className="text-xs font-medium text-muted-foreground">~{formatMoney(Number(account.balance) / eurRate, "EUR")}</span>
+                            <div className="flex flex-wrap justify-end gap-3 mt-1 opacity-80">
+                                <span className="text-xs font-medium text-muted-foreground inline-flex items-baseline gap-0.5">~<KasaBalanceText balance={Number(account.balance)} currency="TRY" accountType={account.type} /></span>
+                                <span className="text-xs font-medium text-muted-foreground inline-flex items-baseline gap-0.5">~<KasaBalanceText balance={Number(account.balance) / usdRate} currency="USD" accountType={account.type} /></span>
+                                <span className="text-xs font-medium text-muted-foreground inline-flex items-baseline gap-0.5">~<KasaBalanceText balance={Number(account.balance) / eurRate} currency="EUR" accountType={account.type} /></span>
                             </div>
                             <div className="hidden justify-end gap-3 mt-1 opacity-60">
                                 <span className="text-xs font-medium text-muted-foreground">~${(Number(account.balance) / usdRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</span>
@@ -184,7 +189,13 @@ export function AccountDetailModal({ account }: { account: Account }) {
                                     <div>
                                         <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">HESAP DURUMU</h4>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-3xl font-black text-foreground">{formatMoney(convertTryToDisplay(Number(account.balance)), displayCurrency)}</span>
+                                            <span className="text-3xl font-black text-foreground">
+                                                <KasaBalanceText
+                                                    balance={convertTryToDisplay(Number(account.balance))}
+                                                    currency={displayCurrency}
+                                                    accountType={account.type}
+                                                />
+                                            </span>
                                             <span className="text-xs text-muted-foreground">toplam bakiye</span>
                                         </div>
                                     </div>

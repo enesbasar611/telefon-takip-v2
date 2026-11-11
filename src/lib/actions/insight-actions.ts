@@ -83,3 +83,24 @@ export async function getReadyDevices() {
         return [];
     }
 }
+
+export async function getOverdueServices() {
+    try {
+        const shopId = await getShopId();
+        const devices = await prisma.serviceTicket.findMany({
+            where: {
+                shopId,
+                status: { notIn: ["DELIVERED", "CANCELLED"] },
+                estimatedDeliveryDate: { lt: new Date() }
+            },
+            include: {
+                customer: { select: { name: true, phone: true } }
+            },
+            orderBy: { estimatedDeliveryDate: "asc" }
+        });
+        return serializePrisma(devices);
+    } catch (error) {
+        console.error("Error fetching overdue services:", error);
+        return [];
+    }
+}

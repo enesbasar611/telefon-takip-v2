@@ -1,10 +1,13 @@
 "use client";
+
+import { TrendingUp as ProfitTrendIcon } from "lucide-react";
 import { useMemo } from "react";
 import { useLongPress } from "@/hooks/use-long-press";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
 import { CountingNumber } from "@/components/ui/counting-number";
+import { splitKasaBalance } from "@/lib/finance/balance-display";
 import { cn } from "@/lib/utils";
 import {
     Wrench,
@@ -51,6 +54,10 @@ export function StatCard({
     onClick,
     usdValue,
     defaultCurrency,
+    profitValue,
+    profitUsdValue,
+    salesProfitValue,
+    serviceProfitValue,
     outOfStockCount,
     isLoading,
     actionLabel,
@@ -86,9 +93,16 @@ export function StatCard({
     const isUSD = defaultCurrency === "USD";
     const hasUSD = usdValue !== undefined && usdValue !== null;
     const hasTRY = value !== undefined && value !== null;
+    const isKasaCard = id === "stat_sales" || (typeof label === "string" && label.toLowerCase().includes("kasa"));
+
+    const parseTRYNumber = (val: any) => {
+        if (typeof val === "number") return val;
+        if (typeof val !== "string") return Number(val);
+        return Number(val.replace(/[₺$€\s]/g, "").replace(/\./g, "").replace(",", "."));
+    };
 
     const formatTRY = (val: any) => {
-        const num = typeof val === 'string' ? Number(val.replace('₺', '').replace(/\./g, '').replace(',', '.')) : Number(val);
+        const num = parseTRYNumber(val);
         if (isNaN(num)) return val;
         return `₺${num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
@@ -100,11 +114,30 @@ export function StatCard({
     };
 
     const isCurrency = hasUSD;
+    const primaryNumeric = isUSD && hasUSD ? Number(usdValue) : parseTRYNumber(value);
+    const secondaryNumeric = isUSD ? parseTRYNumber(value) : Number(usdValue);
+
+    const primarySplit = isKasaCard && !isNaN(primaryNumeric) ? splitKasaBalance(primaryNumeric) : null;
+    const secondarySplit = isKasaCard && !isNaN(secondaryNumeric) ? splitKasaBalance(secondaryNumeric) : null;
+
     const mainDisplay = isCurrency
-        ? (isUSD && hasUSD ? formatUSD(usdValue) : formatTRY(value))
-        : value;
+        ? (isUSD && hasUSD
+            ? formatUSD(primarySplit ? primarySplit.displayAmount : usdValue)
+            : formatTRY(primarySplit ? primarySplit.displayAmount : value))
+        : (primarySplit ? formatTRY(primarySplit.displayAmount) : value);
+
+    const mainDeficitText = primarySplit?.isDeficit
+        ? `(-${isUSD && hasUSD ? formatUSD(primarySplit.deficitAmount) : formatTRY(primarySplit.deficitAmount)})`
+        : null;
+
     const secondaryDisplay = isCurrency
-        ? (isUSD ? (hasTRY ? formatTRY(value) : null) : (hasUSD ? formatUSD(usdValue) : null))
+        ? (isUSD
+            ? (hasTRY ? formatTRY(secondarySplit ? secondarySplit.displayAmount : value) : null)
+            : (hasUSD ? formatUSD(secondarySplit ? secondarySplit.displayAmount : usdValue) : null))
+        : null;
+
+    const secondaryDeficitText = secondarySplit?.isDeficit
+        ? `(-${isUSD ? formatTRY(secondarySplit.deficitAmount) : formatUSD(secondarySplit.deficitAmount)})`
         : null;
 
     // Distinct Liquid Glass Themes per Card (Optimized for both Light & Dark modes)
@@ -284,65 +317,165 @@ export function StatCard({
                         </div>
                     </div>
 
-                    <div className="mt-3 relative min-w-0">
+                    <div className="mt-3 relative min-w-0 @container">
                         <p className="text-[10px] sm:text-[11px] mb-1 font-bold tracking-wider uppercase text-slate-800 dark:text-white/80 truncate">
                             {label}
                         </p>
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                            {outOfStockCount !== undefined ? (
-                                <div className="flex items-baseline gap-3 sm:gap-4">
-                                    <div className="flex flex-col items-start">
-                                        <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums">
-                                            <CountingNumber value={value} />
-                                        </h3>
-                                        <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">Kritik</span>
-                                    </div>
-                                    <div className="h-6 w-px bg-slate-300 dark:bg-white/30 self-center" />
-                                    <div className="flex flex-col items-start">
-                                        <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums">
-                                            <CountingNumber value={outOfStockCount} />
-                                        </h3>
-                                        <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">Biten</span>
-                                    </div>
-                                </div>
-                            ) : secondaryDisplay ? (
+                        {profitValue !== undefined && profitValue !== null ? (() => {
+                            const profitIsUSD = defaultCurrency === "USD";
+                            const profitTRY = Number(profitValue || 0);
+                            const profitUSD = Number(profitUsdValue ?? 0);
+                            const hasProfitUSD = profitUsdValue !== undefined && profitUsdValue !== null;
+                            const primaryProfitNum = profitIsUSD ? profitUSD : profitTRY;
+                            const secondaryProfitNum = profitIsUSD ? profitTRY : profitUSD;
+                            const primaryProfitPrefix = `${primaryProfitNum < 0 ? "-" : ""}${profitIsUSD ? "$" : "₺"}`;
+                            const secondaryProfitPrefix = `${secondaryProfitNum < 0 ? "-" : ""}${profitIsUSD ? "₺" : "$"}`;
+                            const profitPositive = primaryProfitNum >= 0;
+                            const profitBreakdownTitle = `Bu Ay Toplam Kâr — Satış: ₺${Number(salesProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Servis: ₺${Number(serviceProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                            return (
                                 <>
-                                    <RevealFinancial
-                                        amount={mainDisplay}
-                                        prefix=""
-                                        className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums break-all"
-                                    />
-                                    <p className="text-[11px] font-semibold text-slate-700 dark:text-white/75 tabular-nums">
-                                        (<CountingNumber value={secondaryDisplay} />)
-                                    </p>
+                                    <div className="mt-1.5 grid grid-cols-1 @[225px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2.5 @[225px]:gap-3 items-start">
+                                        <div className="min-w-0">
+                                            <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/65 mb-0.5 truncate">
+                                                Nakit Kasa
+                                            </span>
+                                            <RevealFinancial
+                                                amount={mainDisplay}
+                                                prefix=""
+                                                deficitText={mainDeficitText}
+                                                className="text-lg @[250px]:text-xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums leading-tight break-words"
+                                            />
+                                            {secondaryDisplay && (
+                                                <p className="text-[10px] sm:text-[11px] font-semibold text-slate-700 dark:text-white/75 tabular-nums flex items-baseline gap-1 flex-wrap mt-0.5">
+                                                    (<CountingNumber value={secondaryDisplay} />
+                                                    {secondaryDeficitText && (
+                                                        <span className="text-rose-500 font-bold">{secondaryDeficitText}</span>
+                                                    )})
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="h-px w-full @[225px]:h-auto @[225px]:w-px @[225px]:self-stretch bg-slate-300/70 dark:bg-white/15 shrink-0" />
+
+                                        <div className="min-w-0" title={profitBreakdownTitle}>
+                                            <div className="flex items-center gap-1 flex-wrap mb-0.5">
+                                                <ProfitTrendIcon className={cn("h-3 w-3 shrink-0", profitPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")} />
+                                                <span className={cn(
+                                                    "text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate",
+                                                    profitPositive ? "text-emerald-700 dark:text-emerald-300" : "text-rose-600 dark:text-rose-400"
+                                                )}>
+                                                    Toplam Kâr
+                                                </span>
+                                                <span className="rounded px-1 py-px text-[8px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300 border border-emerald-500/20 shrink-0">
+                                                    Bu Ay
+                                                </span>
+                                            </div>
+                                            <RevealFinancial
+                                                amount={Math.abs(primaryProfitNum)}
+                                                prefix={primaryProfitPrefix}
+                                                className={cn(
+                                                    "text-lg @[250px]:text-xl font-extrabold tracking-tight tabular-nums leading-tight break-words",
+                                                    profitPositive ? "text-emerald-700 dark:text-emerald-300" : "text-rose-600 dark:text-rose-400"
+                                                )}
+                                            />
+                                            {hasProfitUSD && (
+                                                <p className="text-[10px] sm:text-[11px] font-semibold text-slate-700 dark:text-white/75 tabular-nums flex items-baseline gap-0.5 flex-wrap mt-0.5">
+                                                    (<CountingNumber
+                                                        value={Math.abs(secondaryProfitNum)}
+                                                        prefix={secondaryProfitPrefix}
+                                                        decimals={2}
+                                                        grouping
+                                                    />)
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {(subValue || actionLabel) && (
+                                        <div className="mt-2.5 pt-2 border-t border-slate-300/50 dark:border-white/10 flex items-center justify-between gap-2 flex-wrap">
+                                            {subValue && (
+                                                <p className="text-[10px] font-medium text-slate-700 dark:text-white/75 leading-tight truncate min-w-0">
+                                                    {subValue}
+                                                </p>
+                                            )}
+                                            {actionLabel && (
+                                                <div className={cn(
+                                                    "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all shrink-0 ml-auto",
+                                                    glassTheme.actionPill
+                                                )}>
+                                                    <span className="truncate">{actionLabel}</span>
+                                                    <ArrowUpRight className="h-2.5 w-2.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </>
-                            ) : typeof mainDisplay === 'string' && (mainDisplay.includes('₺') || mainDisplay.includes('$')) ? (
-                                <RevealFinancial
-                                    amount={mainDisplay}
-                                    prefix=""
-                                    className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums break-all"
-                                />
-                            ) : (
-                                <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums">
-                                    <CountingNumber value={mainDisplay} />
-                                </h3>
-                            )}
-                        </div>
+                            );
+                        })() : (
+                            <>
+                                <div className="flex items-baseline gap-2 flex-wrap">
+                                    {outOfStockCount !== undefined ? (
+                                        <div className="flex items-baseline gap-3 sm:gap-4">
+                                            <div className="flex flex-col items-start">
+                                                <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums">
+                                                    <CountingNumber value={value} />
+                                                </h3>
+                                                <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">Kritik</span>
+                                            </div>
+                                            <div className="h-6 w-px bg-slate-300 dark:bg-white/30 self-center" />
+                                            <div className="flex flex-col items-start">
+                                                <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums">
+                                                    <CountingNumber value={outOfStockCount} />
+                                                </h3>
+                                                <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700 dark:text-white/70">Biten</span>
+                                            </div>
+                                        </div>
+                                    ) : secondaryDisplay ? (
+                                        <>
+                                            <RevealFinancial
+                                                amount={mainDisplay}
+                                                prefix=""
+                                                deficitText={mainDeficitText}
+                                                className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums break-all"
+                                            />
+                                            <p className="text-[11px] font-semibold text-slate-700 dark:text-white/75 tabular-nums flex items-baseline gap-1 flex-wrap">
+                                                (<CountingNumber value={secondaryDisplay} />
+                                                {secondaryDeficitText && (
+                                                    <span className="text-rose-500 font-bold">{secondaryDeficitText}</span>
+                                                )})
+                                            </p>
+                                        </>
+                                    ) : typeof mainDisplay === 'string' && (mainDisplay.includes('₺') || mainDisplay.includes('$')) ? (
+                                        <RevealFinancial
+                                            amount={mainDisplay}
+                                            prefix=""
+                                            deficitText={mainDeficitText}
+                                            className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums break-all"
+                                        />
+                                    ) : (
+                                        <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums">
+                                            <CountingNumber value={mainDisplay} />
+                                        </h3>
+                                    )}
+                                </div>
 
-                        {subValue && (
-                            <p className="text-[10px] mt-1.5 font-medium text-slate-700 dark:text-white/75 leading-tight truncate">
-                                {subValue}
-                            </p>
-                        )}
+                                {subValue && (
+                                    <p className="text-[10px] mt-1.5 font-medium text-slate-700 dark:text-white/75 leading-tight truncate">
+                                        {subValue}
+                                    </p>
+                                )}
 
-                        {actionLabel && (
-                            <div className={cn(
-                                "mt-2.5 inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all",
-                                glassTheme.actionPill
-                            )}>
-                                <span className="truncate">{actionLabel}</span>
-                                <ArrowUpRight className="h-2.5 w-2.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                            </div>
+                                {actionLabel && (
+                                    <div className={cn(
+                                        "mt-2.5 inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all",
+                                        glassTheme.actionPill
+                                    )}>
+                                        <span className="truncate">{actionLabel}</span>
+                                        <ArrowUpRight className="h-2.5 w-2.5 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </CardContent>

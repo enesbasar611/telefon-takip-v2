@@ -2,46 +2,90 @@
 
 import { useDashboard } from "./dashboard-context";
 import { Button } from "@/components/ui/button";
-import { Settings2, Check, Loader2, Edit3, X } from "lucide-react";
+import { Check, Edit3, Loader2, SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function DashboardEditButton() {
-    const { isEditMode, setIsEditMode, isPending, hasChanges } = useDashboard();
+  const {
+    isEditMode,
+    setIsEditMode,
+    isStudioOpen,
+    setIsStudioOpen,
+    isPending,
+    hasChanges,
+  } = useDashboard();
 
-    if (isEditMode) {
-        return (
-            <div className="flex items-center gap-2 shrink-0">
-                {hasChanges ? (
-                    <Button
-                        onClick={() => setIsEditMode(false)}
-                        className="h-10 px-3 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all gap-1.5 sm:gap-2 text-[10px] font-bold uppercase tracking-widest shrink-0 whitespace-nowrap"
-                        disabled={isPending}
-                    >
-                        {isPending ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Check className="h-4 w-4 shrink-0" />}
-                        <span className="hidden sm:inline">DEĞİŞİKLİKLERİ</span> KAYDET
-                    </Button>
-                ) : (
-                    <Button
-                        onClick={() => setIsEditMode(false)}
-                        variant="secondary"
-                        className="h-10 px-3 sm:px-4 rounded-xl shadow-lg transition-all gap-1.5 sm:gap-2 text-[10px] font-bold uppercase tracking-widest border border-border/40 bg-card/40 backdrop-blur-md shrink-0 whitespace-nowrap"
-                    >
-                        <X className="h-4 w-4 shrink-0" />
-                        BİTİR
-                    </Button>
-                )}
-            </div>
-        );
+  const handleOpenStudio = () => {
+    if (!isEditMode) setIsEditMode(true);
+    setIsStudioOpen(!isStudioOpen);
+  };
+
+  const handleToggleEdit = () => {
+    if (!isEditMode) {
+      setIsEditMode(true);
+      return;
     }
 
-    return (
-        <Button
-            onClick={() => setIsEditMode(true)}
-            variant="outline"
-            className="h-10 px-3 sm:px-4 gap-1.5 sm:gap-2 border-border/40 bg-card/40 backdrop-blur-md hover:bg-primary/10 hover:text-primary hover:border-primary/40 rounded-xl transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm group shrink-0 whitespace-nowrap"
-        >
-            <Settings2 className="h-4 w-4 group-hover:rotate-90 transition-transform shrink-0" />
-            <span>PANELİ DÜZENLE</span>
-        </Button>
-    );
+    if (hasChanges) {
+      window.dispatchEvent(new CustomEvent("dashboard:save-and-exit"));
+      return;
+    }
+
+    setIsStudioOpen(false);
+    setIsEditMode(false);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <Button
+        type="button"
+        variant={isStudioOpen ? "default" : "outline"}
+        size="sm"
+        onClick={handleOpenStudio}
+        disabled={isPending}
+        className={cn(
+          "h-8 rounded-xl px-2.5 text-[11px] font-semibold tracking-tight gap-1.5 transition-all cursor-pointer border-border/50",
+          isStudioOpen && "shadow-xs"
+        )}
+        title="Kart kütüphanesi, hazır şablonlar ve görünüm ayarları"
+      >
+        <SlidersHorizontal className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Stüdyo</span>
+      </Button>
+
+      <Button
+        type="button"
+        variant={isEditMode ? (hasChanges ? "default" : "secondary") : "outline"}
+        size="sm"
+        onClick={handleToggleEdit}
+        disabled={isPending}
+        className={cn(
+          "h-8 rounded-xl px-3 text-[11px] font-semibold uppercase tracking-wider gap-1.5 transition-all cursor-pointer",
+          isEditMode && hasChanges && "bg-primary text-primary-foreground shadow-sm",
+          !isEditMode && "bg-card/60 hover:bg-muted border-border/50"
+        )}
+      >
+        {isPending ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : isEditMode ? (
+          hasChanges ? (
+            <>
+              <Check className="w-3.5 h-3.5" />
+              <span>Kaydet & Bitir</span>
+            </>
+          ) : (
+            <>
+              <X className="w-3.5 h-3.5" />
+              <span>Bitir</span>
+            </>
+          )
+        ) : (
+          <>
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Paneli Düzenle</span>
+          </>
+        )}
+      </Button>
+    </div>
+  );
 }

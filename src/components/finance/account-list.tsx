@@ -12,6 +12,8 @@ import { TransferModal } from "./transfer-modal";
 import { CashResetModal } from "./cash-reset-modal";
 import { useToast } from "@/hooks/use-toast";
 import { deleteAccount } from "@/lib/actions/finance-actions";
+import { KasaBalanceText } from "./kasa-balance-text";
+import { splitKasaBalance } from "@/lib/finance/balance-display";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import {
@@ -84,6 +86,31 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
         })}`;
     };
 
+    const toDisplayAmount = (value: number, accountCurrency?: string) => {
+        if (accountCurrency) return value;
+        if (defaultCurrency === "USD") return value / usdRate;
+        if (defaultCurrency === "EUR") return value / eurRate;
+        return value;
+    };
+
+    const getDisplayCurrency = (accountCurrency?: string) => {
+        if (accountCurrency === "USD" || accountCurrency === "EUR" || accountCurrency === "TRY") {
+            return accountCurrency;
+        }
+        return defaultCurrency === "USD" || defaultCurrency === "EUR" ? defaultCurrency : "TRY";
+    };
+
+    const totalKasaNetTry = accounts.reduce((sum, acc) => {
+        if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
+        return sum + Number(acc.balance);
+    }, 0);
+    const totalNonCardDeficitTry = accounts.reduce((sum, acc) => {
+        if (acc.type !== "CREDIT_CARD" && Number(acc.balance) < -0.004) {
+            return sum + Math.abs(Number(acc.balance));
+        }
+        return sum;
+    }, 0);
+
     const handleDelete = async (id: string) => {
         setIsDeleting(id);
         try {
@@ -138,11 +165,16 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                         <div>
                             <h3 className="font-medium text-xs sm:text-sm tracking-tight text-foreground/80 uppercase mb-0.5 sm:mb-1 truncate">Toplam Kasa</h3>
                             <p className="text-base sm:text-xl font-bold tracking-tighter text-foreground truncate">
-                                {formatDisplayMoney(accounts.reduce((sum, acc) => {
-                                    if (acc.type === "CREDIT_CARD") return sum - Number(acc.balance);
-                                    return sum + Number(acc.balance);
-                                }, 0))}
+                                <KasaBalanceText
+                                    balance={toDisplayAmount(totalKasaNetTry)}
+                                    currency={getDisplayCurrency()}
+                                />
                             </p>
+                            {totalKasaNetTry >= -0.004 && totalNonCardDeficitTry > 0 && (
+                                <p className="text-[10px] font-semibold text-rose-500 mt-0.5 truncate">
+                                    Gider açığı: (-{formatDisplayMoney(totalNonCardDeficitTry)})
+                                </p>
+                            )}
                             <p className="text-[8px] sm:text-[10px] text-muted-foreground mt-0.5 opacity-60 truncate">
                                 Birim: {defaultCurrency}
                             </p>
@@ -219,9 +251,32 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-sm tracking-tight text-foreground/80 uppercase mb-1">{account.name}</h3>
-                                    <p className="text-xl font-bold tracking-tighter text-foreground">{formatDisplayMoney(Number(account.balance), account.currency)}</p>
+                                    <p className="text-xl font-bold tracking-tighter text-foreground">
+                                        <KasaBalanceText
+                                            balance={toDisplayAmount(Number(account.balance), account.currency)}
+                                            currency={getDisplayCurrency(account.currency)}
+                                            accountType={account.type}
+                                        />
+                                    </p>
                                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Hesap para birimi: {account.currency || "TRY"}</p>
-                                    {account.currency === "USD" ? (
+                                    {account.type !== "CREDIT_CARD" && Number(account.balance) < -0.004 ? (
+                                        account.currency === "USD" ? (
+                                            <div className="flex gap-2 mt-0.5 opacity-80">
+                                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                                    ~₺0 <span className="text-rose-500 font-bold">(-₺{Math.round(Math.abs(Number(account.balance)) * usdRate).toLocaleString("tr-TR")})</span>
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-2 mt-0.5 opacity-80">
+                                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                                    ~$0,00 <span className="text-rose-500 font-bold">(-${(Math.abs(Number(account.balance)) / usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                                                </span>
+                                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                                    ~€0,00 <span className="text-rose-500 font-bold">(-€{(Math.abs(Number(account.balance)) / eurRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                                                </span>
+                                            </div>
+                                        )
+                                    ) : account.currency === "USD" ? (
                                         <div className="flex gap-2 mt-0.5 opacity-60">
                                             <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
                                                 ~₺{Math.round(Number(account.balance) * usdRate).toLocaleString("tr-TR")}

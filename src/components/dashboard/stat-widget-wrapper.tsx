@@ -63,43 +63,55 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
     let value = stat.value || "0";
     let subValue = stat.subValue;
     let usdValue = stat.usdValue;
+    let profitValue = stat.profitValue;
+    let profitUsdValue = stat.profitUsdValue;
+    let salesProfitValue = stat.salesProfitValue;
+    let serviceProfitValue = stat.serviceProfitValue;
     let outOfStockCount = stat.outOfStockCount;
 
     if (!isLoading && !isError && dashboardInit?.stats) {
         const s = dashboardInit.stats;
         switch (type) {
-            case "DAILY_SALES":
-                // Daily Sales card uses Kasa Balance as primary, Today Sales as sub
-                value = s.kasaBalance || value;
-                subValue = `Günün Satışı: ${s.todaySales || "₺0"}`;
-                usdValue = s.kasaBalanceUSD;
+            case "DAILY_SALES": {
+                // Daily Sales card uses Kasa Balance as primary, Today Sales as sub, Monthly Profit beside it
+                value = s.kasaBalance ?? value;
+                const todayFormatted = defaultCurrency === "USD"
+                    ? `$${Number(s.todaySalesUSD ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `₺${Number(s.todaySales ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                subValue = `Günün Satışı: ${todayFormatted}`;
+                usdValue = s.kasaBalanceUSD ?? usdValue;
+                profitValue = s.monthlyProfit ?? profitValue;
+                profitUsdValue = s.monthlyProfitUSD ?? profitUsdValue;
+                salesProfitValue = s.monthlySalesProfit ?? salesProfitValue;
+                serviceProfitValue = s.monthlyServiceProfit ?? serviceProfitValue;
                 break;
+            }
             case "REPAIR_INCOME":
-                value = s.todayRepairIncome || value;
-                usdValue = s.todayRepairIncomeUSD;
+                value = s.todayRepairIncome ?? value;
+                usdValue = s.todayRepairIncomeUSD ?? usdValue;
                 break;
             case "COLLECTIONS":
-                value = s.collectedPayments || value;
-                usdValue = s.collectedPaymentsUSD;
+                value = s.collectedPayments ?? value;
+                usdValue = s.collectedPaymentsUSD ?? usdValue;
                 break;
             case "PENDING_SERVICES":
-                value = s.pendingServices || value;
+                value = s.pendingServices ?? value;
                 break;
             case "READY_DEVICES":
-                value = s.readyDevices || value;
+                value = s.readyDevices ?? value;
                 break;
             case "CRITICAL_STOCK":
-                value = s.criticalStock || value;
-                outOfStockCount = s.outOfStockCount || outOfStockCount;
+                value = s.criticalStock ?? value;
+                outOfStockCount = s.outOfStockCount ?? outOfStockCount;
                 break;
             case "TOTAL_DEBTS":
-                value = s.totalDebts || value;
-                usdValue = s.totalDebtsUSD;
+                value = s.totalDebts ?? value;
+                usdValue = s.totalDebtsUSD ?? usdValue;
                 break;
             case "CASH_BALANCE":
                 // Cash Balance card uses Today Sales (Volume) as primary
-                value = s.todaySales || value;
-                usdValue = s.todaySalesUSD;
+                value = s.todaySales ?? value;
+                usdValue = s.todaySalesUSD ?? usdValue;
                 break;
         }
     }
@@ -142,6 +154,10 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
                 value={isLoading && !stat.value ? "Yükleniyor..." : value}
                 subValue={subValue}
                 usdValue={usdValue}
+                profitValue={profitValue}
+                profitUsdValue={profitUsdValue}
+                salesProfitValue={salesProfitValue}
+                serviceProfitValue={serviceProfitValue}
                 outOfStockCount={outOfStockCount}
                 defaultCurrency={defaultCurrency}
                 isLoading={isLoading}

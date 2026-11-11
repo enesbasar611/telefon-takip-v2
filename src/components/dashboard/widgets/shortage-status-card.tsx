@@ -62,6 +62,7 @@ export function ShortageStatusCard({
     const [selectedGroup, setSelectedGroup] = useState<GroupedShortage | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
+    const [showAll, setShowAll] = useState(false);
     const VISIBLE_LIMIT = 4;
 
     const { data: fetchedCategories = [] } = useQuery({
@@ -194,7 +195,7 @@ export function ShortageStatusCard({
                     </div>
                 </CardHeader>
 
-                <CardContent className="space-y-3 relative p-0">
+                <CardContent className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-3 relative p-0 pr-0.5">
                     {isUpdating && (
                         <div className="absolute top-2 right-4 z-50">
                             <Loader2 className="h-3 w-3 animate-spin text-blue-500 opacity-50" />
@@ -226,7 +227,7 @@ export function ShortageStatusCard({
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-4 sm:p-5 pb-3">
-                            {groupList.slice(0, VISIBLE_LIMIT).map((group) => (
+                            {(showAll ? groupList : groupList.slice(0, VISIBLE_LIMIT)).map((group) => (
                                 <button
                                     key={group.id}
                                     onClick={() => {
@@ -292,17 +293,21 @@ export function ShortageStatusCard({
                             ))}
 
                             {groupList.length > VISIBLE_LIMIT && (
-                                <div className="flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider hover:text-blue-500 cursor-pointer transition-colors" onClick={() => refreshData(true)}>
-                                    <span>+{groupList.length - VISIBLE_LIMIT} KAYIT DAHA VAR</span>
-                                    <ChevronRight className="w-3 h-3 rotate-90" />
-                                </div>
+                                <button
+                                    type="button"
+                                    className="w-full col-span-full flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-wider hover:text-blue-500 cursor-pointer transition-colors"
+                                    onClick={() => setShowAll((prev) => !prev)}
+                                >
+                                    <span>{showAll ? "DAHA AZ GÖSTER" : `+${groupList.length - VISIBLE_LIMIT} KAYIT DAHA VAR`}</span>
+                                    <ChevronRight className={cn("w-3 h-3 transition-transform", showAll ? "-rotate-90" : "rotate-90")} />
+                                </button>
                             )}
                         </div>
                     )}
                 </CardContent>
 
                 {groupList.length > 0 && (
-                    <div className="p-4 sm:p-5 pt-0 grid grid-cols-2 gap-2">
+                    <div className="shrink-0 p-4 sm:p-5 pt-2 grid grid-cols-2 gap-2">
                         <Button
                             size="sm"
                             onClick={() => setIsAddOrderOpen(true)}

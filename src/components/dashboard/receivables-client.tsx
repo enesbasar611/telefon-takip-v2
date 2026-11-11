@@ -571,7 +571,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                     </div>
                 </CardHeader>
 
-                <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 pt-3.5 flex flex-col custom-scrollbar">
+                <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pt-3.5 flex flex-col custom-scrollbar">
                     {/* Arama Alanı */}
                     {showSearch && (
                         <div className="mb-3 animate-in slide-in-from-top-2 duration-200">
@@ -635,7 +635,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                         </div>
 
                         {pinnedAggregates.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                                 {pinnedAggregates.map(pinned => {
                                     const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
                                     const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
@@ -759,7 +759,7 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                     </div>
 
                     {/* TÜM BAYİLER VE MÜŞTERİLER LİSTESİ (10 Kayıt Sayfalandırma & 0-2.000$ Barlı Sistem) */}
-                    <div className="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar flex-1">
+                    <div className="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0">
                         {filteredCustomerAggregates.length > 0 ? (
                             <>
                                 {paginatedCustomers.map((agg) => {

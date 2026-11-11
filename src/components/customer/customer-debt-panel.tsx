@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import React, { useState, useTransition } from "react";
 import {
     CreditCard,
@@ -595,7 +597,7 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
                                 <SelectContent>
                                     {accounts.map((acc) => (
                                         <SelectItem key={acc.id} value={acc.id}>
-                                            {acc.name} ({formatWithCurrency(acc.balance, "TRY")})
+                                            <span className="inline-flex items-center gap-1">{acc.name} (<KasaBalanceText balance={acc.balance} currency={(acc as any).currency || "TRY"} accountType={acc.type} />)</span>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

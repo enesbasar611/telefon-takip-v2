@@ -24,7 +24,7 @@ export async function StatsGridStream({ labels }: { labels?: Record<string, stri
     const statsData = serializePrisma(statsDataRaw);
 
     const stats = [
-        { label: "Kasa Bakiyesi", value: statsData?.kasaBalance || "₺0", subValue: `Günün Satışı: ${statsData?.todaySales || "₺0"}`, iconId: "Wallet", accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel", type: "DAILY_SALES" },
+        { label: "Kasa Bakiyesi", value: statsData?.kasaBalance || "₺0", subValue: `Günün Satışı: ₺${Number(statsData?.todaySales || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, profitValue: statsData?.monthlyProfit ?? 0, iconId: "Wallet", accent: "primary", colorClass: "text-primary", bgClass: "bg-primary/10", badge: "Güncel", type: "DAILY_SALES" },
         { label: labels?.repairIncome || "Tamir gelirleri", value: statsData?.todayRepairIncome || "₺0", iconId: "Wrench", accent: "secondary", colorClass: "text-secondary", bgClass: "bg-secondary/10", trend: "+8%", type: "REPAIR_INCOME" },
         { label: "Tahsilatlar", value: statsData?.collectedPayments || "₺0", iconId: "Banknote", accent: "tertiary", colorClass: "text-amber-500", bgClass: "bg-amber-500/10", type: "COLLECTIONS" },
         { label: labels?.pendingServices || "Bekleyen servisler", value: statsData?.pendingServices || "0", iconId: "Clock", accent: "primary", colorClass: "text-blue-500", bgClass: "bg-blue-500/10", badge: "Acil", type: "PENDING_SERVICES" },

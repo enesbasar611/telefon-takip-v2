@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
     Users,
     Wallet,
@@ -45,6 +45,10 @@ import { TopProductsStream } from "@/components/dashboard/streamed/top-products-
 import { ShortageStatusCard } from "@/components/dashboard/widgets/shortage-status-card";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { ReceivablesStream } from "@/components/dashboard/streamed/receivables-stream";
+import { CashChannelsStream } from "@/components/dashboard/streamed/cash-channels-stream";
+import { SupplierPayablesStream } from "@/components/dashboard/streamed/supplier-payables-stream";
+import { DailyAgendaStream } from "@/components/dashboard/streamed/daily-agenda-stream";
+import { ReturnsWarrantyStream } from "@/components/dashboard/streamed/returns-warranty-stream";
 import { BorderBeam } from "border-beam";
 import { ThinkingOrb } from "thinking-orbs";
 
@@ -101,7 +105,11 @@ export function AdminDashboard({
             colorClass: "text-primary",
             bgClass: "bg-primary/10",
             badge: "Güncel",
-            usdValue: getUSD(s.kasaBalance)
+            usdValue: getUSD(s.kasaBalance),
+            profitValue: Number(s.monthlyProfit ?? 0),
+            profitUsdValue: s.monthlyProfitUSD ?? Number((Number(s.monthlyProfit ?? 0) / usdRate).toFixed(2)),
+            salesProfitValue: Number(s.monthlySalesProfit ?? 0),
+            serviceProfitValue: Number(s.monthlyServiceProfit ?? 0)
         },
         {
             id: "stat_accounts",
@@ -152,8 +160,8 @@ export function AdminDashboard({
         {
             id: "stat_stock",
             label: "Kritik stok",
-            value: s.criticalStock || "0",
-            outOfStockCount: s.outOfStockCount || "0",
+            value: s.criticalStock ?? "0",
+            outOfStockCount: s.outOfStockCount ?? "0",
             iconId: "AlertTriangle",
             colorClass: "text-rose-500",
             bgClass: "bg-rose-500/10",
@@ -191,9 +199,16 @@ export function AdminDashboard({
         inventory: <TopProductsStream shopId={shopId || ""} />,
         shortage_status: <ShortageStatusCard categories={categories} />,
         receivables: <ReceivablesStream shopId={shopId || ""} />,
+        cash_channels: <CashChannelsStream shopId={shopId || ""} />,
+        daily_agenda: <DailyAgendaStream shopId={shopId || ""} />,
+        supplier_payables: <SupplierPayablesStream shopId={shopId || ""} />,
+        returns_warranty: <ReturnsWarrantyStream shopId={shopId || ""} />,
     };
 
-    const initialLayout = user?.dashboardLayout || [];
+    const initialLayout = useMemo(
+        () => user?.dashboardLayout ?? null,
+        [user?.dashboardLayout]
+    );
 
     return (
         <div className="space-y-5 pb-6">

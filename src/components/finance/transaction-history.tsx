@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { KasaBalanceText } from "./kasa-balance-text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useTableSort } from "@/hooks/use-table-sort";
@@ -511,13 +512,24 @@ export function TransactionHistory({
                                                                 : "text-rose-600 dark:text-rose-400 bg-rose-500/8 border-rose-500/20"
                                                         )}>
                                                             {isIncome ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                                                            {formatMoney(t.runningBalance, t.currency)}
+                                                            <KasaBalanceText
+                                                                balance={t.runningBalance}
+                                                                currency={t.currency || "TRY"}
+                                                                accountType={t.financeAccount?.type}
+                                                                mainClassName="text-inherit"
+                                                            />
                                                         </div>
                                                     );
                                                 })()}
                                                 {t.currency !== "TRY" && t.runningBalance !== null && t.runningBalance !== undefined && (
                                                     <span className="text-[9px] text-muted-foreground/60 font-medium">
-                                                        ~₺{Math.round(Number(t.runningBalance) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString("tr-TR")}
+                                                        ~<KasaBalanceText
+                                                            balance={Math.round(Number(t.runningBalance) * (t.currency === "USD" ? usdRate : eurRate))}
+                                                            currency="TRY"
+                                                            accountType={t.financeAccount?.type}
+                                                            minimumFractionDigits={0}
+                                                            maximumFractionDigits={0}
+                                                        />
                                                     </span>
                                                 )}
                                                 <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest whitespace-nowrap">

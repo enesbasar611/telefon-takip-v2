@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getPendingProcurement, getDeadStockProducts, getReadyDevices } from "@/lib/actions/insight-actions";
+import { getPendingProcurement, getDeadStockProducts, getReadyDevices, getOverdueServices } from "@/lib/actions/insight-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -30,56 +30,73 @@ export function SmartInsights({ stats, cols = 8, rows = 4 }: { stats: any, cols?
   const [details, setDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const s = stats || {};
   const isVerySmall = cols < 8;
   const isShort = rows < 3;
+  const hasSalesTrend = s.salesTrendPercent !== null && s.salesTrendPercent !== undefined;
+  const trendPct = Number(s.salesTrendPercent || 0);
 
   const insights = [
     {
       id: 1,
       icon: Target,
       title: "Tedarik bekleyenler",
-      message: `${stats.pendingProcurementCount} kalem ürün eksikler listesinde sipariş bekliyor.`,
+      message: `${s.pendingProcurementCount} kalem ürün eksikler listesinde sipariş bekliyor.`,
       priority: "HIGH",
       color: "text-rose-500",
       bg: "bg-rose-500/5 hover:bg-rose-500/10",
       border: "border-rose-500/20",
-      show: Number(stats.pendingProcurementCount) > 0,
+      show: Number(s.pendingProcurementCount) > 0,
+      drillDown: true
+    },
+    {
+      id: 5,
+      icon: AlertTriangle,
+      title: "Geciken teslimatlar",
+      message: `${s.overdueServicesCount} servis cihazının tahmini teslim tarihi geçti.`,
+      priority: "HIGH",
+      color: "text-rose-500",
+      bg: "bg-rose-500/5 hover:bg-rose-500/10",
+      border: "border-rose-500/20",
+      show: Number(s.overdueServicesCount) > 0,
       drillDown: true
     },
     {
       id: 2,
       icon: AlertTriangle,
       title: "Ölü stok analizi",
-      message: `${stats.deadStockCount} ürün son 90 gündür hiç satılmadı. Kampanya planlayın.`,
+      message: `${s.deadStockCount} ürün son 90 gündür hiç satılmadı. Kampanya planlayın.`,
       priority: "MEDIUM",
       color: "text-amber-500",
       bg: "bg-amber-500/5 hover:bg-amber-500/10",
       border: "border-amber-500/20",
-      show: Number(stats.deadStockCount) > 0 && !isShort,
+      show: Number(s.deadStockCount) > 0 && !isShort,
       drillDown: true
     },
     {
       id: 3,
       icon: Rocket,
       title: "Satış performansı",
-      message: `Bugünkü satışlar ortalamanın üzerinde seyrediyor. Gelir artışı: +12%`,
+      message: trendPct >= 0
+        ? `Bugünkü ciro son 30 gün ortalamasının %${trendPct} üzerinde seyrediyor.`
+        : `Bugünkü ciro son 30 gün ortalamasının %${Math.abs(trendPct)} altında seyrediyor.`,
       priority: "MEDIUM",
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/5 hover:bg-emerald-500/10",
-      border: "border-emerald-500/20",
-      show: !isVerySmall && !isShort,
+      color: trendPct >= 0 ? "text-emerald-500" : "text-amber-500",
+      bg: trendPct >= 0 ? "bg-emerald-500/5 hover:bg-emerald-500/10" : "bg-amber-500/5 hover:bg-amber-500/10",
+      border: trendPct >= 0 ? "border-emerald-500/20" : "border-amber-500/20",
+      show: hasSalesTrend && !isVerySmall && !isShort,
       drillDown: false
     },
     {
       id: 4,
       icon: Zap,
       title: "Servis verimliliği",
-      message: `${stats.readyDevices} cihaz teslimata hazır bekliyor.`,
+      message: `${s.readyDevices} cihaz teslimata hazır bekliyor.`,
       priority: "LOW",
       color: "text-blue-500",
       bg: "bg-blue-500/5 hover:bg-blue-500/10",
       border: "border-blue-500/20",
-      show: Number(stats.readyDevices) > 0,
+      show: Number(s.readyDevices) > 0,
       drillDown: true
     }
   ].filter(i => i.show);
@@ -94,6 +111,7 @@ export function SmartInsights({ stats, cols = 8, rows = 4 }: { stats: any, cols?
       if (insight.id === 1) data = await getPendingProcurement();
       if (insight.id === 2) data = await getDeadStockProducts();
       if (insight.id === 4) data = await getReadyDevices();
+      if (insight.id === 5) data = await getOverdueServices();
       setDetails(data);
     } catch (err) {
       console.error(err);
@@ -103,8 +121,8 @@ export function SmartInsights({ stats, cols = 8, rows = 4 }: { stats: any, cols?
   };
 
   return (
-    <BorderBeam size="md" colorVariant="colorful" strength={0.65} className="h-full rounded-2xl">
-      <Card className="h-full flex flex-col bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl border border-border/40 dark:border-white/[0.08] shadow-sm overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-md animate-in fade-in">
+    <BorderBeam size="md" colorVariant="colorful" strength={0.65} className="h-full min-h-0 flex flex-col rounded-2xl">
+      <Card className="h-full min-h-0 flex-1 max-h-[inherit] flex flex-col bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl border border-border/40 dark:border-white/[0.08] shadow-sm overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-md animate-in fade-in">
       <CardHeader className={cn(
         "flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 bg-muted/10",
         isVerySmall || isShort ? "p-3 pb-2.5" : "px-5 py-3.5"
@@ -127,7 +145,7 @@ export function SmartInsights({ stats, cols = 8, rows = 4 }: { stats: any, cols?
       </CardHeader>
       
       <CardContent className={cn(
-        "flex-1 overflow-y-auto custom-scrollbar",
+        "flex-1 min-h-0 overflow-y-auto custom-scrollbar",
         isVerySmall || isShort ? "p-3 space-y-2" : "p-4 sm:p-5 space-y-2.5"
       )}>
         {insights.map((insight) => (
@@ -212,18 +230,32 @@ export function SmartInsights({ stats, cols = 8, rows = 4 }: { stats: any, cols?
                               <Wrench className="h-4 w-4 text-blue-500" />}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-semibold text-foreground truncate">{item.name || item.product?.name || item.customer?.name}</span>
+                          <span className="text-xs font-semibold text-foreground truncate">
+                            {selectedInsight?.id === 5 || selectedInsight?.id === 4
+                              ? `${item.deviceBrand || ""} ${item.deviceModel || ""} ${item.customer?.name ? `— ${item.customer.name}` : ""}`.trim()
+                              : (item.name || item.product?.name || item.customer?.name)}
+                          </span>
                           <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                            {selectedInsight?.id === 4 ? `FİŞ: #${item.ticketNumber}` : (item.category?.name || item.product?.category?.name || 'GENEL')}
+                            {(selectedInsight?.id === 4 || selectedInsight?.id === 5)
+                              ? `FİŞ: #${item.ticketNumber}`
+                              : (item.category?.name || item.product?.category?.name || 'GENEL')}
                           </span>
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-3">
                         <span className="text-xs font-bold text-primary tabular-nums block">
-                          {selectedInsight?.id === 4 ? item.status : (selectedInsight?.id === 1 ? `Eksik: ${item.quantity}` : `Stok: ${item.stock}`)}
+                          {selectedInsight?.id === 5
+                            ? "GECİKTİ"
+                            : selectedInsight?.id === 4
+                              ? item.status
+                              : (selectedInsight?.id === 1 ? `Eksik: ${item.quantity}` : `Stok: ${item.stock}`)}
                         </span>
                         <span className="text-[9px] text-muted-foreground uppercase tracking-wider">
-                          {selectedInsight?.id === 1 ? `${item.notes || 'Talep Edildi'}` : (selectedInsight?.id === 2 ? '90+ Gündür Hareketsiz' : 'Teslim Bekliyor')}
+                          {selectedInsight?.id === 5 && item.estimatedDeliveryDate
+                            ? `Hedef: ${new Date(item.estimatedDeliveryDate).toLocaleDateString("tr-TR")}`
+                            : selectedInsight?.id === 1
+                              ? `${item.notes || 'Talep Edildi'}`
+                              : (selectedInsight?.id === 2 ? '90+ Gündür Hareketsiz' : 'Teslim Bekliyor')}
                         </span>
                       </div>
                     </div>

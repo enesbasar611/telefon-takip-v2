@@ -36,13 +36,16 @@ export async function getSalesReport(startDate?: Date, endDate?: Date) {
   }
 }
 
-export async function getServiceMetrics() {
+export async function getServiceMetrics(options?: { activeOnly?: boolean }) {
   try {
     const shopId = await getShopId(false);
     if (!shopId) return [];
     const statuses = await prisma.serviceTicket.groupBy({
       by: ['status'],
-      where: { shopId },
+      where: {
+        shopId,
+        ...(options?.activeOnly ? { status: { notIn: ['DELIVERED', 'CANCELLED'] } } : {})
+      },
       _count: true
     });
 

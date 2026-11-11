@@ -54,6 +54,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { PriceInput } from "@/components/ui/price-input";
+import { KasaBalanceText } from "./kasa-balance-text";
 import {
   convertTransactionAmount,
   getCurrencySymbol,
@@ -269,7 +270,10 @@ export function CreateTransactionModal({
         queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-recent-transactions"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard-stat-detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+        queryClient.invalidateQueries({ queryKey: ["cash-balance-monthly-detail"] }),
         queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),
+        queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] }),
       ]);
       setOpen(false);
       if (!initialData) {
@@ -354,12 +358,40 @@ export function CreateTransactionModal({
 
     // For Credit Card, check against available balance (limit - balance)
     if (selectedAccount.type === "CREDIT_CARD") {
-      return amountValue > (selectedAccount.availableBalance || 0);
+      return (convertedAmounts.TRY || amountValue) > (selectedAccount.availableBalance || 0);
     }
 
     // For Cash/Bank, check against current balance
-    return amountValue > selectedAccount.balance;
+    return false; // Cash/Bank/POS accounts allow expenses exceeding balance (tracked as deficit)
   }, [transactionType, selectedAccount, amountValue]);
+
+  const balanceImpactPreview = useMemo(() => {
+    if (!selectedAccount || selectedAccount.type === "CREDIT_CARD") return null;
+    const currentBal = Number(selectedAccount.balance || 0);
+    const tryDelta = convertedAmounts.TRY || 0;
+    if (tryDelta <= 0) return null;
+
+    if (transactionType === "EXPENSE") {
+      const nextBal = currentBal - tryDelta;
+      if (nextBal >= -0.004) return null;
+      return {
+        mode: "DEFICIT" as const,
+        currentBal,
+        nextBal,
+      };
+    }
+
+    if (currentBal < -0.004) {
+      const nextBal = currentBal + tryDelta;
+      return {
+        mode: "PAYDOWN" as const,
+        currentBal,
+        nextBal,
+      };
+    }
+
+    return null;
+  }, [selectedAccount, transactionType, convertedAmounts.TRY]);
 
   // Smart Eye Keyword Dictionary for Proactive Category Recommendations
   const SMART_CATEGORY_MAP: { keywords: string[]; category: string; label: string }[] = useMemo(() => [
@@ -402,7 +434,7 @@ export function CreateTransactionModal({
 
   const onSubmit = async (data: TransactionFormValues) => {
     if (isInsufficient) {
-      toast.error("Yetersiz bakiye! Bu kasa eksiye düşeceği için işlem yapılamaz.");
+      toast.error("Kart limiti yetersiz! Bu işlem yapılamaz.");
       return;
     }
     transactionMutation.mutate(data);
@@ -657,9 +689,16 @@ export function CreateTransactionModal({
                           </div>
                           <span className={cn(
                             "shrink-0 font-semibold text-[11px]",
-                            Number(acc.balance) >= 0 ? "text-emerald-500" : "text-rose-500"
+                            Number(acc.balance) >= 0 ? "text-emerald-500" : "text-foreground"
                           )}>
-                            ₺{Number(acc.balance).toLocaleString('tr-TR')}
+                            <KasaBalanceText
+                              balance={acc.balance}
+                              currency={acc.currency || "TRY"}
+                              accountType={acc.type}
+                              minimumFractionDigits={0}
+                              maximumFractionDigits={2}
+                              mainClassName={acc.type === "CREDIT_CARD" && Number(acc.balance) < 0 ? "text-rose-500" : undefined}
+                            />
                           </span>
                         </div>
                       </SelectItem>
@@ -671,7 +710,32 @@ export function CreateTransactionModal({
                 {isInsufficient && (
                   <div className="flex items-center gap-2 mt-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 animate-in fade-in slide-in-from-top-1">
                     <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
-                    <p className="text-[10px] text-rose-500 font-medium">Bu kasada yeterli bakiye yok! Kasa eksiye düşeceği için işlem yapılamaz.</p>
+                    <p className="text-[10px] text-rose-500 font-medium">Bu kartın kullanılabilir limiti yetersiz! İşlem yapılamaz.</p>
+                  </div>
+                )}
+
+                {balanceImpactPreview?.mode === "DEFICIT" && (
+                  <div className="flex items-start gap-2.5 mt-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium leading-relaxed">
+                      Bu gider kasa bakiyesini aşıyor. İşlem sonrası kasa{" "}
+                      <KasaBalanceText balance={balanceImpactPreview.nextBal} className="font-bold text-foreground" />{" "}
+                      olarak görünecek ve sonraki satış/gelirler öncelikle bu gider açığından düşülecektir.
+                    </p>
+                  </div>
+                )}
+
+                {balanceImpactPreview?.mode === "PAYDOWN" && (
+                  <div className="flex items-start gap-2.5 mt-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 animate-in fade-in slide-in-from-top-1">
+                    <TrendingUp className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium leading-relaxed">
+                      Bu gelir mevcut{" "}
+                      <span className="text-rose-500 font-bold">
+                        (-₺{Math.abs(balanceImpactPreview.currentBal).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </span>{" "}
+                      gider açığından düşülecek. İşlem sonrası kasa:{" "}
+                      <KasaBalanceText balance={balanceImpactPreview.nextBal} className="font-bold text-foreground" />
+                    </p>
                   </div>
                 )}
 
@@ -814,14 +878,18 @@ export function CreateTransactionModal({
                       <p className="text-[10px] text-muted-foreground uppercase mb-2 group-hover:text-primary transition-colors">{acc.name}</p>
                       <div className="flex items-end justify-between">
                         <p className="text-xl text-foreground tracking-tighter">
-                          ₺{Number(acc.balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                          <KasaBalanceText
+                            balance={acc.balance}
+                            currency={acc.currency || "TRY"}
+                            accountType={acc.type}
+                          />
                         </p>
                         <div className={cn(
                           "px-3 py-1 rounded-full text-[9px] uppercase flex items-center gap-1.5",
                           acc.balance >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
                         )}>
                           {acc.balance >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-                          {acc.balance >= 0 ? "+ %4.2 BUGÜN" : "- %1.5 BUGÜN"}
+                          {acc.balance >= 0 ? "+ %4.2 BUGÜN" : acc.type !== "CREDIT_CARD" ? "GİDER AÇIĞI" : "- %1.5 BUGÜN"}
                         </div>
                       </div>
                     </div>

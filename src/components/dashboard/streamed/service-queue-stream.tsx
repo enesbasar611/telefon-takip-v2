@@ -31,11 +31,12 @@ const statusLabels: Record<string, string> = {
 };
 
 export function ServiceQueueStream({ title = "Servis Kuyruğu", shopId, cols = 12, rows = 3, onDataStatus }: { title?: string, shopId?: string, cols?: number, rows?: number, onDataStatus?: (isEmpty: boolean) => void }) {
+    const limit = rows >= 4 ? 10 : 6;
     const { data: recentTickets = [], isLoading } = useQuery({
-        queryKey: ["dashboard-service-queue", shopId || ""],
+        queryKey: ["dashboard-service-queue", shopId || "", limit],
         queryFn: async () => {
             if (!shopId) return [];
-            const recentTicketsRaw = await getRecentSales(shopId, 6);
+            const recentTicketsRaw = await getRecentSales(shopId, limit, true);
             return serializePrisma(recentTicketsRaw);
         },
         staleTime: 5 * 60 * 1000,
@@ -72,44 +73,60 @@ export function ServiceQueueStream({ title = "Servis Kuyruğu", shopId, cols = 1
             <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-2 custom-scrollbar">
                 {(recentTickets ?? []).length > 0 ? (
                     <>
-                        {(recentTickets ?? []).map((ticket: any) => (
-                            <Link
-                                key={ticket.id}
-                                href={`/servis/liste?status=${ticket.status}`}
-                                className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-muted/20 hover:bg-muted/40 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border border-border/40 hover:border-border transition-all duration-200 group"
-                            >
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="h-9 w-9 rounded-lg bg-card border border-border/40 flex items-center justify-center shadow-xs relative shrink-0 group-hover:scale-105 transition-transform">
-                                        <Smartphone className="h-4 w-4 text-primary/80" />
-                                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-background animate-pulse" />
+                        {(recentTickets ?? []).map((ticket: any) => {
+                            const isOverdue = ticket.estimatedDeliveryDate && new Date(ticket.estimatedDeliveryDate).getTime() < Date.now();
+                            const estimatedCost = Number(ticket.estimatedCost || 0);
+                            return (
+                                <Link
+                                    key={ticket.id}
+                                    href={`/servis/${ticket.id}`}
+                                    className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-muted/20 hover:bg-muted/40 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border border-border/40 hover:border-border transition-all duration-200 group"
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="h-9 w-9 rounded-lg bg-card border border-border/40 flex items-center justify-center shadow-xs relative shrink-0 group-hover:scale-105 transition-transform">
+                                            <Smartphone className="h-4 w-4 text-primary/80" />
+                                            <div className={cn(
+                                                "absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full border border-background",
+                                                isOverdue ? "bg-rose-500 animate-ping" : "bg-emerald-500 animate-pulse"
+                                            )} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <h4 className="font-semibold text-xs text-foreground tracking-tight truncate uppercase group-hover:text-primary transition-colors">
+                                                    {ticket.deviceBrand} {ticket.deviceModel}
+                                                </h4>
+                                                {isOverdue && (
+                                                    <span className="text-[8px] font-bold uppercase px-1.5 py-px rounded bg-rose-500/15 text-rose-500 border border-rose-500/20">
+                                                        Gecikti
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                                                {ticket.customer?.name} • <span className="text-primary font-semibold tabular-nums">#{ticket.ticketNumber}</span>
+                                                {ticket.problemDesc ? ` • ${ticket.problemDesc}` : ""}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <h4 className="font-semibold text-xs text-foreground tracking-tight truncate uppercase group-hover:text-primary transition-colors">
-                                            {ticket.deviceBrand} {ticket.deviceModel}
-                                        </h4>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-tight truncate mt-0.5">
-                                            {ticket.customer?.name} • <span className="text-primary font-semibold tabular-nums">#{ticket.ticketNumber}</span>
+                                    <div className="text-right shrink-0 ml-3">
+                                        <span
+                                            className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider border px-2 py-0.5 rounded-md"
+                                            style={{
+                                                backgroundColor: `${statusColors[ticket.status]}15`,
+                                                borderColor: `${statusColors[ticket.status]}30`,
+                                                color: statusColors[ticket.status]
+                                            }}
+                                        >
+                                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColors[ticket.status] }} />
+                                            {statusLabels[ticket.status] || ticket.status}
+                                        </span>
+                                        <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5 tabular-nums">
+                                            {ticket.technician?.name || "BOŞTA"}
+                                            {estimatedCost > 0 ? ` • ₺${estimatedCost.toLocaleString("tr-TR")}` : ""}
                                         </p>
                                     </div>
-                                </div>
-                                <div className="text-right shrink-0 ml-3">
-                                    <span
-                                        className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider border px-2 py-0.5 rounded-md"
-                                        style={{
-                                            backgroundColor: `${statusColors[ticket.status]}15`,
-                                            borderColor: `${statusColors[ticket.status]}30`,
-                                            color: statusColors[ticket.status]
-                                        }}
-                                    >
-                                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColors[ticket.status] }} />
-                                        {statusLabels[ticket.status]}
-                                    </span>
-                                    <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">
-                                        {ticket.technician?.name || "BOŞTA"}
-                                    </p>
-                                </div>
-                            </Link>
-                        ))}
+                                </Link>
+                            );
+                        })}
                     </>
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center py-8 text-muted-foreground">

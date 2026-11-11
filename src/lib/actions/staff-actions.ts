@@ -367,15 +367,19 @@ export async function updatePassword(data: any) {
 export async function updateDashboardLayout(l: any) {
     try {
         const uid = await getUserId();
+        if (!uid) return { success: false, error: "Oturum bulunamadı." };
+        const { sanitizeLayoutPayloadForServer } = await import("@/lib/dashboard-layout");
+        const sanitized = sanitizeLayoutPayloadForServer(l);
         await prisma.user.update({
             where: { id: uid },
-            data: { dashboardLayout: l }
+            data: { dashboardLayout: sanitized as any }
         });
+        revalidatePath("/dashboard");
         revalidatePath("/", "layout");
-        return { success: true };
-    } catch (error) { 
+        return { success: true, layout: sanitized };
+    } catch (error) {
         console.error("Layout update error:", error);
-        return { success: false }; 
+        return { success: false };
     }
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import { useState, useTransition, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -303,8 +305,8 @@ export function SupplierPaymentModal({
                                                     <SelectItem key={acc.id} value={acc.id} className="text-xs p-3">
                                                         <div className="flex items-center justify-between w-full min-w-[200px]">
                                                             <span>{acc.name}</span>
-                                                            <span className={cn("font-medium text-[10px]", acc.balance >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                                                                ₺{Number(acc.balance).toLocaleString("tr-TR")}
+                                                            <span className={cn("font-medium text-[10px]", acc.balance >= 0 ? "text-emerald-400" : "text-foreground")}>
+                                                                <KasaBalanceText balance={acc.balance} currency={(acc as any).currency || "TRY"} accountType={acc.type} minimumFractionDigits={0} maximumFractionDigits={2} />
                                                             </span>
                                                         </div>
                                                     </SelectItem>

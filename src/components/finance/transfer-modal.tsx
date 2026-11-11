@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -106,7 +108,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[10px]  text-muted-foreground uppercase tracking-[0.2em] mb-1">BAKİYE</p>
-                                    <p className="text-xl  tracking-tight">₺{Number(fromAccount.balance).toLocaleString('tr-TR')}</p>
+                                    <p className="text-xl  tracking-tight"><KasaBalanceText balance={fromAccount.balance} currency={(fromAccount as any).currency || "TRY"} accountType={fromAccount.type} minimumFractionDigits={0} maximumFractionDigits={2} /></p>
                                 </div>
                             </div>
                         </div>
@@ -131,7 +133,7 @@ export function TransferModal({ accounts, fromAccountId }: { accounts: Account[]
                                                         </div>
                                                         <span className="font-extrabold text-xs">{a.name}</span>
                                                     </div>
-                                                    <span className="text-[11px]  text-muted-foreground/60 italic">₺{Number(a.balance).toLocaleString('tr-TR')}</span>
+                                                    <span className="text-[11px] text-muted-foreground/80"><KasaBalanceText balance={a.balance} currency={(a as any).currency || "TRY"} accountType={a.type} minimumFractionDigits={0} maximumFractionDigits={2} /></span>
                                                 </div>
                                             </SelectItem>
                                         );

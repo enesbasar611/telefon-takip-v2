@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServiceStatusChart } from "@/components/charts/service-status-chart";
 import { CountingNumber } from "@/components/ui/counting-number";
@@ -30,13 +31,14 @@ const statusLabels: Record<string, string> = {
 export function ServiceStatusStream({ title = "Servis Durumu", cols = 9, rows = 3, onDataStatus }: { title?: string, cols?: number, rows?: number, onDataStatus?: (isEmpty: boolean) => void }) {
     const isVerySmall = cols < 8;
     const isShort = rows < 3;
+    const [activeOnly, setActiveOnly] = useState(true);
 
     const { data = [], isLoading } = useQuery({
-        queryKey: ["dashboard-service-metrics"],
+        queryKey: ["dashboard-service-metrics", activeOnly],
         queryFn: async () => {
-            const serviceMetricsRaw = await getServiceMetrics();
+            const serviceMetricsRaw = await getServiceMetrics({ activeOnly });
             const data = serializePrisma(serviceMetricsRaw);
-            if (onDataStatus) {
+            if (onDataStatus && !activeOnly) {
                 const total = (data || []).reduce((acc: number, m: any) => acc + (m.value || 0), 0);
                 onDataStatus(!data || data.length === 0 || total === 0);
             }
@@ -61,29 +63,55 @@ export function ServiceStatusStream({ title = "Servis Durumu", cols = 9, rows = 
     return (
         <Card className="h-full flex flex-col shadow-sm overflow-hidden group rounded-2xl bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl border border-border/40 dark:border-white/[0.08] transition-all duration-300 hover:shadow-md animate-in fade-in">
             <CardHeader className={cn(
-                "flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 bg-muted/10",
+                "flex-shrink-0 flex flex-row items-center justify-between gap-2 border-b border-border/40 bg-muted/10",
                 isVerySmall || isShort ? "p-3 pb-2.5" : "px-5 py-3.5"
             )}>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-0.5 min-w-0">
                     <CardTitle className={cn(
-                        "font-semibold tracking-tight uppercase text-foreground",
+                        "font-semibold tracking-tight uppercase text-foreground truncate",
                         isVerySmall ? "text-xs" : "text-sm"
                     )}>{title}</CardTitle>
                     {!isVerySmall && !isShort && (
                         <div className="flex items-center gap-1.5">
                             <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Kapasite Analizi</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                {activeOnly ? "Aktif Atölye Kuyruğu" : "Tüm Zamanlar"}
+                            </p>
                         </div>
                     )}
                 </div>
-                <div className="flex flex-col items-end">
-                    <div className={cn(
-                        "text-foreground leading-none font-extrabold tabular-nums",
-                        isVerySmall || isShort ? "text-base" : "text-xl"
-                    )}>
-                        <CountingNumber value={totalServiceUnits} />
+                <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="flex items-center p-0.5 rounded-lg bg-muted/50 border border-border/40">
+                        <button
+                            type="button"
+                            onClick={() => setActiveOnly(true)}
+                            className={cn(
+                                "px-1.5 py-0.5 rounded-md text-[9px] font-semibold transition-all cursor-pointer",
+                                activeOnly ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Aktif
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveOnly(false)}
+                            className={cn(
+                                "px-1.5 py-0.5 rounded-md text-[9px] font-semibold transition-all cursor-pointer",
+                                !activeOnly ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Tümü
+                        </button>
                     </div>
-                    {!isVerySmall && !isShort && <div className="text-[9px] text-muted-foreground/70 tracking-wider uppercase font-semibold">Cihaz</div>}
+                    <div className="flex flex-col items-end">
+                        <div className={cn(
+                            "text-foreground leading-none font-extrabold tabular-nums",
+                            isVerySmall || isShort ? "text-base" : "text-xl"
+                        )}>
+                            <CountingNumber value={totalServiceUnits} />
+                        </div>
+                        {!isVerySmall && !isShort && <div className="text-[9px] text-muted-foreground/70 tracking-wider uppercase font-semibold">Cihaz</div>}
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className={cn(

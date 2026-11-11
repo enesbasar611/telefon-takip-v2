@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 import { StatDetailModal, StatType } from "./modals/stat-detail-modal";
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
 
 interface MobileStatsHeaderProps {
     stats: {
@@ -40,7 +41,8 @@ export function MobileStatsHeader({ stats, onStatClick, defaultCurrency }: Mobil
             color: "text-blue-500",
             bg: "bg-blue-500/10",
             type: "DAILY_SALES" as StatType,
-            description: "Kasa hareketleri ve bakiyesi"
+            description: "Kasa hareketleri ve bakiyesi",
+            isKasa: true,
         },
         {
             label: "Toplam Cihaz",
@@ -100,9 +102,26 @@ export function MobileStatsHeader({ stats, onStatClick, defaultCurrency }: Mobil
                                     {card.label}
                                 </span>
                                 <span className="text-xl font-black mt-1 leading-none tracking-tight">
-                                    {card.value}
+                                    {(card as any).isKasa ? (
+                                        <KasaBalanceText
+                                            balance={defaultCurrency === "USD" ? stats.kasaBalanceUSD : stats.kasaBalanceRaw}
+                                            currency={defaultCurrency === "USD" ? "USD" : "TRY"}
+                                            minimumFractionDigits={defaultCurrency === "USD" ? 2 : 0}
+                                            maximumFractionDigits={2}
+                                        />
+                                    ) : (
+                                        card.value
+                                    )}
                                 </span>
-                                {card.subValue && (
+                                {(card as any).isKasa && stats.kasaBalanceRaw < -0.004 ? (
+                                    <span className="text-[9px] text-muted-foreground/70 font-medium mt-1">
+                                        {defaultCurrency === "USD" ? (
+                                            <>~₺0 <span className="text-rose-500 font-bold">(-₺{Math.round(Math.abs(stats.kasaBalanceRaw)).toLocaleString('tr-TR')})</span></>
+                                        ) : (
+                                            <>~$0.0 <span className="text-rose-500 font-bold">(-${(Math.abs(stats.kasaBalanceRaw) / 32.5).toFixed(1)})</span></>
+                                        )}
+                                    </span>
+                                ) : card.subValue && (
                                     <span className="text-[9px] text-muted-foreground/50 font-medium mt-1">
                                         {card.subValue}
                                     </span>

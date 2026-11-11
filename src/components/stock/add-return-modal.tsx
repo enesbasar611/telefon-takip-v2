@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -856,7 +858,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                         <SelectContent className="rounded-xl border-border/40">
                                             {accounts.map(acc => (
                                                 <SelectItem key={acc.id} value={acc.id}>
-                                                    {acc.name} ({formatDisplayMoney(Number(acc.balance))})
+                                                    <span className="inline-flex items-center gap-1">{acc.name} (<KasaBalanceText balance={defaultCurrency === "USD" ? Number(acc.balance) / usdRate : defaultCurrency === "EUR" ? Number(acc.balance) / eurRate : Number(acc.balance)} currency={defaultCurrency === "USD" || defaultCurrency === "EUR" ? defaultCurrency : "TRY"} accountType={acc.type} />)</span>
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

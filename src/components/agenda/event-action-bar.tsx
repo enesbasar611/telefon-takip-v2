@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import { useState } from "react";
 import {
     CheckCircle2, Trash2, CalendarClock, Loader2, Play,
@@ -116,7 +118,7 @@ export function EventActionBar({ event, accounts, onDone, compact = false }: Eve
                         <SelectContent className="bg-card border-border rounded-xl">
                             {accounts.map(acc => (
                                 <SelectItem key={acc.id} value={acc.id} className="text-[11px] font-bold">
-                                    {acc.name} — ₺{Number(acc.balance).toLocaleString("tr-TR")}
+                                    <span className="inline-flex items-center gap-1">{acc.name} — <KasaBalanceText balance={acc.balance} currency={(acc as any).currency || "TRY"} accountType={(acc as any).type} minimumFractionDigits={0} maximumFractionDigits={2} /></span>
                                 </SelectItem>
                             ))}
                         </SelectContent>

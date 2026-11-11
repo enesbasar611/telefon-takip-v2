@@ -38,6 +38,7 @@ import {
     getUnifiedHistory,
     type OperationType,
     type SalesHistoryReport,
+    type UnifiedHistorySummary,
     type UnifiedOperation,
 } from "@/lib/actions/activity-actions";
 import { getSaleById } from "@/lib/actions/sale-actions";
@@ -53,6 +54,7 @@ interface SalesHistoryClientProps {
         total: number;
         totalPages: number;
         currentPage: number;
+        summary?: UnifiedHistorySummary;
     };
     reportData: SalesHistoryReport;
     currentPage: number;
@@ -136,6 +138,39 @@ export function SalesHistoryClient({
     const currencySymbol = defaultCurrency === "USD" ? "$" : defaultCurrency === "EUR" ? "€" : "₺";
 
     const displayedTotals = useMemo(() => {
+        const usdRate = rates?.usd || 34.5;
+        const eurRate = rates?.eur || 37.5;
+
+        const convertAmount = (amt: number, currency: string) => {
+            if (!defaultCurrency || defaultCurrency === currency) return amt;
+            if (currency === "TRY" && defaultCurrency === "USD") return amt / usdRate;
+            if (currency === "USD" && defaultCurrency === "TRY") return amt * usdRate;
+            if (currency === "TRY" && defaultCurrency === "EUR") return amt / eurRate;
+            if (currency === "EUR" && defaultCurrency === "TRY") return amt * eurRate;
+            if (currency === "USD" && defaultCurrency === "EUR") return (amt * usdRate) / eurRate;
+            if (currency === "EUR" && defaultCurrency === "USD") return (amt * eurRate) / usdRate;
+            return amt;
+        };
+
+        if (historyData?.summary) {
+            const { incomeByCurrency, expenseByCurrency, count } = historyData.summary;
+            const income =
+                convertAmount(Number(incomeByCurrency.TRY || 0), "TRY") +
+                convertAmount(Number(incomeByCurrency.USD || 0), "USD") +
+                convertAmount(Number(incomeByCurrency.EUR || 0), "EUR");
+            const expense =
+                convertAmount(Number(expenseByCurrency.TRY || 0), "TRY") +
+                convertAmount(Number(expenseByCurrency.USD || 0), "USD") +
+                convertAmount(Number(expenseByCurrency.EUR || 0), "EUR");
+
+            return {
+                net: income - expense,
+                income,
+                expense,
+                count,
+            };
+        }
+
         const items = historyData?.items || [];
         if (items.length === 0) {
             return { net: 0, income: 0, expense: 0, count: 0 };
@@ -148,16 +183,7 @@ export function SalesHistoryClient({
             if (op.isReturned || op.status === "İADE EDİLDİ" || (op.amount === 0 && (op.type === "SALE" || !!op.saleId))) {
                 return;
             }
-            let amount = Number(op.amount) || 0;
-            const currency = op.currency || "TRY";
-
-            if (defaultCurrency !== currency && rates) {
-                if (currency === "TRY" && defaultCurrency === "USD") {
-                    amount = amount / (rates.usd || 34.5);
-                } else if (currency === "USD" && defaultCurrency === "TRY") {
-                    amount = amount * (rates.usd || 34.5);
-                }
-            }
+            const amount = convertAmount(Number(op.amount) || 0, op.currency || "TRY");
 
             if (op.type === "EXPENSE") {
                 expense += amount;
@@ -170,9 +196,9 @@ export function SalesHistoryClient({
             net: income - expense,
             income,
             expense,
-            count: items.length,
+            count: historyData?.total ?? items.length,
         };
-    }, [historyData?.items, defaultCurrency, rates]);
+    }, [historyData?.summary, historyData?.items, historyData?.total, defaultCurrency, rates]);
 
     const applySearch = () => {
         setPage(1);
@@ -759,14 +785,14 @@ export function SalesHistoryClient({
                                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                         <div className="flex flex-col items-end gap-0.5">
                                             <span>Tutar</span>
-                                            {historyData.items.length > 0 && (
+                                            {(historyData.total > 0 || historyData.items.length > 0) && (
                                                 <span className={cn(
                                                     "text-xs font-black tracking-tight normal-case",
                                                     displayedTotals.net > 0 ? "text-blue-600 dark:text-blue-400" :
                                                     displayedTotals.net < 0 ? "text-rose-600 dark:text-rose-400" :
                                                     "text-foreground"
                                                 )}>
-                                                    Toplam: {displayedTotals.net < 0 ? "-" : displayedTotals.net > 0 ? "+" : ""}{currencySymbol}{Math.abs(displayedTotals.net).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    Dönem Toplamı: {displayedTotals.net < 0 ? "-" : displayedTotals.net > 0 ? "+" : ""}{currencySymbol}{Math.abs(displayedTotals.net).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             )}
                                         </div>
@@ -839,7 +865,7 @@ export function SalesHistoryClient({
                                 <tfoot>
                                     <tr className="border-t-2 border-border/60 bg-muted/20 font-bold">
                                         <td colSpan={4} className="px-6 py-3.5 text-right text-xs uppercase tracking-wider text-muted-foreground">
-                                            Gösterilen İşlemlerin Toplamı:
+                                            Seçili Tarih Aralığı / Filtre Toplamı ({displayedTotals.count} İşlem):
                                         </td>
                                         <td className="px-6 py-3.5 text-right">
                                             <div className="flex flex-col items-end">

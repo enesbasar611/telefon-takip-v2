@@ -743,7 +743,12 @@ export function POSInterface({ initialSaleId }: {
           queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-service-metrics"] });
           queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+          queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["accounts"] });
           queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
+          queryClient.invalidateQueries({ queryKey: ["cash-balance-monthly-detail"] });
+          queryClient.invalidateQueries({ queryKey: ["account-analytics"] });
           queryClient.invalidateQueries({ queryKey: ["sales-history"] });
           queryClient.invalidateQueries({ queryKey: ["sales-history-report"] });
           queryClient.invalidateQueries({ queryKey: ["daily-session"] });

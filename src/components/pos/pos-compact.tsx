@@ -598,6 +598,17 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                 }));
                 queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] });
                 queryClient.invalidateQueries({ queryKey: ["products"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-transactions"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard-init"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard-revenue-analysis"] });
+                queryClient.invalidateQueries({ queryKey: ["cash-balance-monthly-detail"] });
+                queryClient.invalidateQueries({ queryKey: ["account-analytics"] });
+                queryClient.invalidateQueries({ queryKey: ["sales-history"] });
+                queryClient.invalidateQueries({ queryKey: ["sales-history-report"] });
+                queryClient.invalidateQueries({ queryKey: ["daily-session"] });
                 setCustomerSearch("");
                 setSelectedCustomerId(undefined);
                 toast({ title: "Satış Başarılı" });

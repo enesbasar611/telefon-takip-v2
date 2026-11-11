@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import React from "react";
 import {
     Banknote, CreditCard, Landmark, History,
@@ -158,7 +160,18 @@ export const CheckoutSummary = ({
                                         <span className="block text-[10px] font-bold truncate leading-tight">{account.name}</span>
                                         <span className="block text-[8px] uppercase tracking-wider opacity-70 leading-none mt-0.5">
                                             {account.type === "CASH" ? "NAKİT" : account.type === "BANK" ? "BANKA" : "KART"} 
-                                            {account.balance !== undefined ? ` • ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: defaultCurrency || 'TRY', maximumFractionDigits: 2 }).format(convertBalance(Number(account.balance), 'TRY'))}` : ` • ${defaultCurrency || "TRY"}`}
+                                            {account.balance !== undefined ? (
+                                                <>
+                                                    {" • "}
+                                                    <KasaBalanceText
+                                                        balance={convertBalance(Number(account.balance), 'TRY')}
+                                                        currency={defaultCurrency || 'TRY'}
+                                                        accountType={account.type}
+                                                        minimumFractionDigits={0}
+                                                        maximumFractionDigits={2}
+                                                    />
+                                                </>
+                                            ) : ` • ${defaultCurrency || "TRY"}`}
                                         </span>
                                     </span>
                                     {checked && <CheckCircle className="h-3.5 w-3.5 shrink-0 text-primary" />}

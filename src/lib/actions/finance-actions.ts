@@ -319,20 +319,17 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
           throw new Error("Kart limiti yetersiz! Bu islem yapilamaz.");
         }
       } else {
-        // For CASH, BANK, POS, 'balance' represents available money
+        // For CASH, BANK, POS, 'balance' represents available money (negative values represent expense deficit paid first by future income)
         newBalance = data.type === 'INCOME' ? oldBalance + tryAmount : oldBalance - tryAmount;
-
-        // VALIDATION: Prevent negative balance
-        if (data.type === 'EXPENSE' && newBalance < 0) {
-          throw new Error("Yetersiz bakiye! Bu kasa eksiye düşeceği için işlem yapılamaz.");
-        }
       }
 
-      // 2. Calculate New Available Balance if it's a Credit Card
+      // 2. Calculate New Available Balance
       let newAvailableBalance = account.availableBalance ? Number(account.availableBalance) : null;
       if (account.type === "CREDIT_CARD") {
         const limit = account.limit ? Number(account.limit) : 0;
         newAvailableBalance = limit - newBalance;
+      } else {
+        newAvailableBalance = newBalance;
       }
 
 
@@ -373,8 +370,9 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
 
       // IMPORTANT: If this is a historical transaction (past date), 
       // we MUST update the runningBalance of ALL subsequent transactions for this account.
-      const txAmount = Number(data.amount);
-      const balanceImpact = data.type === 'INCOME' ? txAmount : -txAmount;
+      const balanceImpact = account.type === "CREDIT_CARD"
+        ? (data.type === 'INCOME' ? -tryAmount : tryAmount)
+        : (data.type === 'INCOME' ? tryAmount : -tryAmount);
 
       await tx.transaction.updateMany({
         where: {
@@ -393,7 +391,8 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
 
     revalidatePath("/satis/kasa");
     revalidatePath("/");
-    revalidatePath("/satis/kasa");
+    revalidatePath("/dashboard");
+    revalidatePath("/satis");
     revalidatePath("/satis/gecmis");
     revalidateTag(`dashboard-${shopId}`);
     return { success: true, transaction: serializePrisma(transaction) };

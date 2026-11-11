@@ -10,9 +10,18 @@ interface RevealFinancialProps {
   className?: string;
   prefix?: string;
   decimals?: number;
+  deficitText?: string | null;
+  deficitClassName?: string;
 }
 
-export function RevealFinancial({ amount, className, prefix = "₺", decimals = 2 }: RevealFinancialProps) {
+export function RevealFinancial({
+  amount,
+  className,
+  prefix = "₺",
+  decimals = 2,
+  deficitText,
+  deficitClassName,
+}: RevealFinancialProps) {
   const { isFinancialVisible } = useUI();
 
   const hasSymbol = typeof amount === "string" && (amount.startsWith('₺') || amount.startsWith('$') || amount.startsWith('€'));
@@ -20,10 +29,10 @@ export function RevealFinancial({ amount, className, prefix = "₺", decimals = 
 
   return (
     <div
-      className={cn("relative group cursor-pointer inline-flex items-center gap-2", className)}
+      className={cn("relative group cursor-pointer inline-flex items-baseline flex-wrap gap-1.5", className)}
     >
       <span className={cn(
-        "transition-all duration-300",
+        "transition-all duration-300 inline-flex items-baseline flex-wrap gap-1.5",
         !isFinancialVisible && "blur-md select-none opacity-40"
       )}>
         <CountingNumber
@@ -33,6 +42,11 @@ export function RevealFinancial({ amount, className, prefix = "₺", decimals = 
           grouping
           decimals={decimals}
         />
+        {deficitText && (
+          <span className={cn("text-rose-500 font-bold text-[0.62em] tabular-nums", deficitClassName)}>
+            {deficitText}
+          </span>
+        )}
       </span>
       {!isFinancialVisible && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

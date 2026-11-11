@@ -53,6 +53,10 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "İptal edildi",
 };
 
+/**
+ * @deprecated Legacy dashboard view (unused in active routes).
+ * Active `/dashboard` renders `AdminDashboard` with streamed widgets (`src/components/dashboard/streamed/`).
+ */
 export function DashboardCore({
   statsData,
   recentTicketsRaw,
@@ -294,26 +298,35 @@ export function DashboardCore({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
-                      {recentTransactions.map((t: any, idx: number) => (
-                        <tr key={t.id} className="group hover:bg-muted/10 transition-colors">
-                          <td className="px-8 py-5">
-                            <div className=" text-foreground text-sm tracking-tight">{t.sale?.customer?.name || "Hızlı Satış"}</div>
-                            <div className="text-[9px]  text-muted-foreground/60 mt-1 uppercase tracking-tight">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
-                          </td>
-                          <td className="px-6 py-5 text-xs text-muted-foreground  lg:table-cell hidden max-w-[150px] truncate">{t.description}</td>
-                          <td className="px-6 py-5">
-                            <RevealFinancial amount={t.amount} className="text-sm  tracking-tight" />
-                          </td>
-                          <td className="px-8 py-5 text-right">
-                            <Badge variant="outline" className={cn(
-                              "text-[8px]  uppercase tracking-tighter px-3 py-1 rounded-lg border-none",
-                              t.type === 'INCOME' ? 'bg-secondary/10 text-secondary' : 'bg-destructive/10 text-destructive'
-                            )}>
-                              {t.type === 'INCOME' ? 'Tahsilat' : 'Gider'}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
+                      {recentTransactions.map((t: any) => {
+                        const curPrefix = t.currency === "USD" ? "$" : t.currency === "EUR" ? "€" : "₺";
+                        const counterparty = t.customer?.name || t.sale?.customer?.name || (t.description?.includes("SATIŞ") ? "Hızlı Satış" : "Genel İşlem");
+                        const badgeText = t.paymentMethod === "DEBT" ? "Veresiye" : t.type === "INCOME" ? "Tahsilat" : "Gider";
+                        return (
+                          <tr key={t.id} className="group hover:bg-muted/10 transition-colors">
+                            <td className="px-8 py-5">
+                              <div className=" text-foreground text-sm tracking-tight">{counterparty}</div>
+                              <div className="text-[9px]  text-muted-foreground/60 mt-1 uppercase tracking-tight">{format(new Date(t.createdAt), "d MMM, HH:mm", { locale: tr })}</div>
+                            </td>
+                            <td className="px-6 py-5 text-xs text-muted-foreground  lg:table-cell hidden max-w-[150px] truncate">{t.description}</td>
+                            <td className="px-6 py-5">
+                              <RevealFinancial amount={t.amount} prefix={curPrefix} className="text-sm  tracking-tight" />
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <Badge variant="outline" className={cn(
+                                "text-[8px]  uppercase tracking-tighter px-3 py-1 rounded-lg border-none",
+                                t.paymentMethod === "DEBT"
+                                  ? "bg-amber-500/10 text-amber-500"
+                                  : t.type === "INCOME"
+                                    ? "bg-secondary/10 text-secondary"
+                                    : "bg-destructive/10 text-destructive"
+                              )}>
+                                {badgeText}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

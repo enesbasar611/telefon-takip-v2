@@ -10,19 +10,19 @@ export async function getLiveActivity() {
     const [serviceLogs, transactions, auditLogs] = await Promise.all([
       prisma.serviceLog.findMany({
         where: { shopId },
-        take: 5,
+        take: 8,
         orderBy: { createdAt: 'desc' },
         include: { ticket: { include: { customer: true } } }
       }),
       prisma.transaction.findMany({
         where: { shopId },
-        take: 5,
+        take: 6,
         orderBy: { createdAt: 'desc' },
-        include: { sale: { include: { customer: true } } }
+        include: { sale: { include: { customer: true } }, customer: { select: { name: true } } }
       }),
       prisma.auditLog.findMany({
         where: { shopId },
-        take: 5,
+        take: 8,
         orderBy: { createdAt: 'desc' },
         include: { user: true }
       })
@@ -32,6 +32,7 @@ export async function getLiveActivity() {
       ...serviceLogs.map((log: any) => ({
         id: `log-${log.id}`,
         type: 'SERVICE',
+        ticketId: log.ticket.id,
         title: log.ticket.ticketNumber,
         message: log.message,
         time: log.createdAt,
@@ -41,11 +42,12 @@ export async function getLiveActivity() {
       ...transactions.map((tr: any) => ({
         id: `tr-${tr.id}`,
         type: 'FINANCE',
-        title: tr.type === 'INCOME' ? 'Tahsilat' : 'Gider',
+        title: tr.paymentMethod === 'DEBT' ? 'Veresiye' : (tr.type === 'INCOME' ? 'Tahsilat' : 'Gider'),
         message: tr.description,
         time: tr.createdAt,
-        user: tr.sale?.customer?.name || 'Hızlı Satış',
-        amount: Number(tr.amount)
+        user: tr.customer?.name || tr.sale?.customer?.name || 'Hızlı Satış',
+        amount: Number(tr.amount),
+        currency: tr.currency || 'TRY'
       })),
       ...auditLogs.map((log: any) => ({
         id: `audit-${log.id}`,
@@ -56,7 +58,7 @@ export async function getLiveActivity() {
         user: log.user?.name || 'Sistem',
         action: log.action
       }))
-    ].sort((a, b) => b.time.getTime() - a.time.getTime()).slice(0, 10);
+    ].sort((a, b) => b.time.getTime() - a.time.getTime()).slice(0, 15);
 
     return serializePrisma(activity);
   } catch (error) {

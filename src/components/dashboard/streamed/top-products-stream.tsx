@@ -1,24 +1,31 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Package, Tag, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getTopProducts } from "@/lib/actions/dashboard-actions";
+import { getTopProducts, TopProductsPeriod } from "@/lib/actions/dashboard-actions";
 import { useQuery } from "@tanstack/react-query";
 import { CountingNumber } from "@/components/ui/counting-number";
 
+const PERIOD_OPTIONS: { id: TopProductsPeriod; label: string }[] = [
+    { id: "TODAY", label: "Bugün" },
+    { id: "WEEK", label: "7 Gün" },
+    { id: "MONTH", label: "Bu Ay" },
+    { id: "ALL", label: "Tümü" },
+];
+
 export function TopProductsStream({ viewMode = 'grid', shopId, cols = 12, rows = 3, onDataStatus }: { viewMode?: 'grid' | 'list', shopId?: string, cols?: number, rows?: number, onDataStatus?: (isEmpty: boolean) => void }) {
-    const isSmall = cols < 8;
     const isVerySmall = cols < 6;
     const isShort = rows < 2;
     const limit = viewMode === 'grid' ? (cols >= 12 ? (rows >= 3 ? 8 : 4) : (cols >= 8 ? 4 : 2)) : (rows >= 3 ? 10 : 5);
+    const [period, setPeriod] = useState<TopProductsPeriod>("MONTH");
 
     const { data: topProducts = [], isLoading } = useQuery({
-        queryKey: ["dashboard-top-products", shopId || "", limit],
+        queryKey: ["dashboard-top-products", shopId || "", limit, period],
         queryFn: async () => {
             if (!shopId) return [];
-            return await getTopProducts(shopId, limit);
+            return await getTopProducts(shopId, limit, period);
         },
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
@@ -26,10 +33,10 @@ export function TopProductsStream({ viewMode = 'grid', shopId, cols = 12, rows =
     });
 
     useEffect(() => {
-        if (!isLoading && onDataStatus) {
+        if (!isLoading && onDataStatus && period === "ALL") {
             onDataStatus(!topProducts || topProducts.length === 0);
         }
-    }, [topProducts, isLoading, onDataStatus]);
+    }, [topProducts, isLoading, onDataStatus, period]);
 
     if (isLoading) {
         return (
@@ -40,9 +47,9 @@ export function TopProductsStream({ viewMode = 'grid', shopId, cols = 12, rows =
     }
 
     return (
-        <Card className="h-full flex flex-col border border-border/40 shadow-sm overflow-hidden rounded-2xl bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl transition-all duration-300 hover:shadow-md animate-in fade-in">
+        <Card className="h-full min-h-0 flex flex-col border border-border/40 shadow-sm overflow-hidden rounded-2xl bg-card/85 dark:bg-[#0c121d]/85 backdrop-blur-xl transition-all duration-300 hover:shadow-md animate-in fade-in">
             <CardHeader className={cn(
-                "flex-shrink-0 flex flex-row items-center justify-between border-b border-border/40 bg-muted/10",
+                "flex-shrink-0 flex flex-row items-center justify-between gap-2 border-b border-border/40 bg-muted/10 flex-wrap",
                 isVerySmall || isShort ? "p-3 pb-2.5" : "p-3.5 sm:px-5 sm:py-3.5"
             )}>
                 <div className="flex items-center gap-2.5 sm:gap-3">
@@ -60,13 +67,37 @@ export function TopProductsStream({ viewMode = 'grid', shopId, cols = 12, rows =
                         {!isVerySmall && !isShort && <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-wider">En Çok Tercih Edilenler</p>}
                     </div>
                 </div>
+                {!isVerySmall && (
+                    <div className="flex items-center p-0.5 rounded-lg bg-muted/50 border border-border/40 ml-auto">
+                        {PERIOD_OPTIONS.map((opt) => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => setPeriod(opt.id)}
+                                className={cn(
+                                    "px-1.5 py-0.5 rounded-md text-[9px] font-semibold transition-all cursor-pointer",
+                                    period === opt.id
+                                        ? "bg-background text-foreground shadow-xs border border-border/40"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </CardHeader>
 
             <CardContent className={cn(
-                "flex-1 overflow-y-auto custom-scrollbar",
+                "flex-1 min-h-0 overflow-y-auto custom-scrollbar",
                 isVerySmall || isShort ? "p-2.5" : "p-3 sm:p-4"
             )}>
-                {viewMode === 'grid' ? (
+                {(topProducts ?? []).length === 0 ? (
+                    <div className="h-full min-h-[120px] flex flex-col items-center justify-center text-muted-foreground py-6">
+                        <Package className="h-6 w-6 mb-1.5 opacity-40" />
+                        <p className="text-[10px] font-semibold uppercase tracking-wider">Bu dönemde ürün satışı bulunmuyor</p>
+                    </div>
+                ) : viewMode === 'grid' ? (
                     <div className={cn(
                         "grid gap-2.5 sm:gap-3.5",
                         cols >= 18

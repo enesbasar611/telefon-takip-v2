@@ -35,6 +35,49 @@ export interface UnifiedOperation {
     originalAmount?: number;
 }
 
+export interface HistoryCurrencyBucket {
+    TRY: number;
+    USD: number;
+    EUR: number;
+}
+
+export interface UnifiedHistorySummary {
+    incomeByCurrency: HistoryCurrencyBucket;
+    expenseByCurrency: HistoryCurrencyBucket;
+    count: number;
+}
+
+function createEmptyCurrencyBucket(): HistoryCurrencyBucket {
+    return { TRY: 0, USD: 0, EUR: 0 };
+}
+
+function addCurrencyAmount(bucket: HistoryCurrencyBucket, currency: string | null | undefined, amount: number) {
+    if (!Number.isFinite(amount) || amount === 0) return;
+    if (currency === "USD") bucket.USD += amount;
+    else if (currency === "EUR") bucket.EUR += amount;
+    else bucket.TRY += amount;
+}
+
+function summarizeOperations(operations: UnifiedOperation[], totalCount?: number): UnifiedHistorySummary {
+    const incomeByCurrency = createEmptyCurrencyBucket();
+    const expenseByCurrency = createEmptyCurrencyBucket();
+
+    for (const op of operations) {
+        if (op.isReturned || op.status === "İADE EDİLDİ" || (op.amount === 0 && (op.type === "SALE" || !!op.saleId))) {
+            continue;
+        }
+        const amount = Number(op.amount) || 0;
+        const target = op.type === "EXPENSE" ? expenseByCurrency : incomeByCurrency;
+        addCurrencyAmount(target, op.currency, amount);
+    }
+
+    return {
+        incomeByCurrency,
+        expenseByCurrency,
+        count: totalCount ?? operations.length,
+    };
+}
+
 function getSearchVariants(term: string): string[] {
     const rawTrimmed = term.trim();
     if (!rawTrimmed) return [];
@@ -195,11 +238,37 @@ export async function getUnifiedHistory(options: {
                 };
             });
 
+            let summary: UnifiedHistorySummary;
+            if (skip === 0 && total <= items.length) {
+                summary = summarizeOperations(items, total);
+            } else {
+                const allSalesForSummary = await prisma.sale.findMany({
+                    where: saleWhere,
+                    select: {
+                        finalAmount: true,
+                        transaction: { select: { currency: true } },
+                    },
+                });
+                const incomeByCurrency = createEmptyCurrencyBucket();
+                for (const s of allSalesForSummary) {
+                    const saleFinal = Number(s.finalAmount) || 0;
+                    if (saleFinal > 0) {
+                        addCurrencyAmount(incomeByCurrency, s.transaction?.currency, saleFinal);
+                    }
+                }
+                summary = {
+                    incomeByCurrency,
+                    expenseByCurrency: createEmptyCurrencyBucket(),
+                    count: total,
+                };
+            }
+
             return {
                 items: serializePrisma(items),
                 total,
                 totalPages: Math.ceil(total / pageSize),
                 currentPage: page,
+                summary,
                 pagination: {
                     total,
                     page,
@@ -392,15 +461,58 @@ export async function getUnifiedHistory(options: {
             };
         });
 
+        let summary: UnifiedHistorySummary;
+        if (skip === 0 && total <= items.length) {
+            summary = summarizeOperations(items, total);
+        } else {
+            const allTxForSummary = await prisma.transaction.findMany({
+                where,
+                select: {
+                    type: true,
+                    amount: true,
+                    currency: true,
+                    sale: { select: { finalAmount: true } },
+                },
+            });
+            const incomeByCurrency = createEmptyCurrencyBucket();
+            const expenseByCurrency = createEmptyCurrencyBucket();
+            for (const tx of allTxForSummary) {
+                const isExpense = tx.type === "EXPENSE";
+                const rawAmount = Number(tx.amount) || 0;
+                const saleFinalAmount = tx.sale ? Number(tx.sale.finalAmount) : rawAmount;
+                const isFullyReturned = !!tx.sale && saleFinalAmount <= 0;
+                const isPartiallyReturned = !!tx.sale && saleFinalAmount > 0 && saleFinalAmount < rawAmount;
+                const displayAmount = isFullyReturned ? 0 : (isPartiallyReturned ? saleFinalAmount : rawAmount);
+                if (displayAmount === 0) continue;
+                addCurrencyAmount(isExpense ? expenseByCurrency : incomeByCurrency, tx.currency, displayAmount);
+            }
+            summary = {
+                incomeByCurrency,
+                expenseByCurrency,
+                count: total,
+            };
+        }
+
         return {
             items: serializePrisma(items),
             total,
             totalPages: Math.ceil(total / pageSize),
             currentPage: page,
+            summary,
         };
     } catch (error) {
         console.error("Unified history error:", error);
-        return { items: [], total: 0, totalPages: 0, currentPage: 1 };
+        return {
+            items: [],
+            total: 0,
+            totalPages: 0,
+            currentPage: 1,
+            summary: {
+                incomeByCurrency: createEmptyCurrencyBucket(),
+                expenseByCurrency: createEmptyCurrencyBucket(),
+                count: 0,
+            },
+        };
     }
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
+
 import { Label } from "@/components/ui/label";
 import {
     Dialog,
@@ -524,7 +526,7 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {accounts.map(acc => (
-                                                    <SelectItem key={acc.id} value={acc.id}>{acc.name} (₺{acc.balance.toLocaleString()})</SelectItem>
+                                                    <SelectItem key={acc.id} value={acc.id}><span className="inline-flex items-center gap-1">{acc.name} (<KasaBalanceText balance={acc.balance} currency={(acc as any).currency || "TRY"} accountType={(acc as any).type} minimumFractionDigits={0} maximumFractionDigits={2} />)</span></SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>

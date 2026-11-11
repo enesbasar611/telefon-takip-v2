@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Scale, PiggyBank, Receipt } from "lucide-react";
 import { RevealFinancial } from "@/components/ui/reveal-financial";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
+import { splitKasaBalance } from "@/lib/finance/balance-display";
 
 export function FinanceDashboard({ summary }: { summary: any }) {
     const { rates, defaultCurrency } = useDashboardData();
@@ -26,11 +27,11 @@ export function FinanceDashboard({ summary }: { summary: any }) {
     const bugunGider = summary?.todayExpense || 0;
 
     const cards = [
-        { label: "BUGÜNKÜ GELİR", value: bugunGelir, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10", description: "Bugün yapılan peşin satış toplamı" },
-        { label: "BUGÜNKÜ KÂR", value: bugunKar, icon: Receipt, color: "text-cyan-500", bg: "bg-cyan-500/10", description: "Satış fiyatı - ürün maliyeti" },
-        { label: "BUGÜNKÜ GİDER", value: bugunGider, icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-500/10", description: "Bugün yapılan toplam çıkış" },
-        { label: "NAKİT & KASA", value: nakitBalance, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", description: "Nakit kasa hesaplarının toplamı" },
-        { label: "BANKA & POS", value: posBankBalance, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10", description: "Banka ve POS bakiyeleri" },
+        { label: "BUGÜNKÜ GELİR", value: bugunGelir, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10", description: "Bugün yapılan peşin satış toplamı", isKasaBalance: false },
+        { label: "BUGÜNKÜ KÂR", value: bugunKar, icon: Receipt, color: "text-cyan-500", bg: "bg-cyan-500/10", description: "Satış fiyatı - ürün maliyeti", isKasaBalance: false },
+        { label: "BUGÜNKÜ GİDER", value: bugunGider, icon: TrendingDown, color: "text-rose-500", bg: "bg-rose-500/10", description: "Bugün yapılan toplam çıkış", isKasaBalance: false },
+        { label: "NAKİT & KASA", value: nakitBalance, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", description: "Nakit kasa hesaplarının toplamı", isKasaBalance: true },
+        { label: "BANKA & POS", value: posBankBalance, icon: Scale, color: "text-blue-500", bg: "bg-blue-500/10", description: "Banka ve POS bakiyeleri", isKasaBalance: true },
     ];
 
     const [selectedCard, setSelectedCard] = useState<string | null>(null);
@@ -56,7 +57,15 @@ export function FinanceDashboard({ summary }: { summary: any }) {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="grid gap-2.5 sm:gap-6 grid-cols-2 md:grid-cols-2 xl:grid-cols-5">
-                {cards.map((stat, i) => (
+                {cards.map((stat, i) => {
+                    const convertedVal = toDisplayAmount(stat.value);
+                    const kasaSplit = stat.isKasaBalance ? splitKasaBalance(convertedVal) : null;
+                    const displayAmount = kasaSplit ? kasaSplit.displayAmount : convertedVal;
+                    const deficitText = kasaSplit?.isDeficit
+                        ? `(-${displayPrefix}${kasaSplit.deficitAmount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                        : null;
+
+                    return (
                     <Card 
                         key={i} 
                         onClick={() => handleCardClick(stat.label)}
@@ -72,12 +81,18 @@ export function FinanceDashboard({ summary }: { summary: any }) {
                             </div>
                             <p className="text-[8px] sm:text-[10px] text-muted-foreground tracking-[0.14em] sm:tracking-[0.2em] uppercase mb-1 opacity-60 truncate">{stat.label}</p>
                             <div className="mt-1 flex items-baseline gap-1 sm:gap-2">
-                                <RevealFinancial amount={toDisplayAmount(stat.value)} prefix={displayPrefix} className="text-lg sm:text-4xl tracking-tighter" />
+                                <RevealFinancial
+                                    amount={displayAmount}
+                                    prefix={displayPrefix}
+                                    deficitText={deficitText}
+                                    className="text-lg sm:text-4xl tracking-tighter"
+                                />
                             </div>
                             <p className="text-[9px] sm:text-[11px] text-muted-foreground mt-2 sm:mt-4 leading-tight sm:leading-relaxed opacity-80 line-clamp-1 sm:line-clamp-none">{stat.description}</p>
                         </CardContent>
                     </Card>
-                ))}
+                    );
+                })}
             </div>
 
             <Dialog open={selectedCard === "BUGÜNKÜ GELİR"} onOpenChange={(open: boolean) => !open && setSelectedCard(null)}>
