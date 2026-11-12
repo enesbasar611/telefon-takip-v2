@@ -39,7 +39,12 @@ import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { getCustomerStatement, collectGlobalCustomerPayment } from "@/lib/actions/debt-actions";
 import { getAccounts } from "@/lib/actions/finance-actions";
-import { buildUnifiedWhatsAppStatement } from "@/lib/debt-statement-calculator";
+import {
+    buildUnifiedWhatsAppStatement,
+    getCurrentDebtTotals,
+    mergeStatementDebtsAndPayments,
+    parseUsdRate,
+} from "@/lib/debt-statement-calculator";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { VeresiyePaymentModal } from "@/components/finance/veresiye/veresiye-payment-modal";
 import { VeresiyePaymentSummaryModal, type PaymentSummary } from "@/components/finance/veresiye/veresiye-payment-summary-modal";
@@ -134,9 +139,8 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
         setWhatsappCustomerName(name);
         setWhatsappPhone(phone.replace(/[^0-9]/g, ''));
 
-        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
-        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
-        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+        const parsedRate = parseUsdRate(rates);
+        const usdRate = parsedRate > 1 ? parsedRate : 34.5;
 
         if (customerId) {
             try {
@@ -204,7 +208,24 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
         setIsCustomerModalOpen(true);
     };
 
-    const handleOpenReceiptForCustomer = (customer: any) => {
+    const handleOpenReceiptForCustomer = async (customer: any) => {
+        const customerId = customer?.id || customer?.customerId;
+        if (customerId) {
+            try {
+                const res = await getCustomerStatement(customerId);
+                if (res?.success) {
+                    setReceiptCustomer({
+                        ...customer,
+                        id: customerId,
+                        statementDebts: mergeStatementDebtsAndPayments(res.debts || [], res.transactions || []),
+                    });
+                    setReceiptOpen(true);
+                    return;
+                }
+            } catch (err) {
+                console.error("Receipt statement fetch error:", err);
+            }
+        }
         setReceiptCustomer(customer);
         setReceiptOpen(true);
     };
@@ -213,9 +234,8 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
         if (paymentCurrency === newCurrency) return;
         setIgnoreBalance(false);
 
-        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
-        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
-        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+        const parsedRate = parseUsdRate(rates);
+        const usdRate = parsedRate > 1 ? parsedRate : 34.5;
         const currentAmount = Number(paymentAmount) || 0;
 
         let converted = 0;
@@ -230,9 +250,8 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
     };
 
     const handleOpenPayment = (customer: any, specificDebt?: any) => {
-        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
-        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
-        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+        const parsedRate = parseUsdRate(rates);
+        const usdRate = parsedRate > 1 ? parsedRate : 34.5;
 
         setPaymentCustomer(customer);
         setPaymentNotes(specificDebt ? `${specificDebt.notes || specificDebt.description || "Borç"} tahsilatı` : "Cari hesap veresiye tahsilatı");
@@ -280,9 +299,8 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
             return;
         }
 
-        const rawUsdRate = (rates as any)?.usd || (rates as any)?.USD;
-        const parsedUsdRate = typeof rawUsdRate === "string" ? parseFloat(rawUsdRate.replace(",", ".")) : Number(rawUsdRate);
-        const usdRate = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? parsedUsdRate : 34.5;
+        const parsedRate = parseUsdRate(rates);
+        const usdRate = parsedRate > 1 ? parsedRate : 34.5;
 
         setIsPaymentPending(true);
         try {
@@ -402,7 +420,9 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
     };
 
     const unpaidDebts = useMemo(() =>
-        Array.isArray(debts) ? debts.filter(d => !d.remainingAmount || Number(d.remainingAmount) > 0) : []
+        Array.isArray(debts)
+            ? debts.filter(d => !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0.01)
+            : []
         , [debts]);
 
     const allAggregates = useMemo(() => {
@@ -431,10 +451,11 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                     debts: [],
                 };
             }
+            const rem = Number(d.remainingAmount ?? d.amount ?? 0);
             if (d.currency === "USD") {
-                aggregates[cId].totalUSD += Number(d.remainingAmount);
+                aggregates[cId].totalUSD = Math.round((aggregates[cId].totalUSD + rem) * 100) / 100;
             } else {
-                aggregates[cId].totalTRY += Number(d.remainingAmount);
+                aggregates[cId].totalTRY = Math.round((aggregates[cId].totalTRY + rem) * 100) / 100;
             }
             aggregates[cId].count += 1;
             aggregates[cId].debts.push(d);
@@ -1075,9 +1096,11 @@ export function ReceivablesClient({ debts, shopName, shopPhone, cols = 8, rows =
                         setReceiptCustomer(null);
                     }}
                     customer={{ id: receiptCustomer.id, name: receiptCustomer.name, phone: receiptCustomer.phone }}
-                    debts={receiptCustomer.debts || []}
+                    debts={receiptCustomer.statementDebts || receiptCustomer.debts || []}
                     shopName={shopName}
                     shopPhone={shopPhone}
+                    rates={rates}
+                    defaultCurrency={defaultCurrency}
                 />
             )}
 

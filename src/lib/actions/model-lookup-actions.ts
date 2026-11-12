@@ -1,20 +1,23 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { getShopId } from "@/lib/auth";
+import { buildProductSearchOrConditions } from "@/lib/inventory/product-search";
 
 export async function searchDeviceModels(query: string) {
-  if (!query || query.length < 2) return [];
+  if (!query || query.trim().length < 2) return [];
 
   const shopId = await getShopId();
+  if (!shopId) return [];
 
-  // Logic: Search existing products/devices to suggest common models
+  const orConditions = await buildProductSearchOrConditions(shopId, query, { minLength: 2 });
+  if (orConditions.length === 0) return [];
+
+  // Logic: Search existing products/devices (including compatible models) to suggest common models
   const products = await prisma.product.findMany({
     where: {
       shopId,
-      OR: [
-        { name: { contains: query, mode: 'insensitive' } },
-        { deviceInfo: { imei: { contains: query } } }
-      ]
+      isDeleted: false,
+      OR: orConditions
     },
     take: 10,
     select: { name: true, category: { select: { name: true } } }

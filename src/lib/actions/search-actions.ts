@@ -1,23 +1,32 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { serializePrisma } from "@/lib/utils";
+import { getProductCompatibility, serializePrisma } from "@/lib/utils";
 import { getShopId } from "@/lib/auth";
+import { buildProductSearchOrConditions } from "@/lib/inventory/product-search";
 
 export async function globalSearchAction(query: string) {
-  if (!query || query.length < 2) return [];
+  if (!query || query.trim().length < 2) return [];
 
   try {
     const shopId = await getShopId();
+    if (!shopId) return [];
+
+    const productOrConditions = await buildProductSearchOrConditions(shopId, query, { minLength: 2 });
+
     const [products, customers, suppliers, serviceTickets, settings] = await Promise.all([
       // Search Products
       prisma.product.findMany({
         where: {
           shopId,
-          OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-            { sku: { contains: query, mode: 'insensitive' } },
-          ]
+          isDeleted: false,
+          OR:
+            productOrConditions.length > 0
+              ? productOrConditions
+              : [
+                  { name: { contains: query, mode: "insensitive" } },
+                  { sku: { contains: query, mode: "insensitive" } },
+                ],
         },
         select: {
           id: true,
@@ -25,6 +34,7 @@ export async function globalSearchAction(query: string) {
           stock: true,
           sellPrice: true,
           sellPriceUsd: true,
+          attributes: true,
         },
         take: 5
       }),
@@ -93,10 +103,13 @@ export async function globalSearchAction(query: string) {
         ? `${usdStr} (${tlStr})`
         : `${tlStr} (${usdStr})`;
 
+      const compatibility = getProductCompatibility(p);
       results.push({
         id: p.id,
         title: p.name,
-        subtitle: `${p.stock} Adet • ${priceSubtitle}`,
+        subtitle: compatibility
+          ? `${p.stock} Adet • ${priceSubtitle} • Uyumlu: ${compatibility}`
+          : `${p.stock} Adet • ${priceSubtitle}`,
         type: 'Ürün',
         href: `/stok?q=${encodeURIComponent(p.name)}`,
         breadcrumb: 'Envanter > Ürünler'

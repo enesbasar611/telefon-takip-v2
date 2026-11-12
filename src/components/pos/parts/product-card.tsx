@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Tag, Package, Plus, Barcode, Check, Eye } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, getProductCompatibility } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { getCategoryTheme } from "@/lib/category-colors";
@@ -58,6 +58,11 @@ export const ProductCard = React.memo(({
                         <h4 className="truncate text-xs font-bold uppercase tracking-tight text-foreground transition-colors">
                             {product.name}
                         </h4>
+                        {getProductCompatibility(product) && (
+                            <p className="truncate text-[10px] font-medium text-blue-600 dark:text-blue-400 mt-0.5" title={getProductCompatibility(product)}>
+                                Uyumlu: {getProductCompatibility(product)}
+                            </p>
+                        )}
                         <div className="mt-0.5 flex items-center gap-2 flex-wrap">
                             <span className={cn(
                                 "text-[9px] uppercase tracking-wider truncate max-w-[120px] px-2 py-0.5 rounded border font-semibold",
@@ -152,10 +157,18 @@ export const ProductCard = React.memo(({
             </div>
 
             {/* Middle: Product Name (Bold & Net) */}
-            <div className="my-auto py-1">
+            <div className="my-auto py-1 space-y-1">
                 <h3 className="font-bold text-xs sm:text-sm text-foreground uppercase tracking-tight line-clamp-2 leading-snug transition-colors">
                     {product.name}
                 </h3>
+                {getProductCompatibility(product) && (
+                    <p
+                        className="text-[10px] font-medium text-blue-600/90 dark:text-blue-400/90 line-clamp-1 leading-tight"
+                        title={getProductCompatibility(product)}
+                    >
+                        Uyumlu: {getProductCompatibility(product)}
+                    </p>
+                )}
             </div>
 
             {/* Bottom Row: Price & Hover Quick Action */}

@@ -23,13 +23,13 @@ import { useRouter } from "next/navigation";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PriceInput } from "@/components/ui/price-input";
 import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-lookup-actions";
-import { cn } from "@/lib/utils";
+import { cn, getProductCompatibility } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
-import { buildNewDebtWhatsAppReceipt } from "@/lib/debt-statement-calculator";
+import { buildNewDebtWhatsAppReceipt, getCurrentDebtTotals } from "@/lib/debt-statement-calculator";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface AddDebtModalProps {
@@ -352,15 +352,9 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                     // Güncel toplam kalan borcu belirlemek için hesap ekstresini çek
                     const stmtRes = await getCustomerStatement(customerRes.customerId);
                     if (stmtRes?.success && Array.isArray(stmtRes.debts)) {
-                        stmtRes.debts.forEach((d: any) => {
-                            if (!d.isPaid) {
-                                const rem = Number(d.remainingAmount ?? d.amount ?? 0);
-                                if (rem > 0.001) {
-                                    if (d.currency === "USD") totalRemainingUSD += rem;
-                                    else totalRemainingTRY += rem;
-                                }
-                            }
-                        });
+                        const totals = getCurrentDebtTotals(stmtRes.debts);
+                        totalRemainingTRY = totals.try;
+                        totalRemainingUSD = totals.usd;
                     } else if (finalAfter) {
                         totalRemainingTRY = Number(finalAfter.totalRemainingTRY || 0);
                         totalRemainingUSD = Number(finalAfter.totalRemainingUSD || 0);
@@ -557,8 +551,13 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                                                                         : "hover:bg-indigo-500 hover:text-white"
                                                                 )}
                                                             >
-                                                                <div className="flex flex-col">
-                                                                    <span className={cn(isOutOfStock && "line-through opacity-70")}>{p.name}</span>
+                                                                <div className="flex flex-col min-w-0 pr-2">
+                                                                    <span className={cn("truncate", isOutOfStock && "line-through opacity-70")}>{p.name}</span>
+                                                                    {getProductCompatibility(p) && (
+                                                                        <span className="text-[10px] text-blue-500 font-medium truncate">
+                                                                            Uyumlu: {getProductCompatibility(p)}
+                                                                        </span>
+                                                                    )}
                                                                     <span className={cn("text-[9px]", isOutOfStock ? "text-rose-500 font-bold" : "opacity-60")}>
                                                                         Stok: {p.stock} {isOutOfStock && "(Stok Yetersiz)"}
                                                                     </span>

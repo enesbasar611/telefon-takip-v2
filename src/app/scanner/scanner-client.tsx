@@ -16,7 +16,7 @@ import { createSale } from "@/lib/actions/sale-actions";
 import { sendWhatsAppAction } from "@/lib/actions/data-management-actions";
 import { Input } from "@/components/ui/input";
 import { PriceInput } from "@/components/ui/price-input";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, getProductCompatibility } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScannerHelpModal } from "@/components/scanner/scanner-help-modal";
 
@@ -782,6 +782,11 @@ export function ScannerClient() {
                                                 <h4 className="text-base font-black truncate text-neutral-200 uppercase tracking-tighter">
                                                     {product.name}
                                                 </h4>
+                                                {getProductCompatibility(product) && (
+                                                    <p className="text-[11px] font-medium text-blue-400 truncate mt-0.5">
+                                                        Uyumlu: {getProductCompatibility(product)}
+                                                    </p>
+                                                )}
                                                 <div className="flex items-center gap-3 mt-2">
                                                     <span className="text-xs font-black text-blue-500">₺{formatCurrency(product.sellPrice)}</span>
                                                     <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-full", product.stock <= 5 ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500")}>STOK: {product.stock}</span>
@@ -859,7 +864,14 @@ export function ScannerClient() {
                                                     }}
                                                     className="bg-neutral-800/50 border border-white/5 p-3 rounded-xl flex items-center justify-between active:scale-[0.98] transition-all"
                                                 >
-                                                    <span className="text-xs font-black truncate flex-1 pr-4">{p.name}</span>
+                                                    <div className="flex-1 min-w-0 pr-4">
+                                                        <span className="block text-xs font-black truncate">{p.name}</span>
+                                                        {getProductCompatibility(p) && (
+                                                            <span className="block text-[10px] font-medium text-blue-400 truncate mt-0.5">
+                                                                Uyumlu: {getProductCompatibility(p)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="flex flex-col items-end shrink-0">
                                                         <span className="text-[9px] text-blue-500 font-bold">STOK: {p.stock}</span>
                                                         <span className="text-[9px] text-neutral-500 italic mt-0.5">{p.barcode || p.sku || 'KOD YOK'}</span>

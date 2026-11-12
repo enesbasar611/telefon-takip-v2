@@ -63,8 +63,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { collectGlobalCustomerPayment, deleteCustomerPayment, updateCustomerPayment } from "@/lib/actions/debt-actions";
+import { collectGlobalCustomerPayment, deleteCustomerPayment, getCustomerStatement, updateCustomerPayment } from "@/lib/actions/debt-actions";
 import { DebtReceiptModal } from "@/components/finance/debt-receipt-modal";
+import { getCurrentDebtTotals, mergeStatementDebtsAndPayments, parseUsdRate } from "@/lib/debt-statement-calculator";
 
 interface CustomerDebtPanelProps {
     customer: any;
@@ -93,7 +94,10 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
     const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
     const [accountId, setAccountId] = useState<string>("");
     const [notes, setNotes] = useState("");
-    const [usdRate, setUsdRate] = useState<number>(Number(rates?.usd || rates?.USD || 34.5));
+    const [usdRate, setUsdRate] = useState<number>(() => {
+        const parsed = parseUsdRate(rates);
+        return parsed > 1 ? parsed : 34.5;
+    });
 
     // Edit Payment State
     const [editingTransaction, setEditingTransaction] = useState<any>(null);
@@ -101,15 +105,10 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
     const [editTxNotes, setEditTxNotes] = useState<string>("");
 
     const debts = customer?.debts || [];
-    const unpaidDebts = debts.filter((d: any) => !d.isPaid);
+    const unpaidDebts = debts.filter((d: any) => !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0.01);
     const transactions = customer?.transactions || [];
 
-    const totalDebtTRY = debts.reduce((acc: number, d: any) =>
-        d.currency === "TRY" ? acc + Number(d.remainingAmount) : acc, 0
-    );
-    const totalDebtUSD = debts.reduce((acc: number, d: any) =>
-        d.currency === "USD" ? acc + Number(d.remainingAmount) : acc, 0
-    );
+    const { try: totalDebtTRY, usd: totalDebtUSD } = getCurrentDebtTotals(debts);
 
     const formatWithCurrency = (amount: number, currency: string = "TRY") => {
         const formatted = formatCurrency(amount, false);
@@ -296,11 +295,23 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                                setReceiptDebts(debts);
+                            onClick={async () => {
+                                if (customer?.id) {
+                                    try {
+                                        const res = await getCustomerStatement(customer.id);
+                                        if (res?.success) {
+                                            setReceiptDebts(mergeStatementDebtsAndPayments(res.debts || debts, res.transactions || transactions));
+                                            setReceiptVisible(true);
+                                            return;
+                                        }
+                                    } catch (err) {
+                                        console.error("Customer receipt statement error:", err);
+                                    }
+                                }
+                                setReceiptDebts(mergeStatementDebtsAndPayments(debts, transactions));
                                 setReceiptVisible(true);
                             }}
-                            disabled={unpaidDebts.length === 0}
+                            disabled={debts.length === 0 && transactions.length === 0}
                             className="text-blue-600 border-blue-200 hover:bg-blue-50"
                         >
                             <Printer className="w-4 h-4 mr-2" />

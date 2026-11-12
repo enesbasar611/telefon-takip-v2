@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { addPartToService, removePartFromService } from "@/lib/actions/service-actions";
 import { searchProducts } from "@/lib/actions/product-actions";
+import { getProductCompatibility } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -147,8 +148,13 @@ export function ServicePartManager({ ticketId, products, currentParts }: { ticke
                             setShowResults(false);
                           }}
                         >
-                          <div className="flex flex-col">
-                            <span className={`text-sm font-medium ${outOfStock ? "text-rose-400" : ""}`}>{p.name}</span>
+                          <div className="flex flex-col min-w-0 pr-2">
+                            <span className={`text-sm font-medium truncate ${outOfStock ? "text-rose-400" : ""}`}>{p.name}</span>
+                            {getProductCompatibility(p) && (
+                              <span className="text-[11px] font-medium text-blue-400 truncate">
+                                Uyumlu: {getProductCompatibility(p)}
+                              </span>
+                            )}
                             <span className={`text-xs ${outOfStock ? "text-rose-500/70 font-semibold" : "text-muted-foreground"}`}>
                               Stok: {p.stock} {outOfStock && "(Stokta Yok)"}
                             </span>

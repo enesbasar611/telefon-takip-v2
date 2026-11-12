@@ -41,7 +41,7 @@ import { getCustomersPaginated } from "@/lib/actions/customer-actions";
 import { createPurchaseOrderAction } from "@/lib/actions/purchase-actions";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { cn, getInitials, getDeterministicColor } from "@/lib/utils";
+import { cn, getInitials, getDeterministicColor, getProductCompatibility } from "@/lib/utils";
 import { StockReceiptModal } from "./stock-receipt-modal";
 import { Badge } from "@/components/ui/badge";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
@@ -501,8 +501,11 @@ export function ShortageList() {
                     {searchResults.length > 0 ? (
                       searchResults.map((p) => (
                         <button key={p.id} onMouseDown={(e) => { e.preventDefault(); handleSelectProduct(p); }} className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left border-b border-border/40 last:border-0">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-foreground">{p.name}</span>
+                          <div className="flex flex-col min-w-0 pr-2">
+                            <span className="text-xs font-bold text-foreground truncate">{p.name}</span>
+                            {getProductCompatibility(p) && (
+                              <span className="text-[10px] font-medium text-blue-500 truncate">Uyumlu: {getProductCompatibility(p)}</span>
+                            )}
                             <span className="text-[10px] text-muted-foreground">{p.sku || 'SKU YOK'}</span>
                           </div>
                           <span className={cn("text-xs font-black px-2.5 py-1 rounded-lg border", p.stock <= 0 ? "text-rose-500 bg-rose-500/10 border-rose-500/20" : "text-emerald-500 bg-emerald-500/10 border-emerald-500/20")}>

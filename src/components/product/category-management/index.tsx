@@ -32,7 +32,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
+import { cn, matchesProductSearch } from "@/lib/utils";
 import { useDashboardData } from "@/lib/context/dashboard-data-context";
 import { PriceInput } from "@/components/ui/price-input";
 
@@ -215,7 +215,7 @@ export function CategoryManagementContainer() {
         categories.forEach(cat => {
             const hasMatchingName = cat.name.toLowerCase().includes(query);
             const hasMatchingProduct = allProducts.some(p =>
-                p.categoryId === cat.id && p.name.toLowerCase().includes(query)
+                p.categoryId === cat.id && matchesProductSearch(p, query)
             );
 
             if (hasMatchingName || hasMatchingProduct) {
@@ -580,7 +580,7 @@ export function CategoryManagementContainer() {
                         {searchQuery && searchFilteredIds && (
                             <div className="mb-4 px-3 py-2 rounded-xl bg-indigo-500/5 border border-indigo-500/20 text-[10px] font-medium text-indigo-400 uppercase tracking-widest flex items-center gap-2">
                                 <Search className="h-3 w-3" />
-                                {searchFilteredIds.size} kategori · {allProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length} ürün eşleşti
+                                {searchFilteredIds.size} kategori · {allProducts.filter(p => matchesProductSearch(p, searchQuery)).length} ürün eşleşti
                             </div>
                         )}
                         <div className="flex items-center gap-2 mb-6">
@@ -735,7 +735,7 @@ export function CategoryManagementContainer() {
                                             <ProductTable
                                                 products={allProducts.filter(p => {
                                                     if (p.categoryId !== selectedCatId) return false;
-                                                    if (searchQuery) return p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                                                    if (searchQuery) return matchesProductSearch(p, searchQuery);
                                                     return true;
                                                 })}
                                                 editingProducts={editingProducts} setEditingProducts={setEditingProducts}

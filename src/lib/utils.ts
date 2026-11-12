@@ -71,6 +71,120 @@ export function normalizeSearchText(text?: string | null): string {
     .trim();
 }
 
+const COMPATIBILITY_ATTRIBUTE_KEYS = [
+  "compatibility",
+  "compatibleModels",
+  "uyumluModeller",
+  "uyumlu_modeller",
+  "uyumluluk",
+  "models",
+] as const;
+
+const IGNORED_SEARCH_ATTRIBUTE_KEYS = new Set(["currency"]);
+
+function parseProductAttributes(attributes: unknown): Record<string, unknown> | null {
+  if (!attributes) return null;
+  if (typeof attributes === "string") {
+    try {
+      const parsed = JSON.parse(attributes);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  if (typeof attributes === "object" && !Array.isArray(attributes)) {
+    return attributes as Record<string, unknown>;
+  }
+  return null;
+}
+
+/**
+ * Extracts a displayable compatible-models string from a product's JSON attributes.
+ */
+export function getProductCompatibility(product: any): string {
+  const attrs = parseProductAttributes(product?.attributes);
+  if (!attrs) return "";
+
+  for (const key of COMPATIBILITY_ATTRIBUTE_KEYS) {
+    const val = attrs[key];
+    if (typeof val === "string" && val.trim()) {
+      return val.trim();
+    }
+    if (Array.isArray(val) && val.length > 0) {
+      const joined = val
+        .map((v) => String(v ?? "").trim())
+        .filter(Boolean)
+        .join(", ");
+      if (joined) return joined;
+    }
+  }
+
+  return "";
+}
+
+function getSearchableProductTexts(product: any): string[] {
+  const parts: string[] = [];
+  if (!product) return parts;
+
+  if (product.name) parts.push(String(product.name));
+  if (product.sku) parts.push(String(product.sku));
+  if (product.barcode) parts.push(String(product.barcode));
+  if (product.description) parts.push(String(product.description));
+  if (product.category?.name) parts.push(String(product.category.name));
+
+  if (product.deviceInfo) {
+    if (product.deviceInfo.imei) parts.push(String(product.deviceInfo.imei));
+    if (product.deviceInfo.serialNumber) parts.push(String(product.deviceInfo.serialNumber));
+    if (product.deviceInfo.color) parts.push(String(product.deviceInfo.color));
+    if (product.deviceInfo.capacity) parts.push(String(product.deviceInfo.capacity));
+  }
+
+  const compat = getProductCompatibility(product);
+  if (compat) parts.push(compat);
+
+  const attrs = parseProductAttributes(product.attributes);
+  if (attrs) {
+    for (const [key, val] of Object.entries(attrs)) {
+      if (IGNORED_SEARCH_ATTRIBUTE_KEYS.has(key) || val == null || typeof val === "boolean") continue;
+      if (typeof val === "string" && val.trim()) {
+        parts.push(val);
+      } else if (Array.isArray(val)) {
+        const joined = val.map((v) => String(v ?? "").trim()).filter(Boolean).join(" ");
+        if (joined) parts.push(joined);
+      }
+    }
+  }
+
+  return parts;
+}
+
+/**
+ * Matches a product against a user search query using Turkish normalization across
+ * core product fields and JSON attributes (including compatible models).
+ */
+export function matchesProductSearch(product: any, query?: string | null): boolean {
+  const normQuery = normalizeSearchText(query);
+  if (!normQuery) return true;
+
+  const normalizedParts = getSearchableProductTexts(product)
+    .map((text) => normalizeSearchText(text))
+    .filter(Boolean);
+
+  if (normalizedParts.some((part) => part.includes(normQuery))) {
+    return true;
+  }
+
+  const tokens = normQuery.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    const combined = normalizedParts.join(" ");
+    return tokens.every((token) => combined.includes(token));
+  }
+
+  return false;
+}
+
 /**
  * Serializes Prisma objects for Next.js Server Components to Client Components.
  * Handles Dates, Decimals, and recursive objects/arrays.

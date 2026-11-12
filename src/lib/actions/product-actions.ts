@@ -5,6 +5,7 @@ import { formatTitleCase, formatUppercase } from "@/lib/formatters";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { addShortageItem } from "./shortage-actions";
 import { getShopId, getUserId, auth } from "@/lib/auth";
+import { buildProductSearchOrConditions } from "@/lib/inventory/product-search";
 import { productSchema } from "@/lib/validations/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { generateProductBarcode } from "@/lib/barcode-utils";
@@ -93,34 +94,7 @@ export const getProducts = cache(async function getProducts(options: {
       }
 
       if (search && search.trim()) {
-        const rawTrimmed = search.trim();
-        const queryVariants = Array.from(new Set([
-          rawTrimmed,
-          rawTrimmed.toLowerCase(),
-          rawTrimmed.toUpperCase(),
-          rawTrimmed.toLocaleLowerCase('tr-TR'),
-          rawTrimmed.toLocaleUpperCase('tr-TR'),
-          rawTrimmed.replace(/i/g, "ı").replace(/İ/g, "I"),
-          rawTrimmed.replace(/ı/g, "i").replace(/I/g, "İ"),
-          rawTrimmed.replace(/i/g, "İ"),
-          rawTrimmed.replace(/ı/g, "I"),
-        ])).filter(v => v.length >= 1);
-
-        const orConditions: any[] = [];
-        for (const q of queryVariants) {
-          orConditions.push(
-            { name: { contains: q, mode: 'insensitive' } },
-            { sku: { contains: q, mode: 'insensitive' } },
-            { barcode: { contains: q, mode: 'insensitive' } },
-            { description: { contains: q, mode: 'insensitive' } },
-            { category: { name: { contains: q, mode: 'insensitive' } } },
-            { deviceInfo: { color: { contains: q, mode: 'insensitive' } } },
-            { deviceInfo: { capacity: { contains: q, mode: 'insensitive' } } },
-            { deviceInfo: { serialNumber: { contains: q, mode: 'insensitive' } } },
-            { deviceInfo: { imei: { contains: q, mode: 'insensitive' } } }
-          );
-        }
-        where.OR = orConditions;
+        where.OR = await buildProductSearchOrConditions(shopId, search, { minLength: 1 });
       }
     }
 
@@ -230,33 +204,8 @@ export const searchProducts = cache(async function searchProducts(query: string)
     const shopId = await getShopId();
     if (!shopId) return [];
 
-    const rawTrimmed = query.trim();
-    const queryVariants = Array.from(new Set([
-      rawTrimmed,
-      rawTrimmed.toLowerCase(),
-      rawTrimmed.toUpperCase(),
-      rawTrimmed.toLocaleLowerCase('tr-TR'),
-      rawTrimmed.toLocaleUpperCase('tr-TR'),
-      rawTrimmed.replace(/i/g, "ı").replace(/İ/g, "I"),
-      rawTrimmed.replace(/ı/g, "i").replace(/I/g, "İ"),
-      rawTrimmed.replace(/i/g, "İ"),
-      rawTrimmed.replace(/ı/g, "I"),
-    ])).filter(v => v.length >= 2);
-
-    const orConditions: any[] = [];
-    for (const q of queryVariants) {
-      orConditions.push(
-        { name: { contains: q, mode: 'insensitive' } },
-        { sku: { contains: q, mode: 'insensitive' } },
-        { barcode: { contains: q, mode: 'insensitive' } },
-        { description: { contains: q, mode: 'insensitive' } },
-        { category: { name: { contains: q, mode: 'insensitive' } } },
-        { deviceInfo: { color: { contains: q, mode: 'insensitive' } } },
-        { deviceInfo: { capacity: { contains: q, mode: 'insensitive' } } },
-        { deviceInfo: { serialNumber: { contains: q, mode: 'insensitive' } } },
-        { deviceInfo: { imei: { contains: q, mode: 'insensitive' } } }
-      );
-    }
+    const orConditions = await buildProductSearchOrConditions(shopId, query, { minLength: 2 });
+    if (orConditions.length === 0) return [];
 
     const products = await prisma.product.findMany({
       where: {
@@ -271,6 +220,7 @@ export const searchProducts = cache(async function searchProducts(query: string)
         criticalStock: true,
         sku: true,
         barcode: true,
+        attributes: true,
         buyPrice: true,
         buyPriceUsd: true,
         sellPrice: true,

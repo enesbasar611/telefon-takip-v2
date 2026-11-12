@@ -28,7 +28,7 @@ import { createSale } from "@/lib/actions/sale-actions";
 import { createCustomer } from "@/lib/actions/customer-actions";
 import { createProduct } from "@/lib/actions/product-actions";
 import { ReceiptModal } from "./receipt-modal";
-import { cn, normalizeSearchText } from "@/lib/utils";
+import { cn, getProductCompatibility, matchesProductSearch, normalizeSearchText } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSettings } from "@/lib/actions/setting-actions";
@@ -249,15 +249,8 @@ export function POSCompact({ products: initialProducts, customers, categories }:
     }, [cart, isLoaded, syncCartToMobile]);
 
     const filteredProducts = useMemo(() => {
-        const searchNormalized = normalizeSearchText(productSearch);
-        const isSearching = searchNormalized.length > 0;
-
         return localProducts.filter((p) => {
-            const matchesSearch = !isSearching ||
-                normalizeSearchText(p.name).includes(searchNormalized) ||
-                (p.barcode && normalizeSearchText(p.barcode).includes(searchNormalized)) ||
-                (p.sku && normalizeSearchText(p.sku).includes(searchNormalized)) ||
-                (p.category?.name && normalizeSearchText(p.category.name).includes(searchNormalized));
+            const matchesSearch = matchesProductSearch(p, productSearch);
             const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
             return matchesSearch && matchesCategory;
         });
@@ -705,7 +698,7 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Ürün ara, barkod okut veya yaz..."
+                                    placeholder="Ürün adı, uyumlu model veya barkod ara..."
                                     className="h-10 rounded-xl border border-border/50 bg-muted/30 pl-9 pr-8 text-xs font-medium"
                                     value={productSearch}
                                     onChange={(e) => setProductSearch(e.target.value)}
@@ -845,6 +838,11 @@ export function POSCompact({ products: initialProducts, customers, categories }:
                                             </div>
                                             <div className="flex min-w-0 flex-col">
                                                 <h4 className="truncate text-xs font-bold uppercase text-foreground">{product.name}</h4>
+                                                {getProductCompatibility(product) && (
+                                                    <p className="truncate text-[10px] font-medium text-blue-600 dark:text-blue-400" title={getProductCompatibility(product)}>
+                                                        Uyumlu: {getProductCompatibility(product)}
+                                                    </p>
+                                                )}
                                                 <div className="flex items-center gap-1.5 mt-0.5">
                                                     <span className="text-[9px] text-muted-foreground uppercase font-medium">
                                                         {product.category?.name || "GENEL"}

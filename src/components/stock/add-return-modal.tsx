@@ -35,7 +35,7 @@ import {
     X,
     CheckCircle2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getProductCompatibility } from "@/lib/utils";
 import { toast } from "sonner";
 import { searchProducts } from "@/lib/actions/product-actions";
 import { getCustomersPaginated } from "@/lib/actions/customer-actions";
@@ -629,8 +629,11 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                 onClick={() => addProduct(product)}
                                                 className="w-full flex items-center justify-between p-4 hover:bg-muted/50 border-b border-border/10 last:border-0 transition-colors text-left"
                                             >
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-sm">{product.name}</span>
+                                                <div className="flex flex-col min-w-0 pr-2">
+                                                    <span className="font-bold text-sm truncate">{product.name}</span>
+                                                    {getProductCompatibility(product) && (
+                                                        <span className="text-[10px] font-medium text-blue-500 truncate">Uyumlu: {getProductCompatibility(product)}</span>
+                                                    )}
                                                     <span className="text-[10px] text-muted-foreground uppercase">{product.category?.name || "Kategorisiz"} • {product.sku || "SKU Yok"}</span>
                                                 </div>
                                                 <div className="flex items-center gap-4">

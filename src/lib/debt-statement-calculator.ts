@@ -60,11 +60,97 @@ const getRemainingAmount = (item: DebtStatementItem) => {
   return Math.min(Math.max(remaining, 0), amount);
 };
 
-export const getStatementItemTitle = (item: DebtStatementItem) =>
-  item.notes || item.description || (getType(item) === "PAYMENT" ? "Tahsilat / Odeme" : "Borc kaydi");
+export const parseUsdRate = (rawRate: unknown): number => {
+  const candidate =
+    typeof rawRate === "object" && rawRate !== null
+      ? (rawRate as any).usd ?? (rawRate as any).rates?.USD ?? (rawRate as any).USD
+      : rawRate;
+
+  if (typeof candidate === "string") {
+    const parsed = parseFloat(candidate.replace(",", "."));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  }
+
+  const num = Number(candidate);
+  return Number.isFinite(num) && num > 0 ? num : 1;
+};
+
+export const extractCleanPaymentNote = (
+  item: DebtStatementItem,
+  customerName?: string | null
+): string | null => {
+  const raw = String(item?.notes ?? item?.description ?? "").trim();
+  if (!raw) return null;
+
+  // Turkish-locale safe index search so uppercase "TAHSİLAT DETAYI:" / "Tahsilat Detayi:" is always stripped
+  const trLowerRaw = raw.toLocaleLowerCase("tr-TR");
+  let cutIdx = -1;
+  for (const marker of [
+    "tahsilat detayı:",
+    "tahsilat detayi:",
+    "tahsılat detayı:",
+    "tahsılat detayi:",
+    "tahsilat detayı",
+    "tahsilat detayi",
+    "tahsılat detayı",
+    "tahsılat detayi",
+  ]) {
+    const idx = trLowerRaw.indexOf(marker);
+    if (idx !== -1 && (cutIdx === -1 || idx < cutIdx)) {
+      cutIdx = idx;
+    }
+  }
+  const stripped = (cutIdx !== -1 ? raw.slice(0, cutIdx) : raw).trim();
+
+  if (!stripped) return null;
+
+  const lower = stripped.replace(/\s+/g, " ").toLocaleLowerCase("tr-TR");
+  const genericExact = new Set([
+    "tahsilat",
+    "tahsilat / ödeme",
+    "tahsilat / odeme",
+    "müşteri tahsilatı",
+    "musteri tahsilati",
+    "borç tahsilatı",
+    "borc tahsilati",
+    "tahsilat alındı",
+    "tahsilat alindi",
+  ]);
+  if (genericExact.has(lower)) return null;
+
+  if (lower.startsWith("borç tahsilatı:") || lower.startsWith("borc tahsilati:")) {
+    const afterColon = stripped.split(":").slice(1).join(":").replace(/\s+/g, " ").trim();
+    if (!afterColon) return null;
+    if (
+      customerName &&
+      afterColon.toLocaleLowerCase("tr-TR") ===
+        customerName.replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR")
+    ) {
+      return null;
+    }
+  }
+
+  if (customerName) {
+    const normalizedCustomer = customerName.replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR");
+    const expectedAutoTitle = `${normalizedCustomer} tahsilatı`;
+    const expectedAutoTitleAscii = `${normalizedCustomer} tahsilati`;
+    if (lower === expectedAutoTitle || lower === expectedAutoTitleAscii) {
+      return null;
+    }
+  }
+
+  return stripped;
+};
+
+export const getStatementItemTitle = (item: DebtStatementItem, customerName?: string | null) => {
+  if (getType(item) === "PAYMENT") {
+    return extractCleanPaymentNote(item, customerName) || "Tahsilat";
+  }
+  return item.notes || item.description || "Borç kaydı";
+};
 
 export function buildDebtStatementEntries(items: DebtStatementItem[], usdRate: number) {
-  const safeRate = Number.isFinite(Number(usdRate)) && Number(usdRate) > 0 ? Number(usdRate) : 1;
+  const safeRate = parseUsdRate(usdRate);
   let runningTRY = 0;
   let runningUSD = 0;
 
@@ -83,15 +169,19 @@ export function buildDebtStatementEntries(items: DebtStatementItem[], usdRate: n
       const remainingAmount = type === "DEBT" ? getRemainingAmount(item) : 0;
       const paidAmount = type === "DEBT" ? money(amount - remainingAmount) : 0;
       const rate = getRate(item, safeRate);
-      let amountTRY = currency === "USD" ? money(amount * rate) : amount;
-      let amountUSD = currency === "USD" ? amount : money(amount / rate);
+      const amountTRY = currency === "USD" ? money(amount * rate) : amount;
+      const amountUSD = currency === "USD" ? amount : money(amount / rate);
       let appliedTRY = 0;
       let appliedUSD = 0;
+      const isValidIncomePayment =
+        type === "PAYMENT" &&
+        item.paymentMethod !== "DEBT" &&
+        item.originalType !== "EXPENSE";
 
       if (type === "DEBT") {
         if (currency === "USD") runningUSD = money(runningUSD + amount);
         else runningTRY = money(runningTRY + amount);
-      } else if (currency === "TRY") {
+      } else if (isValidIncomePayment && currency === "TRY") {
         let remainingPaymentTRY = amount;
         appliedTRY = Math.min(runningTRY, remainingPaymentTRY);
         runningTRY = money(runningTRY - appliedTRY);
@@ -101,7 +191,7 @@ export function buildDebtStatementEntries(items: DebtStatementItem[], usdRate: n
           appliedUSD = Math.min(runningUSD, money(remainingPaymentTRY / rate));
           runningUSD = money(runningUSD - appliedUSD);
         }
-      } else {
+      } else if (isValidIncomePayment) {
         let remainingPaymentUSD = amount;
         appliedUSD = Math.min(runningUSD, remainingPaymentUSD);
         runningUSD = money(runningUSD - appliedUSD);
@@ -133,12 +223,12 @@ export function buildDebtStatementEntries(items: DebtStatementItem[], usdRate: n
 }
 
 export function buildOpenDebtStatementEntries(items: DebtStatementItem[], usdRate: number) {
-  const safeRate = Number.isFinite(Number(usdRate)) && Number(usdRate) > 0 ? Number(usdRate) : 1;
+  const safeRate = parseUsdRate(usdRate);
   let runningTRY = 0;
   let runningUSD = 0;
 
   return [...items]
-    .filter((item) => getType(item) === "DEBT" && !item.isPaid && getRemainingAmount(item) > 0)
+    .filter((item) => getType(item) === "DEBT" && !item.isPaid && getRemainingAmount(item) > 0.01)
     .sort((a, b) => getDate(a.createdAt).getTime() - getDate(b.createdAt).getTime())
     .map((item) => {
       const currency = getCurrency(item.currency);
@@ -172,16 +262,50 @@ export function buildOpenDebtStatementEntries(items: DebtStatementItem[], usdRat
 }
 
 export function getCurrentDebtTotals(items: DebtStatementItem[]) {
-  return items.reduce(
+  const raw = items.reduce(
     (totals, item) => {
       if (getType(item) === "PAYMENT" || item.isPaid) return totals;
       const remaining = getRemainingAmount(item);
-      if (getCurrency(item.currency) === "USD") totals.usd = money(totals.usd + remaining);
-      else totals.try = money(totals.try + remaining);
+      if (remaining <= 0.01) return totals;
+      if (getCurrency(item.currency) === "USD") totals.usd += remaining;
+      else totals.try += remaining;
       return totals;
     },
     { try: 0, usd: 0 }
   );
+  return { try: money(raw.try), usd: money(raw.usd) };
+}
+
+export function getCurrentDebtTotalsWithEquiv(items: DebtStatementItem[], usdRate: unknown) {
+  const safeRate = parseUsdRate(usdRate);
+  const base = getCurrentDebtTotals(items);
+  return {
+    usdRate: safeRate,
+    try: base.try,
+    usd: base.usd,
+    totalTRY: money(base.try + base.usd * safeRate),
+    totalUSD: money(base.usd + base.try / safeRate),
+  };
+}
+
+/**
+ * Merges debt records with valid customer collection transactions into the unified
+ * statement array expected by DebtReceiptModal and DebtStatementModern.
+ */
+export function mergeStatementDebtsAndPayments(debts: any[] = [], transactions: any[] = []) {
+  const mappedPayments = (transactions || [])
+    .filter((t: any) => t.paymentMethod !== "DEBT" && t.type !== "EXPENSE" && Number(t.amount || 0) > 0)
+    .map((t: any) => ({
+      ...t,
+      type: "PAYMENT",
+      originalType: t.type,
+      notes: t.description || t.notes || "",
+      amount: t.amount,
+      currency: t.currency || "TRY",
+      createdAt: t.createdAt || t.date,
+    }));
+
+  return [...(debts || []), ...mappedPayments];
 }
 
 export function formatDebtMoney(amount: number, currency: string = "TRY"): string {
@@ -219,35 +343,17 @@ export function buildUnifiedWhatsAppStatement(options: UnifiedWhatsAppStatementO
     shopName = "Başar Teknik",
   } = options;
 
-  let safeRate = 1;
-  if (typeof usdRate === "string") {
-    const parsed = parseFloat((usdRate as string).replace(",", "."));
-    if (Number.isFinite(parsed) && parsed > 0) safeRate = parsed;
-  } else if (typeof usdRate === "number" && Number.isFinite(usdRate) && usdRate > 0) {
-    safeRate = usdRate;
-  }
-
+  const safeRate = parseUsdRate(usdRate);
   const isUsdDefault = defaultCurrency === "USD";
 
-  // Calculate current real remaining totals
-  let totalRemainingTRY = 0;
-  let totalRemainingUSD = 0;
-  debts.forEach((d: any) => {
-    if (!d.isPaid) {
-      const remaining = Number(d.remainingAmount ?? d.amount ?? 0);
-      if (remaining > 0.01) {
-        if (d.currency === "USD") totalRemainingUSD += remaining;
-        else totalRemainingTRY += remaining;
-      }
-    }
-  });
-
-  totalRemainingTRY = money(totalRemainingTRY);
-  totalRemainingUSD = money(totalRemainingUSD);
+  // Calculate current real remaining totals using the single authoritative calculator
+  const currentTotals = getCurrentDebtTotals(debts);
+  const totalRemainingTRY = currentTotals.try;
+  const totalRemainingUSD = currentTotals.usd;
 
   // Relevant payments:
   const validPayments = (transactions || [])
-    .filter((t: any) => t.paymentMethod !== "DEBT" && Number(t.amount || 0) > 0)
+    .filter((t: any) => t.paymentMethod !== "DEBT" && t.type !== "EXPENSE" && Number(t.amount || 0) > 0)
     .sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
 
   let totalCollectedTRY = 0;
@@ -408,13 +514,7 @@ export function buildNewDebtWhatsAppReceipt(options: NewDebtWhatsAppReceiptOptio
     defaultCurrency = "TRY",
   } = options;
 
-  let safeRate = 1;
-  if (typeof usdRate === "string") {
-    const parsed = parseFloat((usdRate as string).replace(",", "."));
-    if (Number.isFinite(parsed) && parsed > 0) safeRate = parsed;
-  } else if (typeof usdRate === "number" && Number.isFinite(usdRate) && usdRate > 0) {
-    safeRate = usdRate;
-  }
+  const safeRate = parseUsdRate(usdRate);
 
   const isUsdDefault = defaultCurrency === "USD";
   const remTRY = money(totalRemainingTRY);

@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { cn } from "@/lib/utils";
+import { cn, getProductCompatibility } from "@/lib/utils";
 import { useShortage } from "@/lib/context/shortage-context";
 import { searchProducts } from "@/lib/actions/product-actions";
 import { getCustomersPaginated } from "@/lib/actions/customer-actions";
@@ -496,6 +496,9 @@ export function AddShortageForm({ onSuccess, className, categories = [] }: AddSh
                                                         <div className="flex justify-between items-center gap-3 sm:gap-4">
                                                             <div className="flex flex-col min-w-0">
                                                                 <span className="text-sm sm:text-base font-black group-hover/item:text-blue-500 uppercase truncate leading-tight dark:text-zinc-100">{p.name}</span>
+                                                                {getProductCompatibility(p) && (
+                                                                    <span className="text-[10px] font-semibold text-blue-500 truncate mt-0.5">Uyumlu: {getProductCompatibility(p)}</span>
+                                                                )}
                                                                 <span className="text-[9px] sm:text-[10px] font-black group-hover/item:text-blue-500/70 opacity-50 uppercase tracking-widest">{p.barcode || "BARKODSUZ"}</span>
                                                             </div>
                                                             <Badge className={cn("px-3 sm:px-4 py-1 sm:py-1.5 rounded-xl font-black text-[9px] sm:text-[10px] shrink-0 shadow-lg", (p.stock || 0) <= 0 ? "bg-rose-500/20 text-rose-500 group-hover/item:bg-rose-500/30" : "bg-emerald-500/20 text-emerald-500 shadow-emerald-500/10")}>

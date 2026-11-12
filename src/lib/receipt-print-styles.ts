@@ -7,6 +7,8 @@
  * Returns the full CSS string needed for thermal printer rendering.
  * Covers all Tailwind utility classes used across receipt templates.
  */
+import { extractCleanPaymentNote } from "@/lib/debt-statement-calculator";
+
 export function getReceiptPrintCSS(paperSize: string): string {
     return `
         @page { 
@@ -408,7 +410,7 @@ export async function generateDebtPDF(data: {
     // Table Data
     const tableData = data.items.map(item => [
         new Date(item.createdAt).toLocaleDateString('tr-TR'),
-        item.type === 'PAYMENT' ? '[TAHSİLAT] ' + (item.notes || '') : (item.notes || item.description || 'BORÇ'),
+        item.type === 'PAYMENT' ? `[TAHSİLAT]${extractCleanPaymentNote(item, data.customerName) ? ` ${extractCleanPaymentNote(item, data.customerName)}` : ''}` : (item.notes || item.description || 'BORÇ'),
         new Intl.NumberFormat(item.currency === 'USD' ? 'en-US' : 'tr-TR', {
             style: 'currency',
             currency: item.currency || 'TRY'

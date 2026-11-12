@@ -65,18 +65,18 @@ export const VeresiyePaymentSummaryModal: React.FC<VeresiyePaymentSummaryModalPr
                         <div className="p-3 sm:p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                             <span className="block text-[9px] font-black uppercase tracking-widest mb-0.5 text-slate-500">Önceki Bakiye</span>
                             <span className="text-base sm:text-lg font-black font-mono text-slate-700 dark:text-slate-200">
-                                ₺{Math.round(paymentSummary.previousTRY).toLocaleString('tr-TR')}
+                                ₺{Number(paymentSummary.previousTRY || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             {paymentSummary.previousUSD > 0 && (
                                 <span className="block text-[10px] font-bold text-slate-400 mt-0.5">
-                                    + ${Math.round(paymentSummary.previousUSD).toLocaleString('tr-TR')}
+                                    + ${Number(paymentSummary.previousUSD || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             )}
                         </div>
                         <div className="p-3 sm:p-3.5 rounded-xl bg-emerald-600 dark:bg-emerald-500 text-white !text-white shadow-md shadow-emerald-500/20">
                             <span className="block text-[9px] font-black uppercase tracking-widest mb-0.5 opacity-80 !text-white">Tahsil Edilen</span>
                             <span className="text-lg sm:text-xl font-black font-mono !text-white">
-                                {paymentSummary.currency === 'USD' ? '$' : '₺'}{Math.round(paymentSummary.paidAmount).toLocaleString('tr-TR')}
+                                {paymentSummary.currency === 'USD' ? '$' : '₺'}{Number(paymentSummary.paidAmount || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
                     </div>
@@ -85,11 +85,11 @@ export const VeresiyePaymentSummaryModal: React.FC<VeresiyePaymentSummaryModalPr
                         <span className="block text-[9px] font-black uppercase tracking-widest mb-0.5 opacity-80 !text-white text-center">Kalan Bakiye</span>
                         <div className="flex justify-center items-center gap-6">
                             <span className="text-lg sm:text-xl font-black font-mono !text-white">
-                                ₺{Math.round(paymentSummary.remainingTRY).toLocaleString('tr-TR')}
+                                ₺{Number(paymentSummary.remainingTRY || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             {paymentSummary.remainingUSD > 0 && (
                                 <span className="text-lg sm:text-xl font-black font-mono !text-white">
-                                    ${Math.round(paymentSummary.remainingUSD).toLocaleString('tr-TR')}
+                                    ${Number(paymentSummary.remainingUSD || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             )}
                         </div>

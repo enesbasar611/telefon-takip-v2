@@ -59,7 +59,7 @@ import { ServiceStatus } from "@prisma/client";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
-import { cn, formatPhone } from "@/lib/utils";
+import { cn, formatPhone, getProductCompatibility, matchesProductSearch } from "@/lib/utils";
 import {
     addPartToService,
     removePartFromService,
@@ -228,13 +228,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
             if (searchQuery.length >= 2) {
                 setIsSearching(true);
                 const results = await searchProducts(searchQuery);
-
-                const normalizedQuery = normalizeTurkish(searchQuery);
-                const filtered = results.filter((p: any) =>
-                    normalizeTurkish(p.name).includes(normalizedQuery) ||
-                    normalizeTurkish(p.sku || "").includes(normalizedQuery) ||
-                    (p.category?.name && normalizeTurkish(p.category.name).includes(normalizedQuery))
-                );
+                const filtered = results.filter((p: any) => matchesProductSearch(p, searchQuery));
 
                 setSearchResults(filtered);
                 setIsSearching(false);
@@ -244,20 +238,6 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
         }, 300);
         return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
-
-    const normalizeTurkish = (str: string) => {
-        if (!str) return "";
-        return str
-            .toLowerCase()
-            .replace(/ı/g, 'i')
-            .replace(/İ/g, 'i')
-            .replace(/ğ/g, 'g')
-            .replace(/ü/g, 'u')
-            .replace(/ş/g, 's')
-            .replace(/ö/g, 'o')
-            .replace(/ç/g, 'c')
-            .replace(/[^\w\s]/gi, '');
-    };
 
     const handleAddPart = async (product: any) => {
         const alreadyExists = ticket.usedParts?.some((p: any) => p.productId === product.id);
@@ -774,6 +754,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                                                                 <button key={p.id} onClick={() => handleAddPart(p)} className="w-full p-5 flex items-center justify-between hover:bg-white/5 active:scale-[0.98] rounded-[1.5rem] transition-all group/item border border-transparent hover:border-white/5">
                                                                     <div className="flex flex-col text-left gap-1.5">
                                                                         <span className="text-sm font-bold text-white/80 group-hover/item:text-blue-400 transition-colors">{p.name}</span>
+                                                                        {getProductCompatibility(p) && (
+                                                                            <span className="text-[11px] font-medium text-blue-400/90">Uyumlu: {getProductCompatibility(p)}</span>
+                                                                        )}
                                                                         <div className="flex items-center gap-3">
                                                                             <div className={cn(
                                                                                 "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter",

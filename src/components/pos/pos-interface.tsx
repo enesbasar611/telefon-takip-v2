@@ -56,7 +56,7 @@ import { UnifiedSaleModal } from "./unified-sale-modal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { cn, formatPhone, formatCurrency, normalizeSearchText } from "@/lib/utils";
+import { cn, formatPhone, formatCurrency, matchesProductSearch } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -97,7 +97,7 @@ export function POSInterface({ initialSaleId }: {
   });
 
   const customers = (posData?.customers || []) as { id: string; name: string; phone: string; loyaltyPoints?: number }[];
-  const products = (posData?.products || []) as { id: string; name: string; barcode?: string | null; sku?: string | null; category?: { name?: string; parent?: { name?: string } | null } | null; categoryId?: string | null; buyPrice?: number; sellPrice?: number; buyPriceUsd?: number; sellPriceUsd?: number; priceCurrency?: string; stock?: number | null }[];
+  const products = (posData?.products || []) as { id: string; name: string; barcode?: string | null; sku?: string | null; description?: string | null; attributes?: any; category?: { name?: string; parent?: { name?: string } | null } | null; categoryId?: string | null; buyPrice?: number; sellPrice?: number; buyPriceUsd?: number; sellPriceUsd?: number; priceCurrency?: string; stock?: number | null }[];
   const categories = (posData?.categories || []) as { id: string; name: string }[];
   const accounts = (posData?.accounts || []) as { id: string; name: string; type: "CASH" | "BANK" | "POS" | "CREDIT_CARD"; balance?: number; currency?: string }[];
 
@@ -217,8 +217,7 @@ export function POSInterface({ initialSaleId }: {
 
   // Filtered products list
   const filteredProducts = useMemo(() => {
-    const searchNormalized = normalizeSearchText(debouncedSearchTerm);
-    const isSearching = searchNormalized.length > 0;
+    const isSearching = debouncedSearchTerm.trim().length > 0;
 
     return products.filter((p) => {
       const isService = p.category?.name?.toLowerCase() === "hizmet";
@@ -228,11 +227,7 @@ export function POSInterface({ initialSaleId }: {
       if (stockFilter === "IN_STOCK" && !isService && stock <= 0) return false;
       if (stockFilter === "CRITICAL" && !isService && (stock <= 0 || stock > 5)) return false;
 
-      const matchesSearch = !isSearching ||
-        normalizeSearchText(p.name).includes(searchNormalized) ||
-        (p.barcode && normalizeSearchText(p.barcode).includes(searchNormalized)) ||
-        (p.sku && normalizeSearchText(p.sku).includes(searchNormalized)) ||
-        (p.category?.name && normalizeSearchText(p.category.name).includes(searchNormalized));
+      const matchesSearch = matchesProductSearch(p, debouncedSearchTerm);
 
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
 
@@ -885,7 +880,7 @@ export function POSInterface({ initialSaleId }: {
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
-                placeholder="Ürün adı, barkod okut veya ara..."
+                placeholder="Ürün adı, uyumlu model, barkod okut veya ara..."
                 className="pl-8 pr-14 bg-background/80 border-border/40 h-8.5 rounded-xl text-xs focus:bg-background focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
                 value={displaySearchTerm}
                 onChange={(e) => setDisplaySearchTerm(e.target.value)}

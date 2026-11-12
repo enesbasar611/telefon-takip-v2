@@ -1,6 +1,8 @@
 "use server";
 
 import { getCategories, getProducts } from "@/lib/actions/product-actions";
+import { buildProductSearchOrConditions } from "@/lib/inventory/product-search";
+import { getProductCompatibility } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -653,11 +655,15 @@ export interface AISearchFilters {
 }
 
 async function getProductSummaryFiltered(filters: { categoryName?: string; search?: string } = {}) {
+    const { getShopId } = await import("@/lib/auth");
+    const shopId = await getShopId(false);
     let categoryIds: string[] = [];
 
     // If a categoryName is provided, find the category and all its descendants
     if (filters.categoryName) {
-        const allCategories = await prisma.category.findMany();
+        const allCategories = await prisma.category.findMany(
+            shopId ? { where: { shopId } } : undefined
+        );
 
         // Find categories that match the name (bi-directional check)
         const matchingCats = allCategories.filter((c: any) =>
@@ -682,7 +688,9 @@ async function getProductSummaryFiltered(filters: { categoryName?: string; searc
     }
 
     // Fetch products based on categoryIds or search
-    const where: any = {};
+    const where: any = { isDeleted: false };
+    if (shopId) where.shopId = shopId;
+
     if (categoryIds.length > 0) {
         where.categoryId = { in: categoryIds };
     } else if (filters.categoryName) {
@@ -694,15 +702,19 @@ async function getProductSummaryFiltered(filters: { categoryName?: string; searc
     }
 
     if (filters.search) {
-        const searchCondition = { contains: filters.search, mode: 'insensitive' as const };
-        if (where.OR) {
-            where.OR.push({ name: searchCondition });
-        } else {
-            where.OR = [
-                { name: searchCondition },
-                { sku: searchCondition },
-                { barcode: searchCondition }
+        const searchOr = shopId
+            ? await buildProductSearchOrConditions(shopId, filters.search, { minLength: 1 })
+            : [
+                { name: { contains: filters.search, mode: 'insensitive' as const } },
+                { sku: { contains: filters.search, mode: 'insensitive' as const } },
+                { barcode: { contains: filters.search, mode: 'insensitive' as const } },
             ];
+        if (searchOr.length > 0) {
+            if (where.OR) {
+                where.OR.push(...searchOr);
+            } else {
+                where.OR = searchOr;
+            }
         }
     }
 
@@ -716,6 +728,7 @@ async function getProductSummaryFiltered(filters: { categoryName?: string; searc
         id: p.id,
         name: p.name,
         category: p.category?.name || "Kategorisiz",
+        compatibility: getProductCompatibility(p) || undefined,
         buyPrice: Number(p.buyPrice),
         buyPriceUsd: p.buyPriceUsd ? Number(p.buyPriceUsd) : null,
         sellPrice: Number(p.sellPrice),

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { cn, normalizeSearchText } from "@/lib/utils";
+import { cn, getProductCompatibility, matchesProductSearch } from "@/lib/utils";
 import { useTransition } from "react";
 import {
   Search,
@@ -175,16 +175,8 @@ export function StockListTable({
   }, [initializeScannerRoom, shop?.id]);
 
   const filteredProducts = useMemo(() => {
-    const normSearch = normalizeSearchText(searchTerm.trim());
-
     return products.filter((p) => {
-      const matchesSearch =
-        !normSearch ||
-        normalizeSearchText(p.name).includes(normSearch) ||
-        (p.sku && normalizeSearchText(p.sku).includes(normSearch)) ||
-        (p.barcode && normalizeSearchText(p.barcode).includes(normSearch)) ||
-        (p.category?.name && normalizeSearchText(p.category.name).includes(normSearch)) ||
-        (p.description && normalizeSearchText(p.description).includes(normSearch));
+      const matchesSearch = matchesProductSearch(p, searchTerm);
 
       const matchesCategory = selectedCategory === "ALL" || p.categoryId === selectedCategory;
       const matchesStockFilter = !showOutOfStockOnly || p.stock <= 0;
@@ -470,7 +462,7 @@ export function StockListTable({
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
           <Input
-            placeholder={`${getIndustryLabel(shop, "productLabel")} adı, SKU veya barkod ara...`}
+            placeholder={`${getIndustryLabel(shop, "productLabel")} adı, uyumlu model, SKU veya barkod ara...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 pr-12 bg-muted/30 border-border rounded-xl text-[13px] font-medium text-foreground h-10 placeholder:text-muted-foreground/80 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
@@ -599,6 +591,11 @@ export function StockListTable({
                     />
                     <div className="min-w-0">
                       <h3 className="font-semibold text-foreground text-[14px] leading-tight">{product.name}</h3>
+                      {getProductCompatibility(product) && (
+                        <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium mt-0.5 line-clamp-1">
+                          Uyumlu: {getProductCompatibility(product)}
+                        </p>
+                      )}
                       <p className="text-[11px] text-muted-foreground font-medium mt-1">SKU: {product.sku || '-'}</p>
                     </div>
                   </div>
@@ -796,6 +793,11 @@ export function StockListTable({
                   <TableCell className="py-4">
                     <div className="flex flex-col">
                       <span className="text-[13px] font-medium text-foreground/90 group-hover:text-blue-400 transition-colors">{product.name}</span>
+                      {getProductCompatibility(product) && (
+                        <span className="text-[11px] text-blue-600/90 dark:text-blue-400/90 font-medium mt-0.5 line-clamp-1" title={getProductCompatibility(product)}>
+                          Uyumlu: {getProductCompatibility(product)}
+                        </span>
+                      )}
                       <span className="text-[11px] text-muted-foreground/80 font-medium mt-0.5">SKU: {product.sku || 'Belirtilmedi'}</span>
                     </div>
                   </TableCell>

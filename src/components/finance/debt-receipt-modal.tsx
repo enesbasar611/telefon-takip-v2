@@ -13,9 +13,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { generateProfessionalPDF, generateProfessionalPDFBlob } from "@/lib/receipt-print-styles";
 import {
-    buildOpenDebtStatementEntries,
     buildDebtStatementEntries,
-    getCurrentDebtTotals
+    extractCleanPaymentNote,
+    getCurrentDebtTotalsWithEquiv,
+    parseUsdRate
 } from "@/lib/debt-statement-calculator";
 
 import { DebtStatementModern } from "./debt-statement-modern";
@@ -47,6 +48,7 @@ const formatUSD = (amount: number) => new Intl.NumberFormat('en-US', { style: 'c
 const ReceiptContent = ({
     customer,
     debts = [],
+    allDebts,
     shopName,
     shopPhone,
     shopAddress,
@@ -54,20 +56,24 @@ const ReceiptContent = ({
     shopLogo,
     rates,
     showPaid = false,
+    isDateFiltered = false,
     settings,
     defaultCurrency = 'TRY'
 }: any) => {
-    const currentUsdRate = Number(rates?.usd || rates?.rates?.USD || rates?.USD) || 1;
-    const currentTotals = getCurrentDebtTotals(debts);
+    const currentUsdRate = parseUsdRate(rates);
+    const authoritativeSource = (allDebts && allDebts.length > 0 ? allDebts : debts).filter(
+        (d: any) => d.type !== 'PAYMENT'
+    );
+    const currentTotals = getCurrentDebtTotalsWithEquiv(authoritativeSource, currentUsdRate);
     const totalTRY = currentTotals.try;
     const totalUSD = currentTotals.usd;
-    const portfolioTotalTRY = Math.round(totalTRY + (totalUSD * currentUsdRate));
-    const portfolioTotalUSD = (totalTRY / currentUsdRate) + totalUSD;
+    const portfolioTotalTRY = currentTotals.totalTRY;
+    const portfolioTotalUSD = currentTotals.totalUSD;
 
     const unpaid = debts.filter((d: any) => (
         (d.type === 'DEBT' || !d.type)
         && !d.isPaid
-        && Number(d.remainingAmount ?? d.amount ?? 0) > 0
+        && Number(d.remainingAmount ?? d.amount ?? 0) > 0.01
     ));
     const earliestDate = (() => {
         if (unpaid.length === 0) return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -83,13 +89,15 @@ const ReceiptContent = ({
     })();
 
     const displayDebts = debts.filter((d: any) => {
-        if (showPaid) return true;
         if (d.type === 'PAYMENT') {
+            if (d.paymentMethod === 'DEBT' || d.originalType === 'EXPENSE') return false;
+            if (showPaid) return true;
             const date = new Date(d.createdAt);
             if (isNaN(date.getTime())) return false;
             return date >= earliestDate;
         }
-        return (d.type === 'DEBT' || !d.type) && !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0;
+        if (showPaid) return true;
+        return !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0.01;
     });
 
     const statementEntries = buildDebtStatementEntries(displayDebts, currentUsdRate);
@@ -133,18 +141,27 @@ const ReceiptContent = ({
             {/* List */}
             <div className="space-y-2 mb-4 min-h-[50px]">
                 {sortedDates.map((date) => {
-                    const dailyTRY = groups[date]
-                        .filter((entry: any) => entry.type !== 'PAYMENT' && entry.currency !== 'USD')
-                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
-                    const dailyUSD = groups[date]
-                        .filter((entry: any) => entry.type !== 'PAYMENT' && entry.currency === 'USD')
-                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
-                    const dailyPaymentTRY = groups[date]
-                        .filter((entry: any) => entry.type === 'PAYMENT' && entry.currency !== 'USD')
-                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
-                    const dailyPaymentUSD = groups[date]
-                        .filter((entry: any) => entry.type === 'PAYMENT' && entry.currency === 'USD')
-                        .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0);
+                    const round2 = (n: number) => Math.round((Number(n || 0) + Number.EPSILON) * 100) / 100;
+                    const dailyTRY = round2(
+                        groups[date]
+                            .filter((entry: any) => entry.type !== 'PAYMENT' && entry.currency !== 'USD')
+                            .reduce((acc: number, entry: any) => acc + (showPaid ? Number(entry.amount) : Number(entry.remainingAmount ?? entry.amount)), 0)
+                    );
+                    const dailyUSD = round2(
+                        groups[date]
+                            .filter((entry: any) => entry.type !== 'PAYMENT' && entry.currency === 'USD')
+                            .reduce((acc: number, entry: any) => acc + (showPaid ? Number(entry.amount) : Number(entry.remainingAmount ?? entry.amount)), 0)
+                    );
+                    const dailyPaymentTRY = round2(
+                        groups[date]
+                            .filter((entry: any) => entry.type === 'PAYMENT' && entry.currency !== 'USD')
+                            .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0)
+                    );
+                    const dailyPaymentUSD = round2(
+                        groups[date]
+                            .filter((entry: any) => entry.type === 'PAYMENT' && entry.currency === 'USD')
+                            .reduce((acc: number, entry: any) => acc + Number(entry.amount), 0)
+                    );
                     const hasPayment = (dailyPaymentTRY + dailyPaymentUSD) > 0;
 
                     return (
@@ -194,25 +211,39 @@ const ReceiptContent = ({
                                             isPayment ? "bg-emerald-100/70 -mx-1 px-1.5 rounded-md border border-emerald-300 my-0.5" : "border-black/5"
                                         )}>
                                             <div className="flex flex-col flex-1 pr-4">
-                                                <span className={cn(
-                                                    "text-[9px] font-black uppercase leading-tight block w-full break-words",
-                                                    isPayment ? "text-emerald-800" : "text-black"
-                                                )}>
-                                                    {isPayment && "✓ [TAHSİLAT ALINDI] "}
-                                                    {item.notes || item.description || (isPayment ? 'TAHSİLAT' : 'BORÇ KAYDI')}
-                                                    <span className={cn(
-                                                        "block text-[8px] font-bold mt-0.5",
-                                                        isPayment ? "text-emerald-700" : "text-black/60"
-                                                    )}>
-                                                        {isPayment
-                                                            ? `Ödeme İşlendi • Kalan: TL ${entry.runningTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${entry.runningUSD > 0 ? ` + $${entry.runningUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}`
-                                                            : (!showPaid
+                                                {isPayment ? (
+                                                    (() => {
+                                                        const cleanNote = extractCleanPaymentNote(item, customer?.name);
+                                                        const methodLabel =
+                                                            item.paymentMethod === "CASH"
+                                                                ? "Nakit"
+                                                                : item.paymentMethod === "CARD"
+                                                                    ? "Kredi Kartı"
+                                                                    : item.paymentMethod === "TRANSFER"
+                                                                        ? "Havale/EFT"
+                                                                        : null;
+                                                        return (
+                                                            <span className="text-[9px] font-black uppercase leading-tight block w-full break-words text-emerald-800">
+                                                                ✓ TAHSİLAT ALINDI{methodLabel ? ` (${methodLabel})` : ""}
+                                                                {cleanNote ? (
+                                                                    <span className="block text-[8px] font-bold mt-0.5 text-slate-800 normal-case whitespace-pre-line">
+                                                                        {cleanNote}
+                                                                    </span>
+                                                                ) : null}
+                                                            </span>
+                                                        );
+                                                    })()
+                                                ) : (
+                                                    <span className="text-[9px] font-black uppercase leading-tight block w-full break-words text-black">
+                                                        {item.notes || item.description || 'BORÇ KAYDI'}
+                                                        <span className="block text-[8px] font-bold mt-0.5 text-black/60">
+                                                            {!showPaid
                                                                 ? `Kalan: ${formatEntryCurrency(remainingAmount)}${paidAmount > 0 ? ` / Ödenen: ${formatEntryCurrency(paidAmount)}` : ""}`
-                                                                : `Kalan: TL ${entry.runningTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${entry.runningUSD > 0 ? ` + $${entry.runningUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}`
-                                                            )
-                                                        }
+                                                                : `Kalan: ${formatEntryCurrency(remainingAmount)}${paidAmount > 0 ? ` / Ödenen: ${formatEntryCurrency(paidAmount)}` : " (Ödendi)"}`
+                                                            }
+                                                        </span>
                                                     </span>
-                                                </span>
+                                                )}
                                             </div>
                                             <div className="text-right whitespace-nowrap">
                                                 <div className={cn(
@@ -250,14 +281,17 @@ const ReceiptContent = ({
                         <span className="text-[10px] font-black text-black uppercase">USD BORCU:</span>
                         <div className="flex flex-col items-end">
                             <span className="text-[12px] font-black text-black">{formatUSD(totalUSD)}</span>
-                            <span className="text-[8px] font-bold text-black">(~₺{(totalUSD * currentUsdRate).toLocaleString('tr-TR')})</span>
+                            <span className="text-[8px] font-bold text-black">(~{formatTRY(totalUSD * currentUsdRate)})</span>
                         </div>
                     </div>
                 )}
                 <div className="flex justify-between items-center border-[1.5px] border-black p-2 mt-2">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-black uppercase tracking-wider">GENEL TOPLAM</span>
+                        <span className="text-[10px] font-black text-black uppercase tracking-wider">KALAN BORÇ TOPLAMI</span>
                         <span className="text-[7px] font-bold text-black/60 font-sans">KUR: $1 = ₺{currentUsdRate.toFixed(2)}</span>
+                        {isDateFiltered && (
+                            <span className="text-[7px] font-bold text-black/60 font-sans">Tüm zamanlar net bakiyesi</span>
+                        )}
                     </div>
                     <span className="text-lg font-black text-black">
                         {defaultCurrency === 'USD'
@@ -267,7 +301,7 @@ const ReceiptContent = ({
                     </span>
                 </div>
 
-                {unpaid.length === 0 && (
+                {totalTRY <= 0.01 && totalUSD <= 0.01 && (
                     <div className="mt-4 py-3 border-2 border-black border-dashed text-center">
                         <span className="text-[11px] font-black uppercase tracking-[0.2em]">HESAP KAPALIDIR</span>
                     </div>
@@ -317,9 +351,13 @@ export function DebtReceiptModal({
         refetchInterval: 60000 // 1 dakikada bir yenile
     });
 
-    const activeRates = liveRates || rates;
+    const activeRates = rates || liveRates;
     const customerSlug = (customer?.name || "musteri").replace(/\s+/g, "-");
     const pdfFilename = `ekstre-${customerSlug}.pdf`;
+
+    useEffect(() => {
+        setShowPaid(initialShowPaid);
+    }, [initialShowPaid, open, customer?.id]);
 
     useEffect(() => {
         if (open) {
@@ -467,6 +505,7 @@ export function DebtReceiptModal({
                         <ReceiptContent
                             customer={customer}
                             debts={filteredDebts}
+                            allDebts={debts}
                             shopName={shopName}
                             shopPhone={shopPhone}
                             shopAddress={shopAddress}
@@ -474,6 +513,7 @@ export function DebtReceiptModal({
                             shopLogo={shopLogo}
                             rates={activeRates}
                             showPaid={showPaid}
+                            isDateFiltered={dateRange !== "ALL"}
                             settings={settings}
                             defaultCurrency={defaultCurrency}
                         />
@@ -490,6 +530,7 @@ export function DebtReceiptModal({
                     <DebtStatementModern
                         customer={customer}
                         debts={filteredDebts}
+                        allDebts={debts}
                         shopName={shopName || ""}
                         shopPhone={shopPhone || ""}
                         shopAddress={shopAddress || ""}

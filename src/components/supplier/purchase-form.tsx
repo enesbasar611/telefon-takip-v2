@@ -50,7 +50,7 @@ import { getIndustryLabel } from "@/lib/industry-utils";
 import { getExchangeRate } from "@/lib/currency-utils";
 import { PaymentStatus, PaymentMethod } from "@prisma/client";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
-import { normalizeSearchText } from "@/lib/utils";
+import { getProductCompatibility, normalizeSearchText } from "@/lib/utils";
 import { sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
 
 function buildSupplierOrderWhatsAppMessage(orderNo: string, supplierName: string, items: { name: string; quantity: number }[]): string {
@@ -658,6 +658,11 @@ export function PurchaseForm({ isOpen, onClose, suppliers, onSuccess, defaultSup
                                             </div>
                                             <div>
                                                 <p className="font-bold text-sm tracking-tight">{p.name}</p>
+                                                {getProductCompatibility(p) && (
+                                                    <p className={cn("text-[10px] font-medium truncate max-w-[260px]", selectedIndex === idx ? "text-white/85" : "text-blue-500")}>
+                                                        Uyumlu: {getProductCompatibility(p)}
+                                                    </p>
+                                                )}
                                                 <p className={cn("text-[9px] font-bold uppercase tracking-widest", selectedIndex === idx ? "text-white/60" : "text-muted-foreground")}>{p.category?.name || "Kategorisiz"}</p>
                                             </div>
                                         </div>
