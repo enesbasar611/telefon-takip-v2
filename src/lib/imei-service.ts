@@ -6,17 +6,18 @@ import {
   buildAppleExtendedSpecs,
   classifyBtkStatus,
   isValidImeiLuhn,
-  lookupTacDevice,
   normalizeImeiDigits,
   parseBrandAndModel,
   type BtkOfficialDetails,
   type ImeiLookupResult,
 } from "./imei-utils";
+import { lookupTacWithLocalDb, recordLearnedTacMapping } from "./tac-store";
 
 const BTK_ORIGIN = "https://www.turkiye.gov.tr";
 const BTK_URL = `${BTK_ORIGIN}/imei-sorgulama`;
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = 8500;
+const MAX_FRESH_SESSION_ATTEMPTS = 2;
 
 interface PendingBtkChallenge {
   cookies: Record<string, string>;
@@ -487,24 +488,74 @@ function parseBtkPageError(html: string): string | null {
   return null;
 }
 
+function isTransientBtkPageError(msg: string | null | undefined): boolean {
+  if (!msg) return false;
+  const lower = msg.toLocaleLowerCase("tr-TR");
+  return (
+    lower.includes("teknik aksaklık") ||
+    lower.includes("aksaklık") ||
+    lower.includes("oturum") ||
+    lower.includes("zaman aşım") ||
+    lower.includes("geçici") ||
+    lower.includes("daha sonra") ||
+    lower.includes("hata oluştu") ||
+    lower.includes("tamamlanamadı")
+  );
+}
+
+function isWrongCaptchaError(msg: string | null | undefined): boolean {
+  if (!msg) return false;
+  const lower = msg.toLocaleLowerCase("tr-TR");
+  return (
+    lower.includes("güvenlik") ||
+    lower.includes("resim") ||
+    lower.includes("doğrulama") ||
+    lower.includes("yanlış") ||
+    lower.includes("hatalı")
+  );
+}
+
 function parseBtkResultContainer(html: string, queriedImei: string): BtkOfficialDetails | null {
-  const containerMatch =
-    html.match(
-      /<(?:div|dl|section)[^>]*class=["'][^"']*resultContainer[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|dl|section)>/i
-    ) ||
-    html.match(
-      /<dl[^>]*class=["'][^"']*compact[^"']*["'][^>]*>([\s\S]*?)<\/dl>/i
-    );
-  const scope = containerMatch ? containerMatch[1] : html;
+  // Always inspect <dl class="compact"> first — div.resultContainer can wrap nested <div> tags
+  // that would prematurely terminate a naive </div> regex match.
+  const dlMatch = html.match(/<dl[^>]*class=["'][^"']*compact[^"']*["'][^>]*>([\s\S]*?)<\/dl>/i);
+  let scope = dlMatch?.[1] || "";
+
+  if (!scope) {
+    const rcIdx = html.search(/class=["'][^"']*resultContainer[^"']*["']/i);
+    if (rcIdx >= 0) {
+      const afterRc = html.slice(rcIdx);
+      const innerDl = afterRc.match(/<dl[^>]*>([\s\S]*?)<\/dl>/i);
+      scope = innerDl?.[1] || afterRc.slice(0, 6000);
+    }
+  }
+
+  if (!scope) return null;
+
   const ddMatches = Array.from(scope.matchAll(/<dd[^>]*>([\s\S]*?)<\/dd>/gi));
   if (ddMatches.length < 2) return null;
 
+  const dtMatches = Array.from(scope.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>/gi));
   const values = ddMatches.map((m) => decodeHtmlEntities(m[1]));
-  const imei = values[0] || queriedImei;
-  const durum = values[1] || "";
-  const kaynak = values[2] || "Bilgi Teknolojileri ve İletişim Kurumu";
-  const sorguTarihi = values[3] || new Date().toLocaleDateString("tr-TR");
-  const markaModel = values[4] || "";
+
+  let imei = values[0] || queriedImei;
+  let durum = values[1] || "";
+  let kaynak = values[2] || "Bilgi Teknolojileri ve İletişim Kurumu";
+  let sorguTarihi = values[3] || new Date().toLocaleDateString("tr-TR");
+  let markaModel = values[4] || "";
+
+  if (dtMatches.length === ddMatches.length) {
+    for (let i = 0; i < dtMatches.length; i++) {
+      const label = decodeHtmlEntities(dtMatches[i][1]).toLocaleLowerCase("tr-TR");
+      const val = values[i];
+      if (!val) continue;
+      if (label.includes("imei")) imei = val;
+      else if (label.includes("durum")) durum = val;
+      else if (label.includes("kaynak")) kaynak = val;
+      else if (label.includes("tarih")) sorguTarihi = val;
+      else if (label.includes("marka") || label.includes("model")) markaModel = val;
+    }
+  }
 
   if (!durum) return null;
 
@@ -571,6 +622,7 @@ export interface LookupImeiParams {
   challengeId?: string;
   captchaCode?: string;
   skipCache?: boolean;
+  shopId?: string | null;
 }
 
 /**
@@ -587,7 +639,7 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
   const imei = completed.value;
   const luhnValid = isValidImeiLuhn(imei);
   const tac = imei.slice(0, 8);
-  const tacMatch = lookupTacDevice(imei);
+  const tacMatch = await lookupTacWithLocalDb(imei);
 
   const brand = tacMatch?.brand || null;
   const model = tacMatch?.model || null;
@@ -630,7 +682,8 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
           baseResult,
           imei,
           transport,
-          "Güvenlik kodu oturumu zaman aşımına uğradı. Lütfen yeni kodu girin."
+          "Güvenlik kodu oturumu zaman aşımına uğradı. Lütfen yeni kodu girin.",
+          params.shopId
         );
       }
 
@@ -661,12 +714,19 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
       const btk = parseBtkResultContainer(html, imei);
 
       if (btk) {
-        return buildFinalBtkResult(baseResult, btk);
+        const finalRes = buildFinalBtkResult(baseResult, btk);
+        void recordLearnedTacMapping({
+          imeiOrTac: imei,
+          brand: finalRes.brand,
+          model: finalRes.model,
+          shopId: params.shopId,
+        });
+        return finalRes;
       }
 
       const pageErr = parseBtkPageError(html);
       const nextForm = parseBtkFormMetadata(html);
-      if (nextForm.captchaSrc) {
+      if (nextForm.captchaSrc && (!isTransientBtkPageError(pageErr) || isWrongCaptchaError(pageErr))) {
         const imageDataUrl = await fetchCaptchaImageAsDataUrl(
           nextForm.captchaSrc,
           pending.cookies,
@@ -693,15 +753,20 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
         }
       }
 
-      return {
-        ...baseResult,
-        btkError:
-          pageErr || "e-Devlet yanıtı okunamadı. Resmi e-Devlet sayfasından kontrol edebilirsiniz.",
-      };
+      // If e-Devlet dropped/hiccupped after CAPTCHA submission without rejecting the code,
+      // automatically run a clean fresh session attempt right away so the user doesn't have to re-query manually.
+      closeBtkTransport(transport);
+      return await startFreshBtkSession(
+        baseResult,
+        imei,
+        transport,
+        pageErr && isWrongCaptchaError(pageErr) ? pageErr : undefined,
+        params.shopId
+      );
     }
 
-    // 2. Fresh live request to turkiye.gov.tr/imei-sorgulama
-    return await startFreshBtkSession(baseResult, imei, transport);
+    // 2. Fresh live request to turkiye.gov.tr/imei-sorgulama (auto-retries transient hiccups once)
+    return await startFreshBtkSession(baseResult, imei, transport, undefined, params.shopId);
   } catch (error) {
     console.error("BTK lookup error:", error);
     return {
@@ -718,117 +783,152 @@ async function startFreshBtkSession(
   baseResult: ImeiLookupResult,
   imei: string,
   transport: BtkTransport,
-  initialWarning?: string
+  initialWarning?: string,
+  shopId?: string | null
 ): Promise<ImeiLookupResult> {
-  const jar: Record<string, string> = {};
-  const getRes = await fetchWithRedirectsAndCookies(
-    BTK_URL,
-    {
-      method: "GET",
-      headers: {
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-    },
-    jar,
-    transport
-  );
-
-  if (!getRes.ok) {
-    return {
-      ...baseResult,
-      btkError: `e-Devlet servisi HTTP ${getRes.status} yanıtı döndürdü. Resmi e-Devlet sayfasından doğrulayabilirsiniz.`,
-    };
-  }
-
-  const html = getRes.text();
-  const formMeta = parseBtkFormMetadata(html);
   const challengeStore = getChallengeStore();
+  let lastErrorMessage: string | null = null;
 
-  // When e-Devlet presents a CAPTCHA image, present it cleanly to the human user
-  if (formMeta.captchaSrc) {
-    const imageDataUrl = await fetchCaptchaImageAsDataUrl(formMeta.captchaSrc, jar, transport);
-    if (imageDataUrl) {
-      const challengeId = crypto.randomUUID();
-      challengeStore.set(challengeId, {
-        cookies: jar,
-        actionUrl: formMeta.actionUrl,
-        hiddenFields: formMeta.hiddenFields,
-        imeiFieldName: formMeta.imeiFieldName,
-        captchaFieldName: formMeta.captchaFieldName,
-        createdAt: Date.now(),
-      });
-
-      return {
-        ...baseResult,
-        btkPendingCaptcha: true,
-        captchaImageDataUrl: imageDataUrl,
-        challengeId,
-        btkError: initialWarning || null,
-      };
+  for (let sessionAttempt = 0; sessionAttempt < MAX_FRESH_SESSION_ATTEMPTS; sessionAttempt++) {
+    if (sessionAttempt > 0) {
+      closeBtkTransport(transport);
+      await new Promise((r) => setTimeout(r, 150));
     }
-  }
 
-  // If no CAPTCHA challenge is present on this session, submit query directly
-  const formBody = new URLSearchParams();
-  for (const [k, v] of Object.entries(formMeta.hiddenFields)) {
-    formBody.set(k, v);
-  }
-  formBody.set(formMeta.imeiFieldName, imei);
+    try {
+      const jar: Record<string, string> = {};
+      const getRes = await fetchWithRedirectsAndCookies(
+        BTK_URL,
+        {
+          method: "GET",
+          headers: {
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          },
+        },
+        jar,
+        transport
+      );
 
-  const postRes = await fetchWithRedirectsAndCookies(
-    formMeta.actionUrl,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Origin: BTK_ORIGIN,
-        Referer: BTK_URL,
-      },
-      body: formBody.toString(),
-    },
-    jar,
-    transport
-  );
+      if (!getRes.ok) {
+        lastErrorMessage = `e-Devlet servisi HTTP ${getRes.status} yanıtı döndürdü. Resmi e-Devlet sayfasından doğrulayabilirsiniz.`;
+        continue;
+      }
 
-  const postHtml = postRes.text();
-  const btk = parseBtkResultContainer(postHtml, imei);
+      const html = getRes.text();
+      const formMeta = parseBtkFormMetadata(html);
 
-  if (btk) {
-    return buildFinalBtkResult(baseResult, btk);
-  }
+      // When e-Devlet presents a CAPTCHA image, present it cleanly to the human user
+      if (formMeta.captchaSrc) {
+        const imageDataUrl = await fetchCaptchaImageAsDataUrl(formMeta.captchaSrc, jar, transport);
+        if (imageDataUrl) {
+          const challengeId = crypto.randomUUID();
+          challengeStore.set(challengeId, {
+            cookies: jar,
+            actionUrl: formMeta.actionUrl,
+            hiddenFields: formMeta.hiddenFields,
+            imeiFieldName: formMeta.imeiFieldName,
+            captchaFieldName: formMeta.captchaFieldName,
+            createdAt: Date.now(),
+          });
 
-  // Fallback check if POST response redirected/returned a CAPTCHA
-  const followUpForm = parseBtkFormMetadata(postHtml);
-  if (followUpForm.captchaSrc) {
-    const imageDataUrl = await fetchCaptchaImageAsDataUrl(
-      followUpForm.captchaSrc,
-      jar,
-      transport
-    );
-    if (imageDataUrl) {
-      const challengeId = crypto.randomUUID();
-      challengeStore.set(challengeId, {
-        cookies: jar,
-        actionUrl: followUpForm.actionUrl,
-        hiddenFields: followUpForm.hiddenFields,
-        imeiFieldName: followUpForm.imeiFieldName,
-        captchaFieldName: followUpForm.captchaFieldName,
-        createdAt: Date.now(),
-      });
-      return {
-        ...baseResult,
-        btkPendingCaptcha: true,
-        captchaImageDataUrl: imageDataUrl,
-        challengeId,
-        btkError: initialWarning || parseBtkPageError(postHtml) || null,
-      };
+          return {
+            ...baseResult,
+            btkPendingCaptcha: true,
+            captchaImageDataUrl: imageDataUrl,
+            challengeId,
+            btkError: initialWarning || null,
+          };
+        }
+      }
+
+      // If no CAPTCHA challenge is present on this session, submit query directly
+      const formBody = new URLSearchParams();
+      for (const [k, v] of Object.entries(formMeta.hiddenFields)) {
+        formBody.set(k, v);
+      }
+      formBody.set(formMeta.imeiFieldName, imei);
+
+      const postRes = await fetchWithRedirectsAndCookies(
+        formMeta.actionUrl,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Origin: BTK_ORIGIN,
+            Referer: BTK_URL,
+          },
+          body: formBody.toString(),
+        },
+        jar,
+        transport
+      );
+
+      const postHtml = postRes.text();
+      const btk = parseBtkResultContainer(postHtml, imei);
+
+      if (btk) {
+        const finalRes = buildFinalBtkResult(baseResult, btk);
+        void recordLearnedTacMapping({
+          imeiOrTac: imei,
+          brand: finalRes.brand,
+          model: finalRes.model,
+          shopId,
+        });
+        return finalRes;
+      }
+
+      const pageErr = parseBtkPageError(postHtml);
+
+      // Fallback check if POST response redirected/returned a CAPTCHA (unless it's a transient hiccup)
+      const followUpForm = parseBtkFormMetadata(postHtml);
+      if (followUpForm.captchaSrc && !isTransientBtkPageError(pageErr)) {
+        const imageDataUrl = await fetchCaptchaImageAsDataUrl(
+          followUpForm.captchaSrc,
+          jar,
+          transport
+        );
+        if (imageDataUrl) {
+          const challengeId = crypto.randomUUID();
+          challengeStore.set(challengeId, {
+            cookies: jar,
+            actionUrl: followUpForm.actionUrl,
+            hiddenFields: followUpForm.hiddenFields,
+            imeiFieldName: followUpForm.imeiFieldName,
+            captchaFieldName: followUpForm.captchaFieldName,
+            createdAt: Date.now(),
+          });
+          return {
+            ...baseResult,
+            btkPendingCaptcha: true,
+            captchaImageDataUrl: imageDataUrl,
+            challengeId,
+            btkError: initialWarning || pageErr || null,
+          };
+        }
+      }
+
+      lastErrorMessage =
+        pageErr ||
+        "BTK sonucu alınamadı. Resmi e-Devlet IMEI sorgulama sayfasından kontrol edebilirsiniz.";
+
+      // Auto-retry once on transient e-Devlet error or empty unparseable response
+      if (sessionAttempt < MAX_FRESH_SESSION_ATTEMPTS - 1) {
+        continue;
+      }
+    } catch (err: any) {
+      lastErrorMessage =
+        err?.message ||
+        "e-Devlet BTK servisine şu an doğrudan ulaşılamadı.";
+      if (sessionAttempt < MAX_FRESH_SESSION_ATTEMPTS - 1) {
+        continue;
+      }
     }
   }
 
   return {
     ...baseResult,
     btkError:
-      parseBtkPageError(postHtml) ||
+      lastErrorMessage ||
       "BTK sonucu alınamadı. Resmi e-Devlet IMEI sorgulama sayfasından kontrol edebilirsiniz.",
   };
 }

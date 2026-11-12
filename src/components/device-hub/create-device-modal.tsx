@@ -270,6 +270,9 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
     const paramBrand = searchParams.get("brand");
     const paramModel = searchParams.get("model");
     const paramBtk = searchParams.get("btkStatus") as BtkClassification | null;
+    const paramSerial = searchParams.get("serialNumber");
+    const paramColor = searchParams.get("color");
+    const paramStorage = searchParams.get("storage");
 
     if (!shouldOpen && !paramImei) return;
 
@@ -286,6 +289,15 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
     }
     if (paramModel) {
       setValue("model", paramModel, { shouldValidate: true });
+    }
+    if (paramSerial) {
+      setValue("serialNumber", paramSerial, { shouldValidate: true });
+    }
+    if (paramColor) {
+      setValue("color", paramColor, { shouldValidate: true });
+    }
+    if (paramStorage) {
+      setValue("storage", normalizeStorage(paramStorage), { shouldValidate: true });
     }
     if (paramBtk === "KAYITSIZ") {
       setValue("condition", "INTERNATIONAL", { shouldValidate: true });
@@ -887,6 +899,27 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                     value={watch("imei") || ""}
                     onChange={(val) => setValue("imei", val, { shouldValidate: true, shouldDirty: true })}
                     onLookupComplete={handleImeiLookupComplete}
+                    onIfreeicloudComplete={(res) => {
+                      if (res.extracted.brand) {
+                        const canonical = resolveCanonicalBrandOption(res.extracted.brand, POPULAR_BRANDS);
+                        if (canonical) setValue("brand", canonical, { shouldValidate: true });
+                      }
+                      if (res.extracted.model) {
+                        setValue("model", res.extracted.model, { shouldValidate: true });
+                      }
+                      if (res.extracted.serialNumber) {
+                        setValue("serialNumber", res.extracted.serialNumber, { shouldValidate: true });
+                      }
+                      if (res.extracted.color) {
+                        setValue("color", res.extracted.color, { shouldValidate: true });
+                      }
+                      if (res.extracted.storage) {
+                        setValue("storage", normalizeStorage(res.extracted.storage), { shouldValidate: true });
+                      }
+                      if (res.extracted.fmiStatus === "ON") {
+                        toast.error("DİKKAT: Cihazda Find My iPhone (iCloud Kilidi) AÇIK görünüyor!");
+                      }
+                    }}
                     error={errors.imei?.message}
                     placeholder="14 hane yazınca 15. Luhn basamağı otomatik tamamlanır"
                     variant="buyback"

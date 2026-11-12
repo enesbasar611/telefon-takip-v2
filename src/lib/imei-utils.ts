@@ -123,6 +123,51 @@ interface AppleModelSpecSeed {
 }
 
 const APPLE_SPECS_CATALOG: Record<string, AppleModelSpecSeed> = {
+  "iPhone 17 Pro Max": {
+    modelName: "iPhone 17 Pro Max",
+    modelCode: "A3526",
+    releaseYear: 2025,
+    chipset: "Apple A19 Pro",
+    storageOptions: ["256 GB", "512 GB", "1 TB"],
+    colorOptions: ["Kozmik Turuncu", "Gümüş", "Derin Mavi", "Uzay Siyahı"],
+    hardwareRegionNote: "Global / Avrupa (A3526 - Fiziksel nano-SIM + eSIM)",
+  },
+  "iPhone 17 Pro": {
+    modelName: "iPhone 17 Pro",
+    modelCode: "A3523",
+    releaseYear: 2025,
+    chipset: "Apple A19 Pro",
+    storageOptions: ["256 GB", "512 GB", "1 TB"],
+    colorOptions: ["Kozmik Turuncu", "Gümüş", "Derin Mavi", "Uzay Siyahı"],
+    hardwareRegionNote: "Global / Avrupa (A3523 - Fiziksel nano-SIM + eSIM)",
+  },
+  "iPhone 17 Air": {
+    modelName: "iPhone 17 Air",
+    modelCode: "A3517",
+    releaseYear: 2025,
+    chipset: "Apple A19",
+    storageOptions: ["256 GB", "512 GB", "1 TB"],
+    colorOptions: ["Siyah", "Beyaz", "Açık Altın", "Gök Mavisi"],
+    hardwareRegionNote: "Ultra İnce Tasarım (Yalnızca eSIM destekli olabilir — bölge kodu kontrolü)",
+  },
+  "iPhone 17": {
+    modelName: "iPhone 17",
+    modelCode: "A3520",
+    releaseYear: 2025,
+    chipset: "Apple A19",
+    storageOptions: ["128 GB", "256 GB", "512 GB"],
+    colorOptions: ["Siyah", "Beyaz", "Adaçayı", "Sis Mavisi", "Lavanta"],
+    hardwareRegionNote: "Global / Avrupa (A3520 - Fiziksel nano-SIM + eSIM)",
+  },
+  "iPhone 16e": {
+    modelName: "iPhone 16e",
+    modelCode: "A3409",
+    releaseYear: 2025,
+    chipset: "Apple A18",
+    storageOptions: ["128 GB", "256 GB", "512 GB"],
+    colorOptions: ["Siyah", "Beyaz"],
+    hardwareRegionNote: "Global / Avrupa (A3409)",
+  },
   "iPhone 16 Pro Max": {
     modelName: "iPhone 16 Pro Max",
     modelCode: "A3296",
@@ -213,6 +258,15 @@ const APPLE_SPECS_CATALOG: Record<string, AppleModelSpecSeed> = {
     colorOptions: ["Derin Mor", "Altın", "Gümüş", "Uzay Siyahı"],
     hardwareRegionNote: "Global / Avrupa (A2890 - Fiziksel nano-SIM + eSIM)",
   },
+  "iPhone 14 Plus": {
+    modelName: "iPhone 14 Plus",
+    modelCode: "A2886",
+    releaseYear: 2022,
+    chipset: "Apple A15 Bionic",
+    storageOptions: ["128 GB", "256 GB", "512 GB"],
+    colorOptions: ["Gece Yarısı", "Yıldız Işığı", "Mavi", "Mor", "Sarı", "(PRODUCT)RED"],
+    hardwareRegionNote: "Global / Avrupa (A2886)",
+  },
   "iPhone 14": {
     modelName: "iPhone 14",
     modelCode: "A2882",
@@ -240,6 +294,15 @@ const APPLE_SPECS_CATALOG: Record<string, AppleModelSpecSeed> = {
     colorOptions: ["Grafit", "Altın", "Gümüş", "Sierra Mavisi", "Köknar Yeşili"],
     hardwareRegionNote: "Global / Avrupa (A2638)",
   },
+  "iPhone 13 mini": {
+    modelName: "iPhone 13 mini",
+    modelCode: "A2628",
+    releaseYear: 2021,
+    chipset: "Apple A15 Bionic",
+    storageOptions: ["128 GB", "256 GB", "512 GB"],
+    colorOptions: ["Gece Yarısı", "Yıldız Işığı", "Mavi", "Pembe", "Yeşil", "(PRODUCT)RED"],
+    hardwareRegionNote: "Global / Avrupa (A2628)",
+  },
   "iPhone 13": {
     modelName: "iPhone 13",
     modelCode: "A2633",
@@ -258,6 +321,24 @@ const APPLE_SPECS_CATALOG: Record<string, AppleModelSpecSeed> = {
     colorOptions: ["Grafit", "Gümüş", "Altın", "Pasifik Mavisi"],
     hardwareRegionNote: "Global / Avrupa (A2411)",
   },
+  "iPhone 12 Pro": {
+    modelName: "iPhone 12 Pro",
+    modelCode: "A2407",
+    releaseYear: 2020,
+    chipset: "Apple A14 Bionic",
+    storageOptions: ["128 GB", "256 GB", "512 GB"],
+    colorOptions: ["Grafit", "Gümüş", "Altın", "Pasifik Mavisi"],
+    hardwareRegionNote: "Global / Avrupa (A2407)",
+  },
+  "iPhone 12 mini": {
+    modelName: "iPhone 12 mini",
+    modelCode: "A2399",
+    releaseYear: 2020,
+    chipset: "Apple A14 Bionic",
+    storageOptions: ["64 GB", "128 GB", "256 GB"],
+    colorOptions: ["Siyah", "Beyaz", "Mavi", "Yeşil", "Mor", "(PRODUCT)RED"],
+    hardwareRegionNote: "Global / Avrupa (A2399)",
+  },
   "iPhone 12": {
     modelName: "iPhone 12",
     modelCode: "A2403",
@@ -267,6 +348,24 @@ const APPLE_SPECS_CATALOG: Record<string, AppleModelSpecSeed> = {
     colorOptions: ["Siyah", "Beyaz", "Mavi", "Yeşil", "Mor", "(PRODUCT)RED"],
     hardwareRegionNote: "Global / Avrupa (A2403)",
   },
+  "iPhone 11 Pro Max": {
+    modelName: "iPhone 11 Pro Max",
+    modelCode: "A2218",
+    releaseYear: 2019,
+    chipset: "Apple A13 Bionic",
+    storageOptions: ["64 GB", "256 GB", "512 GB"],
+    colorOptions: ["Uzay Grisi", "Gümüş", "Altın", "Gece Yeşili"],
+    hardwareRegionNote: "Global / Avrupa (A2218)",
+  },
+  "iPhone 11 Pro": {
+    modelName: "iPhone 11 Pro",
+    modelCode: "A2215",
+    releaseYear: 2019,
+    chipset: "Apple A13 Bionic",
+    storageOptions: ["64 GB", "256 GB", "512 GB"],
+    colorOptions: ["Uzay Grisi", "Gümüş", "Altın", "Gece Yeşili"],
+    hardwareRegionNote: "Global / Avrupa (A2215)",
+  },
   "iPhone 11": {
     modelName: "iPhone 11",
     modelCode: "A2221",
@@ -275,6 +374,51 @@ const APPLE_SPECS_CATALOG: Record<string, AppleModelSpecSeed> = {
     storageOptions: ["64 GB", "128 GB", "256 GB"],
     colorOptions: ["Siyah", "Beyaz", "Yeşil", "Sarı", "Mor", "(PRODUCT)RED"],
     hardwareRegionNote: "Global / Avrupa (A2221)",
+  },
+  "iPhone XS Max": {
+    modelName: "iPhone XS Max",
+    modelCode: "A2101",
+    releaseYear: 2018,
+    chipset: "Apple A12 Bionic",
+    storageOptions: ["64 GB", "256 GB", "512 GB"],
+    colorOptions: ["Uzay Grisi", "Gümüş", "Altın"],
+    hardwareRegionNote: "Global / Avrupa (A2101)",
+  },
+  "iPhone XS": {
+    modelName: "iPhone XS",
+    modelCode: "A2097",
+    releaseYear: 2018,
+    chipset: "Apple A12 Bionic",
+    storageOptions: ["64 GB", "256 GB", "512 GB"],
+    colorOptions: ["Uzay Grisi", "Gümüş", "Altın"],
+    hardwareRegionNote: "Global / Avrupa (A2097)",
+  },
+  "iPhone XR": {
+    modelName: "iPhone XR",
+    modelCode: "A2105",
+    releaseYear: 2018,
+    chipset: "Apple A12 Bionic",
+    storageOptions: ["64 GB", "128 GB", "256 GB"],
+    colorOptions: ["Siyah", "Beyaz", "Mavi", "Sarı", "Mercan", "(PRODUCT)RED"],
+    hardwareRegionNote: "Global / Avrupa (A2105)",
+  },
+  "iPhone X": {
+    modelName: "iPhone X",
+    modelCode: "A1901",
+    releaseYear: 2017,
+    chipset: "Apple A11 Bionic",
+    storageOptions: ["64 GB", "256 GB"],
+    colorOptions: ["Uzay Grisi", "Gümüş"],
+    hardwareRegionNote: "Global / Avrupa (A1901)",
+  },
+  "iPhone SE": {
+    modelName: "iPhone SE (3. Nesil)",
+    modelCode: "A2783",
+    releaseYear: 2022,
+    chipset: "Apple A15 Bionic",
+    storageOptions: ["64 GB", "128 GB", "256 GB"],
+    colorOptions: ["Gece Yarısı", "Yıldız Işığı", "(PRODUCT)RED"],
+    hardwareRegionNote: "Global / Avrupa (A2783)",
   },
 };
 
@@ -325,6 +469,8 @@ export function buildAppleExtendedSpecs(
  */
 export const TAC_DATABASE: Record<string, Omit<TacDeviceMatch, "tac" | "appleSpecs">> = {
   // Apple iPhone
+  "35137277": { brand: "Apple", model: "iPhone 17 Pro Max", modelCode: "A3526", releaseYear: 2025, category: "Smartphone" },
+  "35987216": { brand: "Apple", model: "iPhone 16 Pro", modelCode: "A3293", releaseYear: 2024, category: "Smartphone" },
   "35902460": { brand: "Apple", model: "iPhone 16 Pro Max", modelCode: "A3296", releaseYear: 2024, category: "Smartphone" },
   "35661468": { brand: "Apple", model: "iPhone 16 Pro", modelCode: "A3293", releaseYear: 2024, category: "Smartphone" },
   "35488935": { brand: "Apple", model: "iPhone 16", modelCode: "A3287", releaseYear: 2024, category: "Smartphone" },
@@ -344,6 +490,7 @@ export const TAC_DATABASE: Record<string, Omit<TacDeviceMatch, "tac" | "appleSpe
   "35656210": { brand: "Apple", model: "iPhone 11", modelCode: "A2221", releaseYear: 2019, category: "Smartphone" },
 
   // Samsung
+  "35169825": { brand: "Samsung", model: "Galaxy S25 Ultra", modelCode: "SM-S938B", releaseYear: 2025, category: "Smartphone" },
   "35089265": { brand: "Samsung", model: "Galaxy S24 Ultra", modelCode: "SM-S928B", releaseYear: 2024, category: "Smartphone" },
   "35267819": { brand: "Samsung", model: "Galaxy S24", modelCode: "SM-S921B", releaseYear: 2024, category: "Smartphone" },
   "35022382": { brand: "Samsung", model: "Galaxy S23 Ultra", modelCode: "SM-S918B", releaseYear: 2023, category: "Smartphone" },
@@ -355,6 +502,7 @@ export const TAC_DATABASE: Record<string, Omit<TacDeviceMatch, "tac" | "appleSpe
   "35482910": { brand: "Samsung", model: "Galaxy A15", modelCode: "SM-A155F", releaseYear: 2023, category: "Smartphone" },
 
   // Xiaomi / Redmi / POCO
+  "86765808": { brand: "Xiaomi", model: "Xiaomi 17T", modelCode: "2602DPT53G", releaseYear: 2025, category: "Smartphone" },
   "86248906": { brand: "Xiaomi", model: "Xiaomi 14", modelCode: "23127PN0CG", releaseYear: 2024, category: "Smartphone" },
   "86781206": { brand: "Xiaomi", model: "Xiaomi 13T", modelCode: "2306EPN60G", releaseYear: 2023, category: "Smartphone" },
   "86431906": { brand: "Xiaomi", model: "Redmi Note 13 Pro+", modelCode: "23090RA98G", releaseYear: 2024, category: "Smartphone" },
@@ -376,13 +524,36 @@ export const TAC_DATABASE: Record<string, Omit<TacDeviceMatch, "tac" | "appleSpe
   "86712004": { brand: "Reeder", model: "S19 Max Pro S", modelCode: "S19MPS", releaseYear: 2023, category: "Smartphone" },
   "86913504": { brand: "Reeder", model: "S23 Pro Max", modelCode: "S23PM", releaseYear: 2024, category: "Smartphone" },
 
-  // Tecno & Infinix
+  // Tecno, Infinix & Nokia
   "35792140": { brand: "Tecno", model: "Spark 20 Pro", modelCode: "KJ6", releaseYear: 2024, category: "Smartphone" },
   "35982410": { brand: "Tecno", model: "Camon 30", modelCode: "CL6", releaseYear: 2024, category: "Smartphone" },
   "35618492": { brand: "Infinix", model: "Hot 50i", modelCode: "X6531", releaseYear: 2024, category: "Smartphone" },
   "35472819": { brand: "Infinix", model: "Hot 40 Pro", modelCode: "X6837", releaseYear: 2023, category: "Smartphone" },
   "35821470": { brand: "Infinix", model: "Note 40 Pro", modelCode: "X6850", releaseYear: 2024, category: "Smartphone" },
+  "49015420": { brand: "Nokia", model: "NOKIA 3110", modelCode: "3110", releaseYear: 2007, category: "Feature Phone" },
 };
+
+export function createTacMatch(
+  tac: string,
+  brand: string,
+  model: string,
+  modelCode?: string,
+  releaseYear?: number,
+  category: TacDeviceMatch["category"] = "Smartphone"
+): TacDeviceMatch {
+  return {
+    tac,
+    brand,
+    model,
+    modelCode,
+    releaseYear,
+    category,
+    appleSpecs:
+      brand.toLowerCase() === "apple"
+        ? buildAppleExtendedSpecs(model, modelCode)
+        : undefined,
+  };
+}
 
 /**
  * Resolves device metadata using an 8-digit TAC lookup with brand-prefix hints.

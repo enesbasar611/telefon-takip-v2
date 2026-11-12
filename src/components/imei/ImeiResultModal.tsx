@@ -30,6 +30,33 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ImeiLookupResult } from "@/lib/imei-utils";
+import type { IfreeicloudCheckResult } from "@/lib/ifreeicloud-service";
+import { IfreeicloudPanel } from "@/components/imei/IfreeicloudPanel";
+import { toast } from "sonner";
+
+function copyImeiForExternalSite(imei: string, siteLabel: string) {
+  const clean = imei?.trim();
+  if (!clean) return;
+  try {
+    if (navigator?.clipboard?.writeText) {
+      void navigator.clipboard.writeText(clean);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = clean;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    toast.success(`${clean} panoya kopyalandı`, {
+      description: `Açılan ${siteLabel} sayfasındaki alana Ctrl+V / Yapıştır ile ekleyebilirsiniz.`,
+    });
+  } catch {
+    // ignore clipboard errors when blocked by browser permissions
+  }
+}
 
 interface BtkDiagnosticCardProps {
   result: ImeiLookupResult;
@@ -37,6 +64,7 @@ interface BtkDiagnosticCardProps {
   isSubmittingCaptcha?: boolean;
   onSubmitCaptcha?: (captchaCode: string) => void;
   onRefreshCaptcha?: () => void;
+  onIfreeicloudResult?: (res: IfreeicloudCheckResult) => void;
 }
 
 export function BtkDiagnosticCard({
@@ -45,6 +73,7 @@ export function BtkDiagnosticCard({
   isSubmittingCaptcha = false,
   onSubmitCaptcha,
   onRefreshCaptcha,
+  onIfreeicloudResult,
 }: BtkDiagnosticCardProps) {
   const [captchaInput, setCaptchaInput] = useState("");
   const classification = result.btk?.classification;
@@ -135,9 +164,10 @@ export function BtkDiagnosticCard({
               href="https://www.turkiye.gov.tr/imei-sorgulama"
               target="_blank"
               rel="noreferrer"
+              onClick={() => copyImeiForExternalSite(result.imei, "e-Devlet IMEI Sorgulama")}
               className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
-              e-Devlet&apos;te Aç <ExternalLink className="h-3 w-3" />
+              Kopyala &amp; e-Devlet&apos;te Aç <ExternalLink className="h-3 w-3" />
             </a>
           </div>
 
@@ -207,9 +237,10 @@ export function BtkDiagnosticCard({
             href="https://www.turkiye.gov.tr/imei-sorgulama"
             target="_blank"
             rel="noreferrer"
+            onClick={() => copyImeiForExternalSite(result.imei, "e-Devlet IMEI Sorgulama")}
             className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
           >
-            e-Devlet&apos;te Aç <ExternalLink className="h-3 w-3" />
+            Kopyala &amp; e-Devlet&apos;te Aç <ExternalLink className="h-3 w-3" />
           </a>
         </div>
       )}
@@ -217,13 +248,24 @@ export function BtkDiagnosticCard({
       {/* BTK Official Details Card */}
       {result.btk && (
         <div className="rounded-2xl border border-border/70 bg-card/70 p-3.5 sm:p-4 space-y-2.5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               BTK Resmi Kayıt Bilgileri
             </span>
-            <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
-              {result.btk.imei}
-            </span>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
+                {result.btk.imei}
+              </span>
+              <a
+                href="https://www.turkiye.gov.tr/imei-sorgulama"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => copyImeiForExternalSite(result.imei, "e-Devlet IMEI Sorgulama")}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
+              >
+                Kopyala &amp; e-Devlet&apos;te Aç <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
             <div className="rounded-xl bg-muted/40 p-2.5">
@@ -330,13 +372,23 @@ export function BtkDiagnosticCard({
               href={result.appleSpecs.warrantyCheckUrl}
               target="_blank"
               rel="noreferrer"
+              onClick={() => copyImeiForExternalSite(result.imei, "Apple Garanti Sorgulama")}
               className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
             >
-              Apple Garanti <ExternalLink className="h-3 w-3" />
+              Kopyala &amp; Apple Garanti <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         )}
       </div>
+
+      {result.luhnValid && (
+        <IfreeicloudPanel
+          imei={result.imei}
+          detectedBrand={result.brand}
+          compact={compact}
+          onResult={onIfreeicloudResult}
+        />
+      )}
     </div>
   );
 }
@@ -361,14 +413,30 @@ export function ImeiResultModal({
   hideQuickActions = false,
 }: ImeiResultModalProps) {
   const router = useRouter();
+  const [ifreeicloudResult, setIfreeicloudResult] = useState<IfreeicloudCheckResult | null>(null);
+
+  useEffect(() => {
+    setIfreeicloudResult(null);
+  }, [result?.imei]);
 
   const buildQueryString = () => {
     if (!result) return "";
     const params = new URLSearchParams();
     params.set("imei", result.imei);
-    if (result.brand) params.set("brand", result.brand);
-    if (result.model) params.set("model", result.model);
+    const resolvedBrand = ifreeicloudResult?.extracted?.brand || result.brand;
+    const resolvedModel = ifreeicloudResult?.extracted?.model || result.model;
+    if (resolvedBrand) params.set("brand", resolvedBrand);
+    if (resolvedModel) params.set("model", resolvedModel);
     if (result.btk?.classification) params.set("btkStatus", result.btk.classification);
+    if (ifreeicloudResult?.extracted?.serialNumber) {
+      params.set("serialNumber", ifreeicloudResult.extracted.serialNumber);
+    }
+    if (ifreeicloudResult?.extracted?.color) {
+      params.set("color", ifreeicloudResult.extracted.color);
+    }
+    if (ifreeicloudResult?.extracted?.storage) {
+      params.set("storage", ifreeicloudResult.extracted.storage);
+    }
     return params.toString();
   };
 
@@ -409,6 +477,7 @@ export function ImeiResultModal({
               isSubmittingCaptcha={isLoading}
               onSubmitCaptcha={onSubmitCaptcha}
               onRefreshCaptcha={onRefreshCaptcha}
+              onIfreeicloudResult={setIfreeicloudResult}
             />
 
             {!hideQuickActions && (

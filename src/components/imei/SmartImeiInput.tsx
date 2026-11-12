@@ -9,6 +9,7 @@ import {
   normalizeImeiDigits,
   type ImeiLookupResult,
 } from "@/lib/imei-utils";
+import type { IfreeicloudCheckResult } from "@/lib/ifreeicloud-service";
 import { Imei14Plus1Field } from "./Imei14Plus1Field";
 import { CameraImeiScanner } from "./CameraImeiScanner";
 import { BtkDiagnosticCard } from "./ImeiResultModal";
@@ -29,6 +30,7 @@ interface SmartImeiInputProps {
   compact?: boolean;
   showLookupButton?: boolean;
   onLookupComplete?: (result: ImeiLookupResult) => void;
+  onIfreeicloudComplete?: (result: IfreeicloudCheckResult) => void;
   showInlineCard?: boolean;
 }
 
@@ -47,6 +49,7 @@ export function SmartImeiInput({
   compact = false,
   showLookupButton = true,
   onLookupComplete,
+  onIfreeicloudComplete,
   showInlineCard = true,
 }: SmartImeiInputProps) {
   const [autoCompleted, setAutoCompleted] = useState(false);
@@ -190,6 +193,7 @@ export function SmartImeiInput({
             })
           }
           onRefreshCaptcha={() => runLookup(lookupResult.imei, { skipCache: true })}
+          onIfreeicloudResult={onIfreeicloudComplete}
         />
       )}
 

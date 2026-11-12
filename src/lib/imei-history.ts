@@ -4,6 +4,7 @@ import type {
   BtkClassification,
   ImeiLookupResult,
 } from "./imei-utils";
+import type { IfreeicloudCheckResult } from "./ifreeicloud-service";
 
 const HISTORY_SETTING_KEY = "imei_lookup_history";
 const MAX_HISTORY_ENTRIES = 200;
@@ -26,6 +27,7 @@ export interface ImeiHistoryEntry {
   lastCheckedAt: string;
   queryCount: number;
   appleSpecs?: AppleExtendedSpecs | null;
+  ifreeicloud?: IfreeicloudCheckResult | null;
 }
 
 function parseHistoryJson(raw?: string | null): ImeiHistoryEntry[] {
@@ -112,9 +114,59 @@ export async function recordImeiLookupHistory(
     lastCheckedAt: nowIso,
     queryCount: (prev?.queryCount || 0) + 1,
     appleSpecs: result.appleSpecs || null,
+    ifreeicloud: prev?.ifreeicloud || null,
   };
 
   const remaining = existing.filter((item) => item.imei !== result.imei);
+  return saveImeiLookupHistory(shopId, [nextEntry, ...remaining]);
+}
+
+export async function recordIfreeicloudLookupHistory(
+  shopId: string,
+  checkResult: IfreeicloudCheckResult,
+  queriedBy?: string | null
+): Promise<ImeiHistoryEntry[]> {
+  if (!checkResult.success || checkResult.pending) {
+    return getImeiLookupHistory(shopId);
+  }
+
+  const existing = await getImeiLookupHistory(shopId);
+  const prev = existing.find((item) => item.imei === checkResult.imei);
+  const nowIso = checkResult.checkedAt || new Date().toISOString();
+
+  const nextEntry: ImeiHistoryEntry = prev
+    ? {
+        ...prev,
+        brand: prev.brand || checkResult.extracted.brand || null,
+        model: checkResult.extracted.model || prev.model || null,
+        lastCheckedAt: nowIso,
+        queriedBy: queriedBy || prev.queriedBy || null,
+        ifreeicloud: checkResult,
+      }
+    : {
+        imei: checkResult.imei,
+        tac: checkResult.imei.slice(0, 8),
+        brand: checkResult.extracted.brand || null,
+        model: checkResult.extracted.model || null,
+        classification: "BELIRSIZ",
+        previousClassification: null,
+        statusChanged: false,
+        durum: `iFreeiCloud (${checkResult.serviceName})`,
+        kaynak: "iFreeiCloud API",
+        sorguTarihi: nowIso,
+        markaModel: [checkResult.extracted.brand, checkResult.extracted.model]
+          .filter(Boolean)
+          .join(" ") || "Bilinmiyor",
+        luhnValid: true,
+        queriedBy: queriedBy || null,
+        firstCheckedAt: nowIso,
+        lastCheckedAt: nowIso,
+        queryCount: 1,
+        appleSpecs: null,
+        ifreeicloud: checkResult,
+      };
+
+  const remaining = existing.filter((item) => item.imei !== checkResult.imei);
   return saveImeiLookupHistory(shopId, [nextEntry, ...remaining]);
 }
 

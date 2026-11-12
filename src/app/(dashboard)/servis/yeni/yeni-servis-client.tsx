@@ -282,12 +282,16 @@ export function YeniServisClient() {
     const paramBrand = searchParams.get("brand");
     const paramModel = searchParams.get("model");
     const paramBtk = searchParams.get("btkStatus") as BtkClassification | null;
+    const paramSerial = searchParams.get("serialNumber");
 
-    if (!paramImei && !paramBrand && !paramModel) return;
+    if (!paramImei && !paramBrand && !paramModel && !paramSerial) return;
 
     const cleanImei = normalizeImeiDigits(paramImei);
     if (cleanImei) {
       form.setValue("imei", cleanImei, { shouldValidate: true });
+    }
+    if (paramSerial) {
+      form.setValue("serialNumber", paramSerial, { shouldValidate: true });
     }
     if (paramBrand) {
       const brandField = industryFields.find((f) => f.key === "deviceBrand");

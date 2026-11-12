@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       rawImei,
       challengeId,
       captchaCode,
+      shopId,
     });
 
     if (result.btk && !result.btkPendingCaptcha) {

@@ -41,6 +41,28 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-12: Yerel TAC Veritabanı Zenginleştirme, Otomatik DB Öğrenme (`tac-store.ts`) ve Tek Seferde Hızlı/Kararlı BTK Sorgulama Motoru:
+  - **Talep:** Yerel TAC veritabanının zenginleştirilmesi ve e-Devlet BTK sorgularının ikinci kez tekrarlamaya gerek kalmadan tek seferde hızlı ve kararlı sonuç vermesi.
+  - **Kök Neden Tespiti (`imei-service.ts`):**
+    1. `parseBtkResultContainer` içindeki `resultContainer` regex eşleşmesi, kapsayıcı içindeki alt `<div>` etiketlerinde erken kesilip `<dl class="compact">` tablosunu okuyamayabiliyordu.
+    2. İlk `startFreshBtkSession` veya CAPTCHA sonrası `POST` adımında e-Devlet sunucularının anlık `"Sistemde yaşanan bir teknik aksaklık..."` / boş HTML döndürmesi durumunda otomatik tekil yeniden deneme (`retry`) olmadığı için kullanıcı ikinci kez sorgulamak zorunda kalıyordu.
+  - **Yapılan Değişiklikler:**
+    - `src/lib/imei-utils.ts`: `APPLE_SPECS_CATALOG` güncel seriyle (`iPhone 17 Pro Max`, `17 Pro`, `17 Air`, `17`, `16e`, `14 Plus`, `13 mini`, `12 Pro/mini`, `11 Pro/Max`, `XS/Max/XR/X`, `SE 3`) genişletildi; `TAC_DATABASE` içerisine canlı doğrulanmış yeni TAC kodları (`35137277` Apple iPhone 17 Pro Max, `35987216` iPhone 16 Pro, `35169825` Galaxy S25 Ultra, `86765808` Xiaomi 17T, `49015420` Nokia 3110) ve dinamik eşleşmeler için `createTacMatch` eklendi.
+    - `src/lib/tac-store.ts`: Dükkanın kendi `ServiceTicket`, `DeviceHubInfo` ve `imei_lookup_history` kayıtlarından gerçek cihaz TAC -> Marka/Model bilgisini belleğe alıp (`lookupTacWithLocalDb`) her başarılı BTK veya iFreeiCloud sorgusundan otomatik yeni TAC öğrenen ve `Setting` (`learned_tac_catalog`) içine kalıcı kaydeden önbellek katmanı oluşturuldu.
+    - `src/lib/imei-service.ts`, `src/app/api/imei/lookup/route.ts`, `src/app/api/imei/ifreeicloud/route.ts`: `<dl class="compact">` öncelikli + `<dt>/<dd>` etiket eşleşmeli dayanıklı ayrıştırma (`parseBtkResultContainer`), `8500ms` adım zaman aşımı, e-Devlet anlık teknik aksaklıklarında tek istek içinde temiz oturumla otomatik 1 kez yeniden deneme (`MAX_FRESH_SESSION_ATTEMPTS = 2`), CAPTCHA sonrası boş/teknik hata kurtarması (`!isWrongCaptchaError`) ve otomatik TAC öğrenme bağlantısı eklendi.
+  - **Doğrulama:** Tek seferde canlı sorgu testi (`351372773576390` -> `438ms`, Apple iPhone 17 Pro Max / `KAYITSIZ`; `867658089439266` -> `1090ms`, Xiaomi 17T / `KAYITLI`), `0ms` yerel TAC doğrulaması (`35137277`, `86765808`, `49015420`) ve `npx tsc --noEmit` doğrulaması çalıştırıldı.
+
+- [x] 2026-11-12: iFreeiCloud Dhru Fusion v6.1 API Entegrasyonu (CAPTCHA'sız FMI / iCloud, SIM-Lock, Blacklist, Seri No, Samsung/Xiaomi/Huawei Bilgi ve Otomatik Form Doldurma):
+  - **Talep:** Kullanıcının sağladığı iFreeiCloud Dhru Fusion v6.1 API (`https://api.ifreeicloud.co.uk`, kullanıcı: `mylife1`) üzerinden CAPTCHA istemeden FMI (Find My iPhone), iCloud Clean/Lost, SIM-Lock, Operatör, Blacklist, IMEI2, Seri Numarası, Renk/Kapasite ve Android marka sorgularının entegre edilmesi; bakiye takibi ve kredi koruma mekanizmasının kurulması.
+  - **Yapılan Değişiklikler:**
+    - `.env` (sunucu taraflı gizli): `IFREEICLOUD_API_URL=https://api.ifreeicloud.co.uk/api/index.php`, `IFREEICLOUD_USERNAME`, `IFREEICLOUD_API_KEY` eklendi (istemci paketine asla sızdırılmaz).
+    - `src/lib/ifreeicloud-service.ts`: Dhru Fusion v6.1 `POST` (`accountinfo`, `imeiservicelist`, ham XML `placeimeiorder`, anlık `getimeiorder` yoklama — `api.ifreeicloud.co.uk` endpoint'inin base64 değil ham `<PARAMETERS>` XML beklediği doğrulanarak düzeltildi), HTML/emoji temizleyici `parseDhruResultHtml` (Marka, Model, Renk, Depolama, Seri No, IMEI2, FMI On/Off, iCloud Durumu, SIM-Lock, Operatör, Garanti, Blacklist çıkarımı), 17 ön-tanımlı servis paketi ve kredi/hata Türkçe çevirileri eklendi.
+    - `src/lib/imei-history.ts`: `ImeiHistoryEntry.ifreeicloud` alanı ve `recordIfreeicloudLookupHistory` eklendi; aynı IMEI tekrar açıldığında kayıtlı sonuç ücretsiz görüntülenebilecek şekilde korundu.
+    - `src/app/api/imei/ifreeicloud/route.ts`: Oturum korumalı `GET` (bakiye, canlı servis fiyatları ve geçmişten önbellek okuması — 0 kredi) ve `POST` (yalnızca kullanıcının seçtiği servisi çalıştırma ve geçmişe kaydetme) endpoint'leri oluşturuldu.
+    - `src/components/imei/IfreeicloudPanel.tsx`, `src/components/imei/ImeiResultModal.tsx`, `src/components/imei/SmartImeiInput.tsx`: Tüm IMEI sonuç ve form bileşenlerine (`BtkDiagnosticCard`) canlı `$` bakiye rozeti, marka duyarlı (Apple/Android/Genel) maliyet etiketli tek tık sorgu butonları ve servis listesi seçicisi eklendi; otomatik sorgu ile bakiye harcanması engellendi. Çıkarılan `brand`, `model`, `serialNumber`, `color`, `storage` değerleri doğrudan `"Bu Cihazla Servis Kaydı Aç"` (`/servis/yeni`) ve `"Cihaz Alımına Aktar"` (`/cihaz-listesi?newDevice=1`) ile açık formlara aktarıldı.
+    - `src/components/device-hub/create-device-modal.tsx` & `src/app/(dashboard)/servis/yeni/yeni-servis-client.tsx`: `serialNumber`, `color`, `storage` URL parametre ön-doldurması ve `SmartImeiInput` içi `onIfreeicloudComplete` form güncellemesi eklendi.
+  - **Doğrulama:** `351372773576390` IMEI üzerinde tam döngü canlı test (`Luhn OK -> e-Devlet BTK: KAYITSIZ / Apple iPhone 17 Pro Max (A3526) -> iFreeiCloud #225 (#418948732): Model: iPhone 17 Pro Max 256GB Silver, FMI: ON, kalan bakiye: $0.01`) ve `npx tsc --noEmit` (`0` hata) ile doğrulandı.
+
 - [x] 2026-11-12: Önbelleksiz Canlı HTTP/2 e-Devlet BTK Sorgulama, CAPTCHA Kararlılık İyileştirmesi ve Sidebar "Cihaz Merkezi > IMEI & BTK Sorgula" Geçmiş Sayfası:
   - **Talep:** CAPTCHA sonrası e-Devlet soket/yönlendirme hatasının tamamen giderilmesi, cihazların sonradan klonlanma ihtimaline karşı önbelleğin (cache) kaldırılması ve Sidebarda "Cihaz Merkezi" altına hem canlı sorgulama hem geçmiş kayıtları tutup tek tıkla "Tekrar Sorgula" yapılabilen bir alt sayfa eklenmesi.
   - **Yapılan Değişiklikler:**
@@ -2563,3 +2585,9 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
         3. **Doğrudan 3-Modlu Tema Döngüsü ([`mode-toggle.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/mode-toggle.tsx))**:
            - `DropdownMenu` kaldırıldı; buton her tıklandığında `light` (Açık / `Sun`) → `dark` (Koyu / `Moon`) → `system` (Sistem / `Monitor`) arasında geçiş yapacak şekilde güncellendi.
     - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata (`exit code 0`) ile tamamlandı.
+
+- [x] 2026-11-12: e-Devlet & Apple Garanti Linklerinde Otomatik IMEI Panoya Kopyalama:
+    - **Teknik Kısıt Notu**: Resmi e-Devlet (`turkiye.gov.tr/imei-sorgulama`) ve Apple Kapsam/Garanti (`checkcoverage.apple.com`) sayfaları URL query parametresiyle (`?imei=...` / `?sn=...`) input ön-doldurmayı desteklememektedir ve tarayıcı Same-Origin Policy gereği harici sekmedeki DOM alanına doğrudan yazılamaz.
+    - **Uygulanan Çözüm ([`ImeiResultModal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/imei/ImeiResultModal.tsx))**:
+        - `copyImeiForExternalSite` yardımcısı eklendi; BTK doğrulama, hata, başarılı sonuç kartı ve Apple Garanti bağlantılarının tümünde (`Kopyala & e-Devlet'te Aç`, `Kopyala & Apple Garanti`) tıklama anında ilgili 15 haneli IMEI otomatik panoya kopyalanır ve açılan sekmede `Ctrl+V` / Yapıştır bilgilendirme bildirimi (`toast`) gösterilir.
+    - **Doğrulama**: `npx tsc --noEmit` -> Çıkış kodu `0` (hata yok).
