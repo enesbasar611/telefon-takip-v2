@@ -393,11 +393,11 @@ export function CreateServiceModal({
           </DialogTrigger>
         )}
 
-        <DialogContent className="w-full max-w-[700px] h-[100dvh] sm:h-auto sm:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden rounded-none sm:rounded-3xl shadow-2xl flex flex-col">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
-            <div className="p-4 sm:p-6 md:p-8 bg-card/50 border-b border-border/50 shrink-0">
+        <DialogContent className="w-full max-w-[700px] max-h-[100dvh] sm:max-h-[90vh] bg-background border-border/50 p-0 overflow-hidden rounded-none sm:rounded-3xl shadow-2xl flex flex-col gap-0">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
+            <div className="p-4 sm:p-6 md:p-8 pr-12 bg-card/50 border-b border-border/50">
               <DialogHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <DialogTitle className="font-medium text-xl md:text-2xl">{isSimpleMode ? "Hızlı İşlem Kaydı" : getIndustryLabel(shop, "serviceTicket") + " Kaydı"}</DialogTitle>
                   <Button
                     type="button"
@@ -418,7 +418,7 @@ export function CreateServiceModal({
               </DialogHeader>
             </div>
 
-            <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+            <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
               {/* Müşteri Bilgileri */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6">
                 <div className="space-y-2 relative">
@@ -775,7 +775,7 @@ export function CreateServiceModal({
               )}
             </div>
 
-            <div className="p-3 sm:p-6 md:p-8 bg-card/50 border-t border-border/50 shrink-0">
+            <div className="p-3 sm:p-6 md:p-8 bg-card/50 border-t border-border/50">
               <DialogFooter className="flex-row gap-3">
                 <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isPending} className="flex-1 h-12 md:h-14 rounded-xl md:rounded-2xl text-muted-foreground uppercase text-[11px] font-bold tracking-widest">Kapat</Button>
                 <Button

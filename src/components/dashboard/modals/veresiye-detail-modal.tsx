@@ -98,11 +98,12 @@ export function VeresiyeDetailModal({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-                <DialogContent className="border-border/40 p-0 overflow-hidden bg-background/95 dark:bg-zinc-950/98 backdrop-blur-3xl rounded-[2rem] shadow-2xl transition-all sm:max-w-3xl max-h-[90vh] flex flex-col">
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600" />
+                <DialogContent className="border-border/40 p-0 overflow-hidden bg-background/95 dark:bg-zinc-950/98 backdrop-blur-3xl rounded-[2rem] shadow-2xl transition-all sm:max-w-3xl max-h-[90dvh] flex flex-col gap-0">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 z-10 pointer-events-none" />
+                    <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
 
                     {/* Header */}
-                    <DialogHeader className="p-6 sm:p-7 pb-4 border-b border-border/40 shrink-0">
+                    <DialogHeader className="p-6 sm:p-7 pr-12 pb-4 border-b border-border/40">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-2xl flex items-center justify-center bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 shadow-inner shrink-0">
@@ -199,7 +200,7 @@ export function VeresiyeDetailModal({
                     </DialogHeader>
 
                     {/* Scrollable Customer List */}
-                    <ScrollArea className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    <div className="p-4 sm:p-6">
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
                                 <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
@@ -367,7 +368,8 @@ export function VeresiyeDetailModal({
                                 })}
                             </div>
                         )}
-                    </ScrollArea>
+                    </div>
+                    </div>
                 </DialogContent>
             </Dialog>
 

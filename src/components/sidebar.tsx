@@ -31,6 +31,7 @@ import {
   ListTree,
   Plus,
   ShieldAlert,
+  ShieldCheck,
   FileText,
   PanelLeftClose,
   PanelLeftOpen,
@@ -137,7 +138,16 @@ const getMenuItems = (shop: any, userRole?: string, isImpersonating?: boolean) =
       href: "/efatura",
       module: "EFATURA",
     },
-    { icon: Smartphone, label: (labels.customerAsset || "Cihaz") + " Merkezi", href: "/cihaz-listesi", module: "SERVICE" },
+    {
+      icon: Smartphone,
+      label: (labels.customerAsset || "Cihaz") + " Merkezi",
+      href: "/cihaz-listesi",
+      module: "SERVICE",
+      subItems: [
+        { label: "Cihaz Envanteri", href: "/cihaz-listesi", icon: Smartphone },
+        { label: "IMEI & BTK Sorgula", href: "/cihaz-listesi/imei-sorgulama", icon: ShieldCheck },
+      ]
+    },
     { icon: BarChart3, label: "İstatistikler", href: "/raporlar", module: "FINANCE" },
     { icon: UserCog, label: "Ekip", href: "/personel", module: "STAFF" },
     { icon: Bell, label: "Bildirimler", href: "/bildirimler", module: "NOTIFICATION" },

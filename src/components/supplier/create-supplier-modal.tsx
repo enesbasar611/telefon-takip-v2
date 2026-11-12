@@ -171,11 +171,11 @@ export function CreateSupplierModal() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-5xl bg-background border-border/50 p-0 overflow-hidden shadow-2xl [&>button]:hidden">
+      <DialogContent className="max-w-5xl max-h-[92dvh] bg-background border-border/50 p-0 overflow-hidden shadow-2xl flex flex-col gap-0 [&>button]:hidden">
         <DialogTitle className="font-medium sr-only">Yeni Tedarikçi Ekle</DialogTitle>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-[90vh] sm:h-[80vh] max-h-[850px]">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
 
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+          <div className="p-4 sm:p-6">
             <div className="flex flex-col lg:flex-row gap-6">
 
               <div className="flex-1 space-y-6">
@@ -370,7 +370,7 @@ export function CreateSupplierModal() {
             </div>
           </div>
 
-          <div className="p-4 sm:px-6 sm:py-4 border-t border-border/50 bg-background flex items-center justify-between shrink-0">
+          <div className="p-4 sm:px-6 sm:py-4 border-t border-border/50 bg-background flex items-center justify-between">
             <Button type="button" variant="cancel" onClick={() => setOpen(false)} disabled={isPending} className="h-11 px-6 rounded-xl">
               İptal
             </Button>

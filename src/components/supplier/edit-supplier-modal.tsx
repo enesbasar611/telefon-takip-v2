@@ -190,16 +190,16 @@ export function EditSupplierModal({ isOpen, onClose, supplier }: EditSupplierMod
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl bg-background border-border/50 p-0 overflow-hidden shadow-2xl [&>button]:hidden">
-                <DialogHeader className="p-6 border-b border-border/50 bg-accent/5">
-                    <DialogTitle className="font-medium text-xl text-foreground flex items-center gap-3">
-                        <Settings className="h-5 w-5 text-blue-600 dark:text-blue-500" />
-                        Tedarikçi Bilgilerini Düzenle
-                    </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-[90vh] sm:h-[80vh] max-h-[850px]">
+            <DialogContent className="max-w-5xl max-h-[92dvh] bg-background border-border/50 p-0 overflow-hidden shadow-2xl flex flex-col gap-0 [&>button]:hidden">
+                <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
+                    <DialogHeader className="p-6 border-b border-border/50 bg-accent/5">
+                        <DialogTitle className="font-medium text-xl text-foreground flex items-center gap-3">
+                            <Settings className="h-5 w-5 text-blue-600 dark:text-blue-500" />
+                            Tedarikçi Bilgilerini Düzenle
+                        </DialogTitle>
+                    </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+                    <div className="p-4 sm:p-6">
                         <div className="flex flex-col lg:flex-row gap-6">
 
                             {/* LEFT COLUMN */}
@@ -394,7 +394,7 @@ export function EditSupplierModal({ isOpen, onClose, supplier }: EditSupplierMod
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 sm:px-6 sm:py-4 border-t border-border/50 bg-background flex items-center justify-between shrink-0">
+                    <div className="p-4 sm:px-6 sm:py-4 border-t border-border/50 bg-background flex items-center justify-between">
                         <Button type="button" variant="cancel" onClick={onClose} disabled={isPending} className="h-11 px-6 rounded-xl">
                             İptal
                         </Button>

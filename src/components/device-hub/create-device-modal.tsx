@@ -794,9 +794,10 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="sm:max-w-[820px] max-w-full w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] p-0 bg-background text-foreground border-0 sm:border sm:border-border shadow-2xl rounded-none sm:rounded-2xl flex flex-col overflow-hidden">
+          <DialogContent className="sm:max-w-[820px] max-w-full w-full max-h-[100dvh] sm:max-h-[92vh] p-0 bg-background text-foreground border-0 sm:border sm:border-border shadow-2xl rounded-none sm:rounded-2xl flex flex-col overflow-hidden gap-0">
+            <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
             {/* Header */}
-            <div className="px-4 sm:px-7 pt-4 sm:pt-6 pb-3 sm:pb-4 flex justify-between items-start border-b border-border/60 shrink-0">
+            <div className="px-4 sm:px-7 pt-4 sm:pt-6 pb-3 sm:pb-4 pr-12 flex justify-between items-start border-b border-border/60">
               <div>
                 <DialogTitle className="font-bold text-lg sm:text-[21px] text-foreground leading-tight flex items-center gap-2 flex-wrap">
                   <span>Yeni Cihaz Kaydı</span>
@@ -809,7 +810,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             </div>
 
             {/* Quick in-modal AI Scan Banner */}
-            <div className="mx-4 sm:mx-7 mt-3 sm:mt-5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-violet-950/40 via-indigo-950/30 to-purple-950/40 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner shrink-0">
+            <div className="mx-4 sm:mx-7 mt-3 sm:mt-5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-violet-950/40 via-indigo-950/30 to-purple-950/40 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0">
                   <Camera className="h-5 w-5 text-indigo-300" />
@@ -834,8 +835,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
               </Button>
             </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
-          <div className="overflow-y-auto flex-1 px-4 sm:px-7 py-4 sm:py-5 space-y-4 sm:space-y-5 custom-scrollbar">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+          <div className="px-4 sm:px-7 py-4 sm:py-5 space-y-4 sm:space-y-5">
 
             {/* Condition Selection */}
             <div className="space-y-2 sm:space-y-3">
@@ -1513,7 +1514,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
           </div>
 
           {/* Footer */}
-          <div className="px-4 sm:px-7 py-3 sm:py-4 border-t border-border bg-card/90 sm:bg-background/80 backdrop-blur-md flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center shrink-0">
+          <div className="px-4 sm:px-7 py-4 border-t border-border bg-card/50 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center">
             <p className="text-[11px] text-muted-foreground/80 font-medium sm:text-left text-center">
               Otomatik kategori:{" "}
               <span className="text-foreground font-semibold">
@@ -1527,6 +1528,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
             </Button>
           </div>
         </form>
+            </div>
       </DialogContent>
     </Dialog>
       </div>

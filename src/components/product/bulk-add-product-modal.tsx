@@ -174,8 +174,9 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[900px] bg-background border border-border text-foreground p-0 overflow-hidden shadow-2xl">
-                <DialogHeader className="p-5 sm:p-7 pb-0">
+            <DialogContent className="sm:max-w-[900px] max-h-[90dvh] bg-background border border-border text-foreground p-0 overflow-hidden shadow-2xl flex flex-col gap-0">
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
+                <DialogHeader className="p-5 sm:p-7 pr-12 pb-0">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-lg bg-violet-600 flex items-center justify-center shadow-md">
                             <Sparkles className="h-6 w-6 text-white" />
@@ -207,7 +208,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                     </div>
                 </DialogHeader>
 
-                <div className="p-5 sm:p-7 space-y-6 max-h-[78vh] overflow-y-auto custom-scrollbar">
+                <div className="p-5 sm:p-7 space-y-6">
 
                     {/* STEP 1: INPUT */}
                     {step === "input" && (
@@ -469,6 +470,7 @@ export function BulkAddProductModal({ categories, shop }: BulkAddProductModalPro
                             </div>
                         </div>
                     )}
+                </div>
                 </div>
             </DialogContent>
         </Dialog>

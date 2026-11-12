@@ -441,7 +441,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                     </DialogTrigger>
                 )}
 
-                <DialogContent className="fixed w-full max-w-[95vw] md:max-w-[760px] h-[94vh] md:h-auto md:max-h-[90vh] bg-background border-none p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col transition-all duration-300">
+                <DialogContent className="fixed w-full max-w-[95vw] md:max-w-[760px] max-h-[94dvh] md:max-h-[90vh] bg-background border-none p-0 overflow-hidden bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col gap-0 transition-all duration-300">
                     <div className="absolute inset-0 p-[2px] rounded-[inherit] overflow-hidden pointer-events-none z-0">
                         <motion.div
                             animate={{ rotate: [0, 360] }}
@@ -451,7 +451,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                         <div className="absolute inset-0 bg-background rounded-[inherit]" />
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden relative z-10">
+                    <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto min-h-0 scrollbar-hide flex flex-col relative z-10">
                         <div className="p-4 sm:p-5 bg-card/50 border-b border-border/50 relative overflow-hidden">
                             <div className="md:hidden w-12 h-1.5 bg-border rounded-full mx-auto mb-4" />
                             <DialogHeader className="relative z-10">
@@ -462,7 +462,7 @@ export function AddDebtModal({ children, rates, initialData, onSuccess, open: ex
                             </DialogHeader>
                         </div>
 
-                        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 scrollbar-hide">
+                        <div className="p-4 sm:p-5 space-y-4">
                             {/* Customer Resolution */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2 relative">

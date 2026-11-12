@@ -124,8 +124,9 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
 
     return (
         <AlertDialog open={!!paymentCustomer} onOpenChange={(o) => { if (!o) onClose(); }}>
-            <AlertDialogContent className="fixed left-0 right-0 top-auto bottom-0 z-[100] w-full max-w-none translate-x-0 translate-y-0 gap-0 bg-card border border-border/50 p-0 overflow-hidden rounded-t-2xl rounded-b-none shadow-2xl flex flex-col h-[90dvh] max-h-[90dvh] sm:left-1/2 sm:right-auto sm:top-1/2 sm:bottom-auto sm:w-[min(540px,calc(100vw-2rem))] sm:max-w-[540px] sm:h-auto sm:max-h-[min(90dvh,720px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl transition-all duration-300">
-                <div className="p-4 sm:p-5 bg-gradient-to-br from-emerald-500/10 via-card to-card border-b border-border/50 relative overflow-hidden shrink-0">
+            <AlertDialogContent className="fixed left-0 right-0 top-auto bottom-0 z-[100] w-full max-w-none translate-x-0 translate-y-0 gap-0 bg-card border border-border/50 p-0 overflow-hidden rounded-t-2xl rounded-b-none shadow-2xl flex flex-col max-h-[90dvh] sm:left-1/2 sm:right-auto sm:top-1/2 sm:bottom-auto sm:w-[min(540px,calc(100vw-2rem))] sm:max-w-[540px] sm:h-auto sm:max-h-[min(90dvh,720px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl transition-all duration-300">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-hide flex flex-col">
+                <div className="p-4 sm:p-5 bg-gradient-to-br from-emerald-500/10 via-card to-card border-b border-border/50 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-[0.04] pointer-events-none">
                         <Wallet className="w-20 h-20 rotate-12" />
                     </div>
@@ -149,7 +150,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                     </AlertDialogHeader>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 scrollbar-hide">
+                <div className="p-4 sm:p-5 space-y-4">
                     {/* Currency toggle */}
                     <div className="space-y-1.5">
                         <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-0.5">Ödeme Birimi</Label>
@@ -399,7 +400,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                     </AnimatePresence>
                 </div>
 
-                <div className="p-3.5 sm:p-4 flex gap-2.5 border-t border-border/50 bg-card/95 backdrop-blur shrink-0">
+                <div className="p-3.5 sm:p-4 flex gap-2.5 border-t border-border/50 bg-card/95 backdrop-blur">
                     <AlertDialogCancel className="h-10 flex-1 rounded-xl border border-border text-xs font-bold uppercase tracking-wider transition-all mt-0">Vazgeç</AlertDialogCancel>
                     <Button
                         type="button"
@@ -409,6 +410,7 @@ export const VeresiyePaymentModal: React.FC<VeresiyePaymentModalProps> = ({
                     >
                         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tahsilatı Tamamla"}
                     </Button>
+                </div>
                 </div>
             </AlertDialogContent>
         </AlertDialog>

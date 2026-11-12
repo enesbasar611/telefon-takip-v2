@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Camera, Loader2, Search, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  applyImeiAutoComplete,
   isValidImeiLuhn,
   normalizeImeiDigits,
   type ImeiLookupResult,
 } from "@/lib/imei-utils";
+import { Imei14Plus1Field } from "./Imei14Plus1Field";
 import { CameraImeiScanner } from "./CameraImeiScanner";
 import { BtkDiagnosticCard } from "./ImeiResultModal";
 import { toast } from "sonner";
@@ -58,7 +56,6 @@ export function SmartImeiInput({
 
   const digits = normalizeImeiDigits(value);
   const luhnOk = digits.length === 15 && isValidImeiLuhn(digits);
-  const luhnBad = digits.length === 15 && !luhnOk;
 
   const runLookup = async (
     targetImei: string,
@@ -100,11 +97,10 @@ export function SmartImeiInput({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const res = applyImeiAutoComplete(digits, e.target.value);
-    setAutoCompleted(res.autoCompleted);
-    onChange(res.value);
-    if (lookupResult && lookupResult.imei !== res.value) {
+  const handleFieldChange = (nextImei: string, meta?: { autoCompleted: boolean }) => {
+    setAutoCompleted(Boolean(meta?.autoCompleted));
+    onChange(nextImei);
+    if (lookupResult && lookupResult.imei !== nextImei) {
       setLookupResult(null);
     }
   };
@@ -140,54 +136,17 @@ export function SmartImeiInput({
           {label} {required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
-      <div className="flex items-center gap-1.5">
-        <div className="relative flex-1 min-w-0">
-          <Input
-            id={id}
-            value={digits}
-            onChange={handleInputChange}
-            onBlur={onBlur}
-            maxLength={15}
-            inputMode="numeric"
-            placeholder={placeholder}
-            className={cn(
-              "font-mono tabular-nums tracking-wider pr-20",
-              luhnOk && "border-emerald-500/40",
-              luhnBad && "border-rose-500/40",
-              resolvedInputCls
-            )}
-          />
-
-          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {autoCompleted && luhnOk && (
-              <Badge
-                variant="outline"
-                className="h-6 px-1.5 text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hidden sm:inline-flex"
-                title={`15. kontrol hanesi (${digits[14]}) otomatik tamamlandı`}
-              >
-                14+1 ✓
-              </Badge>
-            )}
-            {!autoCompleted && luhnOk && (
-              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-            )}
-            {luhnBad && (
-              <span title="Geçersiz 15. Luhn kontrol hanesi">
-                <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
-              </span>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setScannerOpen(true)}
-              title="Kamera ile IMEI Tara"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10"
-            >
-              <Camera className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <Imei14Plus1Field
+          id={id}
+          value={digits}
+          onChange={handleFieldChange}
+          onBlur={onBlur}
+          onOpenScanner={() => setScannerOpen(true)}
+          placeholder={placeholder}
+          inputClassName={resolvedInputCls}
+          plusBoxClassName={resolvedInputCls}
+        />
 
         {showLookupButton && (
           <Button

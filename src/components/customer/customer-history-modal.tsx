@@ -65,9 +65,10 @@ export function CustomerHistoryModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-[850px] max-h-[90vh] p-0 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col bg-card border border-border/60 shadow-2xl">
+            <DialogContent className="max-w-[850px] max-h-[90dvh] p-0 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col gap-0 bg-card border border-border/60 shadow-2xl">
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
                 {/* Header */}
-                <DialogHeader className="p-4 sm:p-5 bg-muted/30 border-b border-border/50 shrink-0">
+                <DialogHeader className="p-4 sm:p-5 pr-12 bg-muted/30 border-b border-border/50">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 shadow-xs">
@@ -137,7 +138,7 @@ export function CustomerHistoryModal({
                 </DialogHeader>
 
                 {/* Content */}
-                <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+                <div className="p-4 sm:p-6">
                     {isLoading ? (
                         <div className="py-20 flex flex-col items-center justify-center gap-3">
                             <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
@@ -156,6 +157,7 @@ export function CustomerHistoryModal({
                             rates={rates}
                         />
                     )}
+                </div>
                 </div>
             </DialogContent>
         </Dialog>

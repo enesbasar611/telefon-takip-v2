@@ -218,9 +218,10 @@ export function SupplierAnalysisModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-3xl bg-card border border-border/50 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-3xl bg-card border border-border/50 p-0 overflow-hidden max-h-[90dvh] flex flex-col gap-0">
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
                 {/* Header */}
-                <div className="relative p-8 bg-gradient-to-br from-blue-600/10 to-transparent border-b border-border/50 overflow-hidden shrink-0">
+                <div className="relative p-8 pr-12 bg-gradient-to-br from-blue-600/10 to-transparent border-b border-border/50 overflow-hidden">
                     <div className="absolute top-0 right-0 h-40 w-40 bg-blue-500/10 rounded-full blur-3xl" />
                     <div className="relative z-10 flex items-start gap-4">
                         <div className="h-14 w-14 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.2)] shrink-0">
@@ -257,7 +258,7 @@ export function SupplierAnalysisModal({
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                <div className="p-8 space-y-8">
                     {/* Urgent: AI Critical/LowStock alerts */}
                     {urgentAlerts.length > 0 && (
                         <div className="space-y-3">
@@ -381,13 +382,14 @@ export function SupplierAnalysisModal({
                 </div>
 
                 {/* Footer */}
-                <div className="px-8 py-4 border-t border-border/50 flex justify-end shrink-0">
+                <div className="px-8 py-4 border-t border-border/50 flex justify-end">
                     <Button
                         onClick={onClose}
                         className="h-11 px-8 rounded-2xl bg-white/5 border border-border text-foreground hover:bg-white/10 "
                     >
                         Kapat
                     </Button>
+                </div>
                 </div>
             </DialogContent>
         </Dialog>

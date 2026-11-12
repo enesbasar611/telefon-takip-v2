@@ -298,8 +298,9 @@ export function ApproveShortageModal({
 
     return (
         <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if (!val) reset(); }}>
-            <DialogContent className="w-[95vw] sm:max-w-[620px] max-h-[88vh] bg-background border border-zinc-200 dark:border-white/10 rounded-[2.5rem] shadow-2xl p-0 flex flex-col overflow-hidden">
-                <DialogHeader className="p-6 sm:p-8 pb-4 shrink-0 border-b border-zinc-100 dark:border-white/5">
+            <DialogContent className="w-[95vw] sm:max-w-[620px] max-h-[88dvh] bg-background border border-zinc-200 dark:border-white/10 rounded-[2.5rem] shadow-2xl p-0 flex flex-col gap-0 overflow-hidden">
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+                <DialogHeader className="p-6 sm:p-8 pb-4 border-b border-zinc-100 dark:border-white/5">
                     <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
                         <div className="flex items-center gap-4">
                             <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
@@ -333,7 +334,7 @@ export function ApproveShortageModal({
                     </div>
                 </DialogHeader>
 
-                <div className="p-6 sm:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                <div className="p-6 sm:p-8 space-y-6">
                     <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-start gap-3">
                         <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
                             <Info className="h-4 w-4 text-blue-500" />
@@ -607,6 +608,7 @@ export function ApproveShortageModal({
                             </Button>
                         </div>
                     )}
+                </div>
                 </div>
             </DialogContent>
         </Dialog>

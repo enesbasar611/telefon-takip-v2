@@ -162,11 +162,12 @@ export function CustomerVeresiyeModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="border-border/40 p-0 overflow-hidden bg-background/95 dark:bg-zinc-950/98 backdrop-blur-3xl rounded-[2rem] shadow-2xl transition-all sm:max-w-2xl max-h-[90vh] flex flex-col z-50">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600" />
+            <DialogContent className="border-border/40 p-0 overflow-hidden bg-background/95 dark:bg-zinc-950/98 backdrop-blur-3xl rounded-[2rem] shadow-2xl transition-all sm:max-w-2xl max-h-[90dvh] flex flex-col gap-0 z-50">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600 z-10 pointer-events-none" />
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
 
                 {/* Header Profile Section */}
-                <DialogHeader className="p-5 sm:p-6 pb-4 border-b border-border/40 shrink-0">
+                <DialogHeader className="p-5 sm:p-6 pr-12 pb-4 border-b border-border/40">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3.5 min-w-0">
                             <div className={cn(
@@ -434,7 +435,7 @@ export function CustomerVeresiyeModal({
                 )}
 
                 {/* Search in open debts */}
-                <div className="px-5 sm:px-6 pt-3 pb-2 border-b border-border/30 shrink-0">
+                <div className="px-5 sm:px-6 pt-3 pb-2 border-b border-border/30">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
@@ -447,7 +448,7 @@ export function CustomerVeresiyeModal({
                 </div>
 
                 {/* Debt Items Scroll Area */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2.5 custom-scrollbar">
+                <div className="p-4 sm:p-6 space-y-2.5">
                     {filteredDebts.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground">
                             <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2 opacity-60" />
@@ -536,6 +537,7 @@ export function CustomerVeresiyeModal({
                             );
                         })
                     )}
+                </div>
                 </div>
             </DialogContent>
         </Dialog>

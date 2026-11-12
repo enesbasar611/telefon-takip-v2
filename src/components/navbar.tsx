@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
-import { ShoppingCart, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun, LayoutDashboard, Zap, User, UserCircle, Eye, EyeOff } from "lucide-react";
+import { ShoppingCart, LogOut, Landmark, MonitorSmartphone, Search, Settings2, Moon, Sun, LayoutDashboard, Zap, User, UserCircle, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -42,6 +42,7 @@ export function Navbar({ shop }: { shop?: any }) {
   const router = useRouter();
 
   const [isChangingCurrency, setIsChangingCurrency] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'SHOP_MANAGER';
 
@@ -69,31 +70,75 @@ export function Navbar({ shop }: { shop?: any }) {
   };
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-4 lg:px-8 sticky top-0 z-20 shadow-none gap-4">
-        <div className="flex items-center gap-4 shrink-0">
+      <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-3 sm:px-4 lg:px-8 sticky top-0 z-20 shadow-none gap-2 md:gap-4">
+        <div className={cn("flex items-center gap-2 sm:gap-3 min-w-0", mobileToolsOpen ? "shrink-0" : "flex-1 md:flex-initial shrink-0")}>
           {/* Mobile: Hamburger & Branding */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <MobileSidebar />
-            <Link href="/" className="md:hidden hover:opacity-80 transition-opacity">
-              <span className="text-[14px] font-bold tracking-tight text-primary uppercase">{shop?.name || "BAŞAR TEKNİK"}</span>
+            <Link
+              href="/"
+              className={cn(
+                "md:hidden min-w-0 hover:opacity-80 transition-opacity",
+                mobileToolsOpen && "hidden"
+              )}
+            >
+              <span className="text-[13px] sm:text-[14px] font-bold tracking-tight text-primary uppercase truncate block">
+                {shop?.name || "BAŞAR TEKNİK"}
+              </span>
             </Link>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-end md:justify-start min-w-0">
+        {/* Desktop always visible; Mobile visible only inside expanded left-sliding tool strip */}
+        <div className={cn(
+          "items-center min-w-0",
+          mobileToolsOpen
+            ? "flex flex-1 justify-end gap-1 overflow-x-auto no-scrollbar md:justify-start"
+            : "hidden md:flex flex-1 justify-start"
+        )}>
+          {/* Mobile Toggle Back Button when expanded */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileToolsOpen(false)}
+            aria-label="Mobil araçları gizle"
+            title="Dükkan Adını Göster"
+            className="md:hidden h-9 w-8 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground hover:text-primary shrink-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
           <NavbarImeiLookup />
         </div>
 
-        <div className="flex items-center gap-2 lg:gap-3 justify-end shrink-0">
-          {/* Quick Shortcut: Cihaz Merkezi - Strictly Mobile Only */}
+        <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-3 justify-end shrink-0">
+          {/* Mobile Left-Expand Toggle Button when collapsed */}
+          {!mobileToolsOpen && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileToolsOpen(true)}
+              aria-label="Hızlı araçları aç"
+              title="Hızlı Araçları Aç"
+              className="md:hidden h-9 w-9 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all shrink-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
+
+          {/* Quick Shortcut: Cihaz Merkezi - Strictly Mobile Only & Shown When Expanded */}
           <Button
             variant="ghost"
             size="icon"
             asChild
-            className="md:hidden h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all shrink-0"
+            className={cn(
+              "md:hidden h-9 w-9 rounded-xl bg-muted/20 border border-border/40 hover:bg-primary/10 hover:text-primary transition-all shrink-0",
+              !mobileToolsOpen && "hidden"
+            )}
           >
-            <Link href="/cihaz-listesi">
-              <MonitorSmartphone className="h-5 w-5" />
+            <Link href="/cihaz-listesi" title="Cihaz Merkezi">
+              <MonitorSmartphone className="h-4 w-4" />
             </Link>
           </Button>
 

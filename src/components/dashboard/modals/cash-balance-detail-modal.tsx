@@ -114,9 +114,10 @@ export function CashBalanceDetailModal({ isOpen, onClose }: CashBalanceDetailMod
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 border-border/80 bg-background/95 backdrop-blur-2xl shadow-2xl rounded-3xl">
+        <DialogContent className="max-w-4xl max-h-[92dvh] overflow-hidden flex flex-col p-0 gap-0 border-border/80 bg-background/95 backdrop-blur-2xl shadow-2xl rounded-3xl">
+          <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
           {/* Header */}
-          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border/40 bg-gradient-to-r from-card/80 to-muted/20">
+          <DialogHeader className="p-4 sm:p-6 pr-12 pb-3 border-b border-border/40 bg-gradient-to-r from-card/80 to-muted/20">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="h-11 w-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm shrink-0">
@@ -178,7 +179,7 @@ export function CashBalanceDetailModal({ isOpen, onClose }: CashBalanceDetailMod
           </DialogHeader>
 
           {/* Body Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar">
+          <div className="p-4 sm:p-6 space-y-5">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -501,6 +502,7 @@ export function CashBalanceDetailModal({ isOpen, onClose }: CashBalanceDetailMod
                 Kapat
               </Button>
             </div>
+          </div>
           </div>
         </DialogContent>
       </Dialog>

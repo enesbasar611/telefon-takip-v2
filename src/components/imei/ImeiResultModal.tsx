@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -48,6 +48,10 @@ export function BtkDiagnosticCard({
 }: BtkDiagnosticCardProps) {
   const [captchaInput, setCaptchaInput] = useState("");
   const classification = result.btk?.classification;
+
+  useEffect(() => {
+    setCaptchaInput("");
+  }, [result.challengeId]);
 
   const statusBannerConfig = (() => {
     if (classification === "KAYITLI") {
@@ -108,11 +112,6 @@ export function BtkDiagnosticCard({
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            {result.cached && (
-              <Badge variant="outline" className="text-[10px] font-bold bg-background/60">
-                Önbellek (0ms)
-              </Badge>
-            )}
             <Badge className={cn("text-[10px] font-black", statusBannerConfig.badge)}>
               {classification}
             </Badge>
@@ -163,7 +162,7 @@ export function BtkDiagnosticCard({
                   }
                 }}
                 placeholder="Güvenlik kodunu girin..."
-                className="h-10 bg-background font-mono tracking-widest text-sm uppercase"
+                className="h-10 bg-background font-mono tracking-widest text-sm"
                 autoComplete="off"
               />
               <Button

@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import http2, { type ClientHttp2Session } from "http2";
 import https from "https";
 import {
   applyImeiAutoComplete,
@@ -12,15 +13,10 @@ import {
   type ImeiLookupResult,
 } from "./imei-utils";
 
-const BTK_URL = "https://www.turkiye.gov.tr/imei-sorgulama";
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const BTK_ORIGIN = "https://www.turkiye.gov.tr";
+const BTK_URL = `${BTK_ORIGIN}/imei-sorgulama`;
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
-const REQUEST_TIMEOUT_MS = 10000;
-
-interface CachedLookupEntry {
-  result: ImeiLookupResult;
-  expiresAt: number;
-}
+const REQUEST_TIMEOUT_MS = 12000;
 
 interface PendingBtkChallenge {
   cookies: Record<string, string>;
@@ -33,16 +29,7 @@ interface PendingBtkChallenge {
 
 declare global {
   // eslint-disable-next-line no-var
-  var __imeiLookupCache: Map<string, CachedLookupEntry> | undefined;
-  // eslint-disable-next-line no-var
   var __btkCaptchaChallenges: Map<string, PendingBtkChallenge> | undefined;
-}
-
-function getCacheStore(): Map<string, CachedLookupEntry> {
-  if (!globalThis.__imeiLookupCache) {
-    globalThis.__imeiLookupCache = new Map();
-  }
-  return globalThis.__imeiLookupCache;
 }
 
 function getChallengeStore(): Map<string, PendingBtkChallenge> {
@@ -118,6 +105,150 @@ interface HttpRawResponse {
   text: () => string;
 }
 
+interface BtkTransport {
+  h2Session: ClientHttp2Session | null;
+  h2Disabled: boolean;
+}
+
+function createBtkTransport(): BtkTransport {
+  return { h2Session: null, h2Disabled: false };
+}
+
+function closeBtkTransport(transport: BtkTransport) {
+  if (transport.h2Session) {
+    try {
+      transport.h2Session.close();
+    } catch {
+      // ignore close errors
+    }
+    transport.h2Session = null;
+  }
+}
+
+function ensureHttp2Session(transport: BtkTransport): Promise<ClientHttp2Session> {
+  if (transport.h2Session && !transport.h2Session.closed && !transport.h2Session.destroyed) {
+    return Promise.resolve(transport.h2Session);
+  }
+
+  return new Promise((resolve, reject) => {
+    const client = http2.connect(BTK_ORIGIN);
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        try {
+          client.destroy();
+        } catch {}
+        reject(new Error("HTTP/2 bağlantı zaman aşımı"));
+      }
+    }, REQUEST_TIMEOUT_MS);
+
+    client.once("connect", () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        transport.h2Session = client;
+        resolve(client);
+      }
+    });
+
+    client.once("error", (err) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      }
+      if (transport.h2Session === client) {
+        transport.h2Session = null;
+      }
+    });
+
+    client.once("close", () => {
+      if (transport.h2Session === client) {
+        transport.h2Session = null;
+      }
+    });
+  });
+}
+
+async function sendHttp2Request(
+  transport: BtkTransport,
+  targetUrl: string,
+  method: string,
+  headers: Record<string, string>,
+  body?: string
+): Promise<HttpRawResponse> {
+  const urlObj = new URL(targetUrl);
+  if (urlObj.origin !== BTK_ORIGIN) {
+    return sendFreshHttpsRequest(targetUrl, method, headers, body);
+  }
+
+  const session = await ensureHttp2Session(transport);
+
+  return new Promise((resolve, reject) => {
+    const h2Headers: http2.OutgoingHttpHeaders = {
+      ":method": method,
+      ":path": `${urlObj.pathname}${urlObj.search}`,
+      ":authority": urlObj.host,
+      ":scheme": "https",
+      "user-agent": headers["User-Agent"] || DEFAULT_UA,
+      "accept-language": headers["Accept-Language"] || "tr-TR,tr;q=0.9,en;q=0.8",
+    };
+
+    for (const [key, val] of Object.entries(headers)) {
+      const lower = key.toLowerCase();
+      if (
+        lower === "host" ||
+        lower === "connection" ||
+        lower === "content-length" ||
+        lower === "user-agent" ||
+        lower === "accept-language"
+      ) {
+        continue;
+      }
+      h2Headers[lower] = val;
+    }
+
+    if (body !== undefined) {
+      h2Headers["content-length"] = String(Buffer.byteLength(body, "utf8"));
+    }
+
+    const stream = session.request(h2Headers);
+    stream.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      stream.close();
+      reject(new Error("e-Devlet HTTP/2 yanıtı zaman aşımına uğradı."));
+    });
+
+    let respHeaders: Record<string, string | string[] | undefined> = {};
+    const chunks: Buffer[] = [];
+
+    stream.on("response", (h) => {
+      respHeaders = h as Record<string, string | string[] | undefined>;
+    });
+    stream.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    stream.on("end", () => {
+      const buf = Buffer.concat(chunks);
+      const status = Number(respHeaders[":status"] || 0);
+      resolve({
+        status,
+        ok: status >= 200 && status < 300,
+        headers: respHeaders,
+        body: buf,
+        text: () => buf.toString("utf8"),
+      });
+    });
+    stream.on("error", reject);
+
+    if (body !== undefined) {
+      stream.write(body, "utf8");
+    }
+    stream.end();
+  });
+}
+
 function sendFreshHttpsRequest(
   targetUrl: string,
   method: string,
@@ -143,13 +274,16 @@ function sendFreshHttpsRequest(
         port: urlObj.port || 443,
         path: `${urlObj.pathname}${urlObj.search}`,
         method,
-        agent: false, // Fresh TLS connection per hop; avoids Undici ECONNRESET on idle F5 sockets
+        family: 4,
+        agent: false,
         timeout: REQUEST_TIMEOUT_MS,
         headers: reqHeaders,
       },
       (res) => {
         const chunks: Buffer[] = [];
-        res.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        res.on("data", (chunk) =>
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+        );
         res.on("end", () => {
           const buf = Buffer.concat(chunks);
           const status = res.statusCode || 0;
@@ -176,7 +310,7 @@ function sendFreshHttpsRequest(
   });
 }
 
-function isRetryableSocketError(err: unknown): boolean {
+function isRetryableTransportError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const code = String((err as { code?: unknown }).code || "");
   const msg = String((err as { message?: unknown }).message || "");
@@ -184,15 +318,47 @@ function isRetryableSocketError(err: unknown): boolean {
     code === "ECONNRESET" ||
     code === "ETIMEDOUT" ||
     code === "EPIPE" ||
+    code === "ERR_HTTP2_GOAWAY_SESSION" ||
+    code === "ERR_HTTP2_SESSION_ERROR" ||
     msg.includes("ECONNRESET") ||
-    msg.includes("socket hang up")
+    msg.includes("socket hang up") ||
+    msg.includes("GOAWAY")
   );
+}
+
+async function performHttpRequest(
+  transport: BtkTransport,
+  targetUrl: string,
+  method: string,
+  headers: Record<string, string>,
+  body?: string
+): Promise<HttpRawResponse> {
+  if (!transport.h2Disabled && targetUrl.startsWith(BTK_ORIGIN)) {
+    try {
+      return await sendHttp2Request(transport, targetUrl, method, headers, body);
+    } catch (err) {
+      closeBtkTransport(transport);
+      if (!isRetryableTransportError(err)) {
+        transport.h2Disabled = true;
+      }
+      // Fallback / retry once on HTTP/2 or IPv4 HTTPS
+      try {
+        if (!transport.h2Disabled) {
+          return await sendHttp2Request(transport, targetUrl, method, headers, body);
+        }
+      } catch {
+        transport.h2Disabled = true;
+      }
+    }
+  }
+  return sendFreshHttpsRequest(targetUrl, method, headers, body);
 }
 
 async function fetchWithRedirectsAndCookies(
   initialUrl: string,
   init: { method?: string; headers?: Record<string, string>; body?: string },
   jar: Record<string, string>,
+  transport: BtkTransport,
   maxRedirects = 5
 ): Promise<HttpRawResponse> {
   let currentUrl = initialUrl;
@@ -208,7 +374,8 @@ async function fetchWithRedirectsAndCookies(
       if (cookieHeader) headersWithCookie.Cookie = cookieHeader;
 
       try {
-        res = await sendFreshHttpsRequest(
+        res = await performHttpRequest(
+          transport,
           currentUrl,
           currentMethod,
           headersWithCookie,
@@ -216,7 +383,7 @@ async function fetchWithRedirectsAndCookies(
         );
         break;
       } catch (err) {
-        if (attempt === 1 || !isRetryableSocketError(err)) throw err;
+        if (attempt === 1 || !isRetryableTransportError(err)) throw err;
         await new Promise((r) => setTimeout(r, 250));
       }
     }
@@ -304,6 +471,22 @@ function parseBtkFormMetadata(html: string) {
   return { actionUrl, hiddenFields, imeiFieldName, captchaFieldName, captchaSrc };
 }
 
+function parseBtkPageError(html: string): string | null {
+  const fieldErr = html.match(/<div[^>]*class=["'][^"']*fieldError[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+  if (fieldErr?.[1]) {
+    const txt = decodeHtmlEntities(fieldErr[1]);
+    if (txt) return txt;
+  }
+  const errBox = html.match(
+    /<div[^>]*class=["'][^"']*(?:errorContainer|warningContainer)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i
+  );
+  if (errBox?.[1]) {
+    const txt = decodeHtmlEntities(errBox[1]);
+    if (txt) return txt;
+  }
+  return null;
+}
+
 function parseBtkResultContainer(html: string, queriedImei: string): BtkOfficialDetails | null {
   const containerMatch =
     html.match(
@@ -337,7 +520,8 @@ function parseBtkResultContainer(html: string, queriedImei: string): BtkOfficial
 
 async function fetchCaptchaImageAsDataUrl(
   captchaUrl: string,
-  jar: Record<string, string>
+  jar: Record<string, string>,
+  transport: BtkTransport
 ): Promise<string | null> {
   const res = await fetchWithRedirectsAndCookies(
     captchaUrl,
@@ -348,12 +532,38 @@ async function fetchCaptchaImageAsDataUrl(
         Referer: BTK_URL,
       },
     },
-    jar
+    jar,
+    transport
   );
   if (!res.ok) return null;
   const rawCt = res.headers["content-type"];
   const mime = (Array.isArray(rawCt) ? rawCt[0] : rawCt) || "image/png";
   return `data:${mime};base64,${res.body.toString("base64")}`;
+}
+
+function buildFinalBtkResult(
+  baseResult: ImeiLookupResult,
+  btk: BtkOfficialDetails
+): ImeiLookupResult {
+  const parsed = parseBrandAndModel(btk.markaModel, baseResult.brand, baseResult.model);
+  const resolvedBrand = parsed.brand;
+  const resolvedModel = parsed.model;
+  const appleSpecs =
+    resolvedBrand?.toLowerCase() === "apple"
+      ? buildAppleExtendedSpecs(resolvedModel || btk.markaModel, baseResult.tacMatch?.modelCode)
+      : baseResult.appleSpecs;
+
+  return {
+    ...baseResult,
+    brand: resolvedBrand,
+    model: resolvedModel,
+    appleSpecs,
+    btk,
+    btkPendingCaptcha: false,
+    btkError: null,
+    cached: false,
+    checkedAt: new Date().toISOString(),
+  };
 }
 
 export interface LookupImeiParams {
@@ -365,7 +575,7 @@ export interface LookupImeiParams {
 
 /**
  * Resolves 14+1 IMEI Luhn validity, TAC brand/model metadata, Apple extended device info,
- * and official e-Devlet BTK status (with human-in-the-loop CAPTCHA prompt when required).
+ * and live official e-Devlet BTK status (zero caching so copied/cloned changes are always detected).
  */
 export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLookupResult> {
   const normalized = normalizeImeiDigits(params.rawImei);
@@ -379,9 +589,9 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
   const tac = imei.slice(0, 8);
   const tacMatch = lookupTacDevice(imei);
 
-  let brand = tacMatch?.brand || null;
-  let model = tacMatch?.model || null;
-  let appleSpecs = tacMatch?.appleSpecs || null;
+  const brand = tacMatch?.brand || null;
+  const model = tacMatch?.model || null;
+  const appleSpecs = tacMatch?.appleSpecs || null;
 
   const baseResult: ImeiLookupResult = {
     imei,
@@ -408,27 +618,20 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
     };
   }
 
-  // 1. Check 24h cache when not explicitly submitting a fresh CAPTCHA verification
-  const cache = getCacheStore();
-  if (!params.skipCache && !params.captchaCode) {
-    const cached = cache.get(imei);
-    if (cached && cached.expiresAt > Date.now()) {
-      return {
-        ...cached.result,
-        autoCompleted15thDigit: completed.autoCompleted,
-        cached: true,
-      };
-    }
-  }
-
   const challengeStore = getChallengeStore();
+  const transport = createBtkTransport();
 
   try {
-    // 2. If user supplied a human-entered CAPTCHA code for an active challenge, submit it
+    // 1. If user supplied a human-entered CAPTCHA code for an active challenge, submit it
     if (params.challengeId && params.captchaCode?.trim()) {
       const pending = challengeStore.get(params.challengeId);
       if (!pending) {
-        return await startFreshBtkSession(baseResult, imei, "Güvenlik kodu oturumu zaman aşımına uğradı. Lütfen yeni kodu girin.");
+        return await startFreshBtkSession(
+          baseResult,
+          imei,
+          transport,
+          "Güvenlik kodu oturumu zaman aşımına uğradı. Lütfen yeni kodu girin."
+        );
       }
 
       const formBody = new URLSearchParams();
@@ -444,12 +647,13 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Origin: "https://www.turkiye.gov.tr",
+            Origin: BTK_ORIGIN,
             Referer: BTK_URL,
           },
           body: formBody.toString(),
         },
-        pending.cookies
+        pending.cookies,
+        transport
       );
       challengeStore.delete(params.challengeId);
 
@@ -457,30 +661,17 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
       const btk = parseBtkResultContainer(html, imei);
 
       if (btk) {
-        const parsed = parseBrandAndModel(btk.markaModel, brand, model);
-        brand = parsed.brand;
-        model = parsed.model;
-        if (brand?.toLowerCase() === "apple") {
-          appleSpecs = buildAppleExtendedSpecs(model || btk.markaModel, tacMatch?.modelCode);
-        }
-
-        const finalResult: ImeiLookupResult = {
-          ...baseResult,
-          brand,
-          model,
-          appleSpecs,
-          btk,
-          btkPendingCaptcha: false,
-          btkError: null,
-          checkedAt: new Date().toISOString(),
-        };
-        cache.set(imei, { result: finalResult, expiresAt: Date.now() + CACHE_TTL_MS });
-        return finalResult;
+        return buildFinalBtkResult(baseResult, btk);
       }
 
+      const pageErr = parseBtkPageError(html);
       const nextForm = parseBtkFormMetadata(html);
       if (nextForm.captchaSrc) {
-        const imageDataUrl = await fetchCaptchaImageAsDataUrl(nextForm.captchaSrc, pending.cookies);
+        const imageDataUrl = await fetchCaptchaImageAsDataUrl(
+          nextForm.captchaSrc,
+          pending.cookies,
+          transport
+        );
         if (imageDataUrl) {
           const newChallengeId = crypto.randomUUID();
           challengeStore.set(newChallengeId, {
@@ -496,32 +687,37 @@ export async function lookupSingleImei(params: LookupImeiParams): Promise<ImeiLo
             btkPendingCaptcha: true,
             captchaImageDataUrl: imageDataUrl,
             challengeId: newChallengeId,
-            btkError: "Güvenlik kodu doğrulanamadı. Lütfen görseldeki yeni kodu yazın.",
+            btkError:
+              pageErr || "Güvenlik kodu doğrulanamadı. Lütfen görseldeki yeni kodu yazın.",
           };
         }
       }
 
       return {
         ...baseResult,
-        btkError: "e-Devlet yanıtı okunamadı. Resmi e-Devlet sayfasından kontrol edebilirsiniz.",
+        btkError:
+          pageErr || "e-Devlet yanıtı okunamadı. Resmi e-Devlet sayfasından kontrol edebilirsiniz.",
       };
     }
 
-    // 3. Initial request to turkiye.gov.tr/imei-sorgulama
-    return await startFreshBtkSession(baseResult, imei);
+    // 2. Fresh live request to turkiye.gov.tr/imei-sorgulama
+    return await startFreshBtkSession(baseResult, imei, transport);
   } catch (error) {
     console.error("BTK lookup error:", error);
     return {
       ...baseResult,
       btkError:
-        "e-Devlet BTK servisine şu an doğrudan ulaşılamadı. Cihaz TAC bilgisi gösteriliyor; BTK doğrulaması için e-Devlet bağlantısını kullanabilirsiniz.",
+        "e-Devlet BTK servisine şu an doğrudan ulaşılamadı. Cihaz TAC bilgisi gösteriliyor; BTK doğrulaması için tekrar deneyebilir veya e-Devlet bağlantısını kullanabilirsiniz.",
     };
+  } finally {
+    closeBtkTransport(transport);
   }
 }
 
 async function startFreshBtkSession(
   baseResult: ImeiLookupResult,
   imei: string,
+  transport: BtkTransport,
   initialWarning?: string
 ): Promise<ImeiLookupResult> {
   const jar: Record<string, string> = {};
@@ -533,7 +729,8 @@ async function startFreshBtkSession(
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
     },
-    jar
+    jar,
+    transport
   );
 
   if (!getRes.ok) {
@@ -549,7 +746,7 @@ async function startFreshBtkSession(
 
   // When e-Devlet presents a CAPTCHA image, present it cleanly to the human user
   if (formMeta.captchaSrc) {
-    const imageDataUrl = await fetchCaptchaImageAsDataUrl(formMeta.captchaSrc, jar);
+    const imageDataUrl = await fetchCaptchaImageAsDataUrl(formMeta.captchaSrc, jar, transport);
     if (imageDataUrl) {
       const challengeId = crypto.randomUUID();
       challengeStore.set(challengeId, {
@@ -584,48 +781,30 @@ async function startFreshBtkSession(
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Origin: "https://www.turkiye.gov.tr",
+        Origin: BTK_ORIGIN,
         Referer: BTK_URL,
       },
       body: formBody.toString(),
     },
-    jar
+    jar,
+    transport
   );
 
   const postHtml = postRes.text();
   const btk = parseBtkResultContainer(postHtml, imei);
 
   if (btk) {
-    const parsed = parseBrandAndModel(btk.markaModel, baseResult.brand, baseResult.model);
-    const resolvedBrand = parsed.brand;
-    const resolvedModel = parsed.model;
-    const appleSpecs =
-      resolvedBrand?.toLowerCase() === "apple"
-        ? buildAppleExtendedSpecs(resolvedModel || btk.markaModel, baseResult.tacMatch?.modelCode)
-        : baseResult.appleSpecs;
-
-    const completedResult: ImeiLookupResult = {
-      ...baseResult,
-      brand: resolvedBrand,
-      model: resolvedModel,
-      appleSpecs,
-      btk,
-      btkPendingCaptcha: false,
-      btkError: null,
-      checkedAt: new Date().toISOString(),
-    };
-
-    getCacheStore().set(imei, {
-      result: completedResult,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    });
-    return completedResult;
+    return buildFinalBtkResult(baseResult, btk);
   }
 
   // Fallback check if POST response redirected/returned a CAPTCHA
   const followUpForm = parseBtkFormMetadata(postHtml);
   if (followUpForm.captchaSrc) {
-    const imageDataUrl = await fetchCaptchaImageAsDataUrl(followUpForm.captchaSrc, jar);
+    const imageDataUrl = await fetchCaptchaImageAsDataUrl(
+      followUpForm.captchaSrc,
+      jar,
+      transport
+    );
     if (imageDataUrl) {
       const challengeId = crypto.randomUUID();
       challengeStore.set(challengeId, {
@@ -641,13 +820,15 @@ async function startFreshBtkSession(
         btkPendingCaptcha: true,
         captchaImageDataUrl: imageDataUrl,
         challengeId,
-        btkError: initialWarning || null,
+        btkError: initialWarning || parseBtkPageError(postHtml) || null,
       };
     }
   }
 
   return {
     ...baseResult,
-    btkError: "BTK sonucu alınamadı. Resmi e-Devlet IMEI sorgulama sayfasından kontrol edebilirsiniz.",
+    btkError:
+      parseBtkPageError(postHtml) ||
+      "BTK sonucu alınamadı. Resmi e-Devlet IMEI sorgulama sayfasından kontrol edebilirsiniz.",
   };
 }

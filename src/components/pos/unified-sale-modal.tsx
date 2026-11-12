@@ -268,10 +268,10 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
     return (
         <>
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[1100px] p-0 bg-[#0F172A] border border-border/50 shadow-2xl rounded-3xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
+            <DialogContent className="max-w-[1100px] p-0 bg-[#0F172A] border border-border/50 shadow-2xl rounded-3xl overflow-y-auto md:overflow-hidden flex flex-col md:flex-row max-h-[92dvh] md:h-[90vh]">
 
                 {/* Left Side: Navigation & Info */}
-                <div className="w-full md:w-80 border-r border-border/30 flex flex-col bg-slate-900/50 shrink-0 shrink-0 overflow-y-auto">
+                <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-border/30 flex flex-col bg-slate-900/50 shrink-0 md:overflow-y-auto">
                     <div className="p-6 border-b border-border/30">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
@@ -571,8 +571,8 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                 </div>
 
                 {/* Right Side: Preview */}
-                <div className="flex-1 flex flex-col bg-[#05070A] overflow-hidden">
-                    <div className="px-8 py-4 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div className="flex-1 flex flex-col bg-[#05070A] md:overflow-hidden">
+                    <div className="px-4 sm:px-8 py-4 border-b border-white/5 flex items-center justify-between md:shrink-0">
                         <div className="flex items-center gap-3">
                             <h2 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Baskı Önizleme</h2>
                             {activeTab === "contract" && (

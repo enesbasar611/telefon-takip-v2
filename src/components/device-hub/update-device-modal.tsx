@@ -228,9 +228,9 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
           <PenLine className="h-4.5 w-4.5" />
         </button>
       </DialogTrigger>
-      <DialogContent className="w-full md:max-w-4xl h-full md:h-auto md:max-h-[85vh] overflow-hidden bg-[#0B0F19] border-border text-foreground/90 p-0 md:rounded-3xl flex flex-col">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-border/60 p-5 md:p-8 gap-6">
+      <DialogContent className="w-full md:max-w-4xl max-h-[100dvh] md:max-h-[85vh] overflow-hidden bg-[#0B0F19] border-border text-foreground/90 p-0 md:rounded-3xl flex flex-col gap-0">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto min-h-0 custom-scrollbar scrollbar-hide flex flex-col">
+          <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-border/60 p-5 md:p-8 pr-12 gap-6">
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                 <PenLine className="h-6 w-6 text-blue-500" />
@@ -272,7 +272,7 @@ export function UpdateDeviceModal({ device }: UpdateDeviceModalProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-8 custom-scrollbar scrollbar-hide">
+          <div className="p-5 md:p-8 space-y-8">
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">

@@ -480,8 +480,9 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="w-full max-w-[98vw] md:w-[1500px] h-[100dvh] md:h-[92vh] bg-white dark:bg-[#0F172A] border-slate-200 dark:border-white/10 p-0 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-none md:rounded-[2.5rem] overflow-hidden text-slate-900 dark:text-white">
+                <div className="flex-1 flex flex-col overflow-y-auto md:overflow-hidden min-h-0 no-scrollbar">
                 {/* Premium Header */}
-                <div className="relative h-16 md:h-24 flex items-center justify-between px-3.5 md:px-10 bg-gradient-to-b from-slate-50 dark:from-white/[0.03] to-transparent border-b border-slate-200 dark:border-white/[0.05] shrink-0 z-50">
+                <div className="relative min-h-16 py-2.5 md:py-0 md:h-24 flex items-center justify-between px-3.5 pr-12 md:px-10 bg-gradient-to-b from-slate-50 dark:from-white/[0.03] to-transparent border-b border-slate-200 dark:border-white/[0.05] md:shrink-0 z-50">
                     <div className="flex items-center gap-3 md:gap-8 min-w-0">
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-center gap-2 mb-0.5 md:mb-1">
@@ -561,7 +562,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                 </div>
 
                 {/* Mobile Tab Switcher */}
-                <div className="flex items-center border-b border-slate-200 dark:border-white/[0.08] bg-slate-100/90 dark:bg-black/40 p-1.5 gap-1 shrink-0 md:hidden z-40">
+                <div className="flex items-center border-b border-slate-200 dark:border-white/[0.08] bg-slate-100/90 dark:bg-black/40 p-1.5 gap-1 md:shrink-0 md:hidden z-40">
                     <button
                         type="button"
                         onClick={() => setMobileTab("operation")}
@@ -603,13 +604,13 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                     </button>
                 </div>
 
-                <div className="flex-1 flex flex-col md:grid md:grid-cols-[340px_1fr] overflow-hidden bg-slate-50 dark:bg-[#0D111C]">
+                <div className="flex-none md:flex-1 flex flex-col md:grid md:grid-cols-[340px_1fr] md:overflow-hidden bg-slate-50 dark:bg-[#0D111C]">
                     {/* Left Pane: Identity & Context */}
                     <div className={cn(
-                        "border-r border-slate-200 dark:border-white/5 flex-col overflow-y-auto no-scrollbar bg-slate-50/50 dark:bg-white/[0.01]",
-                        mobileTab === "device" ? "flex flex-1" : "hidden md:flex"
+                        "border-r border-slate-200 dark:border-white/5 flex-col md:overflow-y-auto no-scrollbar bg-slate-50/50 dark:bg-white/[0.01]",
+                        mobileTab === "device" ? "flex" : "hidden md:flex"
                     )}>
-                        <div className="p-4 md:p-5 space-y-4 md:space-y-6 pb-28 md:pb-6">
+                        <div className="p-4 md:p-5 space-y-4 md:space-y-6">
                             {/* Device Context */}
                             <section className="space-y-1.5">
                                 <div className="flex items-center gap-2 px-1">
@@ -712,10 +713,10 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
 
                     {/* Right Pane: Workshop & Workflow (Merged from Center & Right) */}
                     <div className={cn(
-                        "flex-1 flex flex-col overflow-hidden",
+                        "flex-1 flex flex-col md:overflow-hidden",
                         mobileTab !== "device" ? "flex" : "hidden md:flex"
                     )}>
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-3.5 sm:p-5 md:p-8 space-y-4 sm:space-y-6 md:space-y-8 pb-32 md:pb-8">
+                        <div className="flex-1 md:overflow-y-auto no-scrollbar p-3.5 sm:p-5 md:p-8 space-y-4 sm:space-y-6 md:space-y-8">
                             {/* Problem Highlight */}
                             <div className="p-4 bg-amber-500/5 dark:bg-gradient-to-br dark:from-amber-500/[0.08] dark:via-amber-500/[0.02] dark:to-transparent border border-amber-200 dark:border-amber-500/20 rounded-2xl relative overflow-hidden group shadow-xl">
                                 <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700">
@@ -974,7 +975,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                         </div>
 
                         {/* Financial Footer Workstation */}
-                        <div className="bg-white/95 dark:bg-[#0F172A]/95 border-t border-slate-200 dark:border-white/[0.08] p-3 sm:p-4 md:p-8 backdrop-blur-2xl shrink-0 z-40">
+                        <div className="bg-white/95 dark:bg-[#0F172A]/95 border-t border-slate-200 dark:border-white/[0.08] p-3 sm:p-4 md:p-8 backdrop-blur-2xl md:shrink-0 z-40">
                             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-8">
                                 <div className="flex items-center justify-between md:justify-start gap-3 md:gap-10">
                                     <div className="space-y-1">
@@ -1078,6 +1079,7 @@ export function ServiceManagementModal({ ticket: initialTicket, isOpen, onClose,
                             </div>
                         </div>
                     </div>
+                </div>
                 </div>
             </DialogContent>
             {/* WhatsApp Confirm Modal explicitly nested inside or outside? Better to place outside DialogContent but inside modal tree or completely separated. Actually Dialogs shouldn't be nested too deeply but it's fine. */}

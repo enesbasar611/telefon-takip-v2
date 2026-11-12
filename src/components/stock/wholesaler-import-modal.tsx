@@ -549,11 +549,12 @@ export function WholesalerImportModal({
                 </DialogTrigger>
 
                 <DialogContent className={cn(
-                    "rounded-3xl border-border bg-card p-0 overflow-hidden shadow-2xl transition-all duration-300",
-                    step === 1 ? "max-w-2xl" : "max-w-6xl h-[94vh] flex flex-col"
+                    "rounded-3xl border-border bg-card p-0 overflow-hidden shadow-2xl transition-all duration-300 flex flex-col gap-0 max-h-[94dvh]",
+                    step === 1 ? "max-w-2xl" : "max-w-6xl"
                 )}>
+                    <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
                     {/* Header */}
-                    <div className="p-6 border-b border-border/50 bg-muted/10 shrink-0">
+                    <div className="p-6 pr-12 border-b border-border/50 bg-muted/10">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
@@ -680,9 +681,9 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
 
                     {/* ADIM 2: ÖNİZLEME, RENK AYRIŞTIRMA VE FİYATLANDIRMA */}
                     {step === 2 && (
-                        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        <div className="flex flex-col">
                             {/* Üst İstatistik ve Hızlı Fiyat Şeridi */}
-                            <div className="p-5 border-b border-border/50 bg-muted/10 space-y-4 shrink-0">
+                            <div className="p-5 border-b border-border/50 bg-muted/10 space-y-4">
                                 {/* KPI Kartları */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     <div className="p-3.5 rounded-2xl bg-card border border-border/60 shadow-sm">
@@ -951,7 +952,7 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
                             </div>
 
                             {/* Ürün Listesi Tablosu */}
-                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
+                            <div className="p-4 sm:p-6 space-y-3">
                                 {/* Akıllı Kategori Filtreleri ve Hızlı Arama */}
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                     <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto py-1">
@@ -1287,7 +1288,7 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
                             </div>
 
                             {/* Modal Alt Çubuk (Footer) */}
-                            <div className="p-4 border-t border-border/50 bg-muted/20 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                            <div className="p-4 border-t border-border/50 bg-muted/20 flex flex-wrap items-center justify-between gap-3">
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -1332,6 +1333,7 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
                             </div>
                         </div>
                     )}
+                    </div>
                 </DialogContent>
             </Dialog>
 

@@ -180,10 +180,11 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-none shadow-2xl rounded-3xl h-[85vh] sm:h-auto flex flex-col">
+      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-none shadow-2xl rounded-3xl max-h-[88dvh] flex flex-col gap-0">
+        <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
 
-        <div className="px-6 pt-6 pb-4 flex justify-between items-center bg-slate-50/50 dark:bg-muted/20">
+        <div className="px-6 pt-6 pr-12 pb-4 flex justify-between items-center bg-slate-50/50 dark:bg-muted/20">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-emerald-500/10 rounded-2xl">
               {staff ? <Settings2 className="h-5 w-5 text-emerald-600" /> : <UserPlus className="h-5 w-5 text-emerald-600" />}
@@ -200,7 +201,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
           {/* REMOVED EXTRA CLOSE BUTTON */}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="overflow-y-auto custom-scrollbar flex-1">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
           <div className="p-6 space-y-8">
             {/* Temel Bilgiler */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-2xl bg-slate-50/50 dark:bg-muted/10 border border-slate-100 dark:border-white/5">
@@ -404,6 +405,7 @@ export function CreateStaffModal({ onSuccess, staff }: CreateStaffModalProps) {
             </Button>
           </div>
         </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

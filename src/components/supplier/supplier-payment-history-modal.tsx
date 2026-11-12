@@ -79,8 +79,9 @@ export function SupplierPaymentHistoryModal({ isOpen, onClose, supplier }: Suppl
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-4xl max-w-full w-full h-[90vh] sm:h-auto flex flex-col bg-card border-border/50 p-0 overflow-hidden sm:rounded-3xl">
-                <DialogHeader className="p-6 border-b border-border/50 bg-accent/5">
+            <DialogContent className="sm:max-w-4xl max-w-full w-full max-h-[90dvh] flex flex-col gap-0 bg-card border-border/50 p-0 overflow-hidden sm:rounded-3xl">
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
+                <DialogHeader className="p-6 pr-12 border-b border-border/50 bg-accent/5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
@@ -99,7 +100,7 @@ export function SupplierPaymentHistoryModal({ isOpen, onClose, supplier }: Suppl
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto">
+                <div>
                     <div className="p-4 sm:p-6">
                         {sortedRecords.length === 0 ? (
                             <div className="py-20 text-center text-muted-foreground">
@@ -206,6 +207,7 @@ export function SupplierPaymentHistoryModal({ isOpen, onClose, supplier }: Suppl
                     <Button onClick={onClose} className="w-full h-11 rounded-xl bg-foreground text-background hover:bg-foreground/90 font-medium">
                         Kapat
                     </Button>
+                </div>
                 </div>
             </DialogContent>
         </Dialog>

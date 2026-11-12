@@ -396,9 +396,9 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl p-0 overflow-hidden bg-background rounded-3xl border-border/40 shadow-2xl">
-                <div className="flex flex-col h-[85vh]">
-                    <DialogHeader className="p-6 pb-4 border-b border-border/40 bg-muted/30">
+            <DialogContent className="max-w-4xl max-h-[88dvh] p-0 overflow-hidden bg-background rounded-3xl border-border/40 shadow-2xl flex flex-col gap-0">
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col">
+                    <DialogHeader className="p-6 pr-12 pb-4 border-b border-border/40 bg-muted/30">
                         <DialogTitle className="text-2xl font-bold flex items-center gap-3">
                             <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
                                 <RefreshCcw className="h-6 w-6 text-primary" />
@@ -407,7 +407,7 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                    <div className="p-6 space-y-8">
                         {/* Source Selection */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-3">

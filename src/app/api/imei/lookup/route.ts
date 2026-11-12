@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getShopId } from "@/lib/auth";
+import { auth, getShopId } from "@/lib/auth";
 import { lookupSingleImei } from "@/lib/imei-service";
+import { recordImeiLookupHistory } from "@/lib/imei-history";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,6 @@ export async function POST(request: Request) {
     const rawImei = typeof body?.imei === "string" ? body.imei : "";
     const challengeId = typeof body?.challengeId === "string" ? body.challengeId : undefined;
     const captchaCode = typeof body?.captchaCode === "string" ? body.captchaCode : undefined;
-    const skipCache = Boolean(body?.skipCache);
 
     if (!rawImei.trim()) {
       return NextResponse.json({ error: "Lütfen bir IMEI numarası girin." }, { status: 400 });
@@ -25,8 +25,16 @@ export async function POST(request: Request) {
       rawImei,
       challengeId,
       captchaCode,
-      skipCache,
     });
+
+    if (result.btk && !result.btkPendingCaptcha) {
+      try {
+        const session = await auth();
+        await recordImeiLookupHistory(shopId, result, session?.user?.name || null);
+      } catch (historyError) {
+        console.error("Failed to record IMEI lookup history:", historyError);
+      }
+    }
 
     return NextResponse.json(result);
   } catch (error) {
