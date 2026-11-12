@@ -12,6 +12,13 @@ import { SectionBadge } from "./section-badge";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { DEVICE_BRANDS, DEVICE_MODELS } from "@/lib/constants/devices";
+import { SmartImeiInput } from "@/components/imei/SmartImeiInput";
+import {
+    mergeBtkNoteTag,
+    resolveCanonicalBrandOption,
+    type ImeiLookupResult,
+} from "@/lib/imei-utils";
+import { toast } from "sonner";
 
 interface StepDeviceDetailsProps {
     isSimpleMode: boolean;
@@ -46,13 +53,39 @@ export const StepDeviceDetails = ({
     getInputClass,
     onAddPartToStock
 }: StepDeviceDetailsProps) => {
-    const { register, setValue, watch, formState: { errors }, control } = useFormContext();
+    const { register, setValue, watch, getValues, formState: { errors }, control } = useFormContext();
 
     const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
     const [showModelSuggestions, setShowModelSuggestions] = useState(false);
 
     const watchBrand = watch("deviceBrand") || "";
     const watchModel = watch("deviceModel") || "";
+    const watchImei = watch("imei") || "";
+
+    const handleImeiLookupComplete = (result: ImeiLookupResult) => {
+        const brandField = Array.isArray(industryFields)
+            ? industryFields.find((f: any) => f.key === "deviceBrand")
+            : null;
+        if (result.brand) {
+            const resolvedBrand = resolveCanonicalBrandOption(result.brand, brandField?.options);
+            setValue("deviceBrand", resolvedBrand, { shouldValidate: true, shouldDirty: true });
+        }
+        if (result.model) {
+            setValue("deviceModel", result.model, { shouldValidate: true, shouldDirty: true });
+        }
+        if (result.btk?.classification) {
+            const nextNote = mergeBtkNoteTag(getValues("cosmeticNotes"), result.btk.classification);
+            setValue("cosmeticNotes", nextNote, { shouldDirty: true });
+            setValue("btkStatus", result.btk.classification, { shouldDirty: true });
+            if (result.btk.classification === "KAYITLI") {
+                toast.success("BTK Kayıtlı cihaz doğrulandı.");
+            } else if (result.btk.classification === "KAYITSIZ") {
+                toast.warning("Dikkat: BTK Kayıtsız (Yurtdışı / Kayıt Dışı) cihaz!");
+            } else if (result.btk.classification === "KLONLU") {
+                toast.error("Uyarı: Klonlanmış / Kara Liste IMEI tespit edildi!");
+            }
+        }
+    };
 
     const brandSuggestions = useMemo(() => {
         if (!watchBrand || watchBrand.length < 1) return [];
@@ -162,6 +195,16 @@ export const StepDeviceDetails = ({
                             <Label className={labelClass}>Cihaz Şifresi</Label>
                             <Input {...register("devicePassword")} placeholder="Opsiyonel..." className={getInputClass("devicePassword")} />
                         </div>
+                        <div className="space-y-2 md:col-span-3">
+                            <Label className={labelClass}>IMEI Numarası (Opsiyonel • 14 Hane Girince Tamamlanır)</Label>
+                            <SmartImeiInput
+                                id="imeiSimple"
+                                value={watchImei}
+                                onChange={(val) => setValue("imei", val, { shouldValidate: true, shouldDirty: true })}
+                                inputClassName={getInputClass("imei")}
+                                onLookupComplete={handleImeiLookupComplete}
+                            />
+                        </div>
                     </div>
                 ) : (
                     <FormFactory
@@ -171,6 +214,18 @@ export const StepDeviceDetails = ({
                         errors={errors}
                         twoCol={true}
                         onPatternClick={() => setIsPatternModalOpen(true)}
+                        customRenderers={{
+                            imei: (field) => (
+                                <SmartImeiInput
+                                    id={field.key}
+                                    value={watchImei}
+                                    onChange={(val) => setValue("imei", val, { shouldValidate: true, shouldDirty: true })}
+                                    placeholder={field.placeholder}
+                                    inputClassName="h-14 bg-muted/20 border-border/60 rounded-2xl px-5 text-sm"
+                                    onLookupComplete={handleImeiLookupComplete}
+                                />
+                            ),
+                        }}
                     />
                 )}
             </section>

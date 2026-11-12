@@ -10,17 +10,14 @@ import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query
 export async function StatsGridStream({ labels }: { labels?: Record<string, string> }) {
     const shopId = await getShopId(false);
 
-    // Prefetch for client cards
+    // Prefetch for client cards & reuse per-request cached stats
     const queryClient = new QueryClient();
     await queryClient.prefetchQuery({
         queryKey: ["dashboard-init", shopId || ""],
         queryFn: () => getDashboardInit(shopId || undefined),
     });
 
-    const [initData, statsDataRaw] = await Promise.all([
-        getDashboardInit(shopId || undefined),
-        getDashboardStats()
-    ]);
+    const statsDataRaw = await getDashboardStats();
     const statsData = serializePrisma(statsDataRaw);
 
     const stats = [

@@ -75,13 +75,13 @@ export function FormFactory({
                 if (field.validate === "imei") {
                     validationRules.validate = (val: string) => {
                         if (!val) return true; // not required unless field.required
-                        if (!/^\d{11}$/.test(val)) return "IMEI numarası tam olarak 11 haneli rakamlardan oluşmalıdır";
+                        if (!/^\d{15}$/.test(val)) return "IMEI numarası tam olarak 15 haneli rakamlardan oluşmalıdır";
                         return true;
                     };
                 }
 
                 return (
-                    <div key={field.key} className="space-y-2">
+                    <div key={field.key} className={cn("space-y-2", twoCol && field.validate === "imei" && "col-span-2")}>
                         <Label htmlFor={field.key} className={baseLabel}>
                             {field.label}
                             {field.required && <span className="text-red-500 ml-1">*</span>}

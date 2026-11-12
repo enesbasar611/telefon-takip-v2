@@ -65,6 +65,12 @@ import { findCustomerByPhone, findCustomerByName } from "@/lib/actions/customer-
 import { FormFactory } from "@/components/common/form-factory";
 import { getIndustryLabel, getServiceFormFields, extractCoreAndAttributes, getIndustryAccessories } from "@/lib/industry-utils";
 import { PatternLock } from "@/components/ui/pattern-lock";
+import { SmartImeiInput } from "@/components/imei/SmartImeiInput";
+import {
+  mergeBtkNoteTag,
+  resolveCanonicalBrandOption,
+  type ImeiLookupResult,
+} from "@/lib/imei-utils";
 
 interface CreateServiceModalProps {
   trigger?: ReactNode;
@@ -232,6 +238,30 @@ export function CreateServiceModal({
     }
   };
 
+  const handleImeiLookupComplete = useCallback(
+    (result: ImeiLookupResult) => {
+      const brandField = industryFields.find((f) => f.key === "deviceBrand");
+      if (result.brand) {
+        const canonical = resolveCanonicalBrandOption(result.brand, brandField?.options);
+        if (canonical) {
+          setValue("deviceBrand", canonical, { shouldValidate: true });
+        }
+      }
+      if (result.model) {
+        setValue("deviceModel", result.model, { shouldValidate: true });
+      }
+      if (result.btk?.classification) {
+        setValue("btkStatus", result.btk.classification);
+        const currentNotes = watch("cosmeticNotes") || "";
+        const nextNotes = mergeBtkNoteTag(currentNotes, result.btk.classification);
+        if (nextNotes !== currentNotes) {
+          setValue("cosmeticNotes", nextNotes);
+        }
+      }
+    },
+    [industryFields, setValue, watch]
+  );
+
   const onSubmit = async (data: any) => {
     if (!canCompleteService) {
       setShowMissingRequired(true);
@@ -242,6 +272,7 @@ export function CreateServiceModal({
       try {
         // Form verilerini çekirdek DB alanlarına ve dinamik özelliklere ayır
         const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, data);
+        const btkNote = data.btkStatus ? mergeBtkNoteTag("", data.btkStatus) : "";
 
         const result = await createServiceTicket({
           customerName: data.customerName,
@@ -253,6 +284,7 @@ export function CreateServiceModal({
           problemDesc: isSimpleMode && !data.problemDesc ? "Hızlı Servis İşlemi" : data.problemDesc,
           estimatedCost: Number(data.estimatedCost),
           devicePassword: data.devicePassword,
+          notes: btkNote || undefined,
           attributes,
           technicianId: data.technicianId || undefined,
         });
@@ -475,6 +507,21 @@ export function CreateServiceModal({
                   errors={errors}
                   twoCol={true}
                   onPatternClick={() => setIsPatternModalOpen(true)}
+                  customRenderers={{
+                    imei: (field) => (
+                      <SmartImeiInput
+                        id={field.key}
+                        label={field.label}
+                        required={field.required}
+                        value={watch("imei") || ""}
+                        onChange={(val) => setValue("imei", val, { shouldValidate: true, shouldDirty: true })}
+                        onLookupComplete={handleImeiLookupComplete}
+                        error={errors.imei?.message as string | undefined}
+                        placeholder={field.placeholder}
+                        variant="service"
+                      />
+                    ),
+                  }}
                 />
               )}
 
@@ -627,6 +674,19 @@ export function CreateServiceModal({
                     />
                   </div>
                 </div>
+              )}
+
+              {/* Basit Mod: Akıllı IMEI (14+1 Luhn + Kamera + Opsiyonel BTK) */}
+              {isSimpleMode && (
+                <SmartImeiInput
+                  id="imei-simple-modal"
+                  label="IMEI (Opsiyonel)"
+                  value={watch("imei") || ""}
+                  onChange={(val) => setValue("imei", val, { shouldValidate: true, shouldDirty: true })}
+                  onLookupComplete={handleImeiLookupComplete}
+                  error={errors.imei?.message as string | undefined}
+                  variant="service"
+                />
               )}
 
               {/* Tahmini Maliyet & Görevli Teknisyen - Tam Hizalı */}

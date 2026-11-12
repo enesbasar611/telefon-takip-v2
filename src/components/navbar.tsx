@@ -26,6 +26,7 @@ import { POSDrawer } from "@/components/navbar/pos-drawer";
 import { CurrencyDisplay } from "@/components/navbar/currency-display";
 import { CurrencyTicker } from "@/components/navbar/currency-ticker";
 import { GlobalSearch } from "@/components/navbar/global-search";
+import { NavbarImeiLookup } from "@/components/imei/NavbarImeiLookup";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useUI } from "@/lib/context/ui-context";
 import { NotificationDropdown } from "@/components/navbar/notification-dropdown";
@@ -79,7 +80,9 @@ export function Navbar({ shop }: { shop?: any }) {
           </div>
         </div>
 
-        <div className="flex-1" />
+        <div className="flex-1 flex items-center justify-end md:justify-start min-w-0">
+          <NavbarImeiLookup />
+        </div>
 
         <div className="flex items-center gap-2 lg:gap-3 justify-end shrink-0">
           {/* Quick Shortcut: Cihaz Merkezi - Strictly Mobile Only */}

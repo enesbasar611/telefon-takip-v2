@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import prisma from "@/lib/prisma";
 import { auth, getShopId } from "@/lib/auth";
 import { serializePrisma } from "@/lib/utils";
@@ -112,10 +113,7 @@ function calculateSalesGrossProfit(
   return Math.round(totalProfit * 100) / 100;
 }
 
-export async function getDashboardStats() {
-  const shopId = await getShopId();
-  if (!shopId) return null;
-
+const loadDashboardStatsForShop = cache(async (shopId: string) => {
   const now = new Date();
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
@@ -126,6 +124,7 @@ export async function getDashboardStats() {
   const thirtyDaysAgo = startOfDay(subDays(now, 29));
   const ninetyDaysAgo = startOfDay(subDays(now, 90));
 
+  // Batch 1: Core aggregates & lightweight counts (stays well within Neon pooler limit)
   const [
     totalSalesData,
     todaySalesData,
@@ -137,15 +136,6 @@ export async function getDashboardStats() {
     collectionsTxs,
     readyTickets,
     cancelledTickets,
-    monthSalesForProfit,
-    monthDeliveredServices,
-    profitRates,
-    yesterdayServiceIncomeTxs,
-    pendingProcurementCount,
-    active90dSaleProducts,
-    last30dSalesAgg,
-    overdueServicesCount,
-    bankPosAccounts
   ] = await Promise.all([
     // Total Sales this month
     prisma.sale.aggregate({
@@ -201,6 +191,20 @@ export async function getDashboardStats() {
     prisma.serviceTicket.count({ where: { shopId, status: "READY" } }),
     // Cancelled tickets
     prisma.serviceTicket.count({ where: { shopId, status: "CANCELLED" } }),
+  ]);
+
+  // Batch 2: Secondary analytics & trend queries
+  const [
+    monthSalesForProfit,
+    monthDeliveredServices,
+    profitRates,
+    yesterdayServiceIncomeTxs,
+    pendingProcurementCount,
+    active90dSaleProducts,
+    last30dSalesAgg,
+    overdueServicesCount,
+    bankPosAccounts,
+  ] = await Promise.all([
     prisma.sale.findMany({
       where: { shopId, createdAt: { gte: monthStart, lte: endOfDay(new Date()) }, finalAmount: { gt: 0 } },
       select: {
@@ -318,6 +322,12 @@ export async function getDashboardStats() {
     monthlyServiceProfit,
     issueDevices: cancelledTickets
   });
+});
+
+export async function getDashboardStats(shopIdParam?: string) {
+  const shopId = shopIdParam || await getShopId();
+  if (!shopId) return null;
+  return loadDashboardStatsForShop(shopId);
 }
 
 /**
@@ -328,7 +338,7 @@ export async function getDashboardInit(shopIdParam?: string) {
   if (!shopId) return { rates: null, stats: {}, settings: [], tenant: null };
 
   const [stats, settings, shop] = await Promise.all([
-    getDashboardStats(),
+    getDashboardStats(shopId),
     prisma.setting.findMany({ where: { shopId } }),
     prisma.shop.findUnique({
       where: { id: shopId },

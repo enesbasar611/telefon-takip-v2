@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { YeniServisClient } from "./yeni-servis-client";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function NewServicePage() {
-  return <YeniServisClient />;
+  return (
+    <Suspense fallback={<div className="p-6 animate-pulse text-xs text-muted-foreground">Servis formu yükleniyor...</div>}>
+      <YeniServisClient />
+    </Suspense>
+  );
 }

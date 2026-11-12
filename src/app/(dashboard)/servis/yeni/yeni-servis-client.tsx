@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect, useTransition, useRef, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  mergeBtkNoteTag,
+  normalizeImeiDigits,
+  resolveCanonicalBrandOption,
+  type BtkClassification,
+} from "@/lib/imei-utils";
 import { useSession } from "next-auth/react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -108,6 +114,7 @@ const ASSIGNABLE_SERVICE_ROLES = [...SERVICE_OWNER_ROLES, "TECHNICIAN", "STAFF"]
 // ---------------------------------------------------------------------------
 export function YeniServisClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -269,6 +276,45 @@ export function YeniServisClient() {
 
   const industryFields = getServiceFormFields(shop);
 
+  // Pre-fill from Quick IMEI Lookup ("Bu Cihazla Servis Kaydı Aç")
+  useEffect(() => {
+    const paramImei = searchParams.get("imei");
+    const paramBrand = searchParams.get("brand");
+    const paramModel = searchParams.get("model");
+    const paramBtk = searchParams.get("btkStatus") as BtkClassification | null;
+
+    if (!paramImei && !paramBrand && !paramModel) return;
+
+    const cleanImei = normalizeImeiDigits(paramImei);
+    if (cleanImei) {
+      form.setValue("imei", cleanImei, { shouldValidate: true });
+    }
+    if (paramBrand) {
+      const brandField = industryFields.find((f) => f.key === "deviceBrand");
+      const canonical = resolveCanonicalBrandOption(paramBrand, brandField?.options);
+      if (canonical) {
+        form.setValue("deviceBrand", canonical, { shouldValidate: true });
+      }
+    }
+    if (paramModel) {
+      form.setValue("deviceModel", paramModel, { shouldValidate: true });
+    }
+    if (paramBtk === "KAYITLI" || paramBtk === "KAYITSIZ" || paramBtk === "KLONLU") {
+      form.setValue("btkStatus", paramBtk);
+      const currentNotes = form.getValues("cosmeticNotes") || "";
+      const nextNotes = mergeBtkNoteTag(currentNotes, paramBtk);
+      if (nextNotes !== currentNotes) {
+        form.setValue("cosmeticNotes", nextNotes);
+      }
+    }
+
+    toast({
+      title: "IMEI Bilgisi Aktarıldı",
+      description: `${paramBrand || ""} ${paramModel || cleanImei || ""}`.trim() || "Cihaz bilgileri forma dolduruldu.",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   useEffect(() => {
     if (technicians.length > 0 && !form.getValues("technicianId")) {
       form.setValue("technicianId", technicians[0].id);
@@ -409,7 +455,16 @@ export function YeniServisClient() {
   const createServiceMutation = useMutation({
     mutationFn: async (values: ServiceFormValues) => {
       const { deviceBrand, deviceModel, imei, attributes } = extractCoreAndAttributes(industryFields, values);
+      const btkNoteTag =
+        values.btkStatus === "KAYITLI"
+          ? "[BTK: Kayıtlı]"
+          : values.btkStatus === "KAYITSIZ"
+            ? "[BTK: Kayıtsız]"
+            : values.btkStatus === "KLONLU"
+              ? "[BTK: Klonlu]"
+              : "";
       const notesStr = [
+        btkNoteTag,
         values.accessories && values.accessories.length > 0 ? `Aksesuarlar: ${values.accessories.join(", ")}` : "",
         values.downPayment && Number(values.downPayment) > 0 ? `Ön Ödeme: ₺${values.downPayment}` : ""
       ].filter(Boolean).join(" | ");

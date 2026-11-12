@@ -2,7 +2,8 @@
 
 import { KasaBalanceText } from "@/components/finance/kasa-balance-text";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
@@ -30,6 +31,13 @@ import { toast } from "sonner";
 import { APPLE_COLORS, getColorHex } from "@/lib/device-utils";
 import { cleanFormData } from "@/lib/formatters";
 import { BorderBeam } from "border-beam";
+import { SmartImeiInput } from "@/components/imei/SmartImeiInput";
+import {
+  normalizeImeiDigits,
+  resolveCanonicalBrandOption,
+  type BtkClassification,
+  type ImeiLookupResult,
+} from "@/lib/imei-utils";
 
 type Condition = "NEW" | "USED" | "INTERNATIONAL";
 
@@ -203,6 +211,8 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const [quickAccountBalance, setQuickAccountBalance] = useState("");
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Customer search & sync state
   const [customerSearchText, setCustomerSearchText] = useState("");
@@ -252,6 +262,68 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
   const sim2NotUsed = watch("sim2NotUsed");
   const sellerNameValue = watch("sellerName");
   const sellerPhoneValue = watch("sellerPhone");
+
+  // Pre-fill from Quick IMEI Lookup ("Cihaz Alımına Aktar")
+  useEffect(() => {
+    const shouldOpen = searchParams.get("newDevice") === "1";
+    const paramImei = searchParams.get("imei");
+    const paramBrand = searchParams.get("brand");
+    const paramModel = searchParams.get("model");
+    const paramBtk = searchParams.get("btkStatus") as BtkClassification | null;
+
+    if (!shouldOpen && !paramImei) return;
+
+    setOpen(true);
+    const cleanImei = normalizeImeiDigits(paramImei);
+    if (cleanImei) {
+      setValue("imei", cleanImei, { shouldValidate: true });
+    }
+    if (paramBrand) {
+      const canonical = resolveCanonicalBrandOption(paramBrand, POPULAR_BRANDS);
+      if (canonical) {
+        setValue("brand", canonical, { shouldValidate: true });
+      }
+    }
+    if (paramModel) {
+      setValue("model", paramModel, { shouldValidate: true });
+    }
+    if (paramBtk === "KAYITSIZ") {
+      setValue("condition", "INTERNATIONAL", { shouldValidate: true });
+      setWarrantyMode("intl");
+    }
+  }, [searchParams, setValue]);
+
+  const handleDialogOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen && searchParams.get("newDevice")) {
+        router.replace("/cihaz-listesi");
+      }
+    },
+    [router, searchParams]
+  );
+
+  const handleImeiLookupComplete = useCallback(
+    (result: ImeiLookupResult) => {
+      if (result.brand) {
+        const canonical = resolveCanonicalBrandOption(result.brand, POPULAR_BRANDS);
+        if (canonical) {
+          setValue("brand", canonical, { shouldValidate: true });
+        }
+      }
+      if (result.model) {
+        setValue("model", result.model, { shouldValidate: true });
+      }
+      if (result.btk?.classification === "KAYITSIZ") {
+        setValue("condition", "INTERNATIONAL", { shouldValidate: true });
+        setWarrantyMode("intl");
+        toast.warning("BTK Kayıtsız Cihaz: Cihaz durumu 'Yurtdışı' olarak işaretlendi.");
+      } else if (result.btk?.classification === "KLONLU") {
+        toast.error("UYARI: Bu IMEI BTK kayıtlarında KLONLANMIŞ / KARA LİSTE olarak görünüyor!");
+      }
+    },
+    [setValue]
+  );
 
   // Click outside to close customer search dropdown
   useEffect(() => {
@@ -711,7 +783,7 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
         </Button>
         </BorderBeam>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button
               variant="outline"
@@ -806,12 +878,20 @@ export function CreateDeviceModal({ categories }: { categories: any[] }) {
                   <Input {...register("model")} placeholder="iPhone 15 Pro Max" className={inputCls} />
                   {errors.model && <p className="text-[10px] text-rose-500">{errors.model.message}</p>}
                 </div>
-                <div className="space-y-1.5">
-                  <Label className={labelCls}>IMEI (15 Hane)</Label>
-                  <Input {...register("imei")} maxLength={15} placeholder="352000000000000" className={`${inputCls} font-mono tracking-widest`} />
-                  {errors.imei && <p className="text-[10px] text-rose-500">{errors.imei.message}</p>}
+                <div className="col-span-1 sm:col-span-2 space-y-1.5">
+                  <SmartImeiInput
+                    id="buyback-imei"
+                    label="IMEI (15 Hane)"
+                    required
+                    value={watch("imei") || ""}
+                    onChange={(val) => setValue("imei", val, { shouldValidate: true, shouldDirty: true })}
+                    onLookupComplete={handleImeiLookupComplete}
+                    error={errors.imei?.message}
+                    placeholder="14 hane yazınca 15. Luhn basamağı otomatik tamamlanır"
+                    variant="buyback"
+                  />
                 </div>
-                <div className="space-y-1.5">
+                <div className="col-span-1 sm:col-span-2 space-y-1.5">
                   <Label className={labelCls}>Seri No (S/N) (Opsiyonel)</Label>
                   <Input {...register("serialNumber")} placeholder="SN / EID / Seri Numarası" className={inputCls} />
                 </div>
