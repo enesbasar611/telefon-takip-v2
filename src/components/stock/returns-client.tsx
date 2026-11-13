@@ -23,7 +23,8 @@ import {
     Undo2,
     Plus,
     Navigation,
-    MessageCircle
+    MessageCircle,
+    Wallet
 } from "lucide-react";
 import { processReturn, rejectReturn } from "@/lib/actions/return-actions";
 import { AddReturnModal } from "@/components/stock/add-return-modal";
@@ -537,10 +538,90 @@ export function ReturnsClient({ initialData, suppliers = [] }: ReturnsClientProp
                                 </div>
                             )}
 
-                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.restockProduct && <span className="text-emerald-500 font-medium">• {selectedTicket.quantity} Adet ürün stoğa geri eklenecektir.<br /></span>}
-                            {returnAction === "EXCHANGED" && <span className="text-rose-500 font-medium">• {selectedTicket?.quantity} Adet sağlam ürün stoktan düşülecektir.<br /></span>}
-                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "DEBT" && <span className="text-emerald-500 font-medium">Musteri borcu bu islem onaylaninca iade tutari kadar dusecektir.</span>}
-                            {(returnAction === "RESTOCKED" || returnAction === "REFUNDED") && selectedTicket?.sourceType === "SALE" && <span className="text-rose-500 font-medium">• Kasa hesabından {(selectedTicket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(selectedTicket.refundAmount).toLocaleString('tr-TR')} para iadesi çıkışı yapılacaktır.</span>}
+                            {/* İşlem Etki Raporu */}
+                            {selectedTicket && (
+                                <div className="mt-4 rounded-2xl bg-muted/40 border border-border/50 p-3.5 space-y-2.5 text-xs text-foreground">
+                                    <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                                        <span className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">İade İşlem Etki Raporu</span>
+                                        <Badge variant="outline" className={cn(
+                                            "text-[10px] font-bold px-2 py-0.5",
+                                            (selectedTicket.sourceType === "DEBT" || selectedTicket.debtId)
+                                                ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                                : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                        )}>
+                                            {(selectedTicket.sourceType === "DEBT" || selectedTicket.debtId) ? "Veresiye Borç İadesi" : "Peşin Satış İadesi"}
+                                        </Badge>
+                                    </div>
+
+                                    {/* 1. Stok Hareketi */}
+                                    <div className="flex items-start gap-2.5">
+                                        <Package className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <span className="font-bold text-foreground">Stok Hareketi: </span>
+                                            {returnAction === "RESTOCKED" ? (
+                                                selectedTicket.restockProduct ? (
+                                                    <span className="text-emerald-500 font-semibold">+{selectedTicket.quantity} Adet ürün sağlam stoğa geri eklenecektir.</span>
+                                                ) : (
+                                                    <span className="text-amber-500 font-semibold">Stok hareketi yapılmayacaktır (Hurda/Arızalı parça).</span>
+                                                )
+                                            ) : returnAction === "EXCHANGED" ? (
+                                                <span className="text-rose-500 font-semibold">Müşteriye sağlam yenisi verildiği için 1 adet ürün stoktan düşülecektir.</span>
+                                            ) : returnAction === "SENT_TO_SUPPLIER" ? (
+                                                <span className="text-blue-500 font-semibold">Ürün tedarikçiye gönderilmek üzere kurye/sevk havuzuna aktarılacaktır.</span>
+                                            ) : (
+                                                <span className="text-amber-500 font-semibold">Stoğa eklenmeyecektir (İmha/çöp veya borç düşümü).</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 2. Kasa / Nakit Durumu */}
+                                    <div className="flex items-start gap-2.5">
+                                        <Wallet className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <span className="font-bold text-foreground">Kasa Bakiyesi: </span>
+                                            {(selectedTicket.sourceType === "DEBT" || selectedTicket.debtId) ? (
+                                                <span className="text-emerald-500 font-semibold">
+                                                    Kasa DEĞİŞMEZ. (Veresiye borçlu işlem olduğu için kasadan nakit çıkışı <u>yapılmaz</u>).
+                                                </span>
+                                            ) : returnAction === "EXCHANGED" || returnAction === "SENT_TO_SUPPLIER" ? (
+                                                <span className="text-muted-foreground font-semibold">
+                                                    Kasa DEĞİŞMEZ. (Para iadesi hareketi yapılmaz).
+                                                </span>
+                                            ) : (
+                                                <span className="text-rose-500 font-bold">
+                                                    Kasa hesabından {(selectedTicket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(selectedTicket.refundAmount || 0).toLocaleString('tr-TR')} nakit para iadesi çıkışı kaydedilecektir.
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Veresiye / Borç Durumu */}
+                                    <div className="flex items-start gap-2.5">
+                                        <FileText className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <span className="font-bold text-foreground">Veresiye Durumu: </span>
+                                            {(selectedTicket.sourceType === "DEBT" || selectedTicket.debtId) ? (
+                                                returnAction === "EXCHANGED" ? (
+                                                    <span className="text-muted-foreground font-semibold">
+                                                        Borç DEĞİŞMEZ. (Aynı değerde yeni ürün verildiği için cari bakiye korunur).
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-blue-500 font-bold">
+                                                        Müşterinin veresiye borcundan {(selectedTicket.refundCurrency || "TRY") === "USD" ? "$" : "₺"}{Number(selectedTicket.refundAmount || 0).toLocaleString('tr-TR')} anında silinecektir.
+                                                    </span>
+                                                )
+                                            ) : (
+                                                <span className="text-muted-foreground font-semibold">
+                                                    Veresiye borcu yoktur (Peşin satış işlemi).
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+
+
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">

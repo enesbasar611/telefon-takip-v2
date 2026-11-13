@@ -33,8 +33,12 @@ import {
     Store,
     RefreshCcw,
     X,
-    CheckCircle2
+    CheckCircle2,
+    Wallet,
+    FileText,
+    Info
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn, getProductCompatibility } from "@/lib/utils";
 import { toast } from "sonner";
 import { searchProducts } from "@/lib/actions/product-actions";
@@ -96,13 +100,95 @@ interface ReturnItem {
 
 const currencySymbol = (currency?: string) => currency === "USD" ? "$" : "₺";
 
-const returnActionDescriptions: Record<ReturnProcessingAction, string> = {
-    RESTOCK: "Ürün tamamen iade alınır, tutar kasadan/hesaptan düşülür ve ürün stoğa eklenir.",
-    DEBT_DEDUCT: "Ürün iade alınır, müşteriden borç düşülür (stok hareketi yapılmaz).",
-    SEND_SUPPLIER: "Ürün iade alınır, müşteriden borç düşülür, stoktan çıkarılıp tedarikçiye gönderildi olarak işaretlenir.",
-    DISCARD: "Ürün iade alınır, müşteriden borç düşülür, stoğa eklenmez (çöpe atılır).",
-    WAIT: "İade kaydı beklemeye alınır; borç, kasa ve stok şimdilik değişmez.",
-};
+interface ReturnImpactInfo {
+    title: string;
+    stock: string;
+    stockColor: string;
+    kasa: string;
+    kasaColor: string;
+    debt: string;
+    debtColor: string;
+}
+
+function getItemImpact(
+    action: ReturnProcessingAction,
+    isDebt: boolean,
+    quantity: number,
+    refundAmount: number,
+    currency: string
+): ReturnImpactInfo {
+    const symbol = currencySymbol(currency);
+    const formattedAmount = `${symbol}${Number(refundAmount || 0).toLocaleString("tr-TR")}`;
+
+    switch (action) {
+        case "RESTOCK":
+            return {
+                title: "İade Alındı & Stoğa Eklendi",
+                stock: `+${quantity} Adet sağlam stoğa geri eklenir.`,
+                stockColor: "text-emerald-500",
+                kasa: isDebt 
+                    ? "Kasa DEĞİŞMEZ. (Veresiye borçlu işlem olduğu için kasadan nakit çıkışı yapılmaz)." 
+                    : `Seçilen kasa hesabından ${formattedAmount} nakit para iadesi çıkışı kaydedilir.`,
+                kasaColor: isDebt ? "text-emerald-500 font-semibold" : "text-rose-500 font-bold",
+                debt: isDebt 
+                    ? `Müşterinin veresiye borcundan ${formattedAmount} anında silinir.` 
+                    : "Veresiye borcu yoktur (Peşin satış).",
+                debtColor: isDebt ? "text-blue-500 font-bold" : "text-muted-foreground",
+            };
+        case "DEBT_DEDUCT":
+            return {
+                title: "Sadece Borçtan Düşüldü",
+                stock: "Stok DEĞİŞMEZ. (Stoğa ürün eklenmez).",
+                stockColor: "text-amber-500",
+                kasa: "Kasa DEĞİŞMEZ. (Kasadan nakit çıkışı yapılmaz).",
+                kasaColor: "text-emerald-500 font-semibold",
+                debt: isDebt 
+                    ? `Müşterinin veresiye borcundan ${formattedAmount} anında silinir.` 
+                    : "Veresiye borcu yoktur.",
+                debtColor: isDebt ? "text-blue-500 font-bold" : "text-muted-foreground",
+            };
+        case "SEND_SUPPLIER":
+            return {
+                title: "Tedarikçiye İade Gönderilecek",
+                stock: "Mağaza stoğuna girmez (Tedarikçiye sevk havuzuna aktarılır).",
+                stockColor: "text-blue-500",
+                kasa: isDebt 
+                    ? "Kasa DEĞİŞMEZ. (Kasadan nakit çıkışı yapılmaz)." 
+                    : `Kasadan ${formattedAmount} iade çıkışı kaydedilir.`,
+                kasaColor: isDebt ? "text-emerald-500 font-semibold" : "text-rose-500 font-bold",
+                debt: isDebt 
+                    ? `Müşterinin borcundan ${formattedAmount} anında silinir.` 
+                    : "Veresiye borcu yoktur.",
+                debtColor: isDebt ? "text-blue-500 font-bold" : "text-muted-foreground",
+            };
+        case "DISCARD":
+            return {
+                title: "Hurda / Çöpe Atıldı",
+                stock: "Hasarlı/hurda olarak işaretlenir, sağlam stoğa GİRMEZ.",
+                stockColor: "text-amber-500",
+                kasa: isDebt 
+                    ? "Kasa DEĞİŞMEZ. (Kasadan nakit çıkışı yapılmaz)." 
+                    : `Kasadan ${formattedAmount} para iadesi çıkışı kaydedilir.`,
+                kasaColor: isDebt ? "text-emerald-500 font-semibold" : "text-rose-500 font-bold",
+                debt: isDebt 
+                    ? `Müşterinin borcundan ${formattedAmount} anında silinir.` 
+                    : "Veresiye borcu yoktur.",
+                debtColor: isDebt ? "text-blue-500 font-bold" : "text-muted-foreground",
+            };
+        case "WAIT":
+            return {
+                title: "İncelemeye Alındı (Beklemede)",
+                stock: "Beklemede. (İade onaylanana kadar stok DEĞİŞMEZ).",
+                stockColor: "text-muted-foreground",
+                kasa: "Kasa DEĞİŞMEZ. (İade onaylanana kadar nakit çıkışı yapılmaz).",
+                kasaColor: "text-muted-foreground",
+                debt: isDebt 
+                    ? "Borç DEĞİŞMEZ. (İade onaylanana kadar borç silinmez)." 
+                    : "Veresiye borcu yoktur.",
+                debtColor: "text-muted-foreground",
+            };
+    }
+}
 
 export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: AddReturnModalProps) {
     const queryClient = useQueryClient();
@@ -392,7 +478,19 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
         }
     };
 
-    const requiresFinanceAccount = items.some((item) => item.refundAmount > 0);
+    const isDebtItem = (item: ReturnItem) => {
+        if ((item as any).debtId) return true;
+        if ((item as any).saleId) {
+            const sale = customerSales.find(s => s.id === (item as any).saleId);
+            if (sale?._fromDebt || sale?.paymentMethod === "DEBT") return true;
+        }
+        return false;
+    };
+
+    const requiresFinanceAccount = items.some((item) => {
+        const isDebt = isDebtItem(item);
+        return !isDebt && (item.refundAmount || 0) > 0 && item.returnAction !== "WAIT";
+    });
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -730,9 +828,6 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                                 <SelectItem value="CUSTOMER_CANCEL">Vazgeçme</SelectItem>
                                                             </SelectContent>
                                                         </Select>
-                                                        <p className="text-[10px] leading-snug text-muted-foreground/80 px-1">
-                                                            {returnActionDescriptions[item.returnAction]}
-                                                        </p>
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <Label className="text-[10px] uppercase font-bold text-muted-foreground pl-1">ISLEM</Label>
@@ -806,6 +901,59 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                                 </div>
                                             </div>
 
+                                            {/* İade İşlem Etki Raporu */}
+                                            {(() => {
+                                                const isDebt = isDebtItem(item);
+                                                const impact = getItemImpact(item.returnAction || "RESTOCK", isDebt, item.quantity, item.refundAmount, item.refundCurrency);
+                                                return (
+                                                    <div className="rounded-2xl bg-muted/40 border border-border/50 p-3.5 space-y-2.5 text-xs text-foreground">
+                                                        <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                                                            <span className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                                                <Info className="w-3.5 h-3.5 text-primary" />
+                                                                İade İşlem Etki Raporu
+                                                            </span>
+                                                            <Badge variant="outline" className={cn(
+                                                                "text-[10px] font-bold px-2 py-0.5",
+                                                                isDebt
+                                                                    ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                                                    : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                                            )}>
+                                                                {isDebt ? "Veresiye Borç İadesi" : "Peşin Satış İadesi"}
+                                                            </Badge>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-0.5">
+                                                            {/* 1. Stok Hareketi */}
+                                                            <div className="flex items-start gap-2">
+                                                                <Package className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                                                <div className="leading-snug">
+                                                                    <div className="text-[10px] uppercase font-bold text-muted-foreground">Stok Hareketi</div>
+                                                                    <div className={cn("text-xs font-semibold mt-0.5", impact.stockColor)}>{impact.stock}</div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* 2. Kasa Bakiyesi */}
+                                                            <div className="flex items-start gap-2">
+                                                                <Wallet className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                                                                <div className="leading-snug">
+                                                                    <div className="text-[10px] uppercase font-bold text-muted-foreground">Kasa Bakiyesi</div>
+                                                                    <div className={cn("text-xs mt-0.5", impact.kasaColor)}>{impact.kasa}</div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* 3. Veresiye Durumu */}
+                                                            <div className="flex items-start gap-2">
+                                                                <FileText className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                                                                <div className="leading-snug">
+                                                                    <div className="text-[10px] uppercase font-bold text-muted-foreground">Veresiye Durumu</div>
+                                                                    <div className={cn("text-xs mt-0.5", impact.debtColor)}>{impact.debt}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+
                                             {
                                                 item.productId && item.restockProduct && item.immediateRestock && (
                                                     <div className="grid grid-cols-2 gap-4 pb-2 animate-in slide-in-from-top-1 duration-200">
@@ -850,10 +998,13 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                     </div>
 
                     <DialogFooter className="p-6 pt-4 border-t border-border/40 bg-muted/30 gap-4 flex-col sm:flex-row items-center">
-                        <div className="flex-1 w-full max-w-sm">
-                            {requiresFinanceAccount && (
+                        <div className="flex-1 w-full max-w-md">
+                            {requiresFinanceAccount ? (
                                 <div className="space-y-1.5">
-                                    <Label className="text-[10px] uppercase font-bold text-rose-500 pl-1">Ödemenin Çıkacağı Kasa / Hesap</Label>
+                                    <Label className="text-[10px] uppercase font-bold text-rose-500 pl-1 flex items-center gap-1.5">
+                                        <Wallet className="w-3.5 h-3.5" />
+                                        Peşin İade - Ödemenin Çıkacağı Kasa / Hesap *
+                                    </Label>
                                     <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                                         <SelectTrigger className="h-11 rounded-xl border-rose-500/20 bg-rose-500/5 focus:ring-rose-500/20">
                                             <SelectValue placeholder="Kasa/Hesap Seçin" />
@@ -867,7 +1018,23 @@ export function AddReturnModal({ open, onOpenChange, onSuccess, initialData }: A
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            )}
+                            ) : items.length > 0 && items.every(item => isDebtItem(item)) ? (
+                                <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-2.5">
+                                    <CheckCircle2 className="w-5 h-5 shrink-0 text-blue-500" />
+                                    <div className="leading-snug">
+                                        <div className="font-bold">Veresiye Borç İadesi</div>
+                                        <div className="text-[11px] text-muted-foreground">Kasadan nakit çıkışı yapılmaz. Tutar doğrudan müşterinin açık veresiye borcundan düşülür.</div>
+                                    </div>
+                                </div>
+                            ) : items.length > 0 && items.every(item => item.returnAction === "WAIT") ? (
+                                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2.5">
+                                    <Info className="w-5 h-5 shrink-0 text-amber-500" />
+                                    <div className="leading-snug">
+                                        <div className="font-bold">İnceleme Modu</div>
+                                        <div className="text-[11px] text-muted-foreground">Kayıt beklemede oluşturulur. Onay verilene kadar kasa, stok veya borç değişmez.</div>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                         <div className="flex gap-3 w-full sm:w-auto shrink-0 mt-auto">
                             <Button

@@ -41,6 +41,28 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-13: İade Sistemi Şeffaflık ve Güvenlik Geliştirmesi (Stok, Kasa ve Veresiye Etki Raporu & Kasa Seçim Mantığı Düzeltmesi):
+  - **Talep:** İade sisteminin tam kontrol edilmesi; kullanıcının yaptığı iade işleminde hangi durumda ne işlem olacağının (kasa bakiyesi, müşteri veresiye borcu ve ürün stok adedinin nasıl değişeceğinin) ekranda net, renkli ve şeffaf biçimde bildirilmesi.
+  - **Tespit Edilen Eksiklikler:**
+    1. **Veresiye İadelerinde Kasa Zorunluluğu Hatası:** `add-return-modal.tsx` içerisinde `requiresFinanceAccount = items.some(item => item.refundAmount > 0)` olarak tanımlı olduğu için, veresiye satıştan iade alınan ürünlerde de kullanıcıdan zorunlu "Ödemenin Çıkacağı Kasa / Hesap" seçmesi isteniyor ve kullanıcılarda kasadan nakit para çıkacağı yanılgısı oluşuyordu.
+    2. **İşlem Etki Açıklamalarının Statik ve Yanıltıcı Olması:** Eski açıklamalar sabit metinlerdi ve ürünün peşin mi yoksa veresiye mi olduğunu ayırt etmeden "kasadan düşülür" ya da "borçtan düşülür" diyerek yanlış bilgi veriyordu.
+    3. **Onay Modalında Eksik Bilgilendirme:** Beklemedeki iadelerin onaylandığı `returns-client.tsx` modalında `EXCHANGED` (değişim) veya `SENT_TO_SUPPLIER` (tedarikçiye sevk) durumlarında stok, kasa ve borcun nasıl etkilendiği net açıklanmıyordu.
+  - **Yapılan İyileştirmeler:**
+    - `src/lib/actions/return-actions.ts`:
+      - `processReturn` ve `createMultipleReturnTickets` içinde `saleId`'den `tx.debt` otomatik arama desteği genişletildi; `SENT_TO_SUPPLIER` durumunda da veresiye borcunun güvenle azaltılması sağlandı.
+    - `src/components/stock/add-return-modal.tsx`:
+      - `isDebtItem` helper fonksiyonu eklendi; veresiye kaynaklı (`debtId` veya `sale._fromDebt` / `paymentMethod === 'DEBT'`) ürünler anında tespit edildi.
+      - `requiresFinanceAccount` mantığı düzeltildi: Yalnızca peşin satıştan dönen ve kasadan nakit/kart iadesi çıkacak ürünler için kasa seçimi zorunlu kılındı.
+      - Alt özet çubuğuna (footer) dinamik bilgilendirme kartı eklendi:
+        - Tümü veresiye ise: Yeşil onay rozeti (`Veresiye Borç İadesi: Kasadan nakit çıkışı yapılmaz. Tutar doğrudan müşterinin veresiye borcundan düşülür.`).
+        - Tümü beklemede ise: Sarı bilgi rozeti (`İnceleme Modu: Onay verilene kadar stok, kasa veya veresiye değişmez.`).
+        - Peşin satış iadesi varsa: Cüzdan ikonlu kasa seçici (`Peşin İade - Ödemenin Çıkacağı Kasa / Hesap *`).
+      - Her bir ürün kartının altına dinamik **"İade İşlem Etki Raporu"** (Stok, Kasa Bakiyesi, Veresiye Durumu) eklendi. Seçilen işleme (`RESTOCK`, `DEBT_DEDUCT`, `SEND_SUPPLIER`, `DISCARD`, `WAIT`) göre gerçekte ne olacağı satır satır ve renk kodlarıyla canlı yansıtıldı.
+    - `src/components/stock/returns-client.tsx`:
+      - Onay modalına renkli rozetli (`Veresiye Borç İadesi` / `Peşin Satış İadesi`) **"İade İşlem Etki Raporu"** entegre edildi.
+      - 4 durum (`RESTOCKED`, `EXCHANGED`, `SENT_TO_SUPPLIER`, `REFUNDED`) için Stok Hareketi, Kasa Bakiyesi ve Veresiye Borcunun net etkisi kullanıcıya onay öncesi açıkça sunuldu.
+  - **Doğrulama:** `npx tsc --noEmit` ile TypeScript derlemesi başarıyla doğrulandı (0 hata).
+
 - [x] 2026-11-13: Veresiye Toplam Borç ve İade Senkronizasyonu (Bayi Kartı, WhatsApp Mesajı ve Hesap Hareketleri Tutarsızlığı Düzeltildi):
   - **Talep:** Veresiye sayfasında (`/veresiye`) bazı bayilerde (örneğin İKRA İLT) müşteri kartında görülen toplam borç ile WhatsApp ekstre mesajı ve Hesap Hareketleri modalındaki borçların tutmaması ($1048.47 vs $985.47, tam $63 fark) ve kartta 215 kalem gibi tüm geçmişin açık borç gibi algılanması sorununun kökten çözülmesi.
   - **Kök Neden Tespiti:**

@@ -510,7 +510,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
       }
 
       // Handle Finance
-      if (action === "RESTOCKED" || action === "REFUNDED") {
+      if (action === "RESTOCKED" || action === "REFUNDED" || action === "SENT_TO_SUPPLIER") {
         let targetDebtId = ticket.debtId;
         if (!targetDebtId && ticket.saleId) {
           const linkedDebt = await tx.debt.findFirst({ where: { saleId: ticket.saleId, shopId } });
@@ -525,7 +525,7 @@ export async function processReturn(id: string, action: any, extraNotes?: string
 
         if (targetDebtId && ticket.refundAmount) {
           await reduceDebtForReturn(tx, shopId, targetDebtId, ticket.refundAmount);
-        } else if (ticket.sourceType === "SALE" && ticket.refundAmount) {
+        } else if (ticket.sourceType === "SALE" && ticket.refundAmount && (action === "RESTOCKED" || action === "REFUNDED")) {
           await tx.transaction.create({
             data: {
               type: "EXPENSE",
@@ -741,10 +741,16 @@ export async function createMultipleReturnTickets(tickets: {
         // Handle Finance / Debt impact
         const refundVal = Number(data.refundAmount || 0);
         if (refundVal > 0) {
-          if (data.debtId && processingPlan.reduceDebt) {
+          let targetDebtId = data.debtId;
+          if (!targetDebtId && data.saleId) {
+            const linkedDebt = await tx.debt.findFirst({ where: { saleId: data.saleId, shopId } });
+            if (linkedDebt) targetDebtId = linkedDebt.id;
+          }
+
+          if (targetDebtId && processingPlan.reduceDebt) {
             // Veresiye borçlu işlem: Yalnızca müşterinin borcundan düşülür.
             // Kasaya önceden nakit girmediği için kasadan çifte nakit çıkışı (recordReturnExpense) YAPILMAZ.
-            await reduceDebtForReturn(tx, shopId, data.debtId, refundVal);
+            await reduceDebtForReturn(tx, shopId, targetDebtId, refundVal);
           } else if (data.saleId || data.sourceType === "SALE" || data.sourceType === "CUSTOMER") {
             // For completed sales or general customer returns, create an Expense transaction
             if (financeAccountId) {
