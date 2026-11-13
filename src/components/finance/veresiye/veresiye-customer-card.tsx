@@ -35,6 +35,7 @@ interface VeresiyeCustomerCardProps {
         totalRemainingTRY: number;
         totalRemainingUSD: number;
         debtCount: number;
+        activeDebtCount?: number;
     };
     idx: number;
     viewMode: 'list' | 'grid';
@@ -155,7 +156,29 @@ export function VeresiyeCustomerCard({
                         </span>
                         <span className="opacity-40">•</span>
                         <span className="font-semibold text-primary/80">
-                            {item.debtCount} Kalem
+                            {item.activeDebtCount !== undefined ? (
+                                item.activeDebtCount > 0 ? (
+                                    <span>
+                                        {item.activeDebtCount} Açık Kalem
+                                        {item.debtCount > item.activeDebtCount && (
+                                            <span className="opacity-50 text-[9px] font-normal ml-1">
+                                                ({item.debtCount} Toplam)
+                                            </span>
+                                        )}
+                                    </span>
+                                ) : (
+                                    <span className="text-emerald-500 font-bold">
+                                        Borç Yok
+                                        {item.debtCount > 0 && (
+                                            <span className="opacity-50 text-[9px] font-normal ml-1">
+                                                ({item.debtCount} İşlem)
+                                            </span>
+                                        )}
+                                    </span>
+                                )
+                            ) : (
+                                `${item.debtCount} Kalem`
+                            )}
                         </span>
                     </div>
                 </div>
@@ -179,6 +202,15 @@ export function VeresiyeCustomerCard({
                             {isUsdPrimary ? `(₺${totalInTRY.toLocaleString('tr-TR')})` : `($${totalInUSD})`}
                         </span>
                     </div>
+
+                    {/* Both currencies breakdown if customer owes in both TRY and USD */}
+                    {!hasNoDebt && item.totalRemainingTRY > 0 && item.totalRemainingUSD > 0 && (
+                        <div className="text-[9.5px] font-bold text-muted-foreground/80 tabular-nums tracking-tight flex items-center gap-1 mt-0.5">
+                            <span className="text-blue-500">${item.totalRemainingUSD.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span>+</span>
+                            <span className="text-emerald-500">₺{item.totalRemainingTRY.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                        </div>
+                    )}
 
                     {/* Emanet badge if any */}
                     {hasEmanet && (

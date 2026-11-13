@@ -75,6 +75,71 @@ export const parseUsdRate = (rawRate: unknown): number => {
   return Number.isFinite(num) && num > 0 ? num : 1;
 };
 
+export const RETURNED_STATUSES = ["APPROVED", "RESTOCKED", "REFUNDED", "EXCHANGED", "SENT_TO_SUPPLIER"];
+
+export const getCompletedReturns = (returns: any[] = []) =>
+  (returns || []).filter((r: any) => RETURNED_STATUSES.includes(r.returnStatus));
+
+export const getReturnedDebtAmount = (debt: any, returns: any[] = []) => {
+  const debtId = debt?.id;
+  const saleId = debt?.saleId || debt?.sale?.id;
+  if (!debtId && !saleId) return 0;
+
+  return getCompletedReturns(returns)
+    .filter((r: any) =>
+      (debtId && r.debtId === debtId) ||
+      (saleId && r.saleId === saleId)
+    )
+    .reduce((sum: number, r: any) => sum + Number(r.refundAmount || 0), 0);
+};
+
+export const getReturnedSaleItemAmount = (debt: any, saleItem: any, returns: any[] = []) =>
+  getCompletedReturns(returns)
+    .filter((r: any) =>
+      (!debt?.id || r.debtId === debt.id) &&
+      (!debt?.saleId || r.saleId === debt.saleId || r.saleId === debt.sale?.id) &&
+      (!saleItem?.productId || r.productId === saleItem.productId)
+    )
+    .reduce((sum: number, r: any) => sum + Number(r.refundAmount || 0), 0);
+
+export const adjustDebtForReturns = (debt: any, returns: any[] = []) => {
+  if (!debt) return null;
+  if (debt._isReturnAdjusted) return debt;
+
+  const originalAmount = Number(debt.amount || 0);
+  const returnedAmount = Math.min(originalAmount, getReturnedDebtAmount(debt, returns));
+  if (returnedAmount <= 0) return debt;
+
+  const adjustedAmount = Math.max(0, originalAmount - returnedAmount);
+  if (adjustedAmount <= 0.01) {
+    return {
+      ...debt,
+      amount: 0,
+      remainingAmount: 0,
+      isPaid: true,
+      returnedAmount,
+      _isReturnAdjusted: true,
+    };
+  }
+
+  const rawRemaining = Number(debt.remainingAmount ?? originalAmount);
+  const adjustedRemaining = Math.max(0, Math.min(rawRemaining, adjustedAmount));
+
+  return {
+    ...debt,
+    amount: adjustedAmount,
+    remainingAmount: adjustedRemaining,
+    isPaid: adjustedRemaining <= 0.01,
+    returnedAmount,
+    _isReturnAdjusted: true,
+  };
+};
+
+export const getPrintableDebts = (debts: any[] = [], returns: any[] = []) =>
+  (debts || [])
+    .map((debt) => adjustDebtForReturns(debt, returns))
+    .filter((d: any) => d && (!d._isReturnAdjusted || d.amount > 0.01 || !d.isPaid));
+
 export const extractCleanPaymentNote = (
   item: DebtStatementItem,
   customerName?: string | null

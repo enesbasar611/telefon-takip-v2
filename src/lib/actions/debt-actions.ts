@@ -9,6 +9,7 @@ import { recordAuditLog } from "./audit-actions";
 import { decrementProductStockSafely } from "@/lib/inventory/stock-guards";
 import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
 import { calculatePaymentAllocations } from "@/lib/finance/payment-allocator";
+import { getPrintableDebts, RETURNED_STATUSES } from "@/lib/debt-statement-calculator";
 
 const normalizeMoney = (value: unknown) => {
   const amount = Number(value);
@@ -45,23 +46,45 @@ export async function getDebts() {
   try {
     const shopId = await getShopId(false);
     if (!shopId) return [];
-    const debts = await prisma.debt.findMany({
-      where: { shopId },
-      include: {
-        customer: true,
-        sale: {
-          include: {
-            items: {
-              include: {
-                product: true
+    const [debts, activeReturns] = await Promise.all([
+      prisma.debt.findMany({
+        where: { shopId },
+        include: {
+          customer: true,
+          sale: {
+            include: {
+              items: {
+                include: {
+                  product: true
+                }
               }
             }
           }
+        },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.returnTicket.findMany({
+        where: {
+          shopId,
+          returnStatus: { in: RETURNED_STATUSES as any }
+        },
+        select: {
+          id: true,
+          customerId: true,
+          debtId: true,
+          saleId: true,
+          productId: true,
+          quantity: true,
+          refundAmount: true,
+          refundCurrency: true,
+          returnStatus: true,
+          ticketNumber: true
         }
-      },
-      orderBy: { createdAt: "desc" }
-    });
-    return serializePrisma(debts);
+      })
+    ]);
+
+    const adjustedDebts = getPrintableDebts(debts, activeReturns);
+    return serializePrisma(adjustedDebts);
   } catch (error) {
     console.error("Error fetching debts:", error);
     return [];
@@ -853,23 +876,45 @@ export async function getDebtStatsDetails(filter: {
       return { success: true, data: serializePrisma(transactions) };
     } else {
       // For debt stats (Receivables, Overdue)
-      const debts = await prisma.debt.findMany({
-        where: {
-          shopId,
-          isPaid: false,
-          ...(type === 'RECEIVABLE_TRY' && { currency: 'TRY' }),
-          ...(type === 'RECEIVABLE_USD' && { currency: 'USD' }),
-          ...(type === 'OVERDUE' && {
-            dueDate: { lt: new Date() }
-          }),
-          ...dateFilter
-        },
-        include: {
-          customer: true
-        },
-        orderBy: { createdAt: "desc" }
-      });
-      return { success: true, data: serializePrisma(debts) };
+      const [debts, activeReturns] = await Promise.all([
+        prisma.debt.findMany({
+          where: {
+            shopId,
+            isPaid: false,
+            ...(type === 'RECEIVABLE_TRY' && { currency: 'TRY' }),
+            ...(type === 'RECEIVABLE_USD' && { currency: 'USD' }),
+            ...(type === 'OVERDUE' && {
+              dueDate: { lt: new Date() }
+            }),
+            ...dateFilter
+          },
+          include: {
+            customer: true
+          },
+          orderBy: { createdAt: "desc" }
+        }),
+        prisma.returnTicket.findMany({
+          where: {
+            shopId,
+            returnStatus: { in: RETURNED_STATUSES as any }
+          },
+          select: {
+            id: true,
+            customerId: true,
+            debtId: true,
+            saleId: true,
+            productId: true,
+            quantity: true,
+            refundAmount: true,
+            refundCurrency: true,
+            returnStatus: true,
+            ticketNumber: true
+          }
+        })
+      ]);
+
+      const printableDebts = getPrintableDebts(debts, activeReturns).filter((d: any) => !d.isPaid && Number(d.remainingAmount ?? d.amount ?? 0) > 0.01);
+      return { success: true, data: serializePrisma(printableDebts) };
     }
   } catch (error) {
     console.error("getDebtStatsDetails error:", error);

@@ -41,6 +41,26 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-13: Veresiye Toplam Borç ve İade Senkronizasyonu (Bayi Kartı, WhatsApp Mesajı ve Hesap Hareketleri Tutarsızlığı Düzeltildi):
+  - **Talep:** Veresiye sayfasında (`/veresiye`) bazı bayilerde (örneğin İKRA İLT) müşteri kartında görülen toplam borç ile WhatsApp ekstre mesajı ve Hesap Hareketleri modalındaki borçların tutmaması ($1048.47 vs $985.47, tam $63 fark) ve kartta 215 kalem gibi tüm geçmişin açık borç gibi algılanması sorununun kökten çözülmesi.
+  - **Kök Neden Tespiti:**
+    1. **İade Düşümü Farkı:** Müşterinin onaylanmış/tamamlanmış ürün iadeleri (`ReturnTicket`), Hesap Hareketleri modalı (`historyTotals`) ve WhatsApp ekstresi (`buildUnifiedWhatsAppStatement`) tarafında `getPrintableDebts(debts, activeReturns)` aracılığıyla borçtan dinamik olarak düşülürken; ana Veresiye sayfasındaki kartları besleyen `aggregatedData` ve `getDebts()` fonksiyonunda iadeler hiç çekilmiyor ve borçtan düşülmüyordu. Bu nedenle İKRA İLT'de $63, Aydın İletişim'de $81 tutarındaki iade tutarı kartta borç olarak kalırken, modal ve WhatsApp'ta düşülmüş hali gösteriliyordu.
+    2. **Kalem Sayısı Algısı:** Müşteri kartındaki `debtCount` sayacı müşteriye ait ödenmiş/ödenmemiş tüm geçmiş kayıtları (215 işlem) saydığı için, gerçekte yalnızca 41 açık kalemi olan müşteride "215 Kalem" yazarak kafa karışıklığı yaratıyordu.
+    3. **İade-Veresiye İlişkilendirmesi (`return-actions.ts`):** Satıştan (`sourceType: SALE`) yapılan iadelerde `saleId` bulunduğu halde `debtId` açıkça verilmediğinde `processReturn` ve `normalizeReturnRelations` adımları satışa bağlı veresiye borcunu (`Debt`) tespit edip `reduceDebtForReturn` çalıştırmıyor, harici gider yazıyordu.
+    4. **Çift Para Birimi Detayı:** USD ve TRY borcu aynı anda bulunan müşterilerde kartta yalnızca tek toplam gösterildiği için kullanıcı detaydaki $969,59 + ₺800 ayrımını göremiyordu.
+  - **Yapılan İyileştirmeler ve Düzeltmeler:**
+    - `src/lib/debt-statement-calculator.ts`: `adjustDebtForReturns`, `getPrintableDebts`, `getReturnedDebtAmount`, `getReturnedSaleItemAmount`, `getCompletedReturns` fonksiyonları tek merkezde toplanıp export edildi. İadelerin `saleId` ve `debtId` üzerinden çift yönlü eşleşmesi ve `_isReturnAdjusted` idempotent bayrağı ile mükerrer düşüm engellendi.
+    - `src/lib/actions/debt-actions.ts`: `getDebts()` ve `getDebtStatsDetails()` fonksiyonları `prisma.returnTicket` kayıtlarını da paralel çekerek borçları `getPrintableDebts` ile iadeden arındırılmış net bakiyeler halinde döndürecek şekilde güncellendi.
+    - `src/lib/actions/return-actions.ts`: `normalizeReturnRelations` ve `processReturn` içine satışa bağlı borç (`tx.debt.findFirst({ where: { saleId, shopId } })`) otomatik eşleme desteği eklendi; veresiye borcu bulunan satış iadelerinde borç bakiyesinin anında ve veritabanı seviyesinde düşürülmesi garanti altına alındı.
+    - `src/components/finance/veresiye-client.tsx`:
+      - Kod tekrarı olan yerel iade fonksiyonları kaldırılarak merkezi `debt-statement-calculator` fonksiyonları bağlandı.
+      - `aggregatedData` içerisine `activeDebtCount` (açık/ödenmemiş kalem sayısı) eklendi ve bakiyeler 2 ondalık basamağa yuvarlandı.
+      - `historyTotals` bakiyeleri de kuruş hassasiyetine (`Math.round(... * 100) / 100`) standardize edildi.
+    - `src/components/finance/veresiye/veresiye-customer-card.tsx`:
+      - Kalem gösterimi `{activeDebtCount} Açık Kalem ({debtCount} Toplam)` formatına kavuşturuldu (Örn: `41 Açık Kalem (215 Toplam)` veya `Borç Yok`).
+      - Hem TL hem USD borcu olan müşterilerde kart üzerinde alt satırda `$969,59 + ₺800` para birimi kırılımı eklendi.
+      - Karttaki toplam dönüştürülmüş tutar ($985.47 / ₺49.639) WhatsApp ve Hesap Hareketleri modalı ile kuruşu kuruşuna eşitlendi.
+
 - [x] 2026-11-12: Yerel TAC Veritabanı Zenginleştirme, Otomatik DB Öğrenme (`tac-store.ts`) ve Tek Seferde Hızlı/Kararlı BTK Sorgulama Motoru:
   - **Talep:** Yerel TAC veritabanının zenginleştirilmesi ve e-Devlet BTK sorgularının ikinci kez tekrarlamaya gerek kalmadan tek seferde hızlı ve kararlı sonuç vermesi.
   - **Kök Neden Tespiti (`imei-service.ts`):**

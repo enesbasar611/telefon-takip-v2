@@ -117,6 +117,12 @@ import {
     extractCleanPaymentNote,
     getCurrentDebtTotals,
     parseUsdRate,
+    RETURNED_STATUSES,
+    getCompletedReturns,
+    getReturnedDebtAmount,
+    getReturnedSaleItemAmount,
+    adjustDebtForReturns,
+    getPrintableDebts,
 } from "@/lib/debt-statement-calculator";
 import { calculatePaymentAllocations, PaymentAllocation } from "@/lib/finance/payment-allocator";
 import { VERESIYE_LIVE_QUERY_OPTIONS } from "@/lib/finance/veresiye-query-options";
@@ -227,51 +233,6 @@ const getSafeDebtRemaining = (debt: any) => {
     if (!Number.isFinite(remaining)) return 0;
     return Math.min(Math.max(remaining, 0), amount);
 };
-
-const RETURNED_STATUSES = ["APPROVED", "RESTOCKED", "REFUNDED", "EXCHANGED", "SENT_TO_SUPPLIER"];
-
-const getCompletedReturns = (returns: any[] = []) =>
-    returns.filter((returnTicket: any) => RETURNED_STATUSES.includes(returnTicket.returnStatus));
-
-const getReturnedDebtAmount = (debt: any, returns: any[] = []) => {
-    const debtId = debt?.id;
-    if (!debtId) return 0;
-    return getCompletedReturns(returns)
-        .filter((returnTicket: any) => returnTicket.debtId === debtId)
-        .reduce((sum: number, returnTicket: any) => sum + Number(returnTicket.refundAmount || 0), 0);
-};
-
-const getReturnedSaleItemAmount = (debt: any, saleItem: any, returns: any[] = []) =>
-    getCompletedReturns(returns)
-        .filter((returnTicket: any) =>
-            (!debt?.id || returnTicket.debtId === debt.id) &&
-            (!debt?.saleId || returnTicket.saleId === debt.saleId || returnTicket.saleId === debt.sale?.id) &&
-            (!saleItem?.productId || returnTicket.productId === saleItem.productId)
-        )
-        .reduce((sum: number, returnTicket: any) => sum + Number(returnTicket.refundAmount || 0), 0);
-
-const adjustDebtForReturns = (debt: any, returns: any[] = []) => {
-    const amount = Number(debt?.amount || 0);
-    const returnedAmount = Math.min(amount, getReturnedDebtAmount(debt, returns));
-    if (returnedAmount <= 0) return debt;
-
-    const adjustedAmount = Math.max(0, amount - returnedAmount);
-    if (adjustedAmount <= 0.01) return null;
-
-    const adjustedRemaining = Math.min(getSafeDebtRemaining(debt), adjustedAmount);
-    return {
-        ...debt,
-        amount: adjustedAmount,
-        remainingAmount: adjustedRemaining,
-        isPaid: adjustedRemaining <= 0.01,
-        returnedAmount,
-    };
-};
-
-const getPrintableDebts = (debts: any[] = [], returns: any[] = []) =>
-    debts
-        .map((debt) => adjustDebtForReturns(debt, returns))
-        .filter(Boolean);
 
 const filterPaidForOutput = (debts: any[] = [], includePaidItems: boolean) =>
     includePaidItems
@@ -825,6 +786,7 @@ export function VeresiyeClient({
             totalRemainingTRY: number;
             totalRemainingUSD: number;
             debtCount: number;
+            activeDebtCount: number;
             debtItems: any[];
         }> = {};
 
@@ -841,15 +803,17 @@ export function VeresiyeClient({
                     totalRemainingTRY: 0,
                     totalRemainingUSD: 0,
                     debtCount: 0,
+                    activeDebtCount: 0,
                     debtItems: []
                 };
             }
 
             const remainingAmount = getSafeDebtRemaining(debt);
-            if (!debt.isPaid && remainingAmount > 0) {
+            if (!debt.isPaid && remainingAmount > 0.01) {
                 const amount = remainingAmount;
                 if (debt.currency === 'USD') groups[customerId].totalRemainingUSD += amount;
                 else groups[customerId].totalRemainingTRY += amount;
+                groups[customerId].activeDebtCount++;
             }
 
             groups[customerId].debtCount++;
@@ -857,6 +821,11 @@ export function VeresiyeClient({
             if (new Date(debt.createdAt) > groups[customerId].lastActivity) {
                 groups[customerId].lastActivity = new Date(debt.createdAt);
             }
+        });
+
+        Object.values(groups).forEach((g) => {
+            g.totalRemainingTRY = Math.round(g.totalRemainingTRY * 100) / 100;
+            g.totalRemainingUSD = Math.round(g.totalRemainingUSD * 100) / 100;
         });
 
         let filtered = Object.values(groups);
@@ -1009,7 +978,10 @@ export function VeresiyeClient({
             if (d.currency === 'USD') usdDebt += remaining;
             else tryDebt += remaining;
         });
-        return { try: tryDebt, usd: usdDebt };
+        return {
+            try: Math.round(tryDebt * 100) / 100,
+            usd: Math.round(usdDebt * 100) / 100,
+        };
     }, [debts, historyCustomer, statementData]);
 
     const selectedTotals = useMemo(() => {

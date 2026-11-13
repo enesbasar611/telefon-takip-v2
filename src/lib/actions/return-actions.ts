@@ -125,6 +125,16 @@ async function normalizeReturnRelations(
     }
   }
 
+  if (validSaleId && !validDebtId) {
+    const linkedDebt = await tx.debt.findFirst({
+      where: { saleId: validSaleId, shopId },
+      select: { id: true },
+    });
+    if (linkedDebt) {
+      validDebtId = linkedDebt.id;
+    }
+  }
+
   if (data.serviceTicketId && data.serviceTicketId.trim()) {
     const serviceTicket = await tx.serviceTicket.findFirst({
       where: { id: data.serviceTicketId.trim(), shopId },
@@ -501,8 +511,20 @@ export async function processReturn(id: string, action: any, extraNotes?: string
 
       // Handle Finance
       if (action === "RESTOCKED" || action === "REFUNDED") {
-        if (ticket.debtId && ticket.refundAmount) {
-          await reduceDebtForReturn(tx, shopId, ticket.debtId, ticket.refundAmount);
+        let targetDebtId = ticket.debtId;
+        if (!targetDebtId && ticket.saleId) {
+          const linkedDebt = await tx.debt.findFirst({ where: { saleId: ticket.saleId, shopId } });
+          if (linkedDebt) {
+            targetDebtId = linkedDebt.id;
+            await tx.returnTicket.update({
+              where: { id },
+              data: { debtId: linkedDebt.id },
+            });
+          }
+        }
+
+        if (targetDebtId && ticket.refundAmount) {
+          await reduceDebtForReturn(tx, shopId, targetDebtId, ticket.refundAmount);
         } else if (ticket.sourceType === "SALE" && ticket.refundAmount) {
           await tx.transaction.create({
             data: {
