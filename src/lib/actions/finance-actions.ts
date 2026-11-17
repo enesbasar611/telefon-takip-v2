@@ -239,6 +239,32 @@ export async function createAccount(data: {
 }
 
 
+export function parseTransactionDate(dateStr?: string | null): Date {
+  if (!dateStr || !dateStr.trim()) return new Date();
+
+  const cleanStr = dateStr.trim();
+
+  // If datetime string with T or space (e.g. 2026-11-16T14:30 or 2026-11-16 14:30)
+  if (cleanStr.includes("T") || cleanStr.includes(" ")) {
+    const parsed = new Date(cleanStr);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+
+  // If YYYY-MM-DD only
+  const parts = cleanStr.split("-").map(Number);
+  if (parts.length === 3 && !parts.some(isNaN)) {
+    const [year, month, day] = parts;
+    const now = new Date();
+    const isToday = now.getFullYear() === year && now.getMonth() === month - 1 && now.getDate() === day;
+    if (isToday) return now;
+    // For past date without time: preserve current local hour/min/sec instead of UTC 00:00 (which turns to 03:00 in Turkey)
+    return new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+  }
+
+  const fallback = new Date(cleanStr);
+  return isNaN(fallback.getTime()) ? new Date() : fallback;
+}
+
 export async function createManualTransaction(rawData: z.infer<typeof transactionSchema>) {
   try {
     const shopId = await getShopId();
@@ -272,8 +298,8 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
       targetAccountId = account.id;
     }
 
-    const txDateStr = data.date || format(new Date(), "yyyy-MM-dd");
-    const txDate = startOfDay(new Date(txDateStr));
+    const targetCreatedAt = parseTransactionDate(data.date);
+    const txDate = startOfDay(targetCreatedAt);
     const today = startOfDay(new Date());
 
     if (isAfter(txDate, today)) {
@@ -345,7 +371,7 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
           dailySessionId: activeSession?.id,
           userId,
           shopId,
-          createdAt: data.date ? new Date(data.date) : new Date(),
+          createdAt: targetCreatedAt,
           runningBalance: newBalance,
           attachments: {
             create: data.attachments?.map(att => ({
@@ -467,7 +493,7 @@ export async function updateManualTransaction(
           paymentMethod: data.paymentMethod,
           financeAccountId: data.accountId,
           category: data.category,
-          createdAt: data.date ? new Date(data.date) : oldTx.createdAt,
+          createdAt: data.date ? parseTransactionDate(data.date) : oldTx.createdAt,
           attachments: attachmentData.length > 0 ? {
             create: attachmentData
           } : undefined

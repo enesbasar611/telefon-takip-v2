@@ -208,6 +208,7 @@ const loadDashboardStatsForShop = cache(async (shopId: string) => {
     prisma.sale.findMany({
       where: { shopId, createdAt: { gte: monthStart, lte: endOfDay(new Date()) }, finalAmount: { gt: 0 } },
       select: {
+        createdAt: true,
         finalAmount: true,
         transaction: { select: { amount: true, currency: true } },
         items: {
@@ -228,6 +229,7 @@ const loadDashboardStatsForShop = cache(async (shopId: string) => {
     prisma.serviceTicket.findMany({
       where: { shopId, status: "DELIVERED", deliveredAt: { gte: monthStart, lte: endOfDay(new Date()) } },
       select: {
+        deliveredAt: true,
         estimatedCost: true,
         actualCost: true,
         overhead: true,
@@ -278,7 +280,23 @@ const loadDashboardStatsForShop = cache(async (shopId: string) => {
   const monthlyProfit = Math.round((monthlySalesProfit + monthlyServiceProfit) * 100) / 100;
   const totalYesterdayIncome = sumTransactionsInTry(yesterdayServiceIncomeTxs, profitRates);
 
+  // Günlük Kâr Hesaplaması (Bugün satılan ürünler + bugün teslim edilen servisler)
+  const todaySalesForProfit = monthSalesForProfit.filter(
+    (s) => s.createdAt && s.createdAt >= todayStart && s.createdAt <= todayEnd
+  );
+  const todaySalesProfit = calculateSalesGrossProfit(todaySalesForProfit, profitRates);
+
+  const todayDeliveredServices = monthDeliveredServices.filter(
+    (t) => t.deliveredAt && t.deliveredAt >= todayStart && t.deliveredAt <= todayEnd
+  );
+  const todayServiceProfit = calculateServiceProfitAnalytics(todayDeliveredServices).netProfit;
+  const todayProfit = Math.round((todaySalesProfit + todayServiceProfit) * 100) / 100;
+
+  const usdRateNum = Number(profitRates?.usd || 34);
   const todaySalesAmount = Number(todaySalesData?._sum?.finalAmount || 0);
+  const todaySalesUSD = Number((todaySalesAmount / usdRateNum).toFixed(2));
+  const todayProfitUSD = Number((todayProfit / usdRateNum).toFixed(2));
+  const monthlyProfitUSD = Number((monthlyProfit / usdRateNum).toFixed(2));
   const past29Total = Number(last30dSalesAgg?._sum?.finalAmount || 0);
   const avgDailySales = past29Total > 0 ? past29Total / 29 : 0;
   const salesTrendPercent = avgDailySales > 0
@@ -303,14 +321,24 @@ const loadDashboardStatsForShop = cache(async (shopId: string) => {
   return serializePrisma({
     totalSales: Number(totalSalesData?._sum?.finalAmount || 0),
     todaySales: todaySalesAmount,
+    todaySalesUSD,
+    todayProfit,
+    todaySalesProfit,
+    todayServiceProfit,
+    todayProfitUSD,
     kasaBalance: cashBalance,
+    kasaBalanceUSD: Number((cashBalance / usdRateNum).toFixed(2)),
     bankPosBalance,
+    bankPosBalanceUSD: Number((bankPosBalance / usdRateNum).toFixed(2)),
     todayRepairIncome: todayRepairIncome,
+    todayRepairIncomeUSD: Number((todayRepairIncome / usdRateNum).toFixed(2)),
     repairIncomeChange: Number(repairIncomeChange.toFixed(1)),
     collectedPayments: collectedPaymentsTotal,
+    collectedPaymentsUSD: Number((collectedPaymentsTotal / usdRateNum).toFixed(2)),
     pendingServices,
     overdueServicesCount,
     totalDebts: Number(totalDebtData?._sum?.remainingAmount || 0),
+    totalDebtsUSD: Number((Number(totalDebtData?._sum?.remainingAmount || 0) / usdRateNum).toFixed(2)),
     criticalStock: lowStockProducts,
     outOfStockCount,
     pendingProcurementCount,
@@ -318,6 +346,7 @@ const loadDashboardStatsForShop = cache(async (shopId: string) => {
     salesTrendPercent,
     readyDevices: readyTickets,
     monthlyProfit,
+    monthlyProfitUSD,
     monthlySalesProfit,
     monthlyServiceProfit,
     issueDevices: cancelledTickets

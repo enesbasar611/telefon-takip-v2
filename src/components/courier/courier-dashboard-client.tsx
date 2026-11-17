@@ -62,7 +62,7 @@ import {
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getCouriers } from "@/lib/actions/shortage-actions";
-import { getSuppliers } from "@/lib/actions/supplier-actions";
+import { getSuppliersSimple } from "@/lib/actions/supplier-actions";
 import { processReturnOutcome } from "@/lib/actions/return-actions";
 import { Role } from "@prisma/client";
 import { toast } from "sonner";
@@ -209,6 +209,7 @@ export function CourierDashboardClient({
     const [bulkQtyAdd, setBulkQtyAdd] = useState<number>(1);
     const [unassignedSearch, setUnassignedSearch] = useState("");
     const [pendingFilter, setPendingFilter] = useState<"all" | "critical" | "outOfStock" | "deadStock">("all");
+    const [visiblePendingLimit, setVisiblePendingLimit] = useState(40);
     const [isCourierControlOpen, setIsCourierControlOpen] = useState(false);
 
     // React Query for Tasks
@@ -249,7 +250,7 @@ export function CourierDashboardClient({
 
     const { data: suppliersData } = useQuery({
         queryKey: ["suppliers"],
-        queryFn: () => getSuppliers(),
+        queryFn: () => getSuppliersSimple(),
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
@@ -351,6 +352,24 @@ export function CourierDashboardClient({
         );
     })), [items, searchTerm]);
 
+    const groupedItems = useMemo(() => {
+        const groupsMap = new Map<string, { id: string; title: string; items: any[] }>();
+        filteredItems.forEach((item: any) => {
+            const smartCat = getSmartCategory(item);
+            const groupKey = `smart-${smartCat}`;
+
+            if (!groupsMap.has(groupKey)) {
+                groupsMap.set(groupKey, {
+                    id: groupKey,
+                    title: smartCat,
+                    items: []
+                });
+            }
+            groupsMap.get(groupKey)!.items.push(item);
+        });
+        return Array.from(groupsMap.values());
+    }, [filteredItems]);
+
     const { pendingShortages, pendingCounts } = useMemo(() => {
         const unassigned = sortByCourierPriority(allShortages.filter((s: any) => !s.assignedToId));
 
@@ -391,6 +410,10 @@ export function CourierDashboardClient({
 
         return { pendingShortages: filtered, pendingCounts: counts };
     }, [allShortages, pendingFilter, unassignedSearch]);
+
+    useEffect(() => {
+        setVisiblePendingLimit(40);
+    }, [pendingFilter, unassignedSearch]);
     const nextRouteItems = useMemo(() => sortByCourierPriority(items.filter((item: any) => !item.isResolved && !item.isTaken)).slice(0, 3), [items]);
     const highPriorityCount = items.filter((item: any) => ["ACIL", "YUKSEK"].includes(item.courierPriorityLabel)).length;
 
@@ -1105,23 +1128,7 @@ export function CourierDashboardClient({
                     "grid gap-4 sm:gap-8",
                     isAdmin && viewMode === "double" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
                 )}>
-                    {(() => {
-                        const groupsMap = new Map();
-                        filteredItems.forEach((item: any) => {
-                            const smartCat = getSmartCategory(item);
-                            const groupKey = `smart-${smartCat}`;
-
-                            if (!groupsMap.has(groupKey)) {
-                                groupsMap.set(groupKey, {
-                                    id: groupKey,
-                                    title: smartCat,
-                                    items: []
-                                });
-                            }
-                            groupsMap.get(groupKey).items.push(item);
-                        });
-
-                        return Array.from(groupsMap.values()).map((group, idx) => (
+                    {groupedItems.map((group, idx) => (
                             <div key={idx} className="space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="flex items-center justify-between px-1 sm:px-2">
                                     <div className="flex items-center gap-2.5 sm:gap-3">
@@ -1180,7 +1187,6 @@ export function CourierDashboardClient({
                                         {group.items.map((item: any) => (
                                             <motion.div
                                                 key={item.id}
-                                                layout
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.95 }}
@@ -1455,8 +1461,7 @@ export function CourierDashboardClient({
                                     </AnimatePresence>
                                 </div>
                             </div>
-                        ));
-                    })()}
+                        ))}
                 </div>
 
                 {/* Atanmamış Eksikler - Collapsible at Bottom */}
@@ -1580,11 +1585,11 @@ export function CourierDashboardClient({
                                     <span className="font-black uppercase tracking-widest text-[10px]">HİÇ EKSİK YOK</span>
                                 </div>
                             ) : (
-                                <AnimatePresence mode="popLayout">
-                                    {pendingShortages.map((s) => (
+                                <>
+                                    <AnimatePresence mode="popLayout">
+                                    {pendingShortages.slice(0, visiblePendingLimit).map((s) => (
                                         <motion.div
                                             key={s.id}
-                                            layout
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: 10 }}
@@ -1793,7 +1798,21 @@ export function CourierDashboardClient({
                                         </motion.div>
                                     ))}
                                 </AnimatePresence>
-                            )}
+                                {pendingShortages.length > visiblePendingLimit && (
+                                    <div className="pt-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setVisiblePendingLimit((prev) => prev + 40)}
+                                            className="w-full h-9 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 border-white/10 text-muted-foreground hover:text-foreground transition-all"
+                                        >
+                                            Daha Fazla Göster ({pendingShortages.length - visiblePendingLimit} ürün daha)
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
+                        )}
                         </div>
                     </motion.div>
                 </Card>

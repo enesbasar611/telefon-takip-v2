@@ -19,6 +19,31 @@ import {
   revalidateSmartReplenishment,
 } from "@/lib/inventory/replenishment-cache";
 
+export async function getSuppliersSimple() {
+  try {
+    const shopId = await getShopId(false);
+    if (!shopId) return [];
+    const suppliers = await prisma.supplier.findMany({
+      where: { shopId },
+      select: {
+        id: true,
+        name: true,
+        contact: true,
+        phone: true,
+        email: true,
+        address: true,
+        category: true,
+        trustScore: true,
+      },
+      orderBy: { name: "asc" }
+    });
+    return serializePrisma(suppliers);
+  } catch (error) {
+    console.error("Error fetching simple suppliers:", error);
+    return [];
+  }
+}
+
 export async function getSuppliers() {
   try {
     const shopId = await getShopId(false);

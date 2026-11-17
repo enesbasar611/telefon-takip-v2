@@ -9,7 +9,7 @@ import {
 } from "@/lib/actions/shortage-actions";
 import { getCategories } from "@/lib/actions/product-actions";
 import { getCouriers } from "@/lib/actions/shortage-actions";
-import { getSuppliers } from "@/lib/actions/supplier-actions";
+import { getSuppliersSimple } from "@/lib/actions/supplier-actions";
 
 import { Metadata } from "next";
 
@@ -56,7 +56,7 @@ export default async function CourierPage({ searchParams }: CourierPageProps) {
         }),
         queryClient.prefetchQuery({
             queryKey: ["suppliers"],
-            queryFn: () => getSuppliers(),
+            queryFn: () => getSuppliersSimple(),
         }),
         ...(isAdmin ? [
             queryClient.prefetchQuery({

@@ -54,6 +54,10 @@ export function StatCard({
     onClick,
     usdValue,
     defaultCurrency,
+    todaySales,
+    todaySalesUSD,
+    todayProfit,
+    todayProfitUSD,
     profitValue,
     profitUsdValue,
     salesProfitValue,
@@ -275,7 +279,7 @@ export function StatCard({
                 <div className={cn("pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full blur-2xl opacity-20 group-hover:opacity-40 dark:opacity-40 dark:group-hover:opacity-75 transition-opacity duration-500", glassTheme.blobColor)} />
                 <div className={cn("pointer-events-none absolute -bottom-8 -left-8 w-24 h-24 rounded-full blur-xl opacity-15 group-hover:opacity-30 dark:opacity-20 dark:group-hover:opacity-45 transition-opacity duration-500", glassTheme.blobSecondary)} />
 
-                <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full relative z-10 font-sans">
+                <CardContent className="p-3.5 sm:p-4.5 flex flex-col justify-between h-full relative z-10 font-sans">
                     <div className="flex items-start justify-between relative">
                         <div className={cn(
                             "p-2.5 rounded-xl border transition-all duration-300 group-hover:scale-105",
@@ -284,6 +288,15 @@ export function StatCard({
                             <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                         <div className="flex items-center gap-1.5">
+                            {isKasaCard && profitValue !== undefined && profitValue !== null && (
+                                <span
+                                    className="text-[8px] sm:text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 tracking-tight font-bold uppercase shadow-xs hidden sm:inline-flex items-center gap-1"
+                                    title={`Bu Ay Toplam Kâr: ₺${Number(profitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Satış: ₺${Number(salesProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Servis: ₺${Number(serviceProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
+                                >
+                                    <ProfitTrendIcon className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Ay: {isUSD ? formatUSD(profitUsdValue) : `₺${Math.round(Number(profitValue || 0)).toLocaleString("tr-TR")}`}</span>
+                                </span>
+                            )}
                             {badge && (
                                 <span className={cn(
                                     "text-[9px] px-2 py-0.5 rounded-full tracking-tight font-bold uppercase shadow-xs",
@@ -317,11 +330,93 @@ export function StatCard({
                         </div>
                     </div>
 
-                    <div className="mt-3 relative min-w-0 @container">
+                    <div className="mt-2.5 relative min-w-0 @container">
                         <p className="text-[10px] sm:text-[11px] mb-1 font-bold tracking-wider uppercase text-slate-800 dark:text-white/80 truncate">
                             {label}
                         </p>
-                        {profitValue !== undefined && profitValue !== null ? (() => {
+                        {isKasaCard ? (() => {
+                            const numTodaySales = Number(todaySales || 0);
+                            const numTodaySalesUSD = Number(todaySalesUSD ?? (numTodaySales / 34).toFixed(2));
+                            const todaySalesDisplay = isUSD ? formatUSD(numTodaySalesUSD) : formatTRY(numTodaySales);
+
+                            const numTodayProfit = Number(todayProfit || 0);
+                            const numTodayProfitUSD = Number(todayProfitUSD ?? (numTodayProfit / 34).toFixed(2));
+                            const effectiveTodayProfit = isUSD ? numTodayProfitUSD : numTodayProfit;
+                            const isTodayProfitPos = effectiveTodayProfit >= 0;
+                            const todayProfitPrefix = `${effectiveTodayProfit < 0 ? "-" : "+"}${isUSD ? "$" : "₺"}`;
+
+                            const profitTRY = Number(profitValue || 0);
+                            const profitBreakdownTitle = `Bugünkü Kâr: ₺${numTodayProfit.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • Bu Ay Toplam Kâr: ₺${profitTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Satış: ₺${Number(salesProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Servis: ₺${Number(serviceProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+
+                            return (
+                                <>
+                                    <div className="flex flex-col">
+                                        <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/65 mb-0.5 truncate">
+                                            Nakit Kasa
+                                        </span>
+                                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                                            <RevealFinancial
+                                                amount={mainDisplay}
+                                                prefix=""
+                                                deficitText={mainDeficitText}
+                                                className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums leading-tight break-words"
+                                            />
+                                            {secondaryDisplay && (
+                                                <p className="text-[10px] sm:text-[11px] font-semibold text-slate-700 dark:text-white/75 tabular-nums">
+                                                    (<CountingNumber value={secondaryDisplay} />
+                                                    {secondaryDeficitText && (
+                                                        <span className="text-rose-500 font-bold">{secondaryDeficitText}</span>
+                                                    )})
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Günlük Finansal Metrikler: Bugünlük Satış & Bugünün Kârı */}
+                                    <div className="mt-2 pt-2 border-t border-slate-300/50 dark:border-white/10 grid grid-cols-2 gap-2">
+                                        {/* 1. Bugünlük Satış */}
+                                        <div
+                                            className="min-w-0 bg-slate-900/5 dark:bg-white/5 border border-slate-300/50 dark:border-white/10 rounded-xl px-2 py-1 flex flex-col justify-center"
+                                            title={`Bugünkü Satış Cirosu: ${todaySalesDisplay}${numTodaySalesUSD > 0 ? ` (~$${numTodaySalesUSD})` : ""}`}
+                                        >
+                                            <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/65 mb-0.5">
+                                                <ShoppingCart className="h-2.5 w-2.5 shrink-0 text-primary" />
+                                                <span className="truncate">Bugün Satış</span>
+                                            </div>
+                                            <RevealFinancial
+                                                amount={todaySalesDisplay}
+                                                prefix=""
+                                                className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight truncate leading-tight"
+                                            />
+                                        </div>
+
+                                        {/* 2. Bugünün Kârı */}
+                                        <div
+                                            className={cn(
+                                                "min-w-0 border rounded-xl px-2 py-1 flex flex-col justify-center transition-colors",
+                                                isTodayProfitPos
+                                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
+                                                    : "bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300"
+                                            )}
+                                            title={profitBreakdownTitle}
+                                        >
+                                            <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mb-0.5">
+                                                <ProfitTrendIcon className={cn("h-2.5 w-2.5 shrink-0", isTodayProfitPos ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")} />
+                                                <span className="truncate">Bugün Kâr</span>
+                                            </div>
+                                            <RevealFinancial
+                                                amount={Math.abs(effectiveTodayProfit)}
+                                                prefix={todayProfitPrefix}
+                                                className={cn(
+                                                    "text-xs sm:text-sm font-extrabold tabular-nums tracking-tight truncate leading-tight",
+                                                    isTodayProfitPos ? "text-emerald-700 dark:text-emerald-300" : "text-rose-600 dark:text-rose-400"
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })() : profitValue !== undefined && profitValue !== null ? (() => {
                             const profitIsUSD = defaultCurrency === "USD";
                             const profitTRY = Number(profitValue || 0);
                             const profitUSD = Number(profitUsdValue ?? 0);

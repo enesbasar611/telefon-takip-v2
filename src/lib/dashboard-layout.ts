@@ -513,7 +513,7 @@ export const DENSITY_METRICS: Record<
   compact: {
     label: "Kompakt",
     gapPx: 10,
-    statHeightPx: 162,
+    statHeightPx: 172,
     autoMaxHeightPx: 300,
     mobileMaxHeightPx: 290,
     compactHeightPx: 224,
@@ -523,7 +523,7 @@ export const DENSITY_METRICS: Record<
   comfortable: {
     label: "Standart",
     gapPx: 12,
-    statHeightPx: 176,
+    statHeightPx: 186,
     autoMaxHeightPx: 368,
     mobileMaxHeightPx: 336,
     compactHeightPx: 248,
@@ -533,7 +533,7 @@ export const DENSITY_METRICS: Record<
   spacious: {
     label: "Ferah",
     gapPx: 16,
-    statHeightPx: 190,
+    statHeightPx: 202,
     autoMaxHeightPx: 430,
     mobileMaxHeightPx: 380,
     compactHeightPx: 276,

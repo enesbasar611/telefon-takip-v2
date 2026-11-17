@@ -63,6 +63,10 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
     let value = stat.value || "0";
     let subValue = stat.subValue;
     let usdValue = stat.usdValue;
+    let todaySales = stat.todaySales;
+    let todaySalesUSD = stat.todaySalesUSD;
+    let todayProfit = stat.todayProfit;
+    let todayProfitUSD = stat.todayProfitUSD;
     let profitValue = stat.profitValue;
     let profitUsdValue = stat.profitUsdValue;
     let salesProfitValue = stat.salesProfitValue;
@@ -73,13 +77,17 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
         const s = dashboardInit.stats;
         switch (type) {
             case "DAILY_SALES": {
-                // Daily Sales card uses Kasa Balance as primary, Today Sales as sub, Monthly Profit beside it
+                // Daily Sales card uses Kasa Balance as primary, Today Sales and Today Profit
                 value = s.kasaBalance ?? value;
                 const todayFormatted = defaultCurrency === "USD"
                     ? `$${Number(s.todaySalesUSD ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : `₺${Number(s.todaySales ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 subValue = `Günün Satışı: ${todayFormatted}`;
                 usdValue = s.kasaBalanceUSD ?? usdValue;
+                todaySales = s.todaySales ?? todaySales;
+                todaySalesUSD = s.todaySalesUSD ?? todaySalesUSD;
+                todayProfit = s.todayProfit ?? todayProfit;
+                todayProfitUSD = s.todayProfitUSD ?? todayProfitUSD;
                 profitValue = s.monthlyProfit ?? profitValue;
                 profitUsdValue = s.monthlyProfitUSD ?? profitUsdValue;
                 salesProfitValue = s.monthlySalesProfit ?? salesProfitValue;
@@ -154,6 +162,10 @@ export function StatWidgetWrapper({ stat, type, shopId, defaultCurrency, shop, c
                 value={isLoading && !stat.value ? "Yükleniyor..." : value}
                 subValue={subValue}
                 usdValue={usdValue}
+                todaySales={todaySales}
+                todaySalesUSD={todaySalesUSD}
+                todayProfit={todayProfit}
+                todayProfitUSD={todayProfitUSD}
                 profitValue={profitValue}
                 profitUsdValue={profitUsdValue}
                 salesProfitValue={salesProfitValue}

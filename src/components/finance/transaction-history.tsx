@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +16,24 @@ import {
     Search,
     Trash2,
     User,
+    Scale,
+    Receipt,
+    RotateCcw,
+    Filter,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, isThisWeek, isThisMonth } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { KasaBalanceText } from "./kasa-balance-text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -114,6 +125,9 @@ export function TransactionHistory({
     onSearchChange: (value: string) => void;
 }) {
     const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
+    const [typeFilter, setTypeFilter] = useState<"ALL" | "INCOME" | "EXPENSE">("ALL");
+    const [accountFilter, setAccountFilter] = useState<string>("ALL");
+    const [dateFilter, setDateFilter] = useState<"ALL" | "TODAY" | "YESTERDAY" | "THIS_WEEK" | "THIS_MONTH">("ALL");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleteSaleId, setDeleteSaleId] = useState<string | null>(null);
@@ -134,23 +148,102 @@ export function TransactionHistory({
         }
     };
 
-    const filtered = transactions.filter((t) => {
-        if (t.paymentMethod === "DEBT") return false;
+    const availableAccounts = useMemo(() => {
+        const map = new Map<string, string>();
+        transactions.forEach((t) => {
+            const acc = t.financeAccount || t.account;
+            if (acc?.id && acc?.name) {
+                map.set(acc.id, acc.name);
+            }
+        });
+        return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+    }, [transactions]);
 
-        const needle = search.toLowerCase();
-        const matchSearch =
-            t.description?.toLowerCase().includes(needle) ||
-            t.user?.name?.toLowerCase().includes(needle) ||
-            t.financeAccount?.name?.toLowerCase().includes(needle) ||
-            t.account?.name?.toLowerCase().includes(needle) ||
-            t.customer?.name?.toLowerCase().includes(needle) ||
-            t.supplier?.name?.toLowerCase().includes(needle) ||
-            t.category?.toLowerCase().includes(needle);
+    const isFilterActive = paymentFilter !== "ALL" || typeFilter !== "ALL" || accountFilter !== "ALL" || dateFilter !== "ALL" || search.trim().length > 0;
 
-        const matchPayment = paymentFilter === "ALL" || t.paymentMethod === paymentFilter;
+    const resetFilters = () => {
+        setPaymentFilter("ALL");
+        setTypeFilter("ALL");
+        setAccountFilter("ALL");
+        setDateFilter("ALL");
+        onSearchChange("");
+    };
 
-        return matchSearch && matchPayment;
-    });
+    const filtered = useMemo(() => {
+        return transactions.filter((t) => {
+            if (t.paymentMethod === "DEBT") return false;
+
+            const needle = search.toLowerCase().trim();
+            const matchSearch =
+                !needle ||
+                t.description?.toLowerCase().includes(needle) ||
+                t.user?.name?.toLowerCase().includes(needle) ||
+                t.financeAccount?.name?.toLowerCase().includes(needle) ||
+                t.account?.name?.toLowerCase().includes(needle) ||
+                t.customer?.name?.toLowerCase().includes(needle) ||
+                t.supplier?.name?.toLowerCase().includes(needle) ||
+                t.category?.toLowerCase().includes(needle);
+
+            const matchPayment = paymentFilter === "ALL" || t.paymentMethod === paymentFilter;
+            const matchType = typeFilter === "ALL" || t.type === typeFilter;
+            const matchAccount = accountFilter === "ALL" ||
+                t.financeAccountId === accountFilter ||
+                t.accountId === accountFilter ||
+                t.financeAccount?.id === accountFilter ||
+                t.account?.id === accountFilter;
+
+            let matchDate = true;
+            if (dateFilter !== "ALL") {
+                const d = new Date(t.createdAt);
+                if (!isNaN(d.getTime())) {
+                    if (dateFilter === "TODAY") matchDate = isToday(d);
+                    else if (dateFilter === "YESTERDAY") matchDate = isYesterday(d);
+                    else if (dateFilter === "THIS_WEEK") matchDate = isThisWeek(d, { weekStartsOn: 1 });
+                    else if (dateFilter === "THIS_MONTH") matchDate = isThisMonth(d);
+                } else {
+                    matchDate = false;
+                }
+            }
+
+            return matchSearch && matchPayment && matchType && matchAccount && matchDate;
+        });
+    }, [transactions, search, paymentFilter, typeFilter, accountFilter, dateFilter]);
+
+    const totals = useMemo(() => {
+        let totalIncomeTRY = 0;
+        let totalExpenseTRY = 0;
+        let incomeCount = 0;
+        let expenseCount = 0;
+
+        filtered.forEach((t) => {
+            const rawAmount = Number(t.amount || 0);
+            const currency = t.currency || "TRY";
+            const amountTRY = currency === "USD"
+                ? rawAmount * usdRate
+                : currency === "EUR"
+                ? rawAmount * eurRate
+                : rawAmount;
+
+            if (t.type === "INCOME") {
+                totalIncomeTRY += amountTRY;
+                incomeCount++;
+            } else if (t.type === "EXPENSE") {
+                totalExpenseTRY += amountTRY;
+                expenseCount++;
+            }
+        });
+
+        const netTRY = totalIncomeTRY - totalExpenseTRY;
+
+        return {
+            totalIncomeTRY,
+            totalExpenseTRY,
+            netTRY,
+            incomeCount,
+            expenseCount,
+            totalCount: filtered.length,
+        };
+    }, [filtered, usdRate, eurRate]);
 
     const { sortedData, sortField, sortOrder, toggleSort } = useTableSort(filtered, "createdAt", "desc");
 
@@ -307,78 +400,230 @@ export function TransactionHistory({
 
     return (
         <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm rounded-[2rem]">
-            <div className="p-5 md:p-8 border-b border-zinc-200 dark:border-zinc-800 flex flex-col gap-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                    <div className="flex items-center gap-4">
+            <div className="p-4 md:p-6 border-b border-zinc-200 dark:border-zinc-800 flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
                             <History className="h-5 w-5 text-blue-500" />
                         </div>
                         <div>
-                            <CardTitle className="font-medium text-base tracking-tight">Finansal Hareketler</CardTitle>
-                            <p className="text-[10px] text-muted-foreground tracking-widest uppercase opacity-60">Hesap bazlı nakit akışı</p>
+                            <CardTitle className="font-semibold text-base tracking-tight">Finansal Hareketler</CardTitle>
+                            <p className="text-[10px] text-muted-foreground tracking-widest uppercase opacity-60">Hesap bazlı nakit akışı ve işlem geçmişi</p>
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                         {selectedIds.length > 0 && (
                             <Button
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => setIsBulkDeleteOpen(true)}
-                                className="h-10 rounded-xl gap-2 shadow-lg shadow-rose-500/10 uppercase tracking-widest px-4"
+                                className="h-9 rounded-xl gap-2 shadow-lg shadow-rose-500/10 uppercase tracking-widest text-xs px-3"
                             >
-                                <Trash2 className="h-4 w-4" /> {selectedIds.length} Seçili Sil
+                                <Trash2 className="h-3.5 w-3.5" /> {selectedIds.length} Seçili Sil
                             </Button>
                         )}
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={handleExportCsv}
-                                className="h-10 rounded-xl gap-2 text-xs font-semibold"
+                                className="h-9 rounded-xl gap-1.5 text-xs font-semibold px-3"
                             >
-                                <FileSpreadsheet className="h-4 w-4" /> CSV
+                                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" /> CSV
                             </Button>
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={handleExportPdf}
-                                className="h-10 rounded-xl gap-2 text-xs font-semibold"
+                                className="h-9 rounded-xl gap-1.5 text-xs font-semibold px-3"
                             >
-                                <FileText className="h-4 w-4" /> PDF
+                                <FileText className="h-3.5 w-3.5 text-rose-500" /> PDF
                             </Button>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    <div className="relative w-full md:w-72">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                        <Input
-                            value={search}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="İşlem veya kullanıcı ara..."
-                            className="pl-10 h-11 md:h-10 w-full rounded-xl text-xs border-zinc-200 dark:border-zinc-800 bg-muted/20 focus-visible:ring-blue-500/20"
-                        />
-                    </div>
-                    <div className="flex items-center gap-1 p-1 bg-muted/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-x-auto no-scrollbar">
-                        {["ALL", "CASH", "CARD", "TRANSFER"].map((method) => (
+                {/* Filtreleme Çubuğu */}
+                <div className="flex flex-col gap-3">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
+                        {/* Arama Kutusu */}
+                        <div className="relative flex-1 min-w-[200px]">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                            <Input
+                                value={search}
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                placeholder="İşlem, müşteri, tedarikçi, hesap veya kullanıcı ara..."
+                                className="pl-9 h-9 w-full rounded-xl text-xs border-zinc-200 dark:border-zinc-800 bg-muted/20 focus-visible:ring-blue-500/20"
+                            />
+                        </div>
+
+                        {/* İşlem Türü Filtresi (Tümü / Gelir / Gider) */}
+                        <div className="flex items-center gap-1 p-1 bg-muted/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-x-auto no-scrollbar shrink-0">
                             <Button
-                                key={method}
-                                variant={paymentFilter === method ? "secondary" : "ghost"}
+                                variant={typeFilter === "ALL" ? "secondary" : "ghost"}
                                 size="sm"
-                                onClick={() => setPaymentFilter(method)}
+                                onClick={() => setTypeFilter("ALL")}
                                 className={cn(
-                                    "h-8 text-[10px] rounded-lg px-3 md:px-4 transition-all uppercase tracking-tight flex-1 md:flex-none",
-                                    paymentFilter === method ? "bg-background shadow-md text-foreground" : "text-muted-foreground/60 hover:text-foreground"
+                                    "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight",
+                                    typeFilter === "ALL" ? "bg-background shadow-sm text-foreground font-semibold" : "text-muted-foreground/70 hover:text-foreground"
                                 )}
                             >
-                                {method === "ALL" ? "Tümü" : paymentLabels[method]}
+                                Tümü
                             </Button>
-                        ))}
+                            <Button
+                                variant={typeFilter === "INCOME" ? "secondary" : "ghost"}
+                                size="sm"
+                                onClick={() => setTypeFilter("INCOME")}
+                                className={cn(
+                                    "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight gap-1",
+                                    typeFilter === "INCOME" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm" : "text-emerald-600/70 hover:text-emerald-600"
+                                )}
+                            >
+                                <ArrowUpRight className="h-3 w-3" /> Gelir (+)
+                            </Button>
+                            <Button
+                                variant={typeFilter === "EXPENSE" ? "secondary" : "ghost"}
+                                size="sm"
+                                onClick={() => setTypeFilter("EXPENSE")}
+                                className={cn(
+                                    "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight gap-1",
+                                    typeFilter === "EXPENSE" ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold shadow-sm" : "text-rose-600/70 hover:text-rose-600"
+                                )}
+                            >
+                                <ArrowDownRight className="h-3 w-3" /> Gider (-)
+                            </Button>
+                        </div>
+
+                        {/* Ödeme Yöntemi Filtresi */}
+                        <div className="flex items-center gap-1 p-1 bg-muted/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-x-auto no-scrollbar shrink-0">
+                            {["ALL", "CASH", "CARD", "TRANSFER"].map((method) => (
+                                <Button
+                                    key={method}
+                                    variant={paymentFilter === method ? "secondary" : "ghost"}
+                                    size="sm"
+                                    onClick={() => setPaymentFilter(method)}
+                                    className={cn(
+                                        "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight",
+                                        paymentFilter === method ? "bg-background shadow-sm text-foreground font-semibold" : "text-muted-foreground/70 hover:text-foreground"
+                                    )}
+                                >
+                                    {method === "ALL" ? "Tüm Kanallar" : paymentLabels[method]}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Detay Filtreleri: Hesap Seçimi, Tarih Seçimi ve Sıfırla */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <div className="w-[180px]">
+                            <Select value={accountFilter} onValueChange={setAccountFilter}>
+                                <SelectTrigger className="h-8 rounded-xl text-xs border-zinc-200 dark:border-zinc-800 bg-muted/20">
+                                    <SelectValue placeholder="Tüm Hesaplar" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="ALL">Tüm Hesaplar / Kasalar</SelectItem>
+                                    {availableAccounts.map((acc) => (
+                                        <SelectItem key={acc.id} value={acc.id}>
+                                            {acc.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="w-[160px]">
+                            <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as any)}>
+                                <SelectTrigger className="h-8 rounded-xl text-xs border-zinc-200 dark:border-zinc-800 bg-muted/20">
+                                    <SelectValue placeholder="Tarih Filtresi" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="ALL">Tüm Zamanlar</SelectItem>
+                                    <SelectItem value="TODAY">Bugün</SelectItem>
+                                    <SelectItem value="YESTERDAY">Dün</SelectItem>
+                                    <SelectItem value="THIS_WEEK">Bu Hafta</SelectItem>
+                                    <SelectItem value="THIS_MONTH">Bu Ay</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {isFilterActive && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={resetFilters}
+                                className="h-8 px-2.5 rounded-xl text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                            >
+                                <RotateCcw className="h-3 w-3" /> Filtreleri Temizle
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Finansal Özet Şeridi (Tutar Toplamları) */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
+                    <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/15 flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Toplam Gelir</span>
+                            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+                        </div>
+                        <div className="mt-1">
+                            <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                +{formatMoney(totals.totalIncomeTRY, "TRY")}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground/70">{totals.incomeCount} giriş / tahsilat</span>
+                        </div>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/15 flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">Toplam Gider</span>
+                            <ArrowDownRight className="h-3.5 w-3.5 text-rose-500" />
+                        </div>
+                        <div className="mt-1">
+                            <div className="text-base font-bold text-rose-600 dark:text-rose-400 tracking-tight">
+                                -{formatMoney(totals.totalExpenseTRY, "TRY")}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground/70">{totals.expenseCount} çıkış / ödeme</span>
+                        </div>
+                    </div>
+
+                    <div className={cn(
+                        "p-3 rounded-2xl border flex flex-col justify-between",
+                        totals.netTRY >= 0
+                            ? "bg-blue-500/5 border-blue-500/15 text-blue-600 dark:text-blue-400"
+                            : "bg-amber-500/5 border-amber-500/15 text-amber-600 dark:text-amber-400"
+                    )}>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider">Net Nakit Akışı</span>
+                            <Scale className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="mt-1">
+                            <div className="text-base font-bold tracking-tight">
+                                {totals.netTRY >= 0 ? "+" : ""}{formatMoney(totals.netTRY, "TRY")}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground/70">
+                                {totals.netTRY >= 0 ? "Pozitif net akış" : "Negatif net akış"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-muted/30 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">İşlem Hacmi</span>
+                            <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="mt-1">
+                            <div className="text-base font-bold text-foreground tracking-tight">
+                                {totals.totalCount} <span className="text-xs font-normal text-muted-foreground">kayıt</span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground/70">
+                                {isFilterActive ? "Filtrelenmiş hareket" : "Tüm hareketler"}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -387,118 +632,119 @@ export function TransactionHistory({
                 <div className="hidden md:block">
                     <Table>
                         <TableHeader className="font-medium bg-muted/10">
-                            <TableRow className="border-border/40 hover:bg-transparent h-[60px]">
-                                <TableHead className="w-[50px] pl-10">
+                            <TableRow className="border-border/40 hover:bg-transparent h-10">
+                                <TableHead className="w-[42px] pl-4">
                                     <Checkbox
                                         checked={selectedIds.length === sortedData.length && sortedData.length > 0}
                                         onCheckedChange={(checked) => handleSelectAll(!!checked)}
                                         className="rounded-md border-zinc-300 dark:border-zinc-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                                     />
                                 </TableHead>
-                                <TableHead>
+                                <TableHead className="w-[120px]">
                                     <SortableHeader label="Tarih" field="createdAt" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                 </TableHead>
-                                <TableHead>
+                                <TableHead className="w-[140px]">
                                     <SortableHeader label="Hesap / Kanal" field="accountId" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                 </TableHead>
                                 <TableHead>
                                     <SortableHeader label="Açıklama" field="description" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} />
                                 </TableHead>
-                                <TableHead className="font-medium text-[10px] text-muted-foreground uppercase opacity-60">Sorumlu</TableHead>
-                                <TableHead className="font-medium pr-8">
+                                <TableHead className="w-[100px] font-medium text-[10px] text-muted-foreground uppercase opacity-60">Sorumlu</TableHead>
+                                <TableHead className="w-[150px] font-medium pr-4 text-right">
                                     <SortableHeader label="Tutar" field="amount" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
                                 </TableHead>
-                                <TableHead className="font-medium pr-10">
+                                <TableHead className="w-[150px] font-medium pr-4 text-right">
                                     <SortableHeader label="Bakiye" field="runningBalance" sortField={sortField} sortOrder={sortOrder} onSort={toggleSort} align="right" />
                                 </TableHead>
-                                <TableHead />
+                                <TableHead className="w-[84px] pr-4 text-right font-medium text-[10px] text-muted-foreground uppercase opacity-60">
+                                    İşlemler
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {sortedData.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="h-48 text-center text-xs text-muted-foreground uppercase tracking-widest opacity-40">
-                                        {search || paymentFilter !== "ALL" ? "Filtre kriterine uyan işlem bulunamadı." : "Henüz finansal hareket yok."}
+                                    <TableCell colSpan={8} className="h-36 text-center text-xs text-muted-foreground uppercase tracking-widest opacity-40">
+                                        {isFilterActive ? "Filtre kriterine uyan işlem bulunamadı." : "Henüz finansal hareket yok."}
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 sortedData.map((t) => (
-                                    <TableRow key={t.id} className="border-border/10 hover:bg-muted/10 transition-all duration-300 group h-20">
-                                        <TableCell className="pl-10">
+                                    <TableRow key={t.id} className="border-border/10 hover:bg-muted/10 transition-colors h-14">
+                                        <TableCell className="pl-4 py-2">
                                             <Checkbox
                                                 checked={selectedIds.includes(t.id)}
                                                 onCheckedChange={(checked) => handleSelectRow(t.id, !!checked)}
                                                 className="rounded-md border-zinc-300 dark:border-zinc-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                                             />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="py-2">
                                             {(() => {
                                                 const date = new Date(t.createdAt);
                                                 const isValid = !isNaN(date.getTime());
                                                 return (
                                                     <div className="flex flex-col">
-                                                        <span className="text-[11px]">{isValid ? format(date, "dd MMM yyyy", { locale: tr }) : "-"}</span>
+                                                        <span className="text-[11px] font-medium leading-tight">{isValid ? format(date, "dd MMM yyyy", { locale: tr }) : "-"}</span>
                                                         <span className="text-[9px] text-muted-foreground opacity-60">{isValid ? format(date, "HH:mm") : "-"}</span>
                                                     </div>
                                                 );
                                             })()}
                                         </TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className="text-[10px] text-blue-500 flex items-center gap-1 uppercase tracking-wider">
+                                        <TableCell className="py-2">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-[10px] font-medium text-blue-500 uppercase tracking-tight truncate max-w-[130px]">
                                                     {t.financeAccount?.name || "Genel Kasa"}
                                                 </span>
-                                                <Badge variant="outline" className="w-fit text-[9px] py-0.5 px-2 rounded-lg bg-muted/30 border-border/40 opacity-80 uppercase tracking-tighter">
+                                                <Badge variant="outline" className="w-fit text-[8px] py-0 px-1.5 rounded bg-muted/30 border-border/40 opacity-80 uppercase tracking-tighter">
                                                     {paymentLabels[t.paymentMethod] || t.paymentMethod}
                                                 </Badge>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">{t.description || "Açıklama belirtilmemiş"}</span>
+                                        <TableCell className="py-2">
+                                            <div className="flex flex-col gap-0.5 max-w-[340px]">
+                                                <span className="text-xs font-medium text-foreground truncate">{t.description || "Açıklama belirtilmemiş"}</span>
                                                 <div className="flex items-center gap-2">
                                                     {t.customer && (
-                                                        <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
-                                                            <User className="h-3 w-3" /> {t.customer.name}
+                                                        <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium truncate max-w-[150px]">
+                                                            <User className="h-3 w-3 shrink-0" /> {t.customer.name}
                                                         </span>
                                                     )}
                                                     {t.supplier && (
-                                                        <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium">
-                                                            <Building2 className="h-3 w-3" /> {t.supplier.name}
+                                                        <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium truncate max-w-[150px]">
+                                                            <Building2 className="h-3 w-3 shrink-0" /> {t.supplier.name}
                                                         </span>
                                                     )}
-                                                    {t.category && <span className="text-[9px] text-muted-foreground/40 uppercase tracking-widest">{t.category}</span>}
+                                                    {t.category && <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">{t.category}</span>}
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-7 w-7 rounded-lg bg-muted border border-border/40 flex items-center justify-center text-[10px] text-muted-foreground shadow-sm">
+                                        <TableCell className="py-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-6 w-6 rounded-md bg-muted border border-border/40 flex items-center justify-center text-[10px] text-muted-foreground shadow-sm shrink-0">
                                                     {t.user?.name?.charAt(0) || "S"}
                                                 </div>
-                                                <span className="text-[10px] uppercase tracking-tight">{t.user?.name || "Sistem"}</span>
+                                                <span className="text-[10px] uppercase tracking-tight truncate max-w-[70px]">{t.user?.name || "Sistem"}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-right pr-8">
+                                        <TableCell className="py-2 text-right pr-4">
                                             <div className="flex flex-col items-end">
-                                                <div className={cn("flex items-center gap-1.5 text-base tracking-tighter font-semibold", t.type === "INCOME" ? "text-emerald-500" : "text-rose-500")}>
+                                                <div className={cn("flex items-center gap-1 text-sm tracking-tight font-semibold", t.type === "INCOME" ? "text-emerald-500" : "text-rose-500")}>
                                                     {t.type === "INCOME" ? "+" : "-"}
                                                     {formatMoney(t.amount, t.currency)}
-                                                    {t.type === "INCOME" ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                                                    {t.type === "INCOME" ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
                                                 </div>
-                                                <div className="flex flex-col items-end opacity-50 space-y-0">
+                                                <div className="text-[9px] text-muted-foreground/60 font-medium">
                                                     {t.currency === "TRY" ? (
-                                                        <>
-                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">~${(Number(t.amount) / usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                            <span className="text-[9px] text-muted-foreground font-medium leading-none">~€{(Number(t.amount) / eurRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                        </>
+                                                        <span>
+                                                            ~${(Number(t.amount) / usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • ~€{(Number(t.amount) / eurRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
                                                     ) : (
-                                                        <span className="text-[10px] text-muted-foreground font-medium">~₺{Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString("tr-TR")}</span>
+                                                        <span>~₺{Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString("tr-TR")}</span>
                                                     )}
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-right pr-10">
+                                        <TableCell className="py-2 text-right pr-4">
                                             <div className="flex flex-col items-end gap-0.5">
                                                 {(() => {
                                                     const hasBalance = t.runningBalance !== null && t.runningBalance !== undefined;
@@ -506,7 +752,7 @@ export function TransactionHistory({
                                                     const isIncome = t.type === "INCOME";
                                                     return (
                                                         <div className={cn(
-                                                            "flex items-center gap-1 text-[11px] font-semibold px-3 py-1 rounded-lg border",
+                                                            "flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border",
                                                             isIncome
                                                                 ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/8 border-emerald-500/20"
                                                                 : "text-rose-600 dark:text-rose-400 bg-rose-500/8 border-rose-500/20"
@@ -532,28 +778,34 @@ export function TransactionHistory({
                                                         />
                                                     </span>
                                                 )}
-                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-widest whitespace-nowrap">
-                                                    {t.financeAccount?.name || "Kasa"} bakiyesi
+                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-wider whitespace-nowrap">
+                                                    {t.financeAccount?.name || "Kasa"} bakiye
                                                 </span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="pr-10">
+                                        <TableCell className="py-2 pr-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <EditTransactionWrapper
                                                     transaction={t}
                                                     trigger={
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-500 transition-all opacity-0 group-hover:opacity-100">
-                                                            <Pencil className="h-4 w-4" />
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title="İşlemi Düzenle"
+                                                            className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 transition-colors"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5" />
                                                         </Button>
                                                     }
                                                 />
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    title="İşlemi Sil"
                                                     onClick={() => handleTriggerDelete(t)}
-                                                    className="h-8 w-8 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"
+                                                    className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
                                         </TableCell>
@@ -647,7 +899,7 @@ export function TransactionHistory({
                 </div>
             </CardContent>
 
-            <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-muted/5">
+            <div className="px-4 md:px-6 py-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-muted/5">
                 <p className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase opacity-60">
                     {filtered.length} / {transactions.length} işlem listeleniyor
                 </p>

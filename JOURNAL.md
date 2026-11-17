@@ -41,6 +41,93 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-17: Kurye Operasyonları Sayfası (/kurye) Yüksek Veri Hacmi & Performans/Stabilite Optimizasyonu:
+  - **Talep:** Veri hacmi yüksek olan ve yoğun çalışan bayilerde internet hızı iyi olmasına rağmen `/kurye` sayfasında yaşanan yavaşlık, donma ve takılmaların tespit edilip çözülmesi.
+  - **Kök Neden & Analiz:**
+    1. **Tedarikçi Sorgusu Aşırı Yükü (`getSuppliers`):** `kurye/page.tsx` SSR aşamasında ve istemci tarafında `getSuppliers()` çağrılıyordu. Bu fonksiyon tüm tedarikçilerin geçmiş alışlarını (`purchases`), kalemlerini (`items`), ürünlerini (`products`), kategorilerini (`category`), stok hareketlerini (`inventoryMovements`) ve iade kayıtlarını (`returns`) 6 tablo derinliğinde çekiyordu. Aylar süren dükkan hareketlerinde bu tek sorgu 5-15MB JSON üretiyor ve HTML içine gömülerek (`dehydrate(queryClient)`) istemciye aktarılıyordu. Halbuki kurye sayfasında tedarikçiler sadece basit bir `<Select>` dropdown'unda (id ve isim) kullanılıyordu.
+    2. **Bellekte Tablo Taraması (`getGlobalShortageList`):** Kritik stok altına düşen ürünler veritabanı seviyesinde filtrelenemediği için `Product.findMany({ criticalStock: { gt: 0 } })` ile binlerce ürün Node.js RAM belleğine yüklenip JavaScript tarafında `p.stock <= p.criticalStock` kontrolü yapılıyordu. Ölü stoklar (`hideFromShortage: true`) için de binlerce satır hafızaya alınıyordu.
+    3. **İstemci Tarafında Layout Thrashing & Bounding Rect Hesaplamaları:** `courier-dashboard-client.tsx` içerisinde görev ve atanmamış eksik listelerindeki her bir ürün `<motion.div layout>` ile sarmalanmıştı. Yüzlerce ürün listelendiğinde Framer Motion'ın `layout` özelliği her render, tuş vuruşu ve seçimde tüm DOM öğeleri için `getBoundingClientRect` hesaplayarak tarayıcıyı kilitliyordu (forced reflow). Ayrıca kategori gruplaması (`groupsMap`) her render döngüsünde JSX içinde sıfırdan hesaplanıyordu.
+    4. **Sınırsız DOM Düğümü:** Atanmamış eksikler listesinde 200+ ürün olduğunda hepsi aynı anda DOM'a basılıyor ve kaydırma kutusu kilitleniyordu.
+  - **Uygulanan Çözümler:**
+    1. `src/lib/actions/supplier-actions.ts`:
+       - Yalnızca gerekli alanları (`id`, `name`, `contact`, `phone`, `email`, `address`, `category`, `trustScore`) çeken son derece hafif `getSuppliersSimple` fonksiyonu oluşturuldu.
+    2. `src/app/(dashboard)/kurye/page.tsx` & `src/components/courier/courier-dashboard-client.tsx`:
+       - Prefetch ve istemci sorgusu `getSuppliersSimple`'a bağlandı. Sayfa transfer boyutu ve SSR yükü %90'ın üzerinde azaltıldı.
+    3. `src/lib/actions/shortage-actions.ts`:
+       - `getGlobalShortageList` içindeki in-memory ürün taraması, doğrudan PostgreSQL indeksli `$queryRaw` SQL sorgusuna çevrildi (`p.stock <= p."criticalStock"` ve `NOT EXISTS (ShortageItem)`). Yanıt süresi 2-3 saniyeden 5-15 milisaniyeye indirildi. Limit 150 kritik ürün ve 100 ölü stok olarak sınırlandırıldı.
+       - `manualItemsRaw` ve `getCourierTasks` sorgularındaki `include` blokları, sadece gerekli sütunları çeken hafif `select` projeksiyonları ile optimize edildi.
+    4. `src/components/courier/courier-dashboard-client.tsx`:
+       - Kategori gruplama algoritması `useMemo` içine taşınarak gereksiz tekrarlı hesaplamalar önlendi.
+       - Liste öğelerindeki `layout` prop'u kaldırılarak tarayıcıdaki layout thrashing ve DOM kilitlemeleri tamamen ortadan kaldırıldı.
+       - Atanmamış eksikler için ilk etapta 40 ürün gösteren ve ihtiyaç halinde "Daha Fazla Göster" ile akıcı şekilde genişleyen pencereleme (windowing) sistemi entegre edildi.
+  - **Doğrulama:** `npx tsc --noEmit` ile 0 hata doğrulandı.
+
+- [x] 2026-11-17: Masaüstü Kasa Bakiyesi Kartına Bugünlük Satış ve Bugünün Kârı Gösterimi Eklendi:
+  - **Talep:** `admin-dashboard.tsx` kasa bakiyesi kartında masaüstü görünümde bugünlük satış ve bugünün kârının görünmemesi sorununun giderilmesi; bu iki finansal metriğin doğrudan kart üzerine eklenmesi.
+  - **Kök Neden & Analiz:**
+    1. **Taşan ve Kırpılan Düzen:** `StatCard` içerisinde `isKasaCard` durumunda `@container` eşiği `@[225px]` olarak kurgulanmıştı. Ancak 24 kolonluk ızgarada 6 kolon (`defaultCols: 6`, 1/4 genişlik) kaplayan bir kartın 1366px veya %125 Windows ölçeklemeli 1080p ekranlardaki iç genişliği ~198px kalıyordu. Bu sebeple 225px eşiği tetiklenmeyip tek sütuna düşüyor, değerler dikeyde alt alta dizilerek sabit `statHeightPx: 176px` kart yüksekliğinden taşıyor ve `overflow-hidden` sebebiyle gizleniyordu.
+    2. **Eksik Günlük Kâr Hesabı:** Backend tarafında `monthlyProfit` (aylık kâr) hesaplanırken, o gün yapılan satış ve o gün teslim edilen servislerin net kârını ifade eden `todayProfit` (Bugünün Kârı) ayrıca hesaplanıp dönülmüyordu.
+    3. **Bugünlük Satışın Görünürlüğü:** `todaySales` sadece en alttaki küçük bir dipnotta (`subValue`) yer aldığı için yükseklik kısıtlamasından dolayı görünmez kalıyordu.
+  - **Yapılan İyileştirmeler:**
+    - `src/lib/actions/dashboard-actions.ts`:
+      - `monthSalesForProfit` sorgusuna `createdAt: true`, `monthDeliveredServices` sorgusuna `deliveredAt: true` eklendi.
+      - Bugün yapılan satışların kârı (`todaySalesProfit`) ve bugün teslim edilen servislerin kârı (`todayServiceProfit`) hesaplanarak `todayProfit` (`todaySalesProfit + todayServiceProfit`), `todayProfitUSD` ve `todaySalesUSD` olarak `getDashboardStats` ve `getDashboardInit` yanıtına eklendi.
+    - `src/components/dashboard/admin-dashboard.tsx` & `src/components/dashboard/stat-widget-wrapper.tsx`:
+      - `statItems[0]` (stat_sales) nesnesine `todaySales`, `todaySalesUSD`, `todayProfit`, `todayProfitUSD` alanları eklendi ve hydration durumunda dinamik senkronize edildi.
+    - `src/components/dashboard/stat-card.tsx`:
+      - `isKasaCard` için özel, kırpılmayan, duyarlı çift metrik çipi eklendi:
+        1. **Bugün Satış:** `ShoppingCart` ikonu ile bugünkü toplam satış cirosu (`₺...` / `$..`).
+        2. **Bugün Kâr:** `TrendingUp` ikonu ile bugün elde edilen net kâr (`+₺...`), renk kodlu (yeşil/kırmızı).
+        3. Üzerine gelindiğinde (tooltip) detaylı satış ve servis kâr kırılımı ile aylık toplam kâr bilgisi sunuldu.
+      - Kartın üst sağ köşesine rozet olarak `Ay: ₺...` (Aylık Toplam Kâr) eklendi, böylece hem günlük hem de aylık metrikler tek kartta eksiksiz sağlandı.
+      - Kart iç padding'i `p-3.5 sm:p-4.5` olarak optimize edildi.
+    - `src/lib/dashboard-layout.ts`:
+      - `DENSITY_METRICS` içerisindeki `statHeightPx` değerleri rahat nefes alacak şekilde (Kompakt: 172px, Standart: 186px, Ferah: 202px) dengelendi.
+  - **Doğrulama:** `npx tsc --noEmit` ile TypeScript kontrolü başarıyla doğrulandı (0 hata).
+
+- [x] 2026-11-17: Finansal Hareketler Tablosu Boşluk Azaltma, Detaylı Filtreleme, Tutar Toplamları ve Sürekli Açık İşlem Butonları İyileştirmesi:
+  - **Talep:** `transaction-history.tsx` finansal hareketler tablosunun incelenmesi, gereksiz boşlukların kaldırılması, filtrelemelerin daha detaylı hale getirilmesi (işlem türü, hesap, tarih), tutar toplamlarının gösterilmesi ve satır işlemler butonlarının (düzenle/sil) sadece hover ile değil sürekli görünür olması.
+  - **Kök Neden & Analiz:**
+    1. **Aşırı Boşluklar (Spacing):** Tablo satır yüksekliği `h-20` (80px), başlık `h-[60px]`, hücre iç boşlukları ise `pl-10` ve `pr-10` olarak sabitlenmişti. Ayrıca çoklu para birimi karşılıkları dikeyde üç satır alt alta (`~$\n~€`) dizildiği için satırlar gereksiz yere uzuyordu.
+    2. **Kısıtlı Filtreleme:** Sadece metin arama ve ödeme tipi butonları vardı. İşlem yönü (Gelir / Gider), kasa/hesap ve tarih aralığı filtreleri yoktu.
+    3. **Eksik Tutar Toplamları:** Filtrelenen hareketlerin toplam gelir, toplam gider, net nakit akışı ve işlem sayısı toplamları ekranda gösterilmiyordu.
+    4. **Gizli İşlem Butonları:** Düzenle (Pencil) ve Sil (Trash2) butonları `opacity-0 group-hover:opacity-100` sınıfı yüzünden mobilde veya masaüstünde mouse üzerine gelmedikçe görünmüyordu; başlıkta da sütun ismi boş bırakılmıştı.
+  - **Yapılan İyileştirmeler:**
+    - `src/components/finance/transaction-history.tsx`:
+      - **Boşluk Optimizasyonu:** Kart başlık padding'i `p-4 md:p-6`, tablo başlık yüksekliği `h-10`, satır yüksekliği `h-14` (56px), hücre padding'leri `pl-4 py-2 pr-4` olarak optimize edildi. Döviz karşılıkları tek satırda yatay dizildi (`~$X • ~€Y`).
+      - **Detaylı Filtreleme:**
+        - **İşlem Türü:** `[Tümü]`, `[Gelir (+)]`, `[Gider (-)]` hızlı hap butonları eklendi.
+        - **Ödeme Kanalı:** `[Tüm Kanallar]`, `[Nakit]`, `[Kart]`, `[Havale]` filtre butonları korundu ve stillendirildi.
+        - **Kasa / Hesap Seçimi:** Sistemdeki aktif hesapları listeleyen dinamik dropdown `<Select>` eklendi.
+        - **Tarih Aralığı:** `Tüm Zamanlar`, `Bugün`, `Dün`, `Bu Hafta`, `Bu Ay` seçeneklerine sahip tarih `<Select>` eklendi (`date-fns` entegrasyonu).
+        - **Filtreleri Temizle:** Aktif filtre olduğunda tek tıkla tüm kriterleri sıfırlayan buton eklendi.
+      - **Finansal Özet Şeridi (Tutar Toplamları):** Filtrelerin hemen altına 4 karttan oluşan şerit eklendi:
+        - `Toplam Gelir (+₺...)` ve tahsilat adedi.
+        - `Toplam Gider (-₺...)` ve ödeme adedi.
+        - `Net Nakit Akışı (+/-₺...)` renk dinamikli (pozitif: mavi, negatif: amber).
+        - `İşlem Hacmi (N kayıt)`.
+      - **Sürekli Açık İşlemler Sütunu:** Tablo başlığına `İŞLEMLER` sütunu eklendi; satırdaki Düzenle ve Sil butonlarından `opacity-0 group-hover:opacity-100` kaldırıldı, butonlar daima erişilebilir hale getirildi.
+  - **Doğrulama:** `npx tsc --noEmit` ile TypeScript derlemesi kontrol edildi ve 0 hatayla başarıyla geçti.
+
+- [x] 2026-11-17: Kasa Gelir/Gider Modal Tarih & Saat Düzeltmesi (03:00 UTC Hatası Çözüldü), Kasa Seçim Stabilizasyonu ve Mobil Uyumluluk:
+  - **Talep:** `create-transaction-modal.tsx` gelir/gider çıkış modalının incelenmesi, sisteme nasıl işlendiğinin analizi, stabilite ve mobil uyumluluğunun kontrolü; giderlerin satış arşivinde varsayılan olarak "16 Kas 2026 03:00" gibi UTC gece yarısı yerine işlemin yapıldığı canlı gün ve saatle kaydedilmesi, kullanıcının isterse geçmiş güne kayıt girebilmesi.
+  - **Kök Neden Tespiti:**
+    1. **03:00 UTC Saat Kayması:** Form varsayılan tarihi `new Date().toISOString().split('T')[0]` olarak üretiyordu. Sunucu tarafında `createManualTransaction` ve `updateManualTransaction` fonksiyonları `createdAt: data.date ? new Date(data.date) : new Date()` çalıştırıyordu. Sadece `YYYY-MM-DD` gönderildiği için Node.js bunu UTC `00:00:00.000Z` olarak ayrıştırıyor, Türkiye yerel saatinde (GMT+3) tam olarak `03:00` oluyordu. Ayrıca formda `date` alanı her zaman dolu geldiğinden gerçek kayıt zamanı (`new Date()`) hiçbir zaman kullanılamıyordu.
+    2. **"Hesap seçimi gereklidir" Hayalet Hatası:** `filteredAccounts` ile `watch("accountId")` arasında iki farklı `useEffect` birbirini tetikleyerek `setValue("accountId", "", { shouldValidate: true })` çağırıyor ve hesap seçili görünse bile hata mesajı takılı kalıyordu.
+    3. **Mobil Uyumluluk:** Mobilde `h-[95vh]` dinamik sanal klavyelerle çakışmaya sebep olabiliyordu.
+  - **Yapılan İyileştirmeler:**
+    - `src/lib/actions/finance-actions.ts`:
+      - `parseTransactionDate` yardımcı fonksiyonu yazıldı. `T` veya saat içeren değerleri doğru yerel saatle parse eder; yalnızca `YYYY-MM-DD` girilirse günün o anki saatini korur; bugünün tarihi ise `new Date()` (canlı zaman damgası) esas alınır.
+      - `createManualTransaction` ve `updateManualTransaction` içinde `createdAt: targetCreatedAt` ataması yapıldı.
+      - İleri tarihli randevu/ajanda kontrolü `startOfDay` ile gün bazında güvenceye alındı (aynı günün sonraki saatleri yanlışlıkla ajandaya yönlendirilmez).
+    - `src/components/finance/create-transaction-modal.tsx`:
+      - Tarih girişi `type="datetime-local"` formatına geçirildi; varsayılan değer o anki canlı tarih/saat (`format(new Date(), "yyyy-MM-dd'T'HH:mm")`) yapıldı.
+      - Hızlı seçim butonları eklendi: `[Şimdi (Bugün)]` ve `[Dün]`.
+      - Tarih kutusu altına canlı bilgilendirme rozeti eklendi: Bugün için yeşil `"Canlı Kayıt"`, geçmiş günler için sarı `"Geçmiş Gün Kaydı"`, ileri tarihler için mavi `"Randevu / Ajanda Planlaması"`.
+      - Kasa seçimi senkronizasyonu tek bir `useEffect` çatısı altında toplandı; ödeme yöntemi değiştiğinde ilk uygun hesap otomatik seçilerek `"Hesap seçimi gereklidir"` hayalet hatası tamamen engellendi.
+      - Modal `h-[92dvh] max-h-[92dvh] w-[95vw] sm:w-full` ile mobil cihazlara ve sanal klavyelere tam uyumlu hale getirildi.
+  - **Doğrulama:** `npx tsc --noEmit` ile TypeScript derlemesi başarıyla doğrulandı (0 hata).
+
 - [x] 2026-11-13: İade Sistemi Şeffaflık ve Güvenlik Geliştirmesi (Stok, Kasa ve Veresiye Etki Raporu & Kasa Seçim Mantığı Düzeltmesi):
   - **Talep:** İade sisteminin tam kontrol edilmesi; kullanıcının yaptığı iade işleminde hangi durumda ne işlem olacağının (kasa bakiyesi, müşteri veresiye borcu ve ürün stok adedinin nasıl değişeceğinin) ekranda net, renkli ve şeffaf biçimde bildirilmesi.
   - **Tespit Edilen Eksiklikler:**

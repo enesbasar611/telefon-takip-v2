@@ -51,7 +51,7 @@ import { getSettings } from "@/lib/actions/setting-actions";
 import { CreateAccountModal } from "./create-account-modal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, subDays, isToday, isAfter, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import { PriceInput } from "@/components/ui/price-input";
 import { KasaBalanceText } from "./kasa-balance-text";
@@ -129,9 +129,9 @@ export function CreateTransactionModal({
       currency: initialData?.currency || "TRY",
       manualCategory: "",
       date: (() => {
-        if (!initialData?.createdAt) return new Date().toISOString().split('T')[0];
+        if (!initialData?.createdAt) return format(new Date(), "yyyy-MM-dd'T'HH:mm");
         const date = new Date(initialData.createdAt);
-        return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        return !isNaN(date.getTime()) ? format(date, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm");
       })(),
     }
   });
@@ -183,14 +183,13 @@ export function CreateTransactionModal({
   }, [accounts, paymentMethod]);
 
   useEffect(() => {
+    if (!open || filteredAccounts.length === 0) return;
     const currentAccountId = watch("accountId");
-    if (currentAccountId && accounts.length > 0) {
-      const isValid = filteredAccounts.some(a => a.id === currentAccountId);
-      if (!isValid) {
-        setValue("accountId", "", { shouldValidate: true });
-      }
+    const isCurrentValid = currentAccountId ? filteredAccounts.some(a => a.id === currentAccountId) : false;
+    if (!isCurrentValid) {
+      setValue("accountId", filteredAccounts[0].id, { shouldValidate: true });
     }
-  }, [paymentMethod, accounts, filteredAccounts, setValue, watch]);
+  }, [open, filteredAccounts, setValue, watch]);
 
   const { data: recentTransactions = [] } = useQuery<any[]>({
     queryKey: ["transactions", { pageSize: 4 }],
@@ -305,11 +304,7 @@ export function CreateTransactionModal({
     }
   }, [searchParams, pathname, router, setValue]);
 
-  useEffect(() => {
-    if (open && accounts.length > 0 && !watch("accountId")) {
-      setValue("accountId", accounts[0].id);
-    }
-  }, [accounts, open, setValue, watch]);
+
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -481,7 +476,7 @@ export function CreateTransactionModal({
           )}
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-[1040px] border border-border/70 p-0 overflow-hidden bg-background text-foreground rounded-3xl shadow-2xl flex flex-col lg:flex-row h-[95vh] lg:h-auto max-h-[95vh] lg:max-h-[880px]">
+      <DialogContent className="max-w-[1040px] w-[95vw] sm:w-full border border-border/70 p-0 overflow-hidden bg-background text-foreground rounded-3xl shadow-2xl flex flex-col lg:flex-row h-[92dvh] lg:h-auto max-h-[92dvh] lg:max-h-[880px]">
         {/* Header Gradient Stripe */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-blue-500 to-rose-500 z-50 opacity-80" />
 
@@ -755,14 +750,72 @@ export function CreateTransactionModal({
             </div>
 
             <div className="space-y-3">
-              <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Calendar className="h-3 w-3" /> TARİH VE SAAT
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-primary" /> İŞLEM TARİHİ VE SAATİ
+                </Label>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setValue("date", format(new Date(), "yyyy-MM-dd'T'HH:mm"), { shouldValidate: true })}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
+                  >
+                    Şimdi (Bugün)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setValue("date", format(subDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm"), { shouldValidate: true })}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground transition-all shadow-sm active:scale-95"
+                  >
+                    Dün
+                  </button>
+                </div>
+              </div>
               <Input
-                type="date"
+                type="datetime-local"
                 {...register("date")}
-                className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs px-6 shadow-none"
+                className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-xs px-5 shadow-none focus-visible:ring-primary/20 transition-all font-semibold"
               />
+              {(() => {
+                const dateVal = watch("date");
+                if (!dateVal) return null;
+                const parsed = new Date(dateVal);
+                if (isNaN(parsed.getTime())) return null;
+
+                const isDateToday = isToday(parsed);
+                const isDateFuture = isAfter(startOfDay(parsed), startOfDay(new Date()));
+
+                if (isDateFuture) {
+                  return (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs animate-in fade-in">
+                      <Calendar className="w-4 h-4 shrink-0" />
+                      <span className="text-[11px] font-medium leading-tight">
+                        İleri tarihli işlem: Bu kayıt doğrudan <strong>Randevu / Ajanda Planlaması</strong>'na aktarılacaktır.
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (isDateToday) {
+                  return (
+                    <div className="flex items-center gap-2 px-2 text-xs text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span className="text-[11px] font-medium">
+                        Canlı Kayıt: İşlem bugünün tarihi ve canlı saati ({format(parsed, "HH:mm")}) ile kaydedilecektir.
+                      </span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span className="text-[11px] font-medium leading-tight">
+                      Geçmiş Gün Kaydı: İşlem <strong>{format(parsed, "d MMMM yyyy HH:mm", { locale: tr })}</strong> tarihine işlenecektir.
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="space-y-3">

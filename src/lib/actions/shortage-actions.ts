@@ -152,15 +152,39 @@ export async function getShortageItems() {
       isTaken: false,
     },
     include: {
-      product: true,
-      assignedTo: true,
-      customer: true,
-      shop: true,
-      supplier: true,
+      product: {
+        select: {
+          id: true,
+          name: true,
+          stock: true,
+          criticalStock: true,
+          buyPrice: true,
+          sellPrice: true,
+          shopId: true,
+          hideFromShortage: true,
+        }
+      },
+      assignedTo: { select: { id: true, name: true, surname: true } },
+      customer: { select: { id: true, name: true, phone: true } },
+      shop: { select: { id: true, name: true } },
+      supplier: { select: { id: true, name: true, phone: true } },
       returnTicket: {
         include: {
-          product: true,
-          customer: true
+          product: {
+            select: {
+              id: true,
+              name: true,
+              stock: true,
+              criticalStock: true,
+            }
+          },
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+            }
+          }
         }
       }
     },
@@ -199,15 +223,52 @@ export async function getGlobalShortageList(dateStr?: string) {
     // 1. Get manual shortage entries
     const manualItemsRaw = await prisma.shortageItem.findMany({
       where: baseWhere,
+      take: 200,
       include: {
-        product: true,
-        customer: true,
-        shop: { select: { name: true } },
-        supplier: true,
+        product: {
+          select: {
+            id: true,
+            name: true,
+            stock: true,
+            criticalStock: true,
+            buyPrice: true,
+            sellPrice: true,
+            shopId: true,
+            hideFromShortage: true,
+          }
+        },
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          }
+        },
+        shop: { select: { id: true, name: true } },
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          }
+        },
         returnTicket: {
           include: {
-            product: true,
-            customer: true
+            product: {
+              select: {
+                id: true,
+                name: true,
+                stock: true,
+                criticalStock: true,
+              }
+            },
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              }
+            }
           }
         }
       },
@@ -221,7 +282,17 @@ export async function getGlobalShortageList(dateStr?: string) {
     if (unlinkedManualItems.length > 0) {
       const names = Array.from(new Set(unlinkedManualItems.map(i => i.name.trim())));
       const matchedProducts = await prisma.product.findMany({
-        where: { shopId, name: { in: names, mode: 'insensitive' } }
+        where: { shopId, name: { in: names, mode: 'insensitive' } },
+        select: {
+          id: true,
+          name: true,
+          stock: true,
+          criticalStock: true,
+          buyPrice: true,
+          sellPrice: true,
+          shopId: true,
+          hideFromShortage: true,
+        }
       });
       const productMap = new Map(matchedProducts.map(p => [p.name.toLowerCase().trim(), p]));
       for (const item of manualItemsRaw) {
@@ -237,72 +308,99 @@ export async function getGlobalShortageList(dateStr?: string) {
       isDeadStock: !!item.product?.hideFromShortage
     }));
 
-    // 2. Get low stock products — app-level filter (Prisma field references cannot be used in lte comparisons)
-    // ... (rest of the logic)
-    const allTrackedProducts = await prisma.product.findMany({
-      where: {
-        shopId,
-        criticalStock: { gt: 0 },
-        hideFromShortage: false
-      }, // only products with a defined critical threshold and not hidden
-      include: {
-        shortageItems: {
-          where: { isResolved: false }
-        },
-        shop: { select: { name: true } }
-      }
-    });
+    // 2. Get low stock products using direct indexed SQL (bypasses full table scans in memory)
+    const lowStockRows: any[] = await prisma.$queryRaw`
+      SELECT 
+        p.id, 
+        p.name, 
+        p.stock, 
+        p."criticalStock", 
+        p."buyPrice", 
+        p."sellPrice", 
+        p."shopId",
+        s.name as "shopName"
+      FROM "Product" p
+      LEFT JOIN "Shop" s ON s.id = p."shopId"
+      WHERE p."shopId" = ${shopId}
+        AND p."isDeleted" = false
+        AND p."criticalStock" > 0
+        AND p."hideFromShortage" = false
+        AND p.stock <= p."criticalStock"
+        AND NOT EXISTS (
+          SELECT 1 FROM "ShortageItem" si
+          WHERE si."productId" = p.id AND si."isResolved" = false
+        )
+      ORDER BY (p."criticalStock" - p.stock) DESC, p.name ASC
+      LIMIT 150
+    `;
 
-    const lowStockProducts = allTrackedProducts.filter((p: any) => p.stock <= p.criticalStock);
-
-    const missingProductAlerts = lowStockProducts
-      .filter((p: any) => p.shortageItems.length === 0)
-      .map((p: any) => ({
-        id: `alert-${p.id}`,
+    const missingProductAlerts = lowStockRows.map((p: any) => ({
+      id: `alert-${p.id}`,
+      name: p.name,
+      quantity: 1,
+      notes: p.shopName ? `${String(p.shopName).toUpperCase()} - STOK AZALDI/BİTTİ` : "STOK AZALDI/BİTTİ",
+      productId: p.id,
+      shopId: p.shopId,
+      shopName: p.shopName,
+      isAlert: true,
+      isDeadStock: false,
+      product: {
+        id: p.id,
         name: p.name,
-        quantity: 1,
-        notes: p.shop?.name ? `${p.shop.name.toUpperCase()} - STOK AZALDI/BİTTİ` : "STOK AZALDI/BİTTİ",
-        productId: p.id,
+        stock: p.stock,
+        criticalStock: p.criticalStock,
+        buyPrice: p.buyPrice,
+        sellPrice: p.sellPrice,
         shopId: p.shopId,
-        shopName: p.shop?.name,
-        isAlert: true,
-        isDeadStock: false,
-        product: p
-      }));
+        shop: p.shopName ? { name: p.shopName } : null
+      }
+    }));
 
     // 3. Get dead stock products (hidden from shortage)
-    // BUT only those that DON'T have a manual shortage (to avoid duplicates)
-    // Actually, manual items with hidden products are already marked isDeadStock above.
-    // Here we find hidden products that DON'T have manual entries but SHOULD be listed in dead stock tab.
-    const deadStockProducts = await prisma.product.findMany({
-      where: {
-        shopId,
-        hideFromShortage: true,
-        // Optional: filter out if already in manual items? 
-        // Better: just list alphabetical unique items or let manual ones take precedence?
-      },
-      include: {
-        shop: { select: { name: true } },
-        shortageItems: {
-          where: { isResolved: false }
-        }
-      }
-    });
+    const deadStockRows: any[] = await prisma.$queryRaw`
+      SELECT 
+        p.id, 
+        p.name, 
+        p.stock, 
+        p."criticalStock", 
+        p."buyPrice", 
+        p."sellPrice", 
+        p."shopId",
+        s.name as "shopName"
+      FROM "Product" p
+      LEFT JOIN "Shop" s ON s.id = p."shopId"
+      WHERE p."shopId" = ${shopId}
+        AND p."isDeleted" = false
+        AND p."hideFromShortage" = true
+        AND NOT EXISTS (
+          SELECT 1 FROM "ShortageItem" si
+          WHERE si."productId" = p.id AND si."isResolved" = false
+        )
+      ORDER BY p.name ASC
+      LIMIT 100
+    `;
 
-    const deadStockAlerts = deadStockProducts
-      .filter((p: any) => p.shortageItems.length === 0) // Only add pseudo-alerts for products without manual shortages
-      .map((p: any) => ({
-        id: `deadstock-${p.id}`,
+    const deadStockAlerts = deadStockRows.map((p: any) => ({
+      id: `deadstock-${p.id}`,
+      name: p.name,
+      quantity: 1,
+      notes: "ÖLÜ STOK (GİZLENMİŞ)",
+      productId: p.id,
+      shopId: p.shopId,
+      shopName: p.shopName,
+      isAlert: true,
+      isDeadStock: true,
+      product: {
+        id: p.id,
         name: p.name,
-        quantity: 1,
-        notes: "ÖLÜ STOK (GİZLENMİŞ)",
-        productId: p.id,
+        stock: p.stock,
+        criticalStock: p.criticalStock,
+        buyPrice: p.buyPrice,
+        sellPrice: p.sellPrice,
         shopId: p.shopId,
-        shopName: p.shop?.name,
-        isAlert: true,
-        isDeadStock: true,
-        product: p
-      }));
+        shop: p.shopName ? { name: p.shopName } : null
+      }
+    }));
 
     return serializePrisma(withCourierPriority([...manualItems, ...missingProductAlerts, ...deadStockAlerts]));
   } catch (error) {
@@ -624,15 +722,51 @@ export async function getCourierTasks(dateStr?: string) {
     const items = await prisma.shortageItem.findMany({
       where: whereClause,
       include: {
-        product: true,
-        customer: true,
-        assignedTo: { select: { name: true, surname: true } },
-        shop: { select: { name: true, phone: true } },
-        supplier: true,
+        product: {
+          select: {
+            id: true,
+            name: true,
+            stock: true,
+            criticalStock: true,
+            buyPrice: true,
+            sellPrice: true,
+            shopId: true,
+            hideFromShortage: true,
+          }
+        },
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          }
+        },
+        assignedTo: { select: { id: true, name: true, surname: true } },
+        shop: { select: { id: true, name: true, phone: true } },
+        supplier: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          }
+        },
         returnTicket: {
           include: {
-            product: true,
-            customer: true
+            product: {
+              select: {
+                id: true,
+                name: true,
+                stock: true,
+                criticalStock: true,
+              }
+            },
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              }
+            }
           }
         }
       },
@@ -646,6 +780,16 @@ export async function getCourierTasks(dateStr?: string) {
         where: {
           shopId,
           name: { in: names, mode: 'insensitive' }
+        },
+        select: {
+          id: true,
+          name: true,
+          stock: true,
+          criticalStock: true,
+          buyPrice: true,
+          sellPrice: true,
+          shopId: true,
+          hideFromShortage: true,
         }
       });
       const productMap = new Map(matchedProducts.map(p => [p.name.toLowerCase().trim(), p]));
