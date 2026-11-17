@@ -6,26 +6,27 @@ import {
 } from "@google/generative-ai";
 
 /**
- * Fallback chain of Gemini models when high-demand (503) or rate-limit (429) errors occur.
- * Primary: gemini-3.8-flash
- * Fallbacks: gemini-3.8-flash-lite, gemini-2.5-flash-lite, gemini-2.0-flash
+ * Fallback chain of active, supported Gemini models when high-demand (503),
+ * rate-limit (429), or deprecated model (404) errors occur.
+ * Primary: gemini-3.5-flash-lite (fastest, high throughput, multimodal)
+ * Fallbacks: gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.8-flash, gemini-flash-lite-latest
  */
 export const DEFAULT_GEMINI_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
     "gemini-3.8-flash",
-    "gemini-3.8-flash-lite",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
+    "gemini-flash-lite-latest",
 ] as const;
 
 export type SupportedGeminiModel = typeof DEFAULT_GEMINI_MODELS[number] | string;
 
 /**
  * Default retry delays in milliseconds:
- * 1st retry: 800ms
- * 2nd retry: 1600ms
- * 3rd retry: 3000ms
+ * 1st retry: 600ms
+ * 2nd retry: 1500ms
  */
-export const DEFAULT_RETRY_DELAYS_MS = [800, 1600, 3000];
+export const DEFAULT_RETRY_DELAYS_MS = [600, 1500];
 
 export interface GenerateWithRetryOptions {
     generationConfig?: GenerationConfig;
@@ -69,8 +70,29 @@ export function isRetryableGeminiError(error: any): boolean {
 }
 
 /**
+ * Checks whether an error indicates that the requested model name does not exist,
+ * is deprecated/retired, or is not supported for generateContent (e.g. 404).
+ */
+export function isModelNotFoundError(error: any): boolean {
+    if (!error) return false;
+    const msg = (
+        typeof error === "string"
+            ? error
+            : `${error?.message || ""} ${error?.status || ""} ${error?.statusText || ""} ${error?.code || ""}`
+    ).toLowerCase();
+
+    return (
+        msg.includes("404") ||
+        msg.includes("not found") ||
+        msg.includes("no longer available") ||
+        msg.includes("is not supported for generatecontent")
+    );
+}
+
+/**
  * Executes a Gemini generateContent request with automatic retry (exponential backoff)
- * and seamless fallback across backup models if the primary model is experiencing high demand (503).
+ * and seamless fallback across backup models if the primary model is experiencing high demand (503)
+ * or is unavailable.
  */
 export async function generateWithRetry(
     clientOrKey: GoogleGenerativeAI | string,
@@ -103,6 +125,23 @@ export async function generateWithRetry(
                 return Object.assign(result, { usedModel: currentModelName });
             } catch (err: any) {
                 lastError = err;
+
+                // If the model is 404 / deprecated / unavailable, immediately fallback to next model without retrying this model
+                if (isModelNotFoundError(err)) {
+                    if (nextModelName) {
+                        console.warn(
+                            `[Gemini Fallback] Model '${currentModelName}' is unavailable/deprecated (${err?.message || err}). Switching to fallback model '${nextModelName}'...`
+                        );
+                        options.onModelFallback?.({
+                            failedModel: currentModelName,
+                            nextModel: nextModelName,
+                            error: err,
+                        });
+                        break; // exit retry loop for currentModelName, advance to next model
+                    }
+                    throw err;
+                }
+
                 const isRetryable = isRetryableGeminiError(err);
 
                 // If non-retryable error (e.g. 400 Bad Request, 403 Invalid API Key, SAFETY violation), fail fast

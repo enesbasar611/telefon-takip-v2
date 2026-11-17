@@ -105,6 +105,34 @@ async function runTests() {
     assert.equal(nonRetryableCalls, 1); // Should fail immediately without retrying
     console.log("✔ Non-retryable error fail-fast passed!");
 
+    // 5. Test 404 (deprecated/not found) immediate fallback without wasting retries
+    let callsOnDeprecated = 0;
+    let callsOnFallback = 0;
+    const mockGenAI404: any = {
+        getGenerativeModel: ({ model }: { model: string }) => ({
+            generateContent: async () => {
+                if (model === "deprecated-model") {
+                    callsOnDeprecated++;
+                    throw new Error("[404 Not Found] This model is no longer available.");
+                }
+                callsOnFallback++;
+                return {
+                    response: Promise.resolve({ text: () => "OK from working model" })
+                };
+            }
+        })
+    };
+
+    const res404 = await generateWithRetry(mockGenAI404, "prompt", {
+        primaryModel: "deprecated-model",
+        fallbackModels: ["active-model"],
+        retryDelays: [50, 50]
+    });
+    assert.equal(callsOnDeprecated, 1); // Only 1 call, zero wasted retries!
+    assert.equal(callsOnFallback, 1);
+    assert.equal(res404.usedModel, "active-model");
+    console.log("✔ 404 model immediate fallback passed!");
+
     console.log("\nALL GEMINI RETRY & FALLBACK TESTS PASSED SUCCESSFULLY! 🚀");
 }
 

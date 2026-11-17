@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import {
     Dialog,
     DialogContent,
@@ -168,17 +168,46 @@ export function WholesalerImportModal({
         toast.success(`${result.items.length} kalem ürün başarıyla ayrıştırıldı (${result.totalQuantity} adet).`);
     };
 
-    // AI ile Belge/PDF/Görsel Ayrıştırma Yükleme Durumu
+    // AI ile Belge/PDF/Görsel Ayrıştırma Yükleme Durumu & İptal Referansı
     const [isParsingDoc, setIsParsingDoc] = useState(false);
+    const abortParsingRef = useRef(false);
+
+    // Ayrıştırmayı kullanıcı isteğiyle veya modal kapandığında anında durdurma
+    const handleCancelParsing = () => {
+        abortParsingRef.current = true;
+        setIsParsingDoc(false);
+        toast.dismiss("ai-doc-parse");
+        toast.info("Yapay zeka belge taraması durduruldu.");
+    };
+
+    // Modal açılıp kapanma yönetimi (modal kapanırsa arka plan işlemini iptal et)
+    const handleOpenChange = (newOpen: boolean) => {
+        if (!newOpen) {
+            abortParsingRef.current = true;
+            setIsParsingDoc(false);
+            toast.dismiss("ai-doc-parse");
+        }
+        setOpen(newOpen);
+    };
 
     // AI ile Fatura / Belge / PDF / Görsel Ayrıştırma
     const processDocumentWithAI = async (file: File) => {
+        abortParsingRef.current = false;
         setIsParsingDoc(true);
-        toast.loading("Yapay zeka faturayı inceliyor (ürünler, fiyatlar ve adetler taranıyor)...", { id: "ai-doc-parse" });
+        toast.loading("Yapay zeka faturayı inceliyor (ürünler, fiyatlar ve adetler taranıyor)...", {
+            id: "ai-doc-parse",
+            action: {
+                label: "İptal Et",
+                onClick: () => handleCancelParsing()
+            }
+        });
+
         try {
             const reader = new FileReader();
             reader.onload = async (event) => {
                 try {
+                    if (abortParsingRef.current) return;
+
                     const dataUrl = event.target?.result as string;
                     if (!dataUrl) {
                         toast.error("Dosya okunamadı.", { id: "ai-doc-parse" });
@@ -195,6 +224,11 @@ export function WholesalerImportModal({
                         mimeType,
                         defaultMarkup: defaultMarkup || 5.00
                     });
+
+                    // Eğer kullanıcı işlemi iptal ettiyse veya modalı kapattıysa hiçbir şey yapma
+                    if (abortParsingRef.current) {
+                        return;
+                    }
 
                     if (!res.success || !res.items || res.items.length === 0) {
                         toast.error(res.error || "Belgeden ürün veya fiyat okunamadı.", { id: "ai-doc-parse" });
@@ -219,18 +253,23 @@ export function WholesalerImportModal({
                         { id: "ai-doc-parse" }
                     );
                 } catch (err: any) {
+                    if (abortParsingRef.current) return;
                     console.error("AI parse error:", err);
                     toast.error("Yapay zeka ile belge ayrıştırılırken hata oluştu: " + (err?.message || ""), { id: "ai-doc-parse" });
                 } finally {
-                    setIsParsingDoc(false);
+                    if (!abortParsingRef.current) {
+                        setIsParsingDoc(false);
+                    }
                 }
             };
             reader.onerror = () => {
+                if (abortParsingRef.current) return;
                 toast.error("Dosya okunurken hata meydana geldi.", { id: "ai-doc-parse" });
                 setIsParsingDoc(false);
             };
             reader.readAsDataURL(file);
         } catch (e: any) {
+            if (abortParsingRef.current) return;
             console.error("File processing error:", e);
             toast.error("Dosya işlenemedi.", { id: "ai-doc-parse" });
             setIsParsingDoc(false);
@@ -685,7 +724,7 @@ export function WholesalerImportModal({
 
     return (
         <>
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={handleOpenChange}>
                 <DialogTrigger asChild>
                     {trigger || (
                         <Button className="h-10 rounded-xl px-4 font-semibold gap-2 shadow-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
@@ -784,14 +823,28 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
                                         </div>
                                         <div className="text-center space-y-1">
                                             {isParsingDoc ? (
-                                                <>
+                                                <div className="flex flex-col items-center gap-2">
                                                     <p className="text-sm font-bold text-primary animate-pulse">
                                                         🤖 Yapay Zeka Belgeyi İnceliyor...
                                                     </p>
                                                     <p className="text-xs text-muted-foreground max-w-md">
                                                         PDF veya fatura görselindeki ürünler, adetler, dövizli birim fiyatlar ve kategoriler taranıyor, lütfen bekleyin...
                                                     </p>
-                                                </>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="mt-2 h-7 px-3 text-xs font-bold rounded-lg border-red-500/30 text-red-600 hover:bg-red-500/10 gap-1.5"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            e.preventDefault();
+                                                            handleCancelParsing();
+                                                        }}
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                        <span>Taramayı İptal Et</span>
+                                                    </Button>
+                                                </div>
                                             ) : (
                                                 <>
                                                     <p className="text-sm font-bold text-foreground">
@@ -847,9 +900,21 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
                             </div>
 
                             <DialogFooter className="gap-2 sm:gap-0 pt-2">
-                                <Button variant="outline" className="rounded-xl h-11 px-5" onClick={() => setOpen(false)}>
-                                    Vazgeç
-                                </Button>
+                                {isParsingDoc ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl h-11 px-5 border-red-500/40 text-red-600 hover:bg-red-500/10 font-bold gap-2"
+                                        onClick={handleCancelParsing}
+                                    >
+                                        <X className="h-4 w-4" />
+                                        <span>Taramayı İptal Et</span>
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" className="rounded-xl h-11 px-5" onClick={() => handleOpenChange(false)}>
+                                        Vazgeç
+                                    </Button>
+                                )}
                                 <Button
                                     className="rounded-xl h-11 px-6 font-bold gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                                     onClick={() => handleParse()}

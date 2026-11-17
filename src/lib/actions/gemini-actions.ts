@@ -261,7 +261,7 @@ export async function callGemini(
     try {
         const genAI = new GoogleGenerativeAI(key);
         const result = await generateWithRetry(genAI, promptParts, {
-            primaryModel: "gemini-3.8-flash",
+            primaryModel: "gemini-3.5-flash-lite",
             generationConfig: {
                 responseMimeType: responseType === "json" ? "application/json" : "text/plain",
                 temperature: 0.1,
@@ -1327,7 +1327,7 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
 
         // Simple ping request with auto-retry and model fallback
         const result = await generateWithRetry(genAI, "Merhaba, sistem bağlantı testi. Sadece 'OK' cevabı ver.", {
-            primaryModel: "gemini-3.8-flash"
+            primaryModel: "gemini-3.5-flash-lite"
         });
         const response = await result.response;
         const text = response.text();

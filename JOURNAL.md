@@ -41,6 +41,28 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-17: Gemini 503 High Demand Kilitlenmesi Giderilmesi & Modal Kapanışında Arka Plan İptali (Abort Controller):
+  - **Sorun:** 
+    1. Kullanıcı fatura/PDF yüklediğinde sunucuda `[Gemini Auto-Retry] Model 'gemini-3.8-flash' encountered transient error ([503 Service Unavailable] This model is currently experiencing high demand)` hatası vererek uzun süre beklemede kalması.
+    2. Kullanıcı modalı kapatsa dahi işlemin arka planda çalışmaya devam etmesi ve bildirimlerin takılı kalması.
+  - **Kök Neden:**
+    1. Google API sunucularında `gemini-3.8-flash` modeli geçici yoğunluk (503) verirken, önceki fallback zincirinde yer alan eski model adlarının (`gemini-3.8-flash-lite`, `gemini-2.0-flash` vb.) Google tarafından 404 döndürmesi ve fallback zincirinin bu yüzden yarıda kesilmesi veya uzun retry süreleriyle (45+ sn) beklemesi.
+    2. Modalda iptal bayrağı (`abortRef`) bulunmaması; kullanıcı modalı kapatsa veya "Vazgeç" dese bile Promise'in sunucuda ve istemcide sonlanmayıp loading toast'unun açık kalması.
+  - **Çözüm:**
+    1. **Aktif & Hızlı Model Entegrasyonu (`src/lib/gemini.ts` & `src/lib/actions/gemini-actions.ts`):**
+       - Google'ın API üzerinde aktif olarak sunduğu ve doğrudan önerdiği `gemini-3.5-flash-lite` birincil model yapıldı (960ms - 2.2sn içerisinde fatura görselini %100 doğrulukla ayrıştırdığı test edildi).
+       - Fallback zinciri aktif modellerle güncellendi: `gemini-3.5-flash-lite` $\rightarrow$ `gemini-3.1-flash-lite` $\rightarrow$ `gemini-3.5-flash` $\rightarrow$ `gemini-3.8-flash` $\rightarrow$ `gemini-flash-lite-latest`.
+       - `isModelNotFoundError` eklenerek 404 dönen modellerde gereksiz retry beklenmeden anında bir sonraki yedek modele geçilmesi sağlandı.
+       - Retry bekleme süreleri [600ms, 1500ms] olarak optimize edilerek kullanıcıların dakikalarca bekletilmesi engellendi.
+    2. **İstemci Tarafı Anında İptal Mimarisi (`src/components/stock/wholesaler-import-modal.tsx`):**
+       - `abortParsingRef` referansı eklendi.
+       - Kullanıcı modalı kapattığında (`handleOpenChange`) veya "Taramayı İptal Et" butonuna bastığında (`handleCancelParsing`) işlem anında kesiliyor, `isParsingDoc` sıfırlanıyor ve `ai-doc-parse` bildirim toast'ı hemen yok ediliyor.
+       - Fatura yükleme kartının içine ve alt footer'a belirgin "Taramayı İptal Et" butonları eklendi.
+  - **Doğrulama:**
+    - `tests/gemini-retry.test.ts` çalıştırıldı (5/5 test başarıyla geçti: sınıflandırma, aynı modelde retry, 503 fallback, 403 fail-fast, 404 anında yedek modele geçiş).
+    - Kullanıcının örnek fatura görseli `gemini-3.5-flash-lite` ile test edildi (2.2 saniyede ürünler, adetler, USD birim fiyatları eksiksiz ayrıştırıldı).
+    - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
 - [x] 2026-11-17: Toptancı Parça / Stok İçe Aktarmada PDF Fatura & Fiş Görseli Yapay Zeka (Multimodal Gemini) Entegrasyonu:
   - **Sorun:** Kullanıcı toptancıdan aldığı ürünleri stoğa eklerken PDF formatındaki faturaları sisteme yükleyemiyordu; toptancı parça içe aktarma modalında PDF dosyaları için sadece metin kopyalama uyarısı çıkıyordu. Örnek faturada yer alan ("BAYROXTOPTAN", "LUCATECH LT-601 ENC TWS AIRPODS KULAKLIK", "BAYROX AIR PRO 2 ANC ENC EARPHONE", USD birim alış fiyatları `$10.75`, `$11.25` vb.) bilgilerin otomatik okunması gerekiyordu.
   - **Çözüm:**
