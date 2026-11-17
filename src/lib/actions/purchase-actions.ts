@@ -723,4 +723,20 @@ export async function deletePurchaseOrdersAction(orderIds: string[]) {
     }
 }
 
+export async function getPurchaseOrderItemsAction(orderId: string) {
+    try {
+        const shopId = await getShopId(false);
+        if (!shopId) return [];
+        const items = await prisma.purchaseOrderItem.findMany({
+            where: { orderId, shopId },
+            include: { product: true }
+        });
+        return serializePrisma(items);
+    } catch (error) {
+        console.error("Error fetching order items:", error);
+        return [];
+    }
+}
+
+
 

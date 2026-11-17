@@ -41,6 +41,66 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-17: Kasa Giriş/Çıkış Modalı Tedarikçi Entegrasyonu, Ekstra Borç Girişi & Kesintisiz Çoklu Kayıt Desteği:
+  - **Tedarikçi & Kasa Senkronizasyonu (`CreateTransactionModal`):**
+    - İşlem Türü (kategori) dropdown'una `🏢 Tedarikçi / Toptancı` seçeneği ve diğer kategoriler altından tek tıkla geçiş sağlayan `Tedarikçi Borcu / Ödemesi Bağla` kısayolu eklendi.
+    - Tedarikçi seçildiğinde güncel kalan borç (`Mevcut Borç`) anlık çekilerek gösterilmektedir.
+    - **İşlem Yönü & Ekstra Borç Desteği:**
+      - **💸 Tedarikçiye Ödeme Yap (Borç Düşer):** Kasadan nakit/kart düşer, tedarikçinin bekleyen açık sipariş ve alımlarını FIFO yöntemiyle kapatır (`supplierAction: "PAYMENT"`).
+      - **📈 Ekstra Borç Girişi / Tahakkuk (Borç Artar):** Tedarikçiye borç girişi yapar, tedarikçinin carisine borç tahakkuku (`PurchaseOrder` + `SupplierTransaction`) ekleyerek toplam borcu artırır (`supplierAction: "ADD_DEBT"`).
+    - **Canlı Bakiye & Simülasyon Kartı:**
+      - Modal içinde kullanıcı tutar girdikçe **Mevcut Borç**, **İşlem Tutarı (TL)** ve **İşlem Sonrası Kalan Borç (Son Bakiye)** anlık canlı simüle edilir.
+    - **Otomatik Açıklama Doldurma:**
+      - Tedarikçi ve işlem yönü seçildiğinde açıklama alanı otomatik olarak örn. `Byrox Ömer Tedarikçi Ödemesi` veya `Byrox Ömer Ekstra Borç Girişi` olarak formatlanır.
+  - **Kesintisiz Çoklu Kayıt (Modal Kapanmama Davranışı):**
+    - Kullanıcı gelir veya gider kaydettiğinde modal otomatik olarak kapatılmaz (`setOpen(false)` çağrılmaz).
+    - Ekranda işlem türüne uygun bildirim popup'ı (`toast.success("Gider başarıyla girildi.")` veya `toast.success("Gelir başarıyla girildi.")`) gösterilir.
+    - Tutar, açıklama ve ekler sıfırlanarak kullanıcı ESC tuşuna basana, dışarıya tıklayana veya İptal/X butonuna basana kadar ardı ardına hızlı kayıt girmesine imkan tanınır.
+  - **Backend & Prisma Bütünlüğü:**
+    - `src/lib/actions/finance-actions.ts` içerisinde `createManualTransaction` fonksiyonuna `supplierId` ve `supplierAction` entegrasyonu sağlandı.
+    - `ADD_DEBT` aksiyonunda hem `Supplier.balance` güncellenmekte hem de `PurchaseOrder` ve `SupplierTransaction` kaydı açılarak cari ekstre ve tedarikçi detay hareketleri ile 100% senkronize edilmektedir.
+    - İşlem tamamlandığında `revalidatePath("/tedarikciler")`, `revalidatePath("/satis/kasa")` ve react-query anahtarları anında geçersiz kılınarak arayüz anında güncellenmektedir.
+
+- [x] 2026-11-17: Tedarikçiler Sayfası Net Kalan Borç Hesaplaması, Borç Dağılım Modalı ve Ödeme Geçmişi Carousel Desteği:
+  - **Tedarikçiler Sayfası Gerçek Kalan Borç:**
+    - `src/lib/actions/supplier-actions.ts` içindeki `getSuppliers` ve `getSupplierById` fonksiyonlarında her tedarikçinin sipariş bazlı gerçek kalan borcu (`unpaidPurchasesDebt = sum(p.remainingAmount)`) hesaplanarak `s.balance` senkronize edildi. Böylece ödeme yapılmadan önceki toplam alışveriş yerine fiili kalan net borç gösterilmesi sağlandı.
+    - [tedarikciler-page-client.tsx](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/supplier/tedarikciler-page-client.tsx) query önbellek süresi 10 saniyeye indirilerek sayfa geçişlerinde anlık bakiye güncellemesi sağlandı.
+  - **İnteraktif "Toplam Borç" Tıklama & Dağılım Modalı (`SupplierDebtDetailModal`):**
+    - `Toplam Borç` KPI kartı tıklanabilir yapıldı (`cursor-pointer`, "Borçluları Gör →" yönlendirmesi).
+    - Tıklandığında açılan `SupplierDebtDetailModal` bileşeni oluşturuldu; açık borcu olan tüm tedarikçileri (toplam alış, yapılan ödeme, kalan net borç, dolar karşılığı, son alım tarihi) listeler.
+    - Her satırdaki "Detayına Git →" butonu ile ilgili tedarikçinin detay profiline anında geçiş ve "Öde" butonu ile doğrudan ödeme yapma olanağı sağlandı.
+  - **Ödeme Geçmişi Carousel & On-Demand Sorgulama (`SupplierPaymentHistoryModal`):**
+    - Ödeme geçmişinde siparişlere ait onlarca ürünün ekrana aniden dökülüp alanı kaplaması engellendi; "Ödenen Ürünleri İncele (Carousel)" butonu ile talep edildiğinde (`getPurchaseOrderItemsAction`) ürünleri çeken lazy-load mekanizması kuruldu.
+    - Açılan alanda sağa/sola akıcı kaydırılabilir şık yatay ürün Carousel'i (`ChevronLeft`/`ChevronRight`, ürün adı, SKU, adet, birim fiyat, toplam tutar) eklendi.
+    - Ödemenin nasıl yapıldığı (Nakit / Kasa, Havale / EFT, Kredi Kartı), ödeme durumu (Tamamı Ödendi / Kısmi Ödeme) ve girilen tüm ödeme açıklamaları/notları kart başlık ve gövdesinde belirgin rozetlerle gösterildi.
+
+- [x] 2026-11-17: Tedarikçi Detay Sayfası Tasarım Revizyonu, Çift Para Birimi, Cari Ekstre & Ürünler Sekmesi Optimizasyonu:
+  - **Tasarım & Boşluk Düzenlemesi:** `src/components/supplier/supplier-profile.tsx` bileşenindeki üst aksiyon araç çubuğu standart ve kompakt buton boyutlarına (`h-8.5`, `text-[11px] font-bold`, `px-3`/`px-3.5`) çekildi; aşırı dolgular ve kaymalar giderildi. Sekme çubuğu (`TabsList`) `h-14`'ten modern `h-10` kompakt yapısına dönüştürüldü.
+  - **Çift Para Birimi (Döviz Karşılığı):** "Toplam Alışveriş", "Güncel Borç" ve "Toplam Ödenen" KPI kartlarında güncel canlı döviz kuru (`getCurrentExchangeRates`) ile parantez içinde döviz karşılıkları eklendi (₺ bazlı ise `(~$X USD)`, $ bazlı ise `(~₺Y)`).
+  - **Cari Hesap Ekstresi (TedarikciCariEkstreModal):**
+    - Boş görünme sorunu çözüldü (`SupplierTransaction` ve `purchases` hareketleri birleştirildi; `supplier-actions.ts` içerisinde `getSupplierById` ve `getSuppliers` fonksiyonlarına `SupplierTransaction` ilişkisi ve `transactions` alias'ı eklendi).
+    - Hem zengin ve interaktif bir modal ekranı (arama, tip filtreleme, tarih aralığı, kalem bazlı açılır-kapanır detaylar) hem de A4 formatında kusursuz resmi yazdırılabilir/PDF formatı sunuldu.
+    - Tek tıkla Türkçe karakter destekli UTF-8 BOM Excel (CSV) dışa aktarma özelliği eklendi.
+  - **Ürünler Sekmesi (Canlı Arama & Sayfalama):**
+    - "ÜRÜNLER" sekmesinde 1000'lerce ürün olsa dahi sayfanın aşağı akmasını önleyen 10'luk/25'lik/50'lik/100'lük dinamik sayfalama (pagination) geliştirildi.
+    - Anlık canlı arama inputu (`Search`) ve kategori filtresi eklendi; son alış tarihi, son alış fiyatı (₺ ve $), ortalama alış fiyatı ve toplam alım tutarları detaylandırıldı.
+
+- [x] 2026-11-17: Tedarikçi Detay Sayfası Tasarım Revizyonu, Çift Para Birimi, Cari Ekstre & Ürünler Sekmesi Optimizasyonu:
+  - **Tasarım & Boşluk Düzenlemesi:** `src/components/supplier/supplier-profile.tsx` bileşenindeki üst aksiyon araç çubuğu standart ve kompakt buton boyutlarına (`h-8.5`, `text-[11px] font-bold`, `px-3`/`px-3.5`) çekildi; aşırı dolgular ve kaymalar giderildi. Sekme çubuğu (`TabsList`) `h-14`'ten modern `h-10` kompakt yapısına dönüştürüldü.
+  - **Çift Para Birimi (Döviz Karşılığı):** "Toplam Alışveriş", "Güncel Borç" ve "Toplam Ödenen" KPI kartlarında güncel canlı döviz kuru (`getCurrentExchangeRates`) ile parantez içinde döviz karşılıkları eklendi (₺ bazlı ise `(~$X USD)`, $ bazlı ise `(~₺Y)`).
+  - **Cari Hesap Ekstresi (TedarikciCariEkstreModal):**
+    - Boş görünme sorunu çözüldü (`SupplierTransaction` ve `purchases` hareketleri birleştirildi; `supplier-actions.ts` içerisinde `getSupplierById` ve `getSuppliers` fonksiyonlarına `SupplierTransaction` ilişkisi ve `transactions` alias'ı eklendi).
+    - Hem zengin ve interaktif bir modal ekranı (arama, tip filtreleme, tarih aralığı, kalem bazlı açılır-kapanır detaylar) hem de A4 formatında kusursuz resmi yazdırılabilir/PDF formatı sunuldu.
+    - Tek tıkla Türkçe karakter destekli UTF-8 BOM Excel (CSV) dışa aktarma özelliği eklendi.
+  - **Ürünler Sekmesi (Canlı Arama & Sayfalama):**
+    - "ÜRÜNLER" sekmesinde 1000'lerce ürün olsa dahi sayfanın aşağı akmasını önleyen 10'luk/25'lik/50'lik/100'lük dinamik sayfalama (pagination) geliştirildi.
+    - Anlık canlı arama inputu (`Search`) ve kategori filtresi eklendi; son alış tarihi, son alış fiyatı (₺ ve $), ortalama alış fiyatı ve toplam alım tutarları detaylandırıldı.
+
+- [x] 2026-11-17: Fiş/Fatura Önizleme Tablosunda Düzenlenebilir Alış Fiyatı ($) ve Kalem Simgesi:
+  - `src/components/stock/wholesaler-import-modal.tsx` bileşeninde Adım 2 (Önizleme & Fiyatlandırma) tablosundaki Alış ($) hücresine mavi tonlu kalem simgesi (`Pencil`) ve düzenlenebilir sayısal `Input` eklendi.
+  - Yanlış okunan toptancı alış fiyatları kullanıcı tarafından anında değiştirilebilir; alış fiyatı değiştiğinde toplam alış tutarı, kâr ve tedarikçi borcu gerçek zamanlı olarak güncellenir.
+  - Alış fiyatı satış fiyatının üzerine çıkarılırsa satış fiyatı otomatik olarak varsayılan kâr eklenerek yukarı yönlü güncellenir.
+
 - [x] 2026-11-17: Stok Sayfasına (`/stok`) ve Tedarikçiler Sayfasına Sürekli Görünür Geri Alma Desteği (`alwaysShow={true}`):
   - [src/app/(dashboard)/stok/page.tsx](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/app/(dashboard)/stok/page.tsx) ve [tedarikciler-page-client.tsx](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/supplier/tedarikciler-page-client.tsx) başlık aksiyonlarına `<UndoLastImportButton alwaysShow={true} />` entegre edildi.
   - Geri alınabilecek son işlem olmadığında buton zarif gri tonda pasif ("Geri alınabilecek son stok/fiş girişi bulunmuyor") olarak görünür; toptancı fişi/stok girişi yapıldığı anda kehribar sarısı renkte ve içe aktarılan toplam adet rozetiyle parlayarak tek tıkla geri alma imkanı sunar.

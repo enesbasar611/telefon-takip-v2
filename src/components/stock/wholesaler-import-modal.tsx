@@ -46,7 +46,8 @@ import {
     FileText,
     ScanText,
     RotateCcw,
-    Package
+    Package,
+    Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -564,6 +565,23 @@ export function WholesalerImportModal({
         setParsedItems(prev => prev.map(item => 
             item.id === id ? { ...item, name: newName } : item
         ));
+    };
+
+    // Tek bir ürünün alış fiyatını ($) güncelleme
+    const handleUpdateBuyPrice = (id: string, newBuyPrice: number) => {
+        setParsedItems(prev => prev.map(item => {
+            if (item.id !== id) return item;
+            const validBuyPrice = Math.max(0, newBuyPrice);
+            let newSellPrice = item.sellPriceUsd;
+            if (newSellPrice < validBuyPrice) {
+                newSellPrice = Number((validBuyPrice + (defaultMarkup || 5.00)).toFixed(2));
+            }
+            return {
+                ...item,
+                buyPriceUsd: validBuyPrice,
+                sellPriceUsd: newSellPrice,
+            };
+        }));
     };
 
     // Tek bir ürünün satış fiyatını güncelleme
@@ -1726,7 +1744,7 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
                                                 <th className="py-3 px-4 min-w-[240px]">Ürün Tanımı / Model (Düzenlenebilir)</th>
                                                 <th className="py-3 px-3 w-32">Renk / Varyant</th>
                                                 <th className="py-3 px-3 w-20 text-center">Adet</th>
-                                                <th className="py-3 px-3 w-24 text-right">Alış ($)</th>
+                                                <th className="py-3 px-3 w-32 text-right">Alış ($)</th>
                                                 <th className="py-3 px-3 w-28 text-right">Satış ($)</th>
                                                 <th className="py-3 px-3 w-20 text-center">Kâr</th>
                                                 <th className="py-3 px-3 w-20 text-center">İşlem</th>
@@ -1876,9 +1894,20 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
                                                             />
                                                         </td>
 
-                                                        {/* Alış ($) */}
-                                                        <td className="py-3 px-3 text-right font-mono font-bold text-blue-600 dark:text-blue-400">
-                                                            ${item.buyPriceUsd.toFixed(2)}
+                                                        {/* Alış ($) - Düzenlenebilir Kalem Simgeli */}
+                                                        <td className="py-3 px-3 text-right">
+                                                            <div className="flex items-center justify-end gap-1 group/buy" title="Alış Fiyatını Düzenle ($)">
+                                                                <Pencil className="h-3 w-3 text-blue-500/60 group-hover/buy:text-blue-500 shrink-0 transition-colors" />
+                                                                <span className="text-muted-foreground font-mono text-xs">$</span>
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.25"
+                                                                    min="0"
+                                                                    value={item.buyPriceUsd}
+                                                                    onChange={(e) => handleUpdateBuyPrice(item.id, parseFloat(e.target.value) || 0)}
+                                                                    className="h-7 w-20 text-right rounded-lg text-xs font-bold font-mono text-blue-600 dark:text-blue-400 border-blue-500/30 focus:border-blue-500 bg-background"
+                                                                />
+                                                            </div>
                                                         </td>
 
                                                         {/* Satış ($) */}

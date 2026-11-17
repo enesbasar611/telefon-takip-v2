@@ -43,11 +43,13 @@ import {
   ChevronRight,
   CheckCircle2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Building2,
 } from "lucide-react";
 import { createManualTransaction, updateManualTransaction, getAccounts, getTransactions } from "@/lib/actions/finance-actions";
 import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
 import { getSettings } from "@/lib/actions/setting-actions";
+import { getSuppliersSimple } from "@/lib/actions/supplier-actions";
 import { CreateAccountModal } from "./create-account-modal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -72,6 +74,8 @@ const transactionSchema = z.object({
   currency: z.enum(["TRY", "USD", "EUR"]),
   manualCategory: z.string().optional(),
   date: z.string().optional(),
+  supplierId: z.string().optional(),
+  supplierAction: z.enum(["PAYMENT", "ADD_DEBT"]).optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
@@ -82,6 +86,7 @@ interface CreateTransactionModalProps {
   initialData?: any;
   initialType?: "INCOME" | "EXPENSE";
   initialCategory?: string;
+  initialSupplierId?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -92,12 +97,22 @@ export function CreateTransactionModal({
   initialData,
   initialType,
   initialCategory,
+  initialSupplierId,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange
 }: CreateTransactionModalProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && !initialData) {
+      reset();
+      setAttachments([]);
+      setRemovedAttachmentIds([]);
+    }
+    setOpen(newOpen);
+  };
 
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -128,6 +143,8 @@ export function CreateTransactionModal({
       category: initialCategory || initialData?.category || "GENEL",
       currency: initialData?.currency || "TRY",
       manualCategory: "",
+      supplierId: initialSupplierId || initialData?.supplierId || "",
+      supplierAction: (initialData?.supplierAction as "PAYMENT" | "ADD_DEBT") || "PAYMENT",
       date: (() => {
         if (!initialData?.createdAt) return format(new Date(), "yyyy-MM-dd'T'HH:mm");
         const date = new Date(initialData.createdAt);
@@ -139,7 +156,8 @@ export function CreateTransactionModal({
   useEffect(() => {
     if (initialType) setValue("type", initialType);
     if (initialCategory) setValue("category", initialCategory);
-  }, [initialType, initialCategory, setValue]);
+    if (initialSupplierId) setValue("supplierId", initialSupplierId);
+  }, [initialType, initialCategory, initialSupplierId, setValue]);
 
   const transactionType = watch("type");
   const categoryValue = watch("category");
@@ -211,6 +229,19 @@ export function CreateTransactionModal({
     });
   }, [amountValue, selectedCurrency, rates?.usd, rates?.eur]);
 
+  const { data: suppliers = [] } = useQuery<any[]>({
+    queryKey: ["suppliers-simple"],
+    queryFn: async () => await getSuppliersSimple(),
+    enabled: open,
+    placeholderData: keepPreviousData,
+  });
+
+  const selectedSupplierId = watch("supplierId");
+  const selectedSupplierAction = watch("supplierAction") || "PAYMENT";
+  const selectedSupplier = useMemo(() => {
+    return (suppliers || []).find((s: any) => s.id === selectedSupplierId);
+  }, [suppliers, selectedSupplierId]);
+
   useEffect(() => {
     if (!open || initialData?.currency) return;
     const savedCurrency = typeof window !== "undefined"
@@ -247,6 +278,8 @@ export function CreateTransactionModal({
         ...data,
         category: data.category === "DİĞER" ? toTitleCase(data.manualCategory || "DİĞER") : data.category,
         amount: Number(data.amount),
+        supplierId: (data.category === "TEDARİKÇİ" || data.supplierId) ? (data.supplierId || undefined) : undefined,
+        supplierAction: data.supplierAction,
         attachments,
       });
     },
@@ -255,7 +288,12 @@ export function CreateTransactionModal({
         toast.error(result.error);
         return;
       }
-      toast.success(initialData ? "İşlem güncellendi." : "İşlem başarıyla kaydedildi.");
+      const successMsg = initialData
+        ? "İşlem güncellendi."
+        : transactionType === "EXPENSE"
+          ? "Gider başarıyla girildi."
+          : "Gelir başarıyla girildi.";
+      toast.success(successMsg);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["transactions"] }),
         queryClient.invalidateQueries({ queryKey: ["finance-transactions"] }),
@@ -273,13 +311,23 @@ export function CreateTransactionModal({
         queryClient.invalidateQueries({ queryKey: ["cash-balance-monthly-detail"] }),
         queryClient.invalidateQueries({ queryKey: ["account-analytics"] }),
         queryClient.invalidateQueries({ queryKey: ["pos-initial-data"] }),
+        queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+        queryClient.invalidateQueries({ queryKey: ["suppliers-simple"] }),
+        queryClient.invalidateQueries({ queryKey: ["supplier"] }),
+        queryClient.invalidateQueries({ queryKey: ["supplier-orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["supplier-detail"] }),
       ]);
-      setOpen(false);
-      if (!initialData) {
-        reset();
+      if (initialData) {
+        setOpen(false);
+        setRemovedAttachmentIds([]);
+      } else {
+        // Modal açık tutulur, ardı ardına işlem girilebilmesi sağlanır
+        setValue("amount", "");
+        setValue("description", "");
+        setValue("manualCategory", "");
         setAttachments([]);
+        setRemovedAttachmentIds([]);
       }
-      setRemovedAttachmentIds([]);
     },
     onError: () => {
       toast.error("İşlem kaydedilemedi.");
@@ -390,10 +438,11 @@ export function CreateTransactionModal({
 
   // Smart Eye Keyword Dictionary for Proactive Category Recommendations
   const SMART_CATEGORY_MAP: { keywords: string[]; category: string; label: string }[] = useMemo(() => [
+    { keywords: ["tedarikçi", "toptan", "toptancı", "byrox", "syrox", "deji", "dramex", "parça alımı"], category: "TEDARİKÇİ", label: "Tedarikçi / Toptancı" },
     { keywords: ["kira", "dükkan kirası", "depo kirası", "aidat"], category: "KİRA", label: "Kira / Gider" },
     { keywords: ["elektrik", "fatura", "su", "internet", "doğalgaz", "turkcell", "vodafone", "telekom", "enerjisa"], category: "FATURA", label: "Fatura Ödemesi" },
     { keywords: ["maaş", "avans", "personel", "prim", "yevmiye"], category: "MAAŞ", label: "Maaş Ödemesi" },
-    { keywords: ["stok", "malzeme", "toptan", "ürün alımı", "parça alımı"], category: "STOK", label: "Stok Alımı" },
+    { keywords: ["stok", "malzeme", "ürün alımı"], category: "STOK", label: "Stok Alımı" },
     { keywords: ["yemek", "öğle yemeği", "restoran", "lokanta", "çay", "kahve", "ikram", "pasta"], category: "YEMEK", label: "Yemek Gideri" },
   ], []);
 
@@ -432,6 +481,10 @@ export function CreateTransactionModal({
       toast.error("Kart limiti yetersiz! Bu işlem yapılamaz.");
       return;
     }
+    if ((data.category === "TEDARİKÇİ" || data.supplierId) && !data.supplierId) {
+      toast.error("Lütfen bir tedarikçi seçiniz.");
+      return;
+    }
     transactionMutation.mutate(data);
   };
 
@@ -465,7 +518,7 @@ export function CreateTransactionModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {controlledOpen === undefined && (
         <DialogTrigger asChild>
           {trigger || (
@@ -540,20 +593,30 @@ export function CreateTransactionModal({
                 <Label className="font-medium text-[11px] text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2">
                   <PlusCircle className="h-3 w-3" /> İŞLEM TÜRÜ
                 </Label>
-                <Select onValueChange={(val) => setValue("category", val)} defaultValue={watch("category") || "GENEL"}>
+                <Select onValueChange={(val) => setValue("category", val)} value={categoryValue || "GENEL"}>
                   <SelectTrigger className="h-14 rounded-[1.2rem] bg-zinc-100/50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 text-xs shadow-none hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-all font-medium text-foreground">
                     <SelectValue placeholder="Seçiniz" />
                   </SelectTrigger>
                   <SelectContent className="rounded-[1.2rem] border-zinc-200 dark:border-zinc-700 bg-background/95 backdrop-blur-xl p-2 shadow-2xl">
                     <SelectItem value="GENEL" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Genel İşlem</SelectItem>
+                    <SelectItem value="TEDARİKÇİ" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">🏢 Tedarikçi / Toptancı</SelectItem>
+                    <SelectItem value="STOK" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Stok Alımı</SelectItem>
                     <SelectItem value="KİRA" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Kira / Gider</SelectItem>
                     <SelectItem value="MAAŞ" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Maaş Ödemesi</SelectItem>
                     <SelectItem value="FATURA" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Fatura Ödemesi</SelectItem>
-                    <SelectItem value="STOK" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Stok Alımı</SelectItem>
                     <SelectItem value="YEMEK" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Yemek Gideri</SelectItem>
                     <SelectItem value="DİĞER" className="text-xs rounded-xl py-3 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-foreground font-medium cursor-pointer">Diğer</SelectItem>
                   </SelectContent>
                 </Select>
+                {categoryValue !== "TEDARİKÇİ" && !selectedSupplierId && (
+                  <button
+                    type="button"
+                    onClick={() => setValue("category", "TEDARİKÇİ")}
+                    className="text-[10px] font-semibold text-primary hover:underline flex items-center gap-1 mt-1.5 ml-1 transition-colors"
+                  >
+                    <Building2 className="w-3 h-3" /> Tedarikçi Borcu / Ödemesi Bağla
+                  </button>
+                )}
                 {categoryValue === "DİĞER" && (
                   <div className="mt-3 animate-in slide-in-from-top-2 duration-300">
                     <Input
@@ -632,6 +695,185 @@ export function CreateTransactionModal({
                 </div>
               </div>
             </div>
+
+            {/* Supplier / Tedarikçi Borç & Ödeme Entegrasyon Paneli */}
+            {(categoryValue === "TEDARİKÇİ" || !!selectedSupplierId) && (
+              <div className="p-5 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/80 border border-primary/20 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold text-xs text-foreground flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" /> TEDARİKÇİ VE CARİ HESAP YÖNETİMİ
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    {selectedSupplier && (
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest hidden sm:inline">
+                        {selectedSupplier.phone ? `İletişim: ${selectedSupplier.phone}` : "Kayıtlı Tedarikçi"}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("supplierId", "");
+                        if (categoryValue === "TEDARİKÇİ") setValue("category", "GENEL");
+                      }}
+                      className="text-[10px] text-rose-500 hover:text-rose-400 uppercase tracking-widest font-semibold flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" /> Kaldır
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tedarikçi Seç Dropdown */}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Tedarikçi Seçimi</Label>
+                  <Select
+                    value={selectedSupplierId || undefined}
+                    onValueChange={(val) => {
+                      setValue("supplierId", val, { shouldValidate: true });
+                      const supp = (suppliers || []).find((s: any) => s.id === val);
+                      if (supp) {
+                        const currentDesc = watch("description");
+                        const currentAction = watch("supplierAction") || "PAYMENT";
+                        const actionText = currentAction === "PAYMENT" ? "Tedarikçi Ödemesi" : "Ekstra Borç Girişi";
+                        if (!currentDesc || currentDesc.trim() === "" || currentDesc.includes("Tedarikçi") || currentDesc.includes("Borç")) {
+                          setValue("description", `${supp.name} ${actionText}`);
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-12 rounded-xl bg-background border-zinc-200 dark:border-zinc-700 text-xs shadow-none">
+                      <SelectValue placeholder="İşlem yapılacak tedarikçiyi seçiniz..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-zinc-200 dark:border-zinc-700 bg-background/95 backdrop-blur-xl p-2 max-h-60">
+                      {suppliers.length === 0 ? (
+                        <SelectItem value="none" disabled className="text-xs py-3 text-muted-foreground text-center">
+                          Kayıtlı tedarikçi bulunamadı
+                        </SelectItem>
+                      ) : (
+                        suppliers.map((s: any) => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs rounded-xl py-2.5 cursor-pointer">
+                            <div className="flex items-center justify-between w-full min-w-[280px] gap-4">
+                              <span className="font-semibold text-foreground truncate">{s.name}</span>
+                              <span className={cn(
+                                "font-bold text-[11px] shrink-0",
+                                Number(s.balance || 0) > 0 ? "text-rose-500" : "text-emerald-500"
+                              )}>
+                                Kalan Borç: ₺{Number(s.balance || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* İşlem Yönü / Aksiyon Seçimi (GİDER için Ödeme vs Ekstra Borç) */}
+                {transactionType === "EXPENSE" ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Tedarikçi İşlem Amacı</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setValue("supplierAction", "PAYMENT");
+                          if (selectedSupplier) {
+                            setValue("description", `${selectedSupplier.name} Tedarikçi Ödemesi`);
+                          }
+                        }}
+                        className={cn(
+                          "p-3 rounded-xl border text-left transition-all",
+                          selectedSupplierAction === "PAYMENT"
+                            ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/30"
+                            : "bg-background/40 border-border/40 text-muted-foreground hover:bg-muted/30"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 text-xs font-bold">
+                          <ArrowDownLeft className="h-4 w-4 shrink-0 text-emerald-500" />
+                          <span>Tedarikçiye Ödeme Yap (Borç Düşer)</span>
+                        </div>
+                        <p className="text-[10px] font-normal opacity-80 mt-1 leading-tight">
+                          Kasadan para çıkar, tedarikçiye ait açık sipariş ve borçları sırayla (FIFO) kapatır.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setValue("supplierAction", "ADD_DEBT");
+                          if (selectedSupplier) {
+                            setValue("description", `${selectedSupplier.name} Ekstra Borç Girişi`);
+                          }
+                        }}
+                        className={cn(
+                          "p-3 rounded-xl border text-left transition-all",
+                          selectedSupplierAction === "ADD_DEBT"
+                            ? "bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-400 font-bold shadow-sm ring-1 ring-rose-500/30"
+                            : "bg-background/40 border-border/40 text-muted-foreground hover:bg-muted/30"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 text-xs font-bold">
+                          <ArrowUpRight className="h-4 w-4 shrink-0 text-rose-500" />
+                          <span>Ekstra Borç Ekle (Borç Artar)</span>
+                        </div>
+                        <p className="text-[10px] font-normal opacity-80 mt-1 leading-tight">
+                          Tedarikçiye borç girişi yapar, cari bakiye artar ve sonraki ödemeler bu borcu kapatır.
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400">
+                    <span className="font-semibold block">Tedarikçiden İade / Nakit Tahsilat</span>
+                    <span className="text-[10px] opacity-80">Kasaya nakit girer ve tedarikçiye olan borçtan düşülür.</span>
+                  </div>
+                )}
+
+                {/* Canlı Bakiye Simülasyonu */}
+                {selectedSupplier && (
+                  <div className="p-3.5 rounded-xl bg-background/90 border border-border/60 space-y-2.5">
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-2 rounded-lg bg-muted/40">
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-medium">Mevcut Borç</span>
+                        <span className="text-xs sm:text-sm font-bold text-rose-500">
+                          ₺{Number(selectedSupplier.balance || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-muted/40">
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-medium">İşlem Tutarı (TL)</span>
+                        <span className={cn(
+                          "text-xs sm:text-sm font-bold",
+                          selectedSupplierAction === "PAYMENT" ? "text-emerald-500" : "text-rose-500"
+                        )}>
+                          {selectedSupplierAction === "PAYMENT" ? "-" : "+"}₺{convertedAmounts.TRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                        <span className="text-[9px] uppercase tracking-wider text-primary font-semibold block">Son Bakiye</span>
+                        <span className="text-xs sm:text-sm font-black text-foreground">
+                          ₺{(() => {
+                            const currentBal = Number(selectedSupplier.balance || 0);
+                            const delta = convertedAmounts.TRY || 0;
+                            const nextBal = selectedSupplierAction === "PAYMENT"
+                              ? Math.max(0, currentBal - delta)
+                              : currentBal + delta;
+                            return nextBal.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground text-center font-medium leading-tight">
+                      {selectedSupplierAction === "PAYMENT"
+                        ? `İşlem tamamlandığında ${selectedSupplier.name} borcu ₺${convertedAmounts.TRY.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} azalacaktır.`
+                        : `İşlem tamamlandığında ${selectedSupplier.name} borcu ₺${convertedAmounts.TRY.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} artacaktır.`
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">

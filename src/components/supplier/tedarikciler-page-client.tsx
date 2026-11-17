@@ -100,6 +100,8 @@ import { PurchaseForm } from "./purchase-form";
 import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 import { UndoLastImportButton } from "@/components/stock/undo-last-import-button";
 import { WholesalerImportModal } from "@/components/stock/wholesaler-import-modal";
+import { SupplierDebtDetailModal } from "./supplier-debt-detail-modal";
+import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
 
 export function TedarikcilerPageClient({
     suppliers: initialSuppliers,
@@ -109,12 +111,19 @@ export function TedarikcilerPageClient({
     shop: initialShop
 }: TedarikcilerPageClientProps) {
     const queryClient = useQueryClient();
-    const { data: suppliersData } = useQuery({
+    const { data: suppliersData, refetch: refetchSuppliers } = useQuery({
         queryKey: ["suppliers"],
         queryFn: () => getSuppliers(),
-        staleTime: 5 * 60 * 1000,
-        refetchOnWindowFocus: false,
+        staleTime: 10 * 1000,
+        refetchOnWindowFocus: true,
     });
+
+    const { data: exchangeRates } = useQuery({
+        queryKey: ["currentExchangeRates"],
+        queryFn: () => getCurrentExchangeRates(),
+        staleTime: 60 * 1000,
+    });
+    const usdRate = (exchangeRates?.usd && exchangeRates.usd > 1) ? exchangeRates.usd : 34.5;
 
     const { data: purchaseOrdersData } = useQuery({
         queryKey: ["purchase-orders"],
@@ -162,6 +171,9 @@ export function TedarikcilerPageClient({
     const [isGlobalMalKabulOpen, setIsGlobalMalKabulOpen] = useState(false);
     const [isGlobalDetailOpen, setIsGlobalDetailOpen] = useState(false);
     const [isGlobalPaymentOpen, setIsGlobalPaymentOpen] = useState(false);
+    const [isDebtDetailModalOpen, setIsDebtDetailModalOpen] = useState(false);
+    const [selectedSupplierForPayment, setSelectedSupplierForPayment] = useState<any>(null);
+    const [isSpecificSupplierPaymentOpen, setIsSpecificSupplierPaymentOpen] = useState(false);
     const [isGroupedByDay, setIsGroupedByDay] = useState(false);
     const [globalSelectedOrder, setGlobalSelectedOrder] = useState<any>(null);
     const [deleteConfirmSupplier, setDeleteConfirmSupplier] = useState<{ id: string, name: string, count: number } | null>(null);
@@ -225,8 +237,8 @@ export function TedarikcilerPageClient({
     }
 
     const pendingOrders = purchaseOrders.filter((o: any) => o.status === "PENDING" || o.status === "ORDERED");
-    const totalDebtTry = suppliers.reduce((sum: number, s: any) => sum + Number(s.balance || 0), 0);
-    const totalDebtUsd = suppliers.reduce((sum: number, s: any) => sum + Number(s.balanceUsd || 0), 0);
+    const totalDebtTry = suppliers.reduce((sum: number, s: any) => sum + Math.max(0, Number(s.balance || 0)), 0);
+    const totalDebtUsd = usdRate > 0 ? totalDebtTry / usdRate : 0;
     const lastMonthPurchase = purchaseOrders.slice(0, 3).reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0);
 
     const criticalAlerts = aiAlerts.filter((a: any) => a.type === "CRITICAL" || a.type === "LOW_STOCK");
@@ -353,37 +365,53 @@ export function TedarikcilerPageClient({
                     },
                     {
                         label: "Toplam Borç",
-                        value: `₺${totalDebtTry.toLocaleString("tr-TR")}`,
+                        value: `₺${Math.round(totalDebtTry).toLocaleString("tr-TR")}`,
                         icon: CreditCard,
                         color: "text-rose-500",
                         bg: "bg-rose-500/10",
-                        badge: totalDebtUsd > 0 ? `$${totalDebtUsd.toLocaleString()}` : "₺0",
+                        badge: totalDebtUsd > 0 ? `$${Math.round(totalDebtUsd).toLocaleString()} USD` : "₺0",
                         badgeColor: totalDebtTry > 0 ? "bg-rose-500/10 text-rose-400" : "bg-white/5 text-muted-foreground",
+                        onClick: () => setIsDebtDetailModalOpen(true),
+                        hint: "Borçluları Gör →"
                     },
                     {
                         label: "Son Alım Tutarı",
-                        value: `₺${lastMonthPurchase.toLocaleString("tr-TR")}`,
+                        value: `₺${Math.round(lastMonthPurchase).toLocaleString("tr-TR")}`,
                         icon: TrendingUp,
                         color: "text-emerald-500",
                         bg: "bg-emerald-500/10",
                         badge: `Son ${Math.min(purchaseOrders.length, 3)} sipariş`,
                         badgeColor: "bg-emerald-500/10 text-emerald-400",
                     },
-                ].map((stat, i) => (
-                    <Card key={i} className="bg-card border-border/50 hover:border-border transition-all duration-300 group overflow-hidden">
+                ].map((stat: any, i) => (
+                    <Card
+                        key={i}
+                        onClick={stat.onClick}
+                        className={cn(
+                            "bg-card border-border/50 hover:border-border transition-all duration-300 group overflow-hidden",
+                            stat.onClick && "cursor-pointer hover:border-rose-500/50 hover:bg-rose-500/[0.02] active:scale-[0.99]"
+                        )}
+                    >
                         <CardContent className="p-6 relative">
                             <div className="flex items-start justify-between mb-4">
                                 <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", stat.bg)}>
                                     <stat.icon className={cn("h-5 w-5", stat.color)} />
                                 </div>
                                 {stat.badge && (
-                                    <Badge className={cn("text-[9px]  border-none px-2 py-0.5 rounded-lg", stat.badgeColor)}>
+                                    <Badge className={cn("text-[9px] border-none px-2 py-0.5 rounded-lg", stat.badgeColor)}>
                                         {stat.badge}
                                     </Badge>
                                 )}
                             </div>
-                            <p className="text-xs  text-muted-foreground uppercase tracking-wide mb-1">{stat.label}</p>
-                            <p className="text-2xl  text-foreground">{stat.value}</p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1 flex items-center justify-between">
+                                <span>{stat.label}</span>
+                                {stat.hint && (
+                                    <span className="text-[10px] text-rose-400 font-bold lowercase opacity-75 group-hover:opacity-100 flex items-center gap-0.5">
+                                        {stat.hint}
+                                    </span>
+                                )}
+                            </p>
+                            <p className="text-2xl font-black text-foreground tabular-nums">{stat.value}</p>
                         </CardContent>
                     </Card>
                 ))}
@@ -1086,6 +1114,39 @@ export function TedarikcilerPageClient({
                     window.location.reload();
                 }}
             />
+
+            <SupplierDebtDetailModal
+                isOpen={isDebtDetailModalOpen}
+                onClose={() => setIsDebtDetailModalOpen(false)}
+                suppliers={suppliers}
+                usdRate={usdRate}
+                onSelectSupplier={(supplierId) => {
+                    setSelectedSupplierId(supplierId);
+                }}
+                onPaySupplier={(sup) => {
+                    setSelectedSupplierForPayment(sup);
+                    setIsSpecificSupplierPaymentOpen(true);
+                }}
+            />
+
+            {selectedSupplierForPayment && (
+                <SupplierPaymentModal
+                    isOpen={isSpecificSupplierPaymentOpen}
+                    onClose={() => {
+                        setIsSpecificSupplierPaymentOpen(false);
+                        setSelectedSupplierForPayment(null);
+                    }}
+                    supplierId={selectedSupplierForPayment.id}
+                    supplierName={selectedSupplierForPayment.name}
+                    supplierBalance={Number(selectedSupplierForPayment.balance || 0)}
+                    suppliers={suppliers}
+                    allPurchaseOrders={purchaseOrders}
+                    onSuccess={() => {
+                        refetchSuppliers();
+                        queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+                    }}
+                />
+            )}
 
             <WhatsAppConfirmModal
                 isOpen={orderWhatsAppModalOpen}

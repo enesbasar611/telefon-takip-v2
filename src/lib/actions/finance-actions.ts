@@ -412,9 +412,116 @@ export async function createManualTransaction(rawData: z.infer<typeof transactio
         }
       });
 
+      // Tedarikçi entegrasyonu (Tedarikçiye Ödeme veya Borç Girişi)
+      if (data.supplierId) {
+        const supplier = await tx.supplier.findUnique({
+          where: { id: data.supplierId, shopId },
+          include: {
+            purchases: {
+              where: { paymentStatus: { in: ["UNPAID", "PARTIAL"] } },
+              orderBy: { createdAt: "asc" }
+            }
+          }
+        });
+
+        if (supplier) {
+          const supplierAction = data.supplierAction || (data.type === "EXPENSE" ? "PAYMENT" : "ADD_DEBT");
+
+          if (supplierAction === "PAYMENT") {
+            // Borç Ödeme: Tedarikçi bakiyesinden düşülür
+            const unpaidOrdersSum = (supplier.purchases || []).reduce(
+              (sum: number, p: any) => sum + Math.max(0, Number(p.remainingAmount || 0)),
+              0
+            );
+            const currentBal = (supplier.purchases && supplier.purchases.length > 0) ? unpaidOrdersSum : Number(supplier.balance || 0);
+            const newSupplierBal = Math.max(0, Math.round((currentBal - tryAmount) * 100) / 100);
+
+            await tx.supplier.update({
+              where: { id: supplier.id },
+              data: { balance: newSupplierBal }
+            });
+
+            await tx.supplierTransaction.create({
+              data: {
+                supplierId: supplier.id,
+                amount: tryAmount,
+                type: "EXPENSE",
+                description: `[Kasa Ödemesi] ${data.description || "Tedarikçiye Kasa Borç Ödemesi"}`,
+                date: targetCreatedAt,
+                shopId
+              }
+            });
+
+            // FIFO ile bekleyen siparişlerin kalan borcunu kapat
+            let remainingToApply = tryAmount;
+            for (const order of supplier.purchases) {
+              if (remainingToApply <= 0) break;
+              const orderRemaining = Number(order.remainingAmount || 0);
+              const applyAmount = Math.min(remainingToApply, orderRemaining);
+              const newRemaining = Math.max(0, Math.round((orderRemaining - applyAmount) * 100) / 100);
+
+              await tx.purchaseOrder.update({
+                where: { id: order.id },
+                data: {
+                  remainingAmount: newRemaining,
+                  paymentStatus: newRemaining === 0 ? "PAID" : "PARTIAL"
+                }
+              });
+              remainingToApply -= applyAmount;
+            }
+          } else if (supplierAction === "ADD_DEBT") {
+            // Tedarikçiye Borç Ekleme (Borç Tahakkuku / Alım Borcu)
+            const unpaidOrdersSum = (supplier.purchases || []).reduce(
+              (sum: number, p: any) => sum + Math.max(0, Number(p.remainingAmount || 0)),
+              0
+            );
+            const currentBal = (supplier.purchases && supplier.purchases.length > 0) ? unpaidOrdersSum : Number(supplier.balance || 0);
+            const newSupplierBal = Math.round((currentBal + tryAmount) * 100) / 100;
+
+            await tx.supplier.update({
+              where: { id: supplier.id },
+              data: {
+                balance: newSupplierBal,
+                totalShopping: { increment: tryAmount }
+              }
+            });
+
+            // FIFO ve borç takibi için PurchaseOrder kaydı oluştur
+            const orderNo = `BORC-${format(targetCreatedAt, "yyyyMMdd")}-${Math.floor(1000 + Math.random() * 9000)}`;
+            const po = await tx.purchaseOrder.create({
+              data: {
+                orderNo,
+                supplierId: supplier.id,
+                totalAmount: tryAmount,
+                netAmount: tryAmount,
+                remainingAmount: tryAmount,
+                paymentStatus: "UNPAID",
+                status: "COMPLETED",
+                description: data.description || "Kasa Ekstra Borç Girişi",
+                shopId,
+                createdAt: targetCreatedAt,
+              }
+            });
+
+            await tx.supplierTransaction.create({
+              data: {
+                supplierId: supplier.id,
+                purchaseOrderId: po.id,
+                amount: tryAmount,
+                type: "INCOME",
+                description: `[Kasa Borç Girişi] ${data.description || "Tedarikçiye Ekstra Borç Kaydı"}`,
+                date: targetCreatedAt,
+                shopId
+              }
+            });
+          }
+        }
+      }
+
       return t;
     });
 
+    revalidatePath("/tedarikciler");
     revalidatePath("/satis/kasa");
     revalidatePath("/");
     revalidatePath("/dashboard");

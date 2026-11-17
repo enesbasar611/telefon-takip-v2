@@ -34,10 +34,28 @@ export async function getSuppliersSimple() {
         address: true,
         category: true,
         trustScore: true,
+        balance: true,
+        balanceUsd: true,
+        totalShopping: true,
+        purchases: {
+          where: { paymentStatus: { in: ["UNPAID", "PARTIAL"] } },
+          select: { remainingAmount: true }
+        }
       },
       orderBy: { name: "asc" }
     });
-    return serializePrisma(suppliers);
+    const serialized = serializePrisma(suppliers);
+    if (Array.isArray(serialized)) {
+      serialized.forEach((s: any) => {
+        const unpaidDebt = (s.purchases || []).reduce(
+          (sum: number, p: any) => sum + Math.max(0, Number(p.remainingAmount || 0)),
+          0
+        );
+        const recordedBalance = Number(s.balance || 0);
+        s.balance = (s.purchases && s.purchases.length > 0) ? unpaidDebt : recordedBalance;
+      });
+    }
+    return serialized;
   } catch (error) {
     console.error("Error fetching simple suppliers:", error);
     return [];
@@ -52,7 +70,8 @@ export async function getSuppliers() {
       where: { shopId },
       include: {
         purchases: {
-          include: { items: { include: { product: true } } }
+          include: { items: { include: { product: true } } },
+          orderBy: { createdAt: "desc" }
         },
         inventoryMovements: {
           include: { product: true },
@@ -64,11 +83,31 @@ export async function getSuppliers() {
         returns: {
           include: { product: true, customer: true, serviceTicket: true },
           orderBy: { createdAt: "desc" }
+        },
+        SupplierTransaction: {
+          include: { purchaseOrder: true },
+          orderBy: { date: "desc" }
         }
       },
       orderBy: { createdAt: "desc" }
     });
-    return serializePrisma(suppliers);
+    const serialized = serializePrisma(suppliers);
+    if (Array.isArray(serialized)) {
+      serialized.forEach((s: any) => {
+        s.transactions = s.SupplierTransaction || [];
+        // Gerçek Kalan Borç Hesaplaması:
+        // Eğer tedarikçinin alım/sipariş kayıtları varsa, ödenmemiş/kısmi siparişlerin kalan tutarları toplamını esas al
+        const unpaidPurchasesDebt = (s.purchases || []).reduce(
+          (sum: number, p: any) => sum + Math.max(0, Number(p.remainingAmount || 0)),
+          0
+        );
+        const recordedBalance = Number(s.balance || 0);
+        // Eğer sipariş bazlı kalan borç varsa onu baz al, yoksa recordedBalance
+        const effectiveDebt = (s.purchases && s.purchases.length > 0) ? unpaidPurchasesDebt : recordedBalance;
+        s.balance = effectiveDebt;
+      });
+    }
+    return serialized;
   } catch (error) {
     console.error("Error fetching suppliers:", error);
     return [];
@@ -98,11 +137,23 @@ export async function getSupplierById(id: string) {
           orderBy: { createdAt: "desc" }
         },
         SupplierTransaction: {
+          include: { purchaseOrder: true },
           orderBy: { date: "desc" }
         }
       }
     });
-    return serializePrisma(supplier);
+    const serialized = serializePrisma(supplier);
+    if (serialized) {
+      serialized.transactions = serialized.SupplierTransaction || [];
+      const unpaidPurchasesDebt = (serialized.purchases || []).reduce(
+        (sum: number, p: any) => sum + Math.max(0, Number(p.remainingAmount || 0)),
+        0
+      );
+      const recordedBalance = Number(serialized.balance || 0);
+      const effectiveDebt = (serialized.purchases && serialized.purchases.length > 0) ? unpaidPurchasesDebt : recordedBalance;
+      serialized.balance = effectiveDebt;
+    }
+    return serialized;
   } catch (error) {
     console.error("Error fetching supplier by id:", error);
     return null;

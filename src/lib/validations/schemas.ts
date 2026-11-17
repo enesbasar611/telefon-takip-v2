@@ -86,6 +86,8 @@ export const transactionSchema = z.object({
     accountId: z.string().optional(),
     category: z.string().optional(),
     date: z.string().optional(),
+    supplierId: z.string().optional().nullable(),
+    supplierAction: z.enum(["PAYMENT", "ADD_DEBT"]).optional().nullable(),
     attachments: z.array(z.object({
         id: z.string().optional(),
         url: z.string(),
