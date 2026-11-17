@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,8 @@ import {
     Trash2,
     Zap,
     Copy,
-    XCircle
+    XCircle,
+    FileSpreadsheet
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -47,6 +49,8 @@ import { EditSupplierModal } from "./edit-supplier-modal";
 import { deleteSupplier, cancelPurchaseOrder, getSupplierById } from "@/lib/actions/supplier-actions";
 import { toast } from "sonner";
 import { PurchaseForm } from "./purchase-form";
+import { WholesalerImportModal } from "@/components/stock/wholesaler-import-modal";
+import { UndoLastImportButton } from "@/components/stock/undo-last-import-button";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -67,7 +71,28 @@ interface SupplierProfileProps {
 }
 
 export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, shop, couriers = [] }: SupplierProfileProps) {
-    const [supplier, setSupplier] = useState(initialSupplier);
+    const queryClient = useQueryClient();
+    const [supplierState, setSupplierState] = useState(initialSupplier);
+
+    // Canlı tedarikçi sorgusu - Ön bellek temizlendiğinde anında güncellenir
+    const { data: liveSupplier, refetch: refetchSupplier } = useQuery({
+        queryKey: ["supplier", initialSupplier.id],
+        queryFn: async () => {
+            const res = await getSupplierById(initialSupplier.id);
+            if (res) setSupplierState(res);
+            return res;
+        },
+        initialData: initialSupplier,
+        staleTime: 5 * 1000,
+        refetchOnWindowFocus: true,
+    });
+
+    const supplier = supplierState || liveSupplier || initialSupplier;
+    const setSupplier = (newVal: any) => {
+        setSupplierState(newVal);
+        queryClient.setQueryData(["supplier", initialSupplier.id], newVal);
+    };
+
     const [activeTab, setActiveTab] = useState("orders");
     const [isMalKabulOpen, setIsMalKabulOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -94,15 +119,11 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
     const [isAssigning, setIsAssigning] = useState(false);
 
     useEffect(() => {
-        setSupplier(initialSupplier);
         if (initialSupplier?.id) {
-            getSupplierById(initialSupplier.id).then((fresh) => {
-                if (fresh) {
-                    setSupplier(fresh);
-                }
-            }).catch(console.error);
+            setSupplierState(initialSupplier);
+            refetchSupplier();
         }
-    }, [initialSupplier]);
+    }, [initialSupplier?.id, refetchSupplier]);
 
     const handleDetail = (order: any) => {
         setSelectedOrder(order);
@@ -222,7 +243,13 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <UndoLastImportButton
+                        onSuccess={() => {
+                            refetchSupplier();
+                            queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+                        }}
+                    />
                     {Number(supplier.balance || 0) > 0 && (
                         <Button
                             className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-xs tracking-widest px-4 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -236,6 +263,25 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                             Borcu Kapat (₺{Math.round(Number(supplier.balance)).toLocaleString("tr-TR")})
                         </Button>
                     )}
+                    <WholesalerImportModal
+                        suppliers={suppliers}
+                        initialSupplierId={supplier.id}
+                        lockSupplier={true}
+                        defaultAddToStock={false}
+                        onSuccess={() => {
+                            refetchSupplier();
+                            queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+                        }}
+                        trigger={
+                            <Button
+                                variant="outline"
+                                className="rounded-xl border-primary/40 hover:border-primary text-xs font-bold uppercase transition-all bg-primary/10 hover:bg-primary/20 text-primary gap-2 shadow-xs"
+                            >
+                                <FileSpreadsheet className="w-4 h-4 text-primary" />
+                                <span>Fiş / Fatura Yükle</span>
+                            </Button>
+                        }
+                    />
                     <Button
                         variant="outline"
                         className="rounded-xl border-border/50 hover:border-primary/50 text-xs font-bold uppercase transition-all bg-card/30"
@@ -465,7 +511,18 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
-                                            {Object.entries(groupedOrders).map(([date, orders]: [string, any]) => (
+                                            {(!supplier.purchases || supplier.purchases.length === 0) ? (
+                                                <tr>
+                                                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                                                        <div className="flex flex-col items-center justify-center gap-2">
+                                                            <ShoppingBag className="w-8 h-8 text-muted-foreground/30" />
+                                                            <span className="text-xs font-bold text-foreground/80">Henüz sipariş veya alım kaydı bulunmuyor</span>
+                                                            <span className="text-[10px] text-muted-foreground">Yukarıdaki &quot;Fiş / Fatura Yükle&quot; butonunu kullanarak toptancı fişlerini içe aktarabilirsiniz.</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                Object.entries(groupedOrders).map(([date, orders]: [string, any]) => (
                                                 <div key={date} className="contents underline-none">
                                                     {isGroupedByDay && (
                                                         <tr className="bg-white/[0.02]">
@@ -574,7 +631,8 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                                         </tr>
                                                     ))}
                                                 </div>
-                                            ))}
+                                            ))
+                                        )}
                                         </tbody>
                                     </table>
                                 </div>

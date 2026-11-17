@@ -38,7 +38,8 @@ import {
     Trash2,
     RefreshCcw,
     XCircle,
-    MessageCircle
+    MessageCircle,
+    FileSpreadsheet
 } from "lucide-react";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
 import { sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
@@ -97,6 +98,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SupplierProfile } from "./supplier-profile";
 import { PurchaseForm } from "./purchase-form";
 import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
+import { UndoLastImportButton } from "@/components/stock/undo-last-import-button";
+import { WholesalerImportModal } from "@/components/stock/wholesaler-import-modal";
 
 export function TedarikcilerPageClient({
     suppliers: initialSuppliers,
@@ -291,7 +294,20 @@ export function TedarikcilerPageClient({
                 }
                 actions={
                     <div className="flex items-center gap-3 flex-wrap justify-end">
-
+                        <UndoLastImportButton alwaysShow={true} />
+                        <WholesalerImportModal
+                            suppliers={suppliers}
+                            defaultAddToStock={false}
+                            trigger={
+                                <Button
+                                    variant="outline"
+                                    className="h-12 px-5 rounded-xl text-xs font-bold gap-2.5 transition-all shadow-md bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4 text-primary" />
+                                    <span>Fiş / Fatura Yükle</span>
+                                </Button>
+                            }
+                        />
                         <Button
                             onClick={() => setIsAnalysisOpen(true)}
                             className={cn(

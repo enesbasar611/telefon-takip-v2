@@ -44,9 +44,12 @@ import {
     Wallet,
     CreditCard,
     FileText,
-    ScanText
+    ScanText,
+    RotateCcw,
+    Package
 } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import {
     parseWholesalerRawText,
     type ParsedWholesalerItem,
@@ -58,6 +61,8 @@ import {
     checkWholesalerStockMatchesAction,
     parseWholesalerDocumentWithAIAction,
     parseWholesalerRawTextWithAIAction,
+    getLastWholesalerBatchAction,
+    rollbackLastWholesalerBatchAction,
     type StockMatchInfo
 } from "@/lib/actions/stock-import-actions";
 import { getAccounts } from "@/lib/actions/finance-actions";
@@ -69,12 +74,18 @@ interface WholesalerImportModalProps {
     suppliers?: { id: string; name: string }[];
     onSuccess?: () => void;
     trigger?: React.ReactNode;
+    initialSupplierId?: string;
+    lockSupplier?: boolean;
+    defaultAddToStock?: boolean;
 }
 
 export function WholesalerImportModal({
     suppliers = [],
     onSuccess,
     trigger,
+    initialSupplierId,
+    lockSupplier = false,
+    defaultAddToStock = true,
 }: WholesalerImportModalProps) {
     const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
@@ -88,17 +99,34 @@ export function WholesalerImportModal({
     const [isCheckingMatches, setIsCheckingMatches] = useState(false);
 
     // Tedarikçi ve ödeme yönetimi
-    const [selectedSupplierId, setSelectedSupplierId] = useState<string>("NONE");
+    const [selectedSupplierId, setSelectedSupplierId] = useState<string>(initialSupplierId || "NONE");
+    const [addToStock, setAddToStock] = useState<boolean>(defaultAddToStock ?? true);
     const [paymentStatus, setPaymentStatus] = useState<"PAID" | "PARTIAL" | "UNPAID">("PAID");
     const [paidAmountTry, setPaidAmountTry] = useState<number | undefined>(undefined);
     const [accounts, setAccounts] = useState<any[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
     const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
     const [usdRate, setUsdRate] = useState<number>(34.5);
+    const [lastBatchInfo, setLastBatchInfo] = useState<any>(null);
+    const [isRollingBack, setIsRollingBack] = useState<boolean>(false);
 
     // Kasa hesaplarını ve döviz kurunu çek
     useEffect(() => {
         if (open) {
+            if (initialSupplierId) {
+                setSelectedSupplierId(initialSupplierId);
+            }
+            setAddToStock(defaultAddToStock ?? true);
+
+            // Geri alınabilir son işlemi sorgula
+            getLastWholesalerBatchAction().then((res) => {
+                if (res?.hasBatch && res.batch) {
+                    setLastBatchInfo(res.batch);
+                } else {
+                    setLastBatchInfo(null);
+                }
+            }).catch(() => null);
+
             getAccounts().then((accs) => {
                 setAccounts(accs || []);
                 if (accs && accs.length > 0) {
@@ -113,7 +141,7 @@ export function WholesalerImportModal({
                 }
             }).catch(console.error);
         }
-    }, [open]);
+    }, [open, initialSupplierId, defaultAddToStock]);
 
     // Toplu fiyat artırma aracı
     const [customMarkupUsd, setCustomMarkupUsd] = useState<string>("5.00");
@@ -156,7 +184,9 @@ export function WholesalerImportModal({
 
         const result = parseWholesalerRawText(content, defaultMarkup || 5.00);
         if (result.items.length === 0) {
-            toast.warning("Metinde ürün veya fiyat satırı bulunamadı. Lütfen CSV veya toptancı listesini kontrol edin.");
+            // Yerel ayrıştırıcı satır bulamadıysa otomatik olarak Yapay Zeka çözümlemesini dene
+            toast.info("Yerel şablon bulunamadı, metin yapay zeka ile taranıyor...");
+            await handleParseWithAI();
             return;
         }
 
@@ -233,6 +263,35 @@ export function WholesalerImportModal({
             if (!abortParsingRef.current) {
                 setIsParsingDoc(false);
             }
+        }
+    };
+
+    // Son yapılan toptancı stok ve fiş girişini geri alma (Rollback)
+    const handleRollback = async () => {
+        setIsRollingBack(true);
+        try {
+            toast.loading("Son toptancı stok ve fiş girişi geri alınıyor...", { id: "rollback-import" });
+            const res = await rollbackLastWholesalerBatchAction();
+            if (res.success) {
+                toast.success(res.message || "Son işlem başarıyla geri alındı.", { id: "rollback-import", duration: 6000 });
+                setLastBatchInfo(null);
+                queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+                queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+                queryClient.invalidateQueries({ queryKey: ["supplier"] });
+                queryClient.invalidateQueries({ queryKey: ["products"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["transactions"] });
+                queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+                queryClient.invalidateQueries({ queryKey: ["critical-products"] });
+                queryClient.invalidateQueries({ queryKey: ["last-wholesaler-batch"] });
+            } else {
+                toast.error(res.error || "Geri alma başarısız oldu.", { id: "rollback-import" });
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Geri alma sırasında hata oluştu.", { id: "rollback-import" });
+        } finally {
+            setIsRollingBack(false);
         }
     };
 
@@ -740,14 +799,34 @@ export function WholesalerImportModal({
                 paidAmount: finalPaidAmount,
                 accountId: (paymentStatus === "PAID" || paymentStatus === "PARTIAL") && selectedAccountId ? selectedAccountId : undefined,
                 paymentMethod: (paymentStatus === "PAID" || paymentStatus === "PARTIAL") ? paymentMethod : "CASH",
-                notes: `Toptancı Toplu Giriş (${totalQuantity} Adet)`,
+                notes: `Toptancı Toplu Giriş (${totalQuantity} Adet)${!addToStock ? " [Stoğa Eklenmedi - Yalnızca Fiş]" : ""}`,
+                addToStock: addToStock,
             });
 
             if (res.success) {
-                toast.success(
-                    `Başarılı! ${res.createdCount} yeni ürün açıldı, ${res.updatedCount} ürünün stoğu artırıldı (${res.totalQuantity} adet, $${res.totalAmountUsd}).`,
-                    { duration: 5000 }
-                );
+                if (addToStock) {
+                    toast.success(
+                        `Başarılı! ${res.createdCount} yeni ürün açıldı, ${res.updatedCount} ürünün stoğu artırıldı (${res.totalQuantity} adet, $${res.totalAmountUsd}).`,
+                        {
+                            duration: 7000,
+                            action: {
+                                label: "↩️ Geri Al",
+                                onClick: () => handleRollback(),
+                            }
+                        }
+                    );
+                } else {
+                    toast.success(
+                        `Başarılı! ${res.totalQuantity} adet ürünlük fiş tedarikçi cari kaydına işlendi (ürünler stoğa eklenmedi).`,
+                        {
+                            duration: 7000,
+                            action: {
+                                label: "↩️ Geri Al",
+                                onClick: () => handleRollback(),
+                            }
+                        }
+                    );
+                }
                 if (res.supplierUpdated) {
                     if (paymentStatus === "PAID") {
                         toast.info("Tedarikçi siparişi 'Ödendi' olarak işlendi ve tutar kasadan düşüldü.");
@@ -757,7 +836,7 @@ export function WholesalerImportModal({
                         toast.info(`Tedarikçi siparişi açık hesap (₺${totalBuyTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} veresiye borcu) olarak kaydedildi.`);
                     }
                 }
-                // React Query önbelleklerini tazele (Tedarikçi, Siparişler, Kasa, Stok)
+                // React Query önbelleklerini tazele (Tedarikçi, Siparişler, Kasa, Stok, Geri Alma)
                 queryClient.invalidateQueries({ queryKey: ["suppliers"] });
                 queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
                 queryClient.invalidateQueries({ queryKey: ["supplier"] });
@@ -767,6 +846,7 @@ export function WholesalerImportModal({
                 queryClient.invalidateQueries({ queryKey: ["transactions"] });
                 queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
                 queryClient.invalidateQueries({ queryKey: ["critical-products"] });
+                queryClient.invalidateQueries({ queryKey: ["last-wholesaler-batch"] });
 
                 setOpen(false);
                 setStep(1);
@@ -823,6 +903,38 @@ export function WholesalerImportModal({
                     {/* ADIM 1: DOSYA VEYA METİN GİRİŞİ */}
                     {step === 1 && (
                         <div className="p-6 space-y-6">
+                            {lastBatchInfo && (
+                                <div className="p-4 rounded-2xl bg-amber-500/[0.08] border border-amber-500/25 flex flex-wrap items-center justify-between gap-3 text-xs animate-in fade-in duration-300">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-xl bg-amber-500/20 text-amber-500 shrink-0">
+                                            <RotateCcw className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-foreground">Geri Alınabilir Son Giriş:</span>
+                                                <Badge variant="outline" className="text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-500 font-bold">
+                                                    {lastBatchInfo.supplierName || "Bağımsız Giriş"}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-muted-foreground mt-0.5">
+                                                {lastBatchInfo.totalQuantity} adet ürün • ₺{Number(lastBatchInfo.totalAmountTry || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} {lastBatchInfo.addToStock ? "(Stoğa Eklendi)" : "(Stoğa Eklenmedi)"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 px-3.5 text-xs font-bold border-amber-500/40 text-amber-500 hover:text-amber-400 hover:bg-amber-500/20 rounded-xl gap-2 shrink-0 shadow-xs"
+                                        onClick={handleRollback}
+                                        disabled={isRollingBack}
+                                    >
+                                        <RotateCcw className={cn("w-3.5 h-3.5", isRollingBack && "animate-spin")} />
+                                        <span>Son Girişi Geri Al</span>
+                                    </Button>
+                                </div>
+                            )}
+
                             <Tabs defaultValue="paste" className="w-full">
                                 <TabsList className="grid grid-cols-2 rounded-2xl p-1 bg-muted/40 h-12 mb-4">
                                     <TabsTrigger value="paste" className="rounded-xl text-xs font-bold gap-2">
@@ -1250,7 +1362,11 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
                                     <div className="flex items-center gap-2">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-xs font-bold text-muted-foreground">Tedarikçi:</span>
-                                            <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+                                            <Select
+                                                value={selectedSupplierId}
+                                                onValueChange={setSelectedSupplierId}
+                                                disabled={lockSupplier}
+                                            >
                                                 <SelectTrigger className="w-[190px] h-8 rounded-xl text-xs font-semibold border-border/60">
                                                     <SelectValue placeholder="Tedarikçi Seçilmedi" />
                                                 </SelectTrigger>
@@ -1261,8 +1377,57 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            {lockSupplier && (
+                                                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-bold">
+                                                    Kilitli
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Ürünler Stoğa Eklensin mi? Seçenek Kartı */}
+                            <div className={cn(
+                                "mx-4 sm:mx-6 mt-3 p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 backdrop-blur-sm",
+                                addToStock 
+                                    ? "bg-emerald-500/[0.04] border-emerald-500/25" 
+                                    : "bg-amber-500/[0.04] border-amber-500/30"
+                            )}>
+                                <div className="flex items-start sm:items-center gap-3">
+                                    <div className={cn(
+                                        "p-2.5 rounded-xl shrink-0 mt-0.5 sm:mt-0 transition-colors",
+                                        addToStock ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                                    )}>
+                                        {addToStock ? <PackageCheck className="w-5 h-5" /> : <Package className="w-5 h-5" />}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-sm text-foreground">Ürünleri Dükkan Stoğuna Ekle</span>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "text-[10px] font-black uppercase tracking-wider",
+                                                    addToStock
+                                                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                                                        : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                                                )}
+                                            >
+                                                {addToStock ? "Stok Sayımı Artırılacak" : "Yalnızca Fiş / Borç Kaydı"}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            {addToStock
+                                                ? "Ürün adetleri dükkan stoğuna eklenir/artırılır, alış-satış fiyatları güncellenir ve tedarikçiye alım siparişi kaydedilir."
+                                                : "⚠️ Ürünler dükkan stoğuna eklenmez (adetler değişmez). Önceden stoğa girdiyseniz çift stok girişi önlenir; sadece tedarikçi sipariş fişi, kasa ödemesi ve cari borç işlenir."}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                    <Switch
+                                        checked={addToStock}
+                                        onCheckedChange={setAddToStock}
+                                    />
                                 </div>
                             </div>
 
@@ -1802,19 +1967,28 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
 
                                     <Button
                                         type="button"
-                                        className="rounded-xl h-11 px-6 font-bold text-xs gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+                                        className={cn(
+                                            "rounded-xl h-11 px-6 font-bold text-xs gap-2 text-white shadow-lg transition-all",
+                                            addToStock
+                                                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                                                : "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20"
+                                        )}
                                         onClick={handleFinalImport}
                                         disabled={isPending || selectedItems.length === 0}
                                     >
                                         {isPending ? (
                                             <>
                                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                                <span>Stoğa Aktarılıyor...</span>
+                                                <span>{addToStock ? "Stoğa Aktarılıyor..." : "Fiş Tedarikçiye Kaydediliyor..."}</span>
                                             </>
                                         ) : (
                                             <>
                                                 <PackageCheck className="h-4 w-4" />
-                                                <span>{selectedItems.length} Kalem ({totalQuantity} Adet) Seçili Parçayı Stoğa Aktar</span>
+                                                <span>
+                                                    {addToStock
+                                                        ? `${selectedItems.length} Kalem (${totalQuantity} Adet) Seçili Parçayı Stoğa Aktar`
+                                                        : `${selectedItems.length} Kalem (${totalQuantity} Adet) Fişi Kaydet (Stoğa Eklenmez)`}
+                                                </span>
                                             </>
                                         )}
                                     </Button>

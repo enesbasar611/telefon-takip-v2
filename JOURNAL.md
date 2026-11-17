@@ -41,6 +41,60 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-17: Stok Sayfasına (`/stok`) ve Tedarikçiler Sayfasına Sürekli Görünür Geri Alma Desteği (`alwaysShow={true}`):
+  - [src/app/(dashboard)/stok/page.tsx](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/app/(dashboard)/stok/page.tsx) ve [tedarikciler-page-client.tsx](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/supplier/tedarikciler-page-client.tsx) başlık aksiyonlarına `<UndoLastImportButton alwaysShow={true} />` entegre edildi.
+  - Geri alınabilecek son işlem olmadığında buton zarif gri tonda pasif ("Geri alınabilecek son stok/fiş girişi bulunmuyor") olarak görünür; toptancı fişi/stok girişi yapıldığı anda kehribar sarısı renkte ve içe aktarılan toplam adet rozetiyle parlayarak tek tıkla geri alma imkanı sunar.
+
+- [x] 2026-11-17: Tedarikçiler Ana Sayfasına "Fiş / Fatura Yükle" Butonu Entegrasyonu:
+  - `src/components/supplier/tedarikciler-page-client.tsx` başlık aksiyonlarına `<WholesalerImportModal>` ("Fiş / Fatura Yükle") eklendi.
+  - Kullanıcı artık hem `/tedarikciler` genel sayfasından hem de herhangi bir tedarikçinin detay profil sayfasından tek tıkla toptancı fişi (PDF, Görsel, CSV, WhatsApp metni) yükleyebilir; "Stoğa Eklensin mi?" anahtarı varsayılan olarak kapalı gelerek çift stok sayımını önler.
+
+- [x] 2026-11-17: Kapsamlı Toptancı Liste & Çok Satırlı Fatura Ayrıştırıcı Düzeltmesi (LUCATECH, BAYROX vb.) ve Tedarikçi Canlı Profil Senkronizasyonu:
+  - **Sorun:**
+    1. Kullanıcı toptancıdan kopyaladığı metni (örn. Bayrox satış özet fişi: "LUCATECH LT-601 ENC TWS AİRPODS KULAKLIK \n 2 ad $ 10,75 %0,00 %0 $ 21,50") yapıştırdığında, eski ayrıştırıcı sekme (\t) veya satır geçişlerinde kolonları yanlış sırayla eşleştiriyordu. Ürün adı "%0,00", adet 1, birim fiyatı $21.50 ve kategori boş geliyordu.
+    2. Bu hatalı satır içe aktarıldığında ürünler stoğa "%0,00" adıyla ekleniyor; tedarikçi profilinde borç ₺2.218 olarak güncellenirken alım siparişi ve ürünler tablosu boş ("0 Toplam Kayıt") kalıyordu çünkü profil bileşeni eski statik state'i tutuyor ve önbellek geçersiz kılmalarında otomatik yeniden çekmiyordu.
+  - **Yapılan İyileştirmeler:**
+    1. **Akıllı Çok Satırlı & Delimiter'lı Liste Ayrıştırıcı (`src/lib/stock/wholesaler-parser.ts`):**
+       - `isHeaderRow`: Tablo başlık satırlarını ("Açıklama Miktar Fiyat İndirim KDV Tutar...") otomatik tanıyıp ürün satırlarından ayırır.
+       - `isDetailsLine`: İçinde miktar (`2 ad`, `x`), fiyat (`$ 10,75`, `21.50`) ve indirim (`%0,00`) olan saf fatura detay satırlarını tespit eder.
+       - `extractDetailsFromLine`: Miktarı (`2 ad` -> 2), indirim yüzdelerini (`%0,00` ve `%0` filtreleyerek) ve para birimli fiyatları (`$ 10,75` birim fiyat, `$ 21,50` toplam tutar) ayıklar. `10.75 * 2 = 21.50` bağıntısını kurarak birim alış fiyatını ($10.75) ve adedi (2) eksiksiz çıkarır.
+       - `parseDelimitedRow`: Sekme (`\t`), noktalı virgül (`;`) veya dikey çizgi (`|`) ile ayrılmış satırlarda sabit sıra varsayımı yapmaz; sıra numarası, miktar, iskonto ve fiyatı dinamik olarak sınıflandırır, en tanımlayıcı metni ürün adı yapar.
+       - `parseFreeTextLine`: Serbest WhatsApp ve metin satırlarını ("2 adet Bayrox Air Pro 2 Kulaklık $11.25", "3x Samsung Ekran 18$") kusursuz şekilde ürün adı, adet ve birim fiyata böler.
+       - `parseWholesalerRawText`: Çok satırlı blokları, tek satırlı tabloları ve serbest metinleri sırayla işler; kategori, renk, çıtalı ekran (WF) ve stok kodunu (SKU) otomatik tespit eder.
+    2. **Tedarikçi Profilinde Canlı Veri Senkronizasyonu (`src/components/supplier/supplier-profile.tsx`):**
+       - `useQuery({ queryKey: ["supplier", initialSupplier.id], queryFn: () => getSupplierById(...) })` entegre edildi.
+       - Fiş/fatura yüklendiğinde veya son giriş geri alındığında profil verileri anında ve otomatik olarak sunucudan güncellenir.
+       - Alım hareketleri tablosuna şık bir boş durum (empty state) görünümü eklendi.
+    3. **Backend Güvenlik Filtresi (`src/lib/actions/stock-import-actions.ts`):**
+       - Stoğa veya fişe ürün eklenirken `%` ile başlayan veya geçersiz kalan isimlerin kayda girmesi engellendi.
+
+- [x] 2026-11-17: Tedarikçi Sayfasından Fiş/Fatura Yükleme, "Stoğa Eklensin mi?" Seçeneği & "Son Stok Girişini Geri Al" (Tek Tıkla Rollback) Entegrasyonu:
+  - **Talep:**
+    1. Tedarikçiler sayfasından doğrudan toptancı fişi/faturası yüklenebilmesi (`WholesalerImportModal`). Örneğin stok eklerken tedarikçi seçilmeden eklendiyse, sonradan tedarikçi profilinden fiş yüklenip "Ürünler stoğa eklensin mi?" seçeneği sunulması; eklenmezse mükerrer/çift stok sayımı yapılmadan yalnızca tedarikçi fişi ve borç/ödeme olarak kaydedilmesi.
+    2. Stoğa AI veya metinle ürün/fiş eklendikten sonra hatalı veya çift girişleri anında tersine çevirmek için "Son Stok Girişini Geri Al" butonunun eklenmesi (ürün stoklarını, envanter loglarını, tedarikçi borcunu/alım siparişini ve yapılan kasa ödemesini kuruşu kuruşuna geri alma).
+  - **Yapılan Geliştirmeler:**
+    1. **"Stoğa Eklensin mi?" Seçeneği (`addToStock: boolean`):**
+       - `WholesalerImportBatchPayload` ve `importWholesalerBatchAction` fonksiyonuna `addToStock` parametresi eklendi.
+       - `addToStock === false` seçildiğinde ürünlerin mağaza stoğu (`Product.stock`) artırılmaz ve `InventoryLog` kaydı oluşturulmaz; ancak toptancı alım siparişi (`PurchaseOrder`), kasa ödemesi (`Transaction`) ve tedarikçi cari borcu (`SupplierTransaction`, `balance`, `totalShopping`) eksiksiz olarak kaydedilir.
+       - Önizleme ekranına şık bir Switch kartı eklendi: Kullanıcı tek tıkla "Stok Sayımı Artırılacak" ile "Yalnızca Fiş / Borç Kaydı" arasında geçiş yapabilir.
+    2. **Tedarikçi Profilinde Fiş/Fatura Yükleme Entegrasyonu (`src/components/supplier/supplier-profile.tsx`):**
+       - Tedarikçi profil başlığına "Fiş / Fatura Yükle" butonu eklendi.
+       - Toptancı modalı açıldığında ilgili tedarikçi otomatik olarak seçili gelir (`initialSupplierId`), tedarikçi alanı kilitlenir (`lockSupplier`) ve varsayılan olarak stoğa mükerrer eklemeyi önlemek için `defaultAddToStock={false}` ayarıyla açılır.
+    3. **"Son Stok Girişini Geri Al" (Full Rollback Mimarisi):**
+       - `importWholesalerBatchAction` tamamlandığında yapılan tüm işlemler (`affectedProducts`, `inventoryLogIds`, `purchaseOrderId`, `supplierTransactionIds`, `financeTransactionId`, ödenen tutarlar) `Setting` tablosunda `LAST_WHOLESALER_IMPORT_BATCH` anahtarıyla kaydedilir.
+       - `rollbackLastWholesalerBatchAction` sunucu aksiyonu eklendi: Prisma transaction ile;
+         * Stoğa eklenen ürünlerin adetleri düşürülür (yeni açılan ve başka satış görmeyen ürünler silinir).
+         * Envanter hareket logları silinir.
+         * Oluşturulan alım siparişi (`PurchaseOrder`) ve kalemleri silinir.
+         * Tedarikçi toplam alışverişi ve kalan borcu düşürülür; ekstreden hareketler silinir.
+         * Kasadan peşin veya kısmi ödeme yapıldıysa tutar kasaya iade edilir ve harcama kaydı silinir.
+       - `getLastWholesalerBatchAction` ile geri alınabilir son işlem sorgulanır.
+    4. **Geri Alma Butonu & Arayüz Bileşenleri:**
+       - `UndoLastImportButton` (`src/components/stock/undo-last-import-button.tsx`) oluşturuldu. İşlemin detaylarını (ürün adedi, tedarikçi borcu, kasa iadesi) gösteren onay penceresi (`AlertDialog`) ile `/stok` ve `/tedarikciler` sayfalarının tepe çubuğuna ve tedarikçi profiline yerleştirildi.
+       - `WholesalerImportModal` Step 1 ekranına da geri alma bilgi çubuğu yerleştirildi; ayrıca içe aktarma tamamlandığında ekranda çıkan bildirim toast'ına da "↩️ Geri Al" kısayol butonu eklendi.
+  - **Doğrulama:**
+    - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
 - [x] 2026-11-17: Çok Satırlı PDF / Metin Fiş Ayrıştırıcı Geliştirmesi, Tedarikçi Ürünleri/Siparişleri Senkronizasyonu & Yapay Zeka ile Metin Çözümleme:
   - **Sorun:**
     1. Kullanıcı PDF faturasından metin kopyalayıp toptancı parça aktarma modalına yapıştırdığında, PDF formatının çok satırlı olması (1. satır ürün adı, 2. satır miktar/fiyat/iskonto) sebebiyle eski ayrıştırıcı iskonto yüzdesini (`%0,00`) ürün adı sanıyor, adedi 1 ve alış fiyatını birim fiyat yerine toplam tutar ($21.50) olarak alıyordu.

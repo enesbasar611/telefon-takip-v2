@@ -33,6 +33,7 @@ export interface WholesalerImportBatchPayload {
     accountId?: string; // Ödemenin çekileceği Kasa/Banka hesap ID
     paymentMethod?: "CASH" | "CARD" | "TRANSFER";
     notes?: string;
+    addToStock?: boolean; // false ise ürünler stoğa eklenmez, sadece tedarikçi fişi & cari borcu işlenir
 }
 
 export interface WholesalerImportResult {
@@ -44,6 +45,39 @@ export interface WholesalerImportResult {
     totalAmountUsd: number;
     totalAmountTry: number;
     supplierUpdated: boolean;
+    batchId?: string;
+    purchaseOrderId?: string;
+}
+
+export interface WholesalerBatchRecord {
+    batchId: string;
+    createdAt: string;
+    shopId: string;
+    supplierId?: string | null;
+    supplierName?: string | null;
+    purchaseOrderId?: string | null;
+    purchaseOrderNo?: string | null;
+    addToStock: boolean;
+    totalQuantity: number;
+    totalAmountUsd: number;
+    totalAmountTry: number;
+    paidAmountTry: number;
+    remainingAmountTry: number;
+    remainingAmountUsd: number;
+    accountId?: string | null;
+    financeTransactionId?: string | null;
+    supplierTransactionIds: string[];
+    inventoryLogIds: string[];
+    affectedProducts: {
+        productId: string;
+        name: string;
+        quantity: number;
+        wasCreated: boolean;
+        previousStock: number;
+        newStock: number;
+    }[];
+    undone?: boolean;
+    undoneAt?: string;
 }
 
 export interface StockMatchInfo {
@@ -123,7 +157,7 @@ export async function importWholesalerBatchAction(
         }
 
         const userId = await getUserId();
-        const { items, supplierId, paymentStatus, notes } = payload;
+        const { items, supplierId, paymentStatus, notes, addToStock = true } = payload;
 
         if (!items || items.length === 0) {
             return {
@@ -152,6 +186,7 @@ export async function importWholesalerBatchAction(
 
         // Transaction seçenekleri: maxWait 15sn, timeout 60sn
         const result = await prisma.$transaction(async (tx) => {
+            const now = new Date();
             // 1. Kategorileri tek seferde hazırla (Bulk Category Prep)
             const uniqueCategories = Array.from(new Set(items.map(it => (it.category || "Yedek Parça").trim()))).filter(Boolean);
             const existingCategories = await tx.category.findMany({
@@ -218,18 +253,33 @@ export async function importWholesalerBatchAction(
             let createdCount = 0;
             let updatedCount = 0;
             const orderItemsData: {
-                productId: string;
+                productId: string | null;
                 name: string;
                 quantity: number;
                 buyPriceTry: number;
                 buyPriceUsd: number;
             }[] = [];
 
+            const affectedProductsList: WholesalerBatchRecord["affectedProducts"] = [];
+            const createdInventoryLogIds: string[] = [];
+            const createdSupplierTxIds: string[] = [];
+            let createdFinanceTxId: string | null = null;
+            let createdPurchaseOrderId: string | null = null;
+            let createdPurchaseOrderNo: string | null = null;
+            let createdSupplierName: string | null = null;
+            let actualPaidTry = 0;
+            let actualRemainingTry = 0;
+            let actualRemainingUsd = 0;
+
             // 3. Döngü içerisinde hızlı güncelleme ve oluşturmalar
             for (const item of items) {
+                const cleanName = (item.name || "").trim().replace(/^(\d+[\.\-\)]\s*)+/, "").trim();
+                if (!cleanName || cleanName.startsWith("%") || cleanName.length < 2) {
+                    continue; // Geçersiz veya yüzde/iskonto satırlarını atla
+                }
+
                 const catKey = (item.category || "Yedek Parça").trim().toLowerCase();
                 const categoryId = categoryCache.get(catKey) || categoryCache.get("yedek parça") || Array.from(categoryCache.values())[0];
-                const cleanName = item.name.trim();
 
                 const buyPriceTry = Math.round(item.buyPriceUsd * usdRate * 100) / 100;
                 const sellPriceTry = Math.round(item.sellPriceUsd * usdRate * 100) / 100;
@@ -237,89 +287,120 @@ export async function importWholesalerBatchAction(
                 const lookupKey = cleanName.toLowerCase();
                 const existingProduct = productMap.get(lookupKey);
 
-                if (existingProduct) {
-                    // Mevcut ürün: stoğunu artır, fiyatlarını güncelle
-                    const newStock = existingProduct.stock + item.quantity;
-                    await tx.product.update({
-                        where: { id: existingProduct.id },
-                        data: {
-                            stock: newStock,
-                            buyPrice: buyPriceTry,
-                            buyPriceUsd: item.buyPriceUsd,
-                            sellPrice: sellPriceTry,
-                            sellPriceUsd: item.sellPriceUsd,
-                            supplierId: supplierId || existingProduct.supplierId || null,
-                        }
-                    });
+                if (addToStock) {
+                    if (existingProduct) {
+                        // Mevcut ürün: stoğunu artır, fiyatlarını güncelle
+                        const prevStock = existingProduct.stock;
+                        const newStock = existingProduct.stock + item.quantity;
+                        await tx.product.update({
+                            where: { id: existingProduct.id },
+                            data: {
+                                stock: newStock,
+                                buyPrice: buyPriceTry,
+                                buyPriceUsd: item.buyPriceUsd,
+                                sellPrice: sellPriceTry,
+                                sellPriceUsd: item.sellPriceUsd,
+                                supplierId: supplierId || existingProduct.supplierId || null,
+                            }
+                        });
 
-                    await tx.inventoryLog.create({
-                        data: {
+                        const invLog = await tx.inventoryLog.create({
+                            data: {
+                                productId: existingProduct.id,
+                                userId: userId || null,
+                                quantity: item.quantity,
+                                type: "PURCHASE",
+                                notes: `Toptancı Stok Girişi (+${item.quantity} Adet - Alış: $${item.buyPriceUsd})`,
+                                shopId,
+                            }
+                        });
+                        createdInventoryLogIds.push(invLog.id);
+
+                        existingProduct.stock = newStock;
+                        affectedProductsList.push({
                             productId: existingProduct.id,
-                            userId: userId || null,
-                            quantity: item.quantity,
-                            type: "PURCHASE",
-                            notes: `Toptancı Stok Girişi (+${item.quantity} Adet - Alış: $${item.buyPriceUsd})`,
-                            shopId,
-                        }
-                    });
-
-                    // Lookup haritasındaki mevcut stoğu da güncelle (aynı parça listede birden fazla kez geçebilir)
-                    existingProduct.stock = newStock;
-                    orderItemsData.push({
-                        productId: existingProduct.id,
-                        name: cleanName,
-                        quantity: item.quantity,
-                        buyPriceTry,
-                        buyPriceUsd: item.buyPriceUsd
-                    });
-                    updatedCount++;
-                } else {
-                    // Yeni ürün oluştur
-                    const uniqueSku = getUniqueSku(item.sku);
-                    const newProduct = await tx.product.create({
-                        data: {
-                            sku: uniqueSku,
                             name: cleanName,
-                            categoryId,
-                            supplierId: supplierId || null,
-                            buyPrice: buyPriceTry,
-                            buyPriceUsd: item.buyPriceUsd,
-                            sellPrice: sellPriceTry,
-                            sellPriceUsd: item.sellPriceUsd,
-                            stock: item.quantity,
-                            criticalStock: 1,
-                            shopId,
-                            attributes: item.color ? { color: item.color } : undefined,
-                        }
-                    });
-
-                    await tx.inventoryLog.create({
-                        data: {
-                            productId: newProduct.id,
-                            userId: userId || null,
                             quantity: item.quantity,
-                            type: "PURCHASE",
-                            notes: `Toptancı İlk Stok Girişi (${item.quantity} Adet - Alış: $${item.buyPriceUsd})`,
-                            shopId,
-                        }
-                    });
+                            wasCreated: false,
+                            previousStock: prevStock,
+                            newStock,
+                        });
 
-                    // Haritaya ekle (aynı parti içinde mükerrer isim geçerse stoğunu artırsın)
-                    productMap.set(lookupKey, {
-                        id: newProduct.id,
-                        name: newProduct.name,
-                        stock: newProduct.stock,
-                        supplierId: newProduct.supplierId,
-                    });
+                        orderItemsData.push({
+                            productId: existingProduct.id,
+                            name: cleanName,
+                            quantity: item.quantity,
+                            buyPriceTry,
+                            buyPriceUsd: item.buyPriceUsd
+                        });
+                        updatedCount++;
+                    } else {
+                        // Yeni ürün oluştur
+                        const uniqueSku = getUniqueSku(item.sku);
+                        const newProduct = await tx.product.create({
+                            data: {
+                                sku: uniqueSku,
+                                name: cleanName,
+                                categoryId,
+                                supplierId: supplierId || null,
+                                buyPrice: buyPriceTry,
+                                buyPriceUsd: item.buyPriceUsd,
+                                sellPrice: sellPriceTry,
+                                sellPriceUsd: item.sellPriceUsd,
+                                stock: item.quantity,
+                                criticalStock: 1,
+                                shopId,
+                                attributes: item.color ? { color: item.color } : undefined,
+                            }
+                        });
 
+                        const invLog = await tx.inventoryLog.create({
+                            data: {
+                                productId: newProduct.id,
+                                userId: userId || null,
+                                quantity: item.quantity,
+                                type: "PURCHASE",
+                                notes: `Toptancı İlk Stok Girişi (${item.quantity} Adet - Alış: $${item.buyPriceUsd})`,
+                                shopId,
+                            }
+                        });
+                        createdInventoryLogIds.push(invLog.id);
+
+                        productMap.set(lookupKey, {
+                            id: newProduct.id,
+                            name: newProduct.name,
+                            stock: newProduct.stock,
+                            supplierId: newProduct.supplierId,
+                        });
+
+                        affectedProductsList.push({
+                            productId: newProduct.id,
+                            name: cleanName,
+                            quantity: item.quantity,
+                            wasCreated: true,
+                            previousStock: 0,
+                            newStock: item.quantity,
+                        });
+
+                        orderItemsData.push({
+                            productId: newProduct.id,
+                            name: cleanName,
+                            quantity: item.quantity,
+                            buyPriceTry,
+                            buyPriceUsd: item.buyPriceUsd
+                        });
+                        createdCount++;
+                    }
+                } else {
+                    // addToStock === false: Ürünler stoğa EKLENMEZ, sayımlar değişmez!
+                    // Sadece tedarikçi siparişi için kalem verisi hazırlanır.
                     orderItemsData.push({
-                        productId: newProduct.id,
+                        productId: existingProduct ? existingProduct.id : null,
                         name: cleanName,
                         quantity: item.quantity,
                         buyPriceTry,
                         buyPriceUsd: item.buyPriceUsd
                     });
-                    createdCount++;
                 }
             }
 
@@ -331,6 +412,7 @@ export async function importWholesalerBatchAction(
                 });
 
                 if (supplier) {
+                    createdSupplierName = supplier.name;
                     let paidTry = 0;
                     if (paymentStatus === "PAID") {
                         paidTry = totalTry;
@@ -342,12 +424,15 @@ export async function importWholesalerBatchAction(
                     const remainingTry = Math.max(0, Math.round((totalTry - paidTry) * 100) / 100);
                     const paidUsd = Number((paidTry / usdRate).toFixed(2));
                     const remainingUsd = Number((remainingTry / usdRate).toFixed(2));
+                    actualPaidTry = paidTry;
+                    actualRemainingTry = remainingTry;
+                    actualRemainingUsd = remainingUsd;
+
                     const effectivePaymentStatus: "PAID" | "PARTIAL" | "UNPAID" =
                         remainingTry <= 0 ? "PAID" : paidTry > 0 ? "PARTIAL" : "UNPAID";
                     const payMethod = payload.paymentMethod || "CASH";
 
                     // Benzersiz Sipariş Numarası Üret: SIP-YYYYMMDD-XXXX
-                    const now = new Date();
                     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
                     let orderNo = `SIP-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
                     let attempts = 0;
@@ -359,6 +444,7 @@ export async function importWholesalerBatchAction(
                         orderNo = `SIP-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
                         attempts++;
                     }
+                    createdPurchaseOrderNo = orderNo;
 
                     // 4.1. PurchaseOrder Oluştur (Tedarikçi sayfasında görünür)
                     const purchaseOrder = await tx.purchaseOrder.create({
@@ -375,7 +461,7 @@ export async function importWholesalerBatchAction(
                             paymentMethod: payMethod,
                             status: "COMPLETED",
                             receivedAt: now,
-                            description: `Toptancı Fiş/AI Stok Girişi (${items.length} Kalem, ${totalQty} Adet)${notes ? ` - ${notes}` : ""}`,
+                            description: `Toptancı Fiş/AI Stok Girişi (${items.length} Kalem, ${totalQty} Adet)${!addToStock ? " [Stoğa Eklenmedi - Sadece Fiş]" : ""}${notes ? ` - ${notes}` : ""}`,
                             items: {
                                 create: orderItemsData.map(it => ({
                                     productId: it.productId,
@@ -390,6 +476,7 @@ export async function importWholesalerBatchAction(
                             }
                         }
                     });
+                    createdPurchaseOrderId = purchaseOrder.id;
 
                     // 4.2. Peşin veya Kısmi Ödeme Yapıldıysa: Kasadan Düş + Finans Hareketleri
                     if (paidTry > 0 && payload.accountId) {
@@ -400,7 +487,7 @@ export async function importWholesalerBatchAction(
                         });
 
                         // İşletme genel kasa gideri (EXPENSE)
-                        await tx.transaction.create({
+                        const financeTx = await tx.transaction.create({
                             data: {
                                 shopId,
                                 type: "EXPENSE",
@@ -414,9 +501,10 @@ export async function importWholesalerBatchAction(
                                 description: `[Toptancı Alımı - ${effectivePaymentStatus === "PAID" ? "Peşin" : "Kısmi"}] ${supplier.name} (${orderNo})`
                             }
                         });
+                        createdFinanceTxId = financeTx.id;
 
                         // Tedarikçi ödeme ekstresi kaydı (EXPENSE = tedarikçiye ödeme yapıldı)
-                        await tx.supplierTransaction.create({
+                        const sTxExp = await tx.supplierTransaction.create({
                             data: {
                                 shopId,
                                 supplierId,
@@ -429,11 +517,12 @@ export async function importWholesalerBatchAction(
                                 date: now,
                             }
                         });
+                        createdSupplierTxIds.push(sTxExp.id);
                     }
 
                     // 4.3. Kalan Borç Varsa: Tedarikçi Ekstresine Borç Olarak Ekle (INCOME = borçlandık)
                     if (remainingTry > 0) {
-                        await tx.supplierTransaction.create({
+                        const sTxInc = await tx.supplierTransaction.create({
                             data: {
                                 shopId,
                                 supplierId,
@@ -446,6 +535,7 @@ export async function importWholesalerBatchAction(
                                 date: now,
                             }
                         });
+                        createdSupplierTxIds.push(sTxInc.id);
                     }
 
                     // 4.4. Tedarikçi Cari Bakiye Güncelleme
@@ -462,10 +552,43 @@ export async function importWholesalerBatchAction(
                 }
             }
 
+            // 5. Geri Alma (Rollback) İçin Son İşlem Kaydını Sakla
+            const batchId = `BATCH-${Date.now()}`;
+            const batchRecord: WholesalerBatchRecord = {
+                batchId,
+                createdAt: now.toISOString(),
+                shopId,
+                supplierId: supplierId || null,
+                supplierName: createdSupplierName,
+                purchaseOrderId: createdPurchaseOrderId,
+                purchaseOrderNo: createdPurchaseOrderNo,
+                addToStock,
+                totalQuantity: totalQty,
+                totalAmountUsd: Number(totalUsd.toFixed(2)),
+                totalAmountTry: totalTry,
+                paidAmountTry: actualPaidTry,
+                remainingAmountTry: actualRemainingTry,
+                remainingAmountUsd: actualRemainingUsd,
+                accountId: payload.accountId || null,
+                financeTransactionId: createdFinanceTxId,
+                supplierTransactionIds: createdSupplierTxIds,
+                inventoryLogIds: createdInventoryLogIds,
+                affectedProducts: affectedProductsList,
+                undone: false,
+            };
+
+            await tx.setting.upsert({
+                where: { shopId_key: { shopId, key: "LAST_WHOLESALER_IMPORT_BATCH" } },
+                create: { shopId, key: "LAST_WHOLESALER_IMPORT_BATCH", value: JSON.stringify(batchRecord) },
+                update: { value: JSON.stringify(batchRecord) },
+            });
+
             return {
                 createdCount,
                 updatedCount,
                 supplierUpdated,
+                batchId,
+                purchaseOrderId: createdPurchaseOrderId || undefined,
             };
         }, {
             maxWait: 15000, // 15 saniye bağlantı bekleme
@@ -486,6 +609,8 @@ export async function importWholesalerBatchAction(
             totalAmountUsd: Number(totalUsd.toFixed(2)),
             totalAmountTry: totalTry,
             supplierUpdated: result.supplierUpdated,
+            batchId: result.batchId,
+            purchaseOrderId: result.purchaseOrderId,
         };
     } catch (error: any) {
         console.error("Wholesaler batch import error:", error);
@@ -824,5 +949,241 @@ YANIT FORMATI (Yalnızca geçerli JSON):
     } catch (err: any) {
         console.error("parseWholesalerRawTextWithAIAction error:", err);
         return { success: false, error: err?.message || "Metin işlenirken bir hata oluştu." };
+    }
+}
+
+/**
+ * Geri alınabilir son toptancı içe aktarma / stok kaydını sorgular.
+ */
+export async function getLastWholesalerBatchAction(): Promise<{
+    hasBatch: boolean;
+    batch?: {
+        batchId: string;
+        createdAt: string;
+        supplierName?: string | null;
+        purchaseOrderNo?: string | null;
+        totalQuantity: number;
+        totalAmountTry: number;
+        totalAmountUsd: number;
+        paidAmountTry: number;
+        remainingAmountTry: number;
+        addToStock: boolean;
+        undone?: boolean;
+    } | null;
+}> {
+    try {
+        const shopId = await getShopId();
+        if (!shopId) return { hasBatch: false };
+
+        const setting = await prisma.setting.findUnique({
+            where: { shopId_key: { shopId, key: "LAST_WHOLESALER_IMPORT_BATCH" } }
+        });
+
+        if (!setting || !setting.value) return { hasBatch: false };
+
+        const batch: WholesalerBatchRecord = JSON.parse(setting.value);
+        if (batch.undone) return { hasBatch: false };
+
+        return {
+            hasBatch: true,
+            batch: {
+                batchId: batch.batchId,
+                createdAt: batch.createdAt,
+                supplierName: batch.supplierName,
+                purchaseOrderNo: batch.purchaseOrderNo,
+                totalQuantity: batch.totalQuantity,
+                totalAmountTry: batch.totalAmountTry,
+                totalAmountUsd: batch.totalAmountUsd,
+                paidAmountTry: batch.paidAmountTry,
+                remainingAmountTry: batch.remainingAmountTry,
+                addToStock: batch.addToStock,
+                undone: batch.undone,
+            }
+        };
+    } catch (e) {
+        return { hasBatch: false };
+    }
+}
+
+/**
+ * Son yapılan toptancı parça/stok ve fiş girişini tamamen geri alır (Rollback).
+ * - Eklenen ürünlerin stoğu düşürülür (yeni açılan ve satılmayan ürünler silinir).
+ * - Stok hareketleri (InventoryLog) silinir.
+ * - Tedarikçi siparişi (PurchaseOrder) ve kalemleri silinir.
+ * - Tedarikçi borcu ve cari alışveriş bakiyesi düşürülür.
+ * - Yapılan nakit/kasa ödemesi kasaya iade edilir ve harcama kaydı silinir.
+ */
+export async function rollbackLastWholesalerBatchAction(): Promise<{
+    success: boolean;
+    error?: string;
+    message?: string;
+    rolledBackBatch?: {
+        supplierName?: string | null;
+        totalQuantity: number;
+        totalAmountTry: number;
+        paidAmountTry: number;
+        addToStock: boolean;
+    };
+}> {
+    try {
+        const shopId = await getShopId();
+        if (!shopId) {
+            return { success: false, error: "Dükkan oturumu bulunamadı." };
+        }
+
+        const setting = await prisma.setting.findUnique({
+            where: { shopId_key: { shopId, key: "LAST_WHOLESALER_IMPORT_BATCH" } }
+        });
+
+        if (!setting || !setting.value) {
+            return { success: false, error: "Geri alınacak son stok veya fiş girişi bulunamadı." };
+        }
+
+        let batch: WholesalerBatchRecord;
+        try {
+            batch = JSON.parse(setting.value);
+        } catch {
+            return { success: false, error: "Kayıt bilgisi okunamadı." };
+        }
+
+        if (batch.undone) {
+            return { success: false, error: "Bu son işlem zaten daha önce geri alınmış." };
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // 1. Stok Geri Alma (Eğer ürünler stoğa eklenmişse)
+            if (batch.addToStock && Array.isArray(batch.affectedProducts)) {
+                for (const item of batch.affectedProducts) {
+                    if (!item.productId) continue;
+                    const p = await tx.product.findUnique({
+                        where: { id: item.productId, shopId },
+                        select: { id: true, stock: true }
+                    });
+
+                    if (p) {
+                        if (item.wasCreated) {
+                            // Yeni oluşturulmuş ürün: Eğer başka satış görmediyse sil, gördüyse stoğu sıfırla
+                            if (p.stock <= item.quantity) {
+                                try {
+                                    await tx.product.delete({ where: { id: p.id } });
+                                } catch {
+                                    await tx.product.update({
+                                        where: { id: p.id },
+                                        data: { stock: 0 }
+                                    });
+                                }
+                            } else {
+                                await tx.product.update({
+                                    where: { id: p.id },
+                                    data: { stock: { decrement: item.quantity } }
+                                });
+                            }
+                        } else {
+                            // Önceden var olan ürün: stoğunu aktarılan miktar kadar azalt
+                            const newStock = Math.max(0, p.stock - item.quantity);
+                            await tx.product.update({
+                                where: { id: p.id },
+                                data: { stock: newStock }
+                            });
+                        }
+                    }
+                }
+
+                // İlgili envanter loglarını temizle
+                if (Array.isArray(batch.inventoryLogIds) && batch.inventoryLogIds.length > 0) {
+                    await tx.inventoryLog.deleteMany({
+                        where: { id: { in: batch.inventoryLogIds }, shopId }
+                    });
+                }
+            }
+
+            // 2. Tedarikçi Siparişini (PurchaseOrder) Silme
+            if (batch.purchaseOrderId) {
+                await tx.purchaseOrderItem.deleteMany({
+                    where: { orderId: batch.purchaseOrderId }
+                });
+                await tx.purchaseOrder.delete({
+                    where: { id: batch.purchaseOrderId }
+                }).catch(() => null);
+            }
+
+            // 3. Tedarikçi Bakiye ve Cari Hareketlerini Geri Alma
+            if (batch.supplierId) {
+                const supplier = await tx.supplier.findUnique({
+                    where: { id: batch.supplierId, shopId }
+                });
+
+                if (supplier) {
+                    const newTotalShopping = Math.max(0, Number(supplier.totalShopping || 0) - Number(batch.totalAmountTry || 0));
+                    const newBalance = Math.max(0, Number(supplier.balance || 0) - Number(batch.remainingAmountTry || 0));
+                    const newBalanceUsd = Math.max(0, Number(supplier.balanceUsd || 0) - Number(batch.remainingAmountUsd || 0));
+
+                    await tx.supplier.update({
+                        where: { id: batch.supplierId },
+                        data: {
+                            totalShopping: newTotalShopping,
+                            balance: newBalance,
+                            balanceUsd: newBalanceUsd,
+                        }
+                    });
+                }
+
+                if (Array.isArray(batch.supplierTransactionIds) && batch.supplierTransactionIds.length > 0) {
+                    await tx.supplierTransaction.deleteMany({
+                        where: { id: { in: batch.supplierTransactionIds }, shopId }
+                    });
+                }
+            }
+
+            // 4. Kasa Ödemesini İade Etme
+            if (batch.paidAmountTry > 0 && batch.accountId) {
+                await tx.financeAccount.update({
+                    where: { id: batch.accountId },
+                    data: { balance: { increment: batch.paidAmountTry } }
+                });
+
+                if (batch.financeTransactionId) {
+                    await tx.transaction.delete({
+                        where: { id: batch.financeTransactionId }
+                    }).catch(() => null);
+                }
+            }
+
+            // 5. Kaydı "Geri Alındı" (undone) olarak güncelle
+            batch.undone = true;
+            batch.undoneAt = new Date().toISOString();
+            await tx.setting.update({
+                where: { shopId_key: { shopId, key: "LAST_WHOLESALER_IMPORT_BATCH" } },
+                data: { value: JSON.stringify(batch) }
+            });
+        }, {
+            maxWait: 10000,
+            timeout: 30000
+        });
+
+        revalidatePath("/stok");
+        revalidatePath("/tedarikciler");
+        revalidatePath("/finans");
+        revalidatePath("/stok/siparisler");
+        revalidateSmartReplenishment(shopId);
+
+        const stockText = batch.addToStock ? `${batch.totalQuantity} adet ürün stoğu, ` : "";
+        const supplierText = batch.supplierName ? `${batch.supplierName} tedarikçi siparişi (₺${batch.totalAmountTry.toLocaleString("tr-TR")}), ` : "";
+        const cashText = batch.paidAmountTry > 0 ? `₺${batch.paidAmountTry.toLocaleString("tr-TR")} kasa iadesi ` : "";
+
+        return {
+            success: true,
+            message: `Son işlem geri alındı: ${stockText}${supplierText}${cashText}başarıyla geri alındı.`,
+            rolledBackBatch: {
+                supplierName: batch.supplierName,
+                totalQuantity: batch.totalQuantity,
+                totalAmountTry: batch.totalAmountTry,
+                paidAmountTry: batch.paidAmountTry,
+                addToStock: batch.addToStock,
+            }
+        };
+    } catch (err: any) {
+        console.error("rollbackLastWholesalerBatchAction error:", err);
+        return { success: false, error: err?.message || "Geri alma sırasında bir hata oluştu." };
     }
 }
