@@ -41,6 +41,40 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-17: Toptancı Parça / Stok İçe Aktarmada PDF Fatura & Fiş Görseli Yapay Zeka (Multimodal Gemini) Entegrasyonu:
+  - **Sorun:** Kullanıcı toptancıdan aldığı ürünleri stoğa eklerken PDF formatındaki faturaları sisteme yükleyemiyordu; toptancı parça içe aktarma modalında PDF dosyaları için sadece metin kopyalama uyarısı çıkıyordu. Örnek faturada yer alan ("BAYROXTOPTAN", "LUCATECH LT-601 ENC TWS AIRPODS KULAKLIK", "BAYROX AIR PRO 2 ANC ENC EARPHONE", USD birim alış fiyatları `$10.75`, `$11.25` vb.) bilgilerin otomatik okunması gerekiyordu.
+  - **Çözüm:**
+    1. **Multimodal AI Belge Ayrıştırıcı (`src/lib/actions/stock-import-actions.ts` - `parseWholesalerDocumentWithAIAction`):**
+       - Gemini multimodal desteği (`inlineData`) ile PDF dosyalarını (`application/pdf`) ve fatura/fiş görsellerini (`image/png`, `image/jpeg`, `image/webp`) doğrudan okuyan server action oluşturuldu.
+       - Yapay zeka faturadaki satıcı/toptancı unvanını, ürün açıklamalarını, miktar adetlerini, para birimini ($ USD veya ₺ TL), birim alış fiyatlarını ve genel fatura toplamını eksiksiz okuyacak şekilde yapılandırıldı.
+       - Ürün adından hareketle otomatik kategori tespiti (`smartDetectCategory`: "earphone", "buds", "airpods" $\rightarrow$ "Kulaklık", "şarj başlığı", "lcd ekran" vb.) ve benzersiz SKU üretimi (`generateProductSku`) bağlandı.
+       - Faturadaki satıcı firma unvanı sistemdeki kayıtlı toptancılarla (`prisma.supplier`) isim benzerliği üzerinden taranarak eşleşen toptancı otomatik seçildi.
+    2. **Arayüz Entegrasyonu (`src/components/stock/wholesaler-import-modal.tsx`):**
+       - Modalın dosya yükleme alanına doğrudan `.pdf, .png, .jpg, .jpeg, .webp` formatları eklendi.
+       - Yapay zeka taraması esnasında animasyonlu tarama yükleniyor rozeti (`Loader2`, "🤖 Yapay Zeka Belgeyi İnceliyor...") ve bilgilendirme toast'ı yerleştirildi.
+       - Pano yakalama (`handlePasteEvent` - Ctrl+V) desteği eklenerek ekran görüntüsü alan veya WhatsApp'tan fiş kopyalayan kullanıcıların doğrudan modal içerisine Ctrl+V ile görsel yapıştırıp tek saniyede ürünleri önizleme tablosuna aktarması sağlandı.
+       - Ayrıştırma tamamlandığında otomatik olarak Adım 2 önizleme ekranına geçiliyor; ürün kâr marjları ayarlanabilir hale geliyor ve mağaza stoğunda benzer ürünler varsa otomatik eşleştiriliyor.
+    3. **Doğrulama:** `npx tsc --noEmit` ile tip kontrolleri yapıldı (0 hata).
+
+- [x] 2026-11-17: Stok AI / Toptancı Girişinde Tedarikçi Cari, Alım Siparişi (PurchaseOrder) & FIFO Borç Kapatma Entegrasyonu:
+  - **Sorun:** Toptancıdan alınan ürünler "Kısmi Ödeme / Veresiye" olarak kaydedildiğinde tedarikçi sayfasındaki cari ekstreye ve alınan siparişlere düşmüyor, borç takibi yapılamıyordu.
+  - **Çözüm:**
+    1. **Stok İçe Aktarma $\leftrightarrow$ Alım Siparişi (`src/lib/actions/stock-import-actions.ts`):** `importWholesalerBatchAction` fonksiyonuna `PurchaseOrder` ve `PurchaseOrderItem` kayıt mekanizması eklendi. Peşin ödeme yapıldıysa `PAID`, kısmi ödeme yapıldıysa `PARTIAL`, hiç ödeme yapılmadıysa `UNPAID` durumunda sipariş oluşturulup tedarikçinin bakiye ve işlem kayıtlarına işlendi. Yapılan nakit/kart ödemesi seçilen dükkan kasasından (`FinanceAccount`) otomatik düşüldü.
+    2. **FIFO Borç Ödeme & Emanet Kasa Önleme (`src/lib/actions/purchase-actions.ts`):** Tedarikçiye yapılan borç ödemelerinin en eski tarihli açık alım siparişlerinden başlanarak kapatılması (FIFO) sağlandı. Borçtan fazla ödeme girilse dahi sistem otomatik olarak borç miktarını üst sınır kabul ederek fazlalığı kasaya iade eder/emanet kasa oluşturmaz hale getirildi.
+    3. **Tedarikçi Arayüzü İyileştirmeleri (`src/components/supplier/supplier-profile.tsx` & `supplier-payment-modal.tsx`):** "⚡ Borcu Kapat" tek tıkla tam kapatma butonu, sipariş no gösterimi (`order.orderNo || order.orderNumber`) ve anlık profil bakiye yenilenmesi sağlandı.
+    4. **Doğrulama:** `npx tsc --noEmit` ile kontrol edildi (0 hata).
+
+- [x] 2026-11-17: Gemini 503 (Yüksek Talep / High Demand) Hataları İçin Otomatik Yeniden Deneme (Exponential Backoff) & Model Fallback Zinciri:
+  - **Sorun:** `gemini-3.8-flash` modelinde zaman zaman Google sunucularından kaynaklı `[503 Service Unavailable] This model is currently experiencing high demand` veya geçici 429 kota/yoğunluk hataları alınması ve kullanıcı işlemlerinin kesintiye uğraması.
+  - **Çözüm:**
+    1. **Merkezi Yardımcı (`src/lib/gemini.ts`):** `generateWithRetry` yardımcı fonksiyonu ve `isRetryableGeminiError` hata analiz mekanizması geliştirildi.
+    2. **Otomatik Yeniden Deneme (Exponential Backoff):** 503, 429, "high demand", "overloaded", "resource_exhausted" veya geçici bağlantı hatalarında çağrı otomatik olarak 3 kez kısa gecikmelerle (`800ms`, `1600ms`, `3000ms`) yeniden deneniyor.
+    3. **Model Fallback (Yedek Model) Zinciri:** Birincil model olan `gemini-3.8-flash` 3 denemeden sonra hala 503 vermeye devam ederse sistem otomatik olarak sırasıyla `gemini-3.8-flash-lite`, `gemini-2.5-flash-lite` ve `gemini-2.0-flash` modellerine geçiş yapıyor. Böylece kullanıcı hiçbir zaman 503 çökmesi görmüyor.
+    4. **Merkezi Entegrasyon:** Sistemdeki tüm yapay zeka operasyonlarının (ürün ayrıştırma, servis arıza tespiti, IMEI OCR, WhatsApp mesaj iyileştirme, kategori ağacı oluşturma, mağaza sağlık analizi vb.) bağlandığı `callGemini` ve `validateGeminiKeyAction` fonksiyonları (`src/lib/actions/gemini-actions.ts`) doğrudan `generateWithRetry` motoruna bağlandı. Mevcut promptlar, JSON şemaları ve iş mantığı %100 korundu.
+  - **Doğrulama:**
+    - `tests/gemini-retry.test.ts` yazılarak hata sınıflandırma, aynı modelde yeniden deneme, model fallback zinciri ve kalıcı hataların (403 vb.) anında fırlatılması test edildi (4/4 test başarıyla geçti).
+    - `npx tsc --noEmit` çalıştırıldı, 0 hata ile tip kontrolü doğrulandı.
+
 - [x] 2026-11-17: Kasa Kartı İkinci Yüzündeki 'Kasa Bakiyesine Geri Dön' Butonunun Kaldırılması:
   - **İyileştirme:** Kullanıcı talebi doğrultusunda Kasa kartının arka yüzünde (Bugünkü Performans) yer alan "← Kasa Bakiyesi" alt buton ve çizgisi tamamen kaldırıldı.
   - **Kullanılabilirlik:** Masaüstünde zaten fareyi kart üzerinden çekmek doğal olarak ön yüze döndürdüğü için alt buton gereksiz kalabalık yaratıyordu. Buton kaldırılarak "Bugün Satış" ve "Bugün Kâr" kartlarına daha ferah bir dikey alan sağlandı. Mobil/dokunmatik ekranda ise karta hafifçe dokunulduğunda doğrudan ön yüze pürüzsüz dönüş sağlandı.
@@ -2788,3 +2822,30 @@ ArayÃ¼zdeki "..." sorunu ve bayilerin kayÄ±t sÄ±rasÄ±nda "asÄ±lÄ± ka
     - **Uygulanan Çözüm ([`ImeiResultModal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/imei/ImeiResultModal.tsx))**:
         - `copyImeiForExternalSite` yardımcısı eklendi; BTK doğrulama, hata, başarılı sonuç kartı ve Apple Garanti bağlantılarının tümünde (`Kopyala & e-Devlet'te Aç`, `Kopyala & Apple Garanti`) tıklama anında ilgili 15 haneli IMEI otomatik panoya kopyalanır ve açılan sekmede `Ctrl+V` / Yapıştır bilgilendirme bildirimi (`toast`) gösterilir.
     - **Doğrulama**: `npx tsc --noEmit` -> Çıkış kodu `0` (hata yok).
+
+- [x] 2026-11-17: Toptancı/AI Fiş ile Stok İçe Aktarma $\leftrightarrow$ Tedarikçi Cari/Sipariş Entegrasyonu, Kısmi Ödeme, FIFO Borç Dağıtımı ve Emanet Kasa Korumalı Borç Kapatma:
+    - **Kullanıcı Talebi**:
+        1. AI / Toptancı içe aktarma modalından (`wholesaler-import-modal.tsx`) ürün girilip tedarikçi seçildiğinde ve peşin/kısmi/açık hesap ödeme yapıldığında, ürünlerin stoğa girmesine rağmen `/tedarikciler` sayfasında alınan siparişler listesine düşmemesi sorununun çözülmesi.
+        2. **Senaryo 1 (Peşin Ödeme)**: Ürünler stoğa aktarılır, seçilen dükkan kasasından (Nakit Kasa/Banka) tutar düşülür, tedarikçi profilinde `COMPLETED` / `PAID` durumunda 0 ₺ kalan borçlu sipariş ve ekstre hareketi oluşturulur.
+        3. **Senaryo 2 (Kısmi Ödeme / Veresiye)**: Toplam fiş tutarı örn. 3.000 ₺ iken 2.000 ₺ ödeme girilip kasa seçildiğinde, 2.000 ₺ kasadan düşülür, tedarikçi sayfasında 3.000 ₺ toplam, 2.000 ₺ ödenen, 1.000 ₺ kalan borçlu sipariş görünür; sonraki siparişlerde borç kümülatif olarak birikir.
+        4. **FIFO Borç Dağıtımı**: Tedarikçiye genel borç ödemesi yapıldığında, ödeme en eski ödenmemiş siparişten başlanarak sırayla (FIFO - First In, First Out) açık siparişleri kapatır.
+        5. **Borcu Kapat Butonu & Emanet Kasa Koruması**: Tedarikçi profilinde tek tıkla kuruşu kuruşuna borcu kapatma butonu bulunur. Borçtan fazla ödeme girilse dahi emanet kasa / eksi bakiye oluşturulmaz; en fazla mevcut borç kadar kasadan düşülür, borç sıfırlanır ve fazla tutar otomatik olarak kasada kalır.
+    - **Kök Neden**:
+        - [`stock-import-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/stock-import-actions.ts) içindeki `importWholesalerBatchAction` fonksiyonu yalnızca `Product` ve `InventoryLog` kayıtlarını oluşturuyor/güncelliyordu; `PurchaseOrder` ve `PurchaseOrderItem` kayıtları hiç oluşturulmadığı için `/tedarikciler` ve [`supplier-profile.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/supplier/supplier-profile.tsx) sayfasındaki sipariş listesi boş kalıyordu. Ayrıca modal üzerinde kasa seçimi ve kısmi ödeme desteği bulunmuyordu.
+    - **Uygulanan Çözüm**:
+        1. **Sunucu Tarafı Stok İçe Aktarma & Sipariş Entegrasyonu ([`stock-import-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/stock-import-actions.ts))**:
+           - `WholesalerImportBatchPayload` arayüzüne `paymentStatus: "PAID" | "PARTIAL" | "UNPAID" | "NONE"`, `paidAmount?: number`, `accountId?: string` ve `paymentMethod?: "CASH" | "CARD" | "TRANSFER"` parametreleri eklendi.
+           - Parti aktarımı sırasında açılan veya güncellenen ürünler `orderItemsData` listesinde toplanarak döngü sonunda otomatik benzersiz sipariş numarası (`SIP-YYYYMMDD-XXXX`) ile `PurchaseOrder` (`status: "COMPLETED"`, `items: PurchaseOrderItem[]`) oluşturuldu.
+           - Peşin veya kısmi ödemelerde (`paidTry > 0`): Seçilen `FinanceAccount` bakiyesinden ödenen miktar düşüldü, işletme `Transaction` (EXPENSE) ve `SupplierTransaction` (EXPENSE) hareketleri oluşturuldu.
+           - Kalan borç varsa (`remainingTry > 0`): `SupplierTransaction` (INCOME) kaydı açılarak tedarikçinin `balance` ve `balanceUsd` tutarları kalan borç kadar artırıldı, `totalShopping` toplam tutar kadar yükseltildi.
+        2. **FIFO Borç Dağıtımı & Emanet Kasa Önleme ([`purchase-actions.ts`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/lib/actions/purchase-actions.ts))**:
+           - `createSupplierTransactionAction` içinde emanet kasa koruması eklendi: `effectivePayment = Math.min(requestedAmount, currentBalance)`. Kasadan sadece mevcut borç kadar düşülür, fazla girilen tutar (`overpaymentRefund`) kasada bırakılır ve borç sıfırlanır.
+           - Tedarikçiye yapılan ödemelerde açık siparişler (`paymentStatus: { in: ["UNPAID", "PARTIAL"] }`, `orderBy: { createdAt: "asc" }`) en eski siparişten başlanarak FIFO mantığıyla otomatik kapatıldı (`remainingAmount` düşürülüp `PAID` / `PARTIAL` durumuna getirildi).
+        3. **Toptancı İçe Aktarma Modalı Geliştirmeleri ([`wholesaler-import-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/stock/wholesaler-import-modal.tsx))**:
+           - 2. Adımda tedarikçi seçildiğinde açılan `Tedarikçi Cari Entegrasyonu` paneli eklendi: Peşin Ödeme, Kısmi Ödeme ve Açık Hesap (Veresiye) seçenekleri.
+           - Kısmi ödeme seçildiğinde `Ödenen Tutar (₺)` girişi ve anlık `Kalan Borç` rozet hesabı sunuldu; peşin ve kısmi ödemelerde ödemenin düşüleceği kasa/banka hesabı ve ödeme yöntemi seçimi sağlandı.
+        4. **Tedarikçi Profili & Borcu Kapatma Butonu ([`supplier-profile.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/supplier/supplier-profile.tsx), [`supplier-payment-modal.tsx`](file:///c:/Users/PC/Desktop/dukkan-app/telefon-takip-v2/telefon-takip-v2/src/components/supplier/supplier-payment-modal.tsx))**:
+           - Tedarikçinin açık borcu olduğunda başlıkta ve `Güncel Borç` kartında doğrudan tek tıkla çalışan **"⚡ Borcu Kapat (₺...)"** butonu yerleştirildi.
+           - Ödeme modalında tek tıkla tam borcu doldurma butonu ve fazla tutar girildiğinde emanet kasa oluşmayacağını, sadece borcun kapatılacağını bildiren bilgilendirme banner'ı eklendi.
+           - Sipariş tablosunda `#order.orderNo` gösterimi düzeltildi ve ödeme sonrası profil anında dinamik olarak güncellenecek şekilde bağlandı.
+    - **Doğrulama**: `npx tsc --noEmit` çalıştırıldı ve 0 hata (exit code 0) ile doğrulandı. Geliştirme sunucusu açık olduğu için proje kuralına titizlikle uyularak `npm run build` çalıştırılmadı.

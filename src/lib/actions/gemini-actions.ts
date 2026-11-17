@@ -6,6 +6,7 @@ import { getProductCompatibility } from "@/lib/utils";
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateWithRetry } from "@/lib/gemini";
 
 const getGeminiApiKey = async (shopId: string) => {
     return unstable_cache(
@@ -259,18 +260,15 @@ export async function callGemini(
 
     try {
         const genAI = new GoogleGenerativeAI(key);
-        const model = genAI.getGenerativeModel(
-            {
-                model: "gemini-3.8-flash",
-                generationConfig: {
-                    responseMimeType: responseType === "json" ? "application/json" : "text/plain",
-                    temperature: 0.1,
-                    maxOutputTokens: 8192
-                }
+        const result = await generateWithRetry(genAI, promptParts, {
+            primaryModel: "gemini-3.8-flash",
+            generationConfig: {
+                responseMimeType: responseType === "json" ? "application/json" : "text/plain",
+                temperature: 0.1,
+                maxOutputTokens: 8192
             }
-        );
+        });
 
-        const result = await model.generateContent(promptParts);
         const response = await result.response;
         let text = response.text();
 
@@ -1326,12 +1324,11 @@ export async function validateGeminiKeyAction(apiKey: string): Promise<{ success
     try {
         const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
 
-
-
-        // Simple ping request
-        const result = await model.generateContent("Merhaba, sistem bağlantı testi. Sadece 'OK' cevabı ver.");
+        // Simple ping request with auto-retry and model fallback
+        const result = await generateWithRetry(genAI, "Merhaba, sistem bağlantı testi. Sadece 'OK' cevabı ver.", {
+            primaryModel: "gemini-3.8-flash"
+        });
         const response = await result.response;
         const text = response.text();
 

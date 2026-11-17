@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import {
     Dialog,
     DialogContent,
@@ -39,7 +39,11 @@ import {
     Split,
     Search,
     X,
-    PackageCheck
+    PackageCheck,
+    Wallet,
+    CreditCard,
+    FileText,
+    ScanText
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -51,8 +55,12 @@ import {
 import {
     importWholesalerBatchAction,
     checkWholesalerStockMatchesAction,
+    parseWholesalerDocumentWithAIAction,
     type StockMatchInfo
 } from "@/lib/actions/stock-import-actions";
+import { getAccounts } from "@/lib/actions/finance-actions";
+import { getCurrentExchangeRates } from "@/lib/actions/currency-actions";
+import { PriceInput } from "@/components/ui/price-input";
 import { cn } from "@/lib/utils";
 
 interface WholesalerImportModalProps {
@@ -78,7 +86,31 @@ export function WholesalerImportModal({
 
     // Tedarikçi ve ödeme yönetimi
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>("NONE");
-    const [paymentStatus, setPaymentStatus] = useState<"PAID" | "UNPAID">("PAID");
+    const [paymentStatus, setPaymentStatus] = useState<"PAID" | "PARTIAL" | "UNPAID">("PAID");
+    const [paidAmountTry, setPaidAmountTry] = useState<number | undefined>(undefined);
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+    const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
+    const [usdRate, setUsdRate] = useState<number>(34.5);
+
+    // Kasa hesaplarını ve döviz kurunu çek
+    useEffect(() => {
+        if (open) {
+            getAccounts().then((accs) => {
+                setAccounts(accs || []);
+                if (accs && accs.length > 0) {
+                    const defaultAcc = accs.find((a: any) => a.isDefault) || accs[0];
+                    setSelectedAccountId(prev => prev || defaultAcc.id);
+                }
+            }).catch(console.error);
+
+            getCurrentExchangeRates().then((rates) => {
+                if (rates?.usd && rates.usd > 0) {
+                    setUsdRate(rates.usd);
+                }
+            }).catch(console.error);
+        }
+    }, [open]);
 
     // Toplu fiyat artırma aracı
     const [customMarkupUsd, setCustomMarkupUsd] = useState<string>("5.00");
@@ -136,14 +168,104 @@ export function WholesalerImportModal({
         toast.success(`${result.items.length} kalem ürün başarıyla ayrıştırıldı (${result.totalQuantity} adet).`);
     };
 
-    // Dosya Yükleme (CSV, TXT, Excel)
+    // AI ile Belge/PDF/Görsel Ayrıştırma Yükleme Durumu
+    const [isParsingDoc, setIsParsingDoc] = useState(false);
+
+    // AI ile Fatura / Belge / PDF / Görsel Ayrıştırma
+    const processDocumentWithAI = async (file: File) => {
+        setIsParsingDoc(true);
+        toast.loading("Yapay zeka faturayı inceliyor (ürünler, fiyatlar ve adetler taranıyor)...", { id: "ai-doc-parse" });
+        try {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const dataUrl = event.target?.result as string;
+                    if (!dataUrl) {
+                        toast.error("Dosya okunamadı.", { id: "ai-doc-parse" });
+                        setIsParsingDoc(false);
+                        return;
+                    }
+
+                    const base64Data = dataUrl.split(",")[1];
+                    const fileName = file.name.toLowerCase();
+                    const mimeType = file.type || (fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+
+                    const res = await parseWholesalerDocumentWithAIAction({
+                        base64Data,
+                        mimeType,
+                        defaultMarkup: defaultMarkup || 5.00
+                    });
+
+                    if (!res.success || !res.items || res.items.length === 0) {
+                        toast.error(res.error || "Belgeden ürün veya fiyat okunamadı.", { id: "ai-doc-parse" });
+                        return;
+                    }
+
+                    // Eşleşen tedarikçi varsa otomatik seç
+                    if (res.matchedSupplierId) {
+                        setSelectedSupplierId(res.matchedSupplierId);
+                    }
+
+                    const itemsWithSelection = res.items.map(it => ({ ...it, selected: true }));
+                    setParsedItems(itemsWithSelection);
+                    setStep(2);
+
+                    // Stok eşleşmelerini sorgula
+                    queryStockMatches(itemsWithSelection);
+
+                    toast.success(
+                        `Yapay zeka ${res.items.length} kalem ürünü başarıyla aktardı! (${res.totalQuantity} adet)` +
+                        (res.supplierName ? ` • ${res.supplierName}` : ""),
+                        { id: "ai-doc-parse" }
+                    );
+                } catch (err: any) {
+                    console.error("AI parse error:", err);
+                    toast.error("Yapay zeka ile belge ayrıştırılırken hata oluştu: " + (err?.message || ""), { id: "ai-doc-parse" });
+                } finally {
+                    setIsParsingDoc(false);
+                }
+            };
+            reader.onerror = () => {
+                toast.error("Dosya okunurken hata meydana geldi.", { id: "ai-doc-parse" });
+                setIsParsingDoc(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (e: any) {
+            console.error("File processing error:", e);
+            toast.error("Dosya işlenemedi.", { id: "ai-doc-parse" });
+            setIsParsingDoc(false);
+        }
+    };
+
+    // Pano Yapıştırma (Ctrl + V ile resim veya metin yakalama)
+    const handlePasteEvent = async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    e.preventDefault();
+                    await processDocumentWithAI(file);
+                    return;
+                }
+            }
+        }
+    };
+
+    // Dosya Yükleme (PDF, Görsel, CSV, TXT, Excel)
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         const fileName = file.name.toLowerCase();
-        
-        if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
+        const isPdf = fileName.endsWith(".pdf") || file.type === "application/pdf";
+        const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|webp|bmp)$/i.test(fileName);
+
+        if (isPdf || isImage) {
+            await processDocumentWithAI(file);
+        } else if (fileName.endsWith(".csv") || fileName.endsWith(".txt")) {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const text = event.target?.result as string;
@@ -169,10 +291,8 @@ export function WholesalerImportModal({
                 console.error("Excel parse error:", err);
                 toast.error("Excel dosyası okunurken hata oluştu.");
             }
-        } else if (fileName.endsWith(".pdf")) {
-            toast.info("PDF tablolarını doğrudan kopyalayıp 'Metin Yapıştır' sekmesine yapıştırabilirsiniz.");
         } else {
-            toast.error("Desteklenmeyen dosya formatı. Lütfen .csv, .xlsx veya .txt dosyası yükleyin.");
+            toast.error("Desteklenmeyen dosya formatı. Lütfen .pdf, görsel (.png, .jpg), .xlsx veya .csv yükleyin.");
         }
     };
 
@@ -235,6 +355,20 @@ export function WholesalerImportModal({
     const totalSellUsd = Number(selectedItems.reduce((acc, it) => acc + (it.sellPriceUsd * it.quantity), 0).toFixed(2));
     const totalProfitUsd = Number((totalSellUsd - totalBuyUsd).toFixed(2));
     const overallProfitMargin = totalBuyUsd > 0 ? Math.round((totalProfitUsd / totalBuyUsd) * 100) : 0;
+
+    const totalBuyTry = useMemo(() => {
+        return Math.round(totalBuyUsd * usdRate * 100) / 100;
+    }, [totalBuyUsd, usdRate]);
+
+    const effectivePaidTry = useMemo(() => {
+        if (paymentStatus === "PAID") return totalBuyTry;
+        if (paymentStatus === "UNPAID") return 0;
+        return Math.min(totalBuyTry, Math.max(0, Number(paidAmountTry || 0)));
+    }, [paymentStatus, totalBuyTry, paidAmountTry]);
+
+    const effectiveRemainingTry = useMemo(() => {
+        return Math.max(0, Math.round((totalBuyTry - effectivePaidTry) * 100) / 100);
+    }, [totalBuyTry, effectivePaidTry]);
 
     // Toplu Satış Fiyatı Artırma (Dolar veya Yüzde)
     const applyBulkMarkup = (amountUsd: number, scope: "ALL" | "SELECTED" = "ALL") => {
@@ -496,7 +630,15 @@ export function WholesalerImportModal({
             return;
         }
 
+        if (selectedSupplierId !== "NONE" && (paymentStatus === "PAID" || paymentStatus === "PARTIAL")) {
+            if (!selectedAccountId) {
+                toast.error("Lütfen ödemenin çıkış yapılacağı kasa veya banka hesabını seçiniz.");
+                return;
+            }
+        }
+
         startTransition(async () => {
+            const finalPaidAmount = paymentStatus === "PAID" ? totalBuyTry : paymentStatus === "PARTIAL" ? effectivePaidTry : 0;
             const res = await importWholesalerBatchAction({
                 items: selectedItems.map(it => ({
                     name: it.name,
@@ -510,6 +652,9 @@ export function WholesalerImportModal({
                 })),
                 supplierId: selectedSupplierId === "NONE" ? null : selectedSupplierId,
                 paymentStatus: selectedSupplierId === "NONE" ? "NONE" : paymentStatus,
+                paidAmount: finalPaidAmount,
+                accountId: (paymentStatus === "PAID" || paymentStatus === "PARTIAL") && selectedAccountId ? selectedAccountId : undefined,
+                paymentMethod: (paymentStatus === "PAID" || paymentStatus === "PARTIAL") ? paymentMethod : "CASH",
                 notes: `Toptancı Toplu Giriş (${totalQuantity} Adet)`,
             });
 
@@ -519,10 +664,12 @@ export function WholesalerImportModal({
                     { duration: 5000 }
                 );
                 if (res.supplierUpdated) {
-                    if (paymentStatus === "UNPAID") {
-                        toast.info("Tedarikçi cari hesabına açık hesap (veresiye) borcu eklendi.");
+                    if (paymentStatus === "PAID") {
+                        toast.info("Tedarikçi siparişi 'Ödendi' olarak işlendi ve tutar kasadan düşüldü.");
+                    } else if (paymentStatus === "PARTIAL") {
+                        toast.info(`Tedarikçi siparişi kaydedildi: ₺${effectivePaidTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} kasadan ödendi, ₺${effectiveRemainingTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} borç olarak eklendi.`);
                     } else {
-                        toast.info("Tedarikçi alımı peşin olarak kaydedildi (cari bakiye değişmedi).");
+                        toast.info(`Tedarikçi siparişi açık hesap (₺${totalBuyTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} veresiye borcu) olarak kaydedildi.`);
                     }
                 }
                 setOpen(false);
@@ -588,7 +735,7 @@ export function WholesalerImportModal({
                                     </TabsTrigger>
                                     <TabsTrigger value="upload" className="rounded-xl text-xs font-bold gap-2">
                                         <UploadCloud className="h-4 w-4" />
-                                        <span>Dosya Yükle (.csv, .xlsx, .txt)</span>
+                                        <span>Dosya / Fatura Yükle (PDF, Görsel, Excel)</span>
                                     </TabsTrigger>
                                 </TabsList>
 
@@ -600,17 +747,20 @@ export function WholesalerImportModal({
                                                 Toptancı Listesi Metni (CSV / Noktalı Virgül / Tablo)
                                             </Label>
                                             <span className="text-[11px] text-muted-foreground">
-                                                WhatsApp veya e-postadan kopyalayıp yapıştırabilirsiniz
+                                                WhatsApp/e-postadan yapıştırabilir veya fatura ekran görüntüsü (Ctrl+V) atabilirsiniz
                                             </span>
                                         </div>
                                         <textarea
                                             value={rawText}
                                             onChange={(e) => setRawText(e.target.value)}
+                                            onPaste={handlePasteEvent}
                                             placeholder={`Örnek Format:
 Kategori;Marka;Model / Ürün Tanımı;Adet;Birim Fiyat ($);Toplam Tutar ($)
 Kapak;Apple (iPhone);iPhone 11 Arka Kapak;2;$2,00;$4,00
 Kapak;Apple (iPhone);iPhone 13 Arka Kapak;4;$2,50;$10,00
-LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
+LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
+
+💡 İpucu: Fatura ekran görüntüsü kopyaladıysanız bu alana Ctrl+V ile yapıştırabilirsiniz, yapay zeka otomatik tanıyacaktır.`}
                                             className="w-full h-56 p-4 rounded-2xl border border-border/60 bg-muted/10 font-mono text-xs focus:ring-2 focus:ring-primary/40 focus:outline-none resize-none"
                                         />
                                     </div>
@@ -618,18 +768,51 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
 
                                 {/* Sekme 2: Dosya Yükleme */}
                                 <TabsContent value="upload" className="space-y-4 mt-0">
-                                    <label className="border-2 border-dashed border-border/80 rounded-2xl p-10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-muted/20 transition-all">
-                                        <div className="p-4 rounded-full bg-primary/10 text-primary">
-                                            <UploadCloud className="h-8 w-8" />
+                                    <label className={cn(
+                                        "border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all",
+                                        isParsingDoc ? "border-primary bg-primary/5 pointer-events-none" : "border-border/80 hover:bg-muted/20"
+                                    )}>
+                                        <div className={cn(
+                                            "p-4 rounded-full",
+                                            isParsingDoc ? "bg-primary/20 text-primary animate-pulse" : "bg-primary/10 text-primary"
+                                        )}>
+                                            {isParsingDoc ? (
+                                                <Loader2 className="h-8 w-8 animate-spin" />
+                                            ) : (
+                                                <UploadCloud className="h-8 w-8" />
+                                            )}
                                         </div>
-                                        <div className="text-center">
-                                            <p className="text-sm font-bold text-foreground">Dosyayı sürükleyip bırakın veya tıklayın</p>
-                                            <p className="text-xs text-muted-foreground mt-1">.CSV, .XLSX, .XLS veya .TXT formatları desteklenir</p>
+                                        <div className="text-center space-y-1">
+                                            {isParsingDoc ? (
+                                                <>
+                                                    <p className="text-sm font-bold text-primary animate-pulse">
+                                                        🤖 Yapay Zeka Belgeyi İnceliyor...
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground max-w-md">
+                                                        PDF veya fatura görselindeki ürünler, adetler, dövizli birim fiyatlar ve kategoriler taranıyor, lütfen bekleyin...
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="text-sm font-bold text-foreground">
+                                                        PDF Fatura, Fiş Görseli veya Excel Dosyasını Sürükleyip Bırakın
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        .PDF (Toptancı Faturası), .PNG, .JPG, .XLSX veya .CSV formatları doğrudan desteklenir
+                                                    </p>
+                                                    <div className="pt-2">
+                                                        <Badge variant="outline" className="text-[10px] bg-primary/10 border-primary/30 text-primary font-bold px-2.5 py-1">
+                                                            ✨ Yapay Zeka ile Otomatik PDF & Fiş Ayrıştırma
+                                                        </Badge>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                         <input
                                             type="file"
-                                            accept=".csv,.xlsx,.xls,.txt,.pdf"
+                                            accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.xlsx,.xls,.txt,image/*"
                                             className="hidden"
+                                            disabled={isParsingDoc}
                                             onChange={handleFileUpload}
                                         />
                                     </label>
@@ -670,10 +853,19 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
                                 <Button
                                     className="rounded-xl h-11 px-6 font-bold gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                                     onClick={() => handleParse()}
-                                    disabled={!rawText.trim()}
+                                    disabled={!rawText.trim() || isParsingDoc}
                                 >
-                                    <span>Listeyi Ayrıştır ve Önizle</span>
-                                    <ArrowRight className="h-4 w-4" />
+                                    {isParsingDoc ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Yapay Zeka İnceliyor...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Listeyi Ayrıştır ve Önizle</span>
+                                            <ArrowRight className="h-4 w-4" />
+                                        </>
+                                    )}
                                 </Button>
                             </DialogFooter>
                         </div>
@@ -920,36 +1112,199 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00`}
                                         </div>
                                     </div>
 
-                                    {/* Tedarikçi Seçimi (İsteğe Bağlı) */}
+                                    {/* Tedarikçi Seçimi */}
                                     <div className="flex items-center gap-2">
                                         <div className="flex items-center gap-1.5">
+                                            <span className="text-xs font-bold text-muted-foreground">Tedarikçi:</span>
                                             <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-                                                <SelectTrigger className="w-[180px] h-8 rounded-xl text-xs border-border/60">
-                                                    <SelectValue placeholder="Tedarikçi (İsteğe Bağlı)" />
+                                                <SelectTrigger className="w-[190px] h-8 rounded-xl text-xs font-semibold border-border/60">
+                                                    <SelectValue placeholder="Tedarikçi Seçilmedi" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="NONE">Tedarikçi Seçilmedi</SelectItem>
+                                                    <SelectItem value="NONE">Tedarikçi Seçilmedi (Bağımsız)</SelectItem>
                                                     {suppliers.map(s => (
                                                         <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-
-                                            {selectedSupplierId !== "NONE" && (
-                                                <Select value={paymentStatus} onValueChange={(val: any) => setPaymentStatus(val)}>
-                                                    <SelectTrigger className="w-[190px] h-8 rounded-xl text-xs border-border/60 font-semibold">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="PAID">✅ Peşin Ödendi (Borç Yok)</SelectItem>
-                                                        <SelectItem value="UNPAID">⏳ Açık Hesap / Veresiye (Borç Ekle)</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Tedarikçi Seçildiğinde: Ödeme, Kasa ve Cari Entegrasyonu Kartı */}
+                            {selectedSupplierId !== "NONE" && (
+                                <div className="mx-4 sm:mx-6 mt-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-primary/5 border border-emerald-500/30 space-y-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                                <Wallet className="h-4 w-4" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
+                                                    <span>Tedarikçi Cari Entegrasyonu:</span>
+                                                    <span className="text-emerald-600 dark:text-emerald-400 underline font-black">
+                                                        {suppliers.find(s => s.id === selectedSupplierId)?.name}
+                                                    </span>
+                                                </h4>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Bu alım siparişi toptancının cari ekstresine eklenecek ve ödeme dükkan kasasıyla senkronize edilecektir.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Fatura Toplamı Rozeti */}
+                                        <div className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl bg-card border border-border/70 shadow-xs">
+                                            <span className="text-muted-foreground">Toplam Fatura:</span>
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+                                                ₺{totalBuyTry.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                            <span className="text-muted-foreground text-[10px]">
+                                                (${totalBuyUsd.toFixed(2)})
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* 3 Seçenekli Ödeme Durumu Butonları */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentStatus("PAID")}
+                                            className={cn(
+                                                "p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer",
+                                                paymentStatus === "PAID"
+                                                    ? "bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-emerald-100 ring-2 ring-emerald-500/30 shadow-xs"
+                                                    : "bg-card border-border/70 text-muted-foreground hover:bg-muted/40"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold flex items-center gap-1.5">
+                                                    <span>✅ Peşin Ödeme</span>
+                                                </span>
+                                                <Badge variant="outline" className="text-[10px] font-bold border-emerald-500/40 text-emerald-600 bg-emerald-500/10">0 ₺ Kalan Borç</Badge>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground mt-1">
+                                                Faturanın tamamı seçilen kasadan düşülür, sipariş sipariş listesinde "Ödendi" olarak kapanır.
+                                            </p>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPaymentStatus("PARTIAL");
+                                                if (!paidAmountTry) setPaidAmountTry(Math.round(totalBuyTry / 2));
+                                            }}
+                                            className={cn(
+                                                "p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer",
+                                                paymentStatus === "PARTIAL"
+                                                    ? "bg-amber-500/15 border-amber-500 text-amber-950 dark:text-amber-100 ring-2 ring-amber-500/30 shadow-xs"
+                                                    : "bg-card border-border/70 text-muted-foreground hover:bg-muted/40"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold flex items-center gap-1.5">
+                                                    <span>⚖️ Kısmi Ödeme</span>
+                                                </span>
+                                                <Badge variant="outline" className="text-[10px] font-bold border-amber-500/40 text-amber-600 bg-amber-500/10">Peşin + Kalan Borç</Badge>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground mt-1">
+                                                Belirttiğiniz miktar kasadan ödenir, kalan miktar tedarikçinin sayfasına borç olarak yazılır.
+                                            </p>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentStatus("UNPAID")}
+                                            className={cn(
+                                                "p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer",
+                                                paymentStatus === "UNPAID"
+                                                    ? "bg-rose-500/15 border-rose-500 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/30 shadow-xs"
+                                                    : "bg-card border-border/70 text-muted-foreground hover:bg-muted/40"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold flex items-center gap-1.5">
+                                                    <span>⏳ Açık Hesap (Veresiye)</span>
+                                                </span>
+                                                <Badge variant="outline" className="text-[10px] font-bold border-rose-500/40 text-rose-600 bg-rose-500/10">0 ₺ Ödeme</Badge>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground mt-1">
+                                                Kasadan para çıkışı yapılmaz. Tutarın tamamı tedarikçiye açık hesap veresiye borcu eklenir.
+                                            </p>
+                                        </button>
+                                    </div>
+
+                                    {/* Kasa Seçimi ve Tutar Detayları */}
+                                    {(paymentStatus === "PAID" || paymentStatus === "PARTIAL") && (
+                                        <div className="p-3 rounded-xl bg-card border border-border/70 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                                            {/* 1. Kasa / Banka Hesabı */}
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] font-bold text-muted-foreground uppercase">ÖDEME KASASI / HESABI</Label>
+                                                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                                                    <SelectTrigger className="h-9 rounded-xl text-xs font-semibold">
+                                                        <SelectValue placeholder="Kasa / Hesap Seçin" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {accounts.map(acc => (
+                                                            <SelectItem key={acc.id} value={acc.id} className="text-xs">
+                                                                {acc.name} (Bakiye: ₺{Number(acc.balance || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })})
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            {/* 2. Ödeme Yöntemi */}
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] font-bold text-muted-foreground uppercase">ÖDEME YÖNTEMİ</Label>
+                                                <Select value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)}>
+                                                    <SelectTrigger className="h-9 rounded-xl text-xs font-semibold">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="CASH">💵 NAKİT</SelectItem>
+                                                        <SelectItem value="CARD">💳 KREDİ KARTI</SelectItem>
+                                                        <SelectItem value="TRANSFER">🏦 HAVALE / EFT</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            {/* 3. Tutar Girişi / Özeti */}
+                                            {paymentStatus === "PARTIAL" ? (
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-[11px] font-bold text-muted-foreground uppercase">ŞİMDİ ÖDENEN (₺)</Label>
+                                                        <span className="text-[10px] font-black text-rose-500">
+                                                            Kalan Borç: ₺{effectiveRemainingTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    </div>
+                                                    <PriceInput
+                                                        value={paidAmountTry ?? ""}
+                                                        onChange={(val) => setPaidAmountTry(val)}
+                                                        placeholder="0,00"
+                                                        className="h-9 text-xs font-bold rounded-xl"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    <Label className="text-[11px] font-bold text-muted-foreground uppercase">KASADAN DÜŞECEK TUTAR</Label>
+                                                    <div className="h-9 px-3 rounded-xl bg-muted/40 border border-border/60 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                                        <span>Tamamı Ödenecek:</span>
+                                                        <span>₺{totalBuyTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {paymentStatus === "UNPAID" && (
+                                        <div className="p-3 rounded-xl bg-card border border-rose-500/20 flex items-center justify-between text-xs text-rose-600 dark:text-rose-400 font-semibold">
+                                            <span>Tedarikçi Carisine Eklenecek Veresiye Borcu:</span>
+                                            <span className="font-extrabold text-sm">₺{totalBuyTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} (~${totalBuyUsd.toFixed(2)})</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Ürün Listesi Tablosu */}
                             <div className="p-4 sm:p-6 space-y-3">

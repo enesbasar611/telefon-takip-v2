@@ -80,6 +80,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
     const [initialPaymentOrderId, setInitialPaymentOrderId] = useState<string | undefined>(undefined);
+    const [initialPaymentAmount, setInitialPaymentAmount] = useState<number | undefined>(undefined);
     const [isDeleting, setIsDeleting] = useState(false);
     const [pendingOrdersToDelete, setPendingOrdersToDelete] = useState<any[]>([]);
     const [isPendingOrdersModalOpen, setIsPendingOrdersModalOpen] = useState(false);
@@ -209,6 +210,19 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {Number(supplier.balance || 0) > 0 && (
+                        <Button
+                            className="rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-xs tracking-widest px-4 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            onClick={() => {
+                                setInitialPaymentOrderId("manual");
+                                setInitialPaymentAmount(Number(supplier.balance));
+                                setIsPaymentOpen(true);
+                            }}
+                        >
+                            <Wallet className="w-4 h-4 mr-2" />
+                            Borcu Kapat (₺{Math.round(Number(supplier.balance)).toLocaleString("tr-TR")})
+                        </Button>
+                    )}
                     <Button
                         variant="outline"
                         className="rounded-xl border-border/50 hover:border-primary/50 text-xs font-bold uppercase transition-all bg-card/30"
@@ -254,6 +268,20 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</span>
                                 <span className="text-xl font-black text-foreground tabular-nums tracking-tight">{stat.value}</span>
+                                {stat.id === "cari" && Number(supplier.balance || 0) > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setInitialPaymentOrderId("manual");
+                                            setInitialPaymentAmount(Number(supplier.balance));
+                                            setIsPaymentOpen(true);
+                                        }}
+                                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-500 hover:text-emerald-400 transition-colors tracking-widest cursor-pointer w-fit"
+                                    >
+                                        <span>⚡ Borcu Kapat</span>
+                                        <span>→</span>
+                                    </button>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -441,7 +469,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                                                                         <ShoppingBag className="w-4 h-4" />
                                                                     </div>
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-xs font-black text-foreground tabular-nums tracking-wider uppercase">#{order.orderNumber}</span>
+                                                                        <span className="text-xs font-black text-foreground tabular-nums tracking-wider uppercase">#{order.orderNo || order.orderNumber}</span>
                                                                         <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">{order.type === 'INITIAL' ? 'Stok Devir' : 'Alım'}</span>
                                                                     </div>
                                                                 </div>
@@ -704,11 +732,17 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                 isOpen={isPaymentOpen}
                 onClose={() => {
                     setInitialPaymentOrderId(undefined);
+                    setInitialPaymentAmount(undefined);
                     setIsPaymentOpen(false);
                 }}
                 supplierId={supplier.id}
                 supplierName={supplier.name}
+                supplierBalance={Number(supplier.balance || 0)}
+                initialAmount={initialPaymentAmount}
                 initialOrderId={initialPaymentOrderId}
+                onSuccess={(updated) => {
+                    if (updated) setSupplier(updated);
+                }}
             />
 
             <PurchaseOrderDetailModal
@@ -854,7 +888,7 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
                         </div>
                         <AlertDialogTitle className="text-xl font-bold text-foreground uppercase tracking-tight">Siparişi İptal Et</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed font-medium uppercase tracking-widest">
-                            <strong className="text-foreground">#{cancelConfirmOrder?.orderNumber}</strong> nolu sipariş iptal edilecektir.
+                            <strong className="text-foreground">#{cancelConfirmOrder?.orderNo || cancelConfirmOrder?.orderNumber}</strong> nolu sipariş iptal edilecektir.
                             <br /><br />
                             Siparişteki ürünler otomatik olarak <strong className="text-blue-400">Akıllı Stok Yenileme</strong> listesine (Eksik Ürünler) geri dönecektir.
                             <br /><br />

@@ -232,100 +232,207 @@ export async function createSupplierTransactionAction(data: {
         const { getUserId } = await import("@/lib/auth");
         const userId = await getUserId();
 
-        const transaction = await prisma.$transaction(async (tx: any) => {
-            const t = await tx.supplierTransaction.create({
-                data: {
-                    supplierId: data.supplierId,
-                    amount: Math.round(data.amount), // Küsüratları yuvarla
-                    type: data.type,
-                    description: data.description,
-                    purchaseOrderId: data.purchaseOrderId || null,
-                    shopId
-                },
-            });
-
-            // If an account is selected and this impacts cash flow:
-            // "EXPENSE" in supplier means we PAY money -> decreases our FinanceAccount (EXPENSE transaction)
-            if (data.accountId && data.type === "EXPENSE") {
-                await tx.transaction.create({
-                    data: {
-                        type: "EXPENSE",
-                        amount: Math.round(data.amount),
-                        description: `[Tedarikçi Ödemesi] ${data.description}`,
-                        paymentMethod: data.paymentMethod || "CASH",
-                        financeAccountId: data.accountId,
-                        userId,
-                        shopId,
-                        category: "TEDARİKÇİ"
-                    }
-                });
-
-                // Dedükte balance in FinanceAccount
-                await tx.financeAccount.update({
-                    where: { id: data.accountId },
-                    data: { balance: { decrement: data.amount } }
-                });
-            }
-
-            // Borç/Ödeme miktarını yuvarla
-            const roundedAmount = Math.round(data.amount);
-
-            // 1. Eğer spesifik bir sipariş için ödeme yapılıyorsa
-            if (data.purchaseOrderId && data.type === "EXPENSE") {
-                const order = await tx.purchaseOrder.findUnique({
-                    where: { id: data.purchaseOrderId, shopId }
-                });
-
-                if (order) {
-                    const newRemaining = Math.max(0, Math.round(Number(order.remainingAmount) - roundedAmount));
-                    await tx.purchaseOrder.update({
-                        where: { id: data.purchaseOrderId },
-                        data: {
-                            remainingAmount: newRemaining,
-                            paymentStatus: newRemaining <= 0 ? "PAID" : "PARTIAL"
-                        }
-                    });
-                }
-            }
-
-            // 2. Tedarikçi bakiyesini güncelle
-            // INCOME = Borçlandık (balance artar), EXPENSE = Ödeme yaptık (balance azalır)
+        const result = await prisma.$transaction(async (tx: any) => {
             const supplier = await tx.supplier.findUnique({ where: { id: data.supplierId, shopId } });
             if (!supplier) throw new Error("Tedarikçi bulunamadı");
 
-            const currentBalance = Math.round(Number(supplier.balance));
-            const adjustment = data.type === "INCOME" ? roundedAmount : -roundedAmount;
-            let newBalance = Math.max(0, currentBalance + adjustment); // Borç asla eksiye düşmez
+            const currentBalance = Number(supplier.balance || 0);
+            const requestedAmount = Math.max(0, Number(data.amount));
 
-            await tx.supplier.update({
-                where: { id: data.supplierId },
-                data: { balance: newBalance },
-            });
+            if (data.type === "EXPENSE") {
+                // EMANET KASA ÖNLEME: Borçtan fazla ödeme girilse bile en fazla mevcut borç kadar düşülür
+                const effectivePayment = Math.min(requestedAmount, currentBalance);
+                const overpaymentRefund = Math.max(0, Math.round((requestedAmount - effectivePayment) * 100) / 100);
 
-            // 3. Eğer toplam borç sıfırlandıysa, o tedarikçinin tüm siparişlerini ÖDENDİ olarak işaretle
-            if (newBalance === 0) {
-                await tx.purchaseOrder.updateMany({
-                    where: {
-                        supplierId: data.supplierId,
-                        shopId,
-                        paymentStatus: { not: "PAID" }
-                    },
+                if (effectivePayment <= 0 && currentBalance <= 0) {
+                    throw new Error("Bu tedarikçinin açık borcu bulunmamaktadır (Borç: 0 ₺).");
+                }
+
+                // 1. Kasa / Banka Hesabından Düşme (Sadece borç tutarı kadar düşülür, fazla para kasada kalır)
+                if (data.accountId && effectivePayment > 0) {
+                    await tx.financeAccount.update({
+                        where: { id: data.accountId },
+                        data: { balance: { decrement: effectivePayment } }
+                    });
+
+                    await tx.transaction.create({
+                        data: {
+                            type: "EXPENSE",
+                            amount: effectivePayment,
+                            description: `[Tedarikçi Ödemesi] ${data.description}${overpaymentRefund > 0 ? ` (Talep: ₺${requestedAmount}, Kapatılan: ₺${effectivePayment}, İade/Kalan: ₺${overpaymentRefund})` : ""}`,
+                            paymentMethod: data.paymentMethod || "CASH",
+                            financeAccountId: data.accountId,
+                            userId,
+                            shopId,
+                            category: "TEDARİKÇİ"
+                        }
+                    });
+                }
+
+                // 2. Tedarikçi Ekstre Kaydı (SupplierTransaction)
+                const t = await tx.supplierTransaction.create({
                     data: {
-                        paymentStatus: "PAID",
-                        remainingAmount: 0
-                    }
+                        supplierId: data.supplierId,
+                        amount: effectivePayment,
+                        type: "EXPENSE",
+                        description: data.description + (overpaymentRefund > 0 ? ` (Borç Kapatıldı, ₺${overpaymentRefund} Kasada Kaldı)` : ""),
+                        purchaseOrderId: data.purchaseOrderId && data.purchaseOrderId !== "manual" ? data.purchaseOrderId : null,
+                        shopId
+                    },
                 });
-            }
 
-            return t;
+                // 3. FIFO (Geçmiş Borçtan Başlayarak Siparişleri Kapatma) Mantığı
+                if (data.purchaseOrderId && data.purchaseOrderId !== "manual") {
+                    // Kullanıcı belirli bir sipariş seçtiyse önce o siparişi kapat
+                    const specificOrder = await tx.purchaseOrder.findUnique({
+                        where: { id: data.purchaseOrderId, shopId }
+                    });
+                    let unallocated = effectivePayment;
+                    if (specificOrder) {
+                        const orderRem = Number(specificOrder.remainingAmount ?? specificOrder.totalAmount);
+                        const payThis = Math.min(orderRem, unallocated);
+                        const newRem = Math.max(0, Math.round((orderRem - payThis) * 100) / 100);
+                        await tx.purchaseOrder.update({
+                            where: { id: specificOrder.id },
+                            data: {
+                                remainingAmount: newRem,
+                                paymentStatus: newRem <= 0 ? "PAID" : "PARTIAL"
+                            }
+                        });
+                        unallocated -= payThis;
+                    }
+
+                    // Artan ödeme miktarı varsa en eski açık siparişlerden devam ederek kapat (FIFO)
+                    if (unallocated > 0) {
+                        const remainingOrders = await tx.purchaseOrder.findMany({
+                            where: {
+                                shopId,
+                                supplierId: data.supplierId,
+                                id: { not: data.purchaseOrderId },
+                                paymentStatus: { in: ["UNPAID", "PARTIAL"] }
+                            },
+                            orderBy: { createdAt: "asc" }
+                        });
+                        for (const o of remainingOrders) {
+                            if (unallocated <= 0) break;
+                            const oRem = Number(o.remainingAmount ?? o.totalAmount);
+                            const oPay = Math.min(oRem, unallocated);
+                            const oNewRem = Math.max(0, Math.round((oRem - oPay) * 100) / 100);
+                            await tx.purchaseOrder.update({
+                                where: { id: o.id },
+                                data: {
+                                    remainingAmount: oNewRem,
+                                    paymentStatus: oNewRem <= 0 ? "PAID" : "PARTIAL"
+                                }
+                            });
+                            unallocated -= oPay;
+                        }
+                    }
+                } else {
+                    // Genel borç ödemesi: Geçmişten günümüze sırayla siparişleri kapat (FIFO)
+                    const openOrders = await tx.purchaseOrder.findMany({
+                        where: {
+                            shopId,
+                            supplierId: data.supplierId,
+                            paymentStatus: { in: ["UNPAID", "PARTIAL"] }
+                        },
+                        orderBy: { createdAt: "asc" } // En eski siparişten başla
+                    });
+                    let unallocated = effectivePayment;
+                    for (const o of openOrders) {
+                        if (unallocated <= 0) break;
+                        const oRem = Number(o.remainingAmount ?? o.totalAmount);
+                        const oPay = Math.min(oRem, unallocated);
+                        const oNewRem = Math.max(0, Math.round((oRem - oPay) * 100) / 100);
+                        await tx.purchaseOrder.update({
+                            where: { id: o.id },
+                            data: {
+                                remainingAmount: oNewRem,
+                                paymentStatus: oNewRem <= 0 ? "PAID" : "PARTIAL"
+                            }
+                        });
+                        unallocated -= oPay;
+                    }
+                }
+
+                // 4. Tedarikçi Bakiyelerini Güncelle (Emanet kasa yok: bakiye eksiye asla düşmez)
+                const newBalance = Math.max(0, Math.round((currentBalance - effectivePayment) * 100) / 100);
+                const currentBalanceUsd = Number(supplier.balanceUsd || 0);
+                const ratio = currentBalance > 0 ? (effectivePayment / currentBalance) : 0;
+                const newBalanceUsd = Math.max(0, Math.round((currentBalanceUsd * (1 - ratio)) * 100) / 100);
+
+                await tx.supplier.update({
+                    where: { id: data.supplierId },
+                    data: {
+                        balance: newBalance,
+                        balanceUsd: newBalanceUsd,
+                    },
+                });
+
+                // Toplam borç sıfırlandıysa tüm kalan siparişleri kesin olarak PAID yap
+                if (newBalance === 0) {
+                    await tx.purchaseOrder.updateMany({
+                        where: {
+                            supplierId: data.supplierId,
+                            shopId,
+                            paymentStatus: { not: "PAID" }
+                        },
+                        data: {
+                            paymentStatus: "PAID",
+                            remainingAmount: 0
+                        }
+                    });
+                }
+
+                return {
+                    transaction: t,
+                    effectivePayment,
+                    overpaymentRefund,
+                    newBalance
+                };
+            } else {
+                // INCOME = Tedarikçiye manuel borç ekleme
+                const roundedAmount = Math.round(requestedAmount * 100) / 100;
+                const t = await tx.supplierTransaction.create({
+                    data: {
+                        supplierId: data.supplierId,
+                        amount: roundedAmount,
+                        type: "INCOME",
+                        description: data.description,
+                        purchaseOrderId: data.purchaseOrderId && data.purchaseOrderId !== "manual" ? data.purchaseOrderId : null,
+                        shopId
+                    },
+                });
+
+                await tx.supplier.update({
+                    where: { id: data.supplierId },
+                    data: {
+                        balance: { increment: roundedAmount }
+                    },
+                });
+
+                return {
+                    transaction: t,
+                    effectivePayment: roundedAmount,
+                    overpaymentRefund: 0,
+                    newBalance: currentBalance + roundedAmount
+                };
+            }
         });
 
         revalidatePath("/tedarikciler");
         revalidatePath("/finans");
-        return { success: true, transaction: serializePrisma(transaction) };
-    } catch (error) {
+        revalidatePath("/stok/siparisler");
+        return {
+            success: true,
+            effectivePayment: result.effectivePayment,
+            overpaymentRefund: result.overpaymentRefund,
+            newBalance: result.newBalance,
+            transaction: serializePrisma(result.transaction)
+        };
+    } catch (error: any) {
         console.error("Error creating transaction:", error);
-        return { success: false, error: "İşlem kaydedilemedi." };
+        return { success: false, error: error?.message || "İşlem kaydedilemedi." };
     }
 }
 

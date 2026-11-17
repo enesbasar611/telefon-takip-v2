@@ -279,7 +279,8 @@ export function smartDetectCategory(productName: string, rawCat?: string): strin
     if (
         combined.includes("kulaklık") || combined.includes("kulaklik") ||
         combined.includes("airpods") || combined.includes("tws") ||
-        combined.includes("bluetooth kulaklık") || combined.includes("headphone")
+        combined.includes("bluetooth kulaklık") || combined.includes("headphone") ||
+        combined.includes("earphone") || combined.includes("earbuds") || combined.includes("buds")
     ) {
         return "Kulaklık";
     }

@@ -5,6 +5,14 @@ import { getShopId, getUserId } from "@/lib/auth";
 import { getExchangeRates } from "@/lib/actions/currency-actions";
 import { revalidatePath } from "next/cache";
 import { revalidateSmartReplenishment } from "@/lib/inventory/replenishment-cache";
+import { callGemini } from "@/lib/actions/gemini-actions";
+import {
+    type ParsedWholesalerItem,
+    smartDetectCategory,
+    generateProductSku,
+    detectColorInName,
+    STANDARD_CATEGORIES
+} from "@/lib/stock/wholesaler-parser";
 
 export interface WholesalerImportItemInput {
     name: string;
@@ -20,7 +28,10 @@ export interface WholesalerImportItemInput {
 export interface WholesalerImportBatchPayload {
     items: WholesalerImportItemInput[];
     supplierId?: string | null;
-    paymentStatus: "PAID" | "UNPAID" | "NONE"; // PAID = Peşin/Önceden ödendi (bakiye değişmez), UNPAID = Açık hesap (tedarikçi borcuna eklenir), NONE = Tedarikçi yok
+    paymentStatus: "PAID" | "PARTIAL" | "UNPAID" | "NONE"; // PAID = Peşin, PARTIAL = Kısmi, UNPAID = Açık hesap / Veresiye, NONE = Tedarikçi yok
+    paidAmount?: number; // Ödenen tutar (TRY)
+    accountId?: string; // Ödemenin çekileceği Kasa/Banka hesap ID
+    paymentMethod?: "CASH" | "CARD" | "TRANSFER";
     notes?: string;
 }
 
@@ -206,6 +217,13 @@ export async function importWholesalerBatchAction(
 
             let createdCount = 0;
             let updatedCount = 0;
+            const orderItemsData: {
+                productId: string;
+                name: string;
+                quantity: number;
+                buyPriceTry: number;
+                buyPriceUsd: number;
+            }[] = [];
 
             // 3. Döngü içerisinde hızlı güncelleme ve oluşturmalar
             for (const item of items) {
@@ -247,6 +265,13 @@ export async function importWholesalerBatchAction(
 
                     // Lookup haritasındaki mevcut stoğu da güncelle (aynı parça listede birden fazla kez geçebilir)
                     existingProduct.stock = newStock;
+                    orderItemsData.push({
+                        productId: existingProduct.id,
+                        name: cleanName,
+                        quantity: item.quantity,
+                        buyPriceTry,
+                        buyPriceUsd: item.buyPriceUsd
+                    });
                     updatedCount++;
                 } else {
                     // Yeni ürün oluştur
@@ -287,11 +312,18 @@ export async function importWholesalerBatchAction(
                         supplierId: newProduct.supplierId,
                     });
 
+                    orderItemsData.push({
+                        productId: newProduct.id,
+                        name: cleanName,
+                        quantity: item.quantity,
+                        buyPriceTry,
+                        buyPriceUsd: item.buyPriceUsd
+                    });
                     createdCount++;
                 }
             }
 
-            // 4. Tedarikçi Bakiye ve Cari Yönetimi
+            // 4. Tedarikçi Bakiye, Sipariş (PurchaseOrder) ve Cari Yönetimi
             let supplierUpdated = false;
             if (supplierId && paymentStatus !== "NONE") {
                 const supplier = await tx.supplier.findUnique({
@@ -299,51 +331,134 @@ export async function importWholesalerBatchAction(
                 });
 
                 if (supplier) {
-                    if (paymentStatus === "UNPAID") {
-                        // Açık Hesap (Veresiye): Tedarikçi bakiyesine borç ekle
-                        await tx.supplier.update({
-                            where: { id: supplierId },
-                            data: {
-                                balance: { increment: totalTry },
-                                balanceUsd: { increment: totalUsd },
-                                totalShopping: { increment: totalTry }
-                            }
-                        });
-
-                        await tx.supplierTransaction.create({
-                            data: {
-                                supplierId,
-                                amount: totalTry,
-                                amountUsd: totalUsd,
-                                exchangeRate: usdRate,
-                                type: "EXPENSE",
-                                description: `Toptancı Parça Alımı - Açık Hesap (${totalQty} Parça, $${totalUsd.toFixed(2)}) ${notes ? `[${notes}]` : ""}`,
-                                shopId
-                            }
-                        });
-                        supplierUpdated = true;
-                    } else if (paymentStatus === "PAID") {
-                        // Peşin / Önceden Ödendi: Cari bakiye DEĞİŞMEZ, sadece toplam alışveriş tutarı artar
-                        await tx.supplier.update({
-                            where: { id: supplierId },
-                            data: {
-                                totalShopping: { increment: totalTry }
-                            }
-                        });
-
-                        await tx.supplierTransaction.create({
-                            data: {
-                                supplierId,
-                                amount: totalTry,
-                                amountUsd: totalUsd,
-                                exchangeRate: usdRate,
-                                type: "EXPENSE",
-                                description: `Toptancı Parça Alımı - Ödemesi Peşin/Önceden Yapıldı (${totalQty} Parça, $${totalUsd.toFixed(2)})`,
-                                shopId
-                            }
-                        });
-                        supplierUpdated = true;
+                    let paidTry = 0;
+                    if (paymentStatus === "PAID") {
+                        paidTry = totalTry;
+                    } else if (paymentStatus === "PARTIAL") {
+                        paidTry = Math.min(totalTry, Math.max(0, Number(payload.paidAmount || 0)));
+                    } else {
+                        paidTry = 0;
                     }
+                    const remainingTry = Math.max(0, Math.round((totalTry - paidTry) * 100) / 100);
+                    const paidUsd = Number((paidTry / usdRate).toFixed(2));
+                    const remainingUsd = Number((remainingTry / usdRate).toFixed(2));
+                    const effectivePaymentStatus: "PAID" | "PARTIAL" | "UNPAID" =
+                        remainingTry <= 0 ? "PAID" : paidTry > 0 ? "PARTIAL" : "UNPAID";
+                    const payMethod = payload.paymentMethod || "CASH";
+
+                    // Benzersiz Sipariş Numarası Üret: SIP-YYYYMMDD-XXXX
+                    const now = new Date();
+                    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
+                    let orderNo = `SIP-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+                    let attempts = 0;
+                    while (attempts < 10) {
+                        const exists = await tx.purchaseOrder.findUnique({
+                            where: { shopId_orderNo: { shopId, orderNo } }
+                        });
+                        if (!exists) break;
+                        orderNo = `SIP-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+                        attempts++;
+                    }
+
+                    // 4.1. PurchaseOrder Oluştur (Tedarikçi sayfasında görünür)
+                    const purchaseOrder = await tx.purchaseOrder.create({
+                        data: {
+                            shopId,
+                            supplierId,
+                            orderNo,
+                            totalAmount: totalTry,
+                            netAmount: Math.round(totalTry * 0.8 * 100) / 100,
+                            vatAmount: Math.round(totalTry * 0.2 * 100) / 100,
+                            discount: 0,
+                            remainingAmount: remainingTry,
+                            paymentStatus: effectivePaymentStatus,
+                            paymentMethod: payMethod,
+                            status: "COMPLETED",
+                            receivedAt: now,
+                            description: `Toptancı Fiş/AI Stok Girişi (${items.length} Kalem, ${totalQty} Adet)${notes ? ` - ${notes}` : ""}`,
+                            items: {
+                                create: orderItemsData.map(it => ({
+                                    productId: it.productId,
+                                    name: it.name,
+                                    quantity: it.quantity,
+                                    receivedQuantity: it.quantity,
+                                    buyPrice: it.buyPriceTry,
+                                    buyPriceUsd: it.buyPriceUsd,
+                                    vatRate: 20,
+                                    shopId,
+                                }))
+                            }
+                        }
+                    });
+
+                    // 4.2. Peşin veya Kısmi Ödeme Yapıldıysa: Kasadan Düş + Finans Hareketleri
+                    if (paidTry > 0 && payload.accountId) {
+                        // Seçilen kasadan düş
+                        await tx.financeAccount.update({
+                            where: { id: payload.accountId },
+                            data: { balance: { decrement: paidTry } }
+                        });
+
+                        // İşletme genel kasa gideri (EXPENSE)
+                        await tx.transaction.create({
+                            data: {
+                                shopId,
+                                type: "EXPENSE",
+                                amount: paidTry,
+                                currency: "TRY",
+                                paymentMethod: payMethod,
+                                financeAccountId: payload.accountId,
+                                supplierId,
+                                userId: userId || null,
+                                category: "TEDARİKÇİ",
+                                description: `[Toptancı Alımı - ${effectivePaymentStatus === "PAID" ? "Peşin" : "Kısmi"}] ${supplier.name} (${orderNo})`
+                            }
+                        });
+
+                        // Tedarikçi ödeme ekstresi kaydı (EXPENSE = tedarikçiye ödeme yapıldı)
+                        await tx.supplierTransaction.create({
+                            data: {
+                                shopId,
+                                supplierId,
+                                purchaseOrderId: purchaseOrder.id,
+                                type: "EXPENSE",
+                                amount: paidTry,
+                                amountUsd: paidUsd,
+                                exchangeRate: usdRate,
+                                description: `${orderNo} nolu sipariş ${effectivePaymentStatus === "PARTIAL" ? "kısmi ödemesi" : "peşin ödemesi"}`,
+                                date: now,
+                            }
+                        });
+                    }
+
+                    // 4.3. Kalan Borç Varsa: Tedarikçi Ekstresine Borç Olarak Ekle (INCOME = borçlandık)
+                    if (remainingTry > 0) {
+                        await tx.supplierTransaction.create({
+                            data: {
+                                shopId,
+                                supplierId,
+                                purchaseOrderId: purchaseOrder.id,
+                                type: "INCOME",
+                                amount: remainingTry,
+                                amountUsd: remainingUsd,
+                                exchangeRate: usdRate,
+                                description: `${orderNo} nolu sipariş kalan borcu (${effectivePaymentStatus === "PARTIAL" ? "Kısmi Veresiye" : "Açık Hesap"})`,
+                                date: now,
+                            }
+                        });
+                    }
+
+                    // 4.4. Tedarikçi Cari Bakiye Güncelleme
+                    await tx.supplier.update({
+                        where: { id: supplierId },
+                        data: {
+                            totalShopping: { increment: totalTry },
+                            balance: { increment: remainingTry },
+                            balanceUsd: { increment: remainingUsd },
+                        }
+                    });
+
+                    supplierUpdated = true;
                 }
             }
 
@@ -359,6 +474,8 @@ export async function importWholesalerBatchAction(
 
         revalidatePath("/stok");
         revalidatePath("/tedarikciler");
+        revalidatePath("/finans");
+        revalidatePath("/stok/siparisler");
         revalidateSmartReplenishment(shopId);
 
         return {
@@ -382,5 +499,171 @@ export async function importWholesalerBatchAction(
             totalAmountTry: 0,
             supplierUpdated: false,
         };
+    }
+}
+
+/**
+ * Toptancıdan gelen fatura / satış özet fişini (PDF veya görsel formatında)
+ * multimodal yapay zeka (Gemini) ile analiz ederek ürün adları, adetler,
+ * birim alış fiyatları ($/₺) ve uygun kategorileri çıkarır.
+ */
+export async function parseWholesalerDocumentWithAIAction(payload: {
+    base64Data: string;
+    mimeType: string;
+    defaultMarkup?: number;
+}): Promise<{
+    success: boolean;
+    error?: string;
+    items?: ParsedWholesalerItem[];
+    supplierName?: string | null;
+    matchedSupplierId?: string | null;
+    totalBuyUsd?: number;
+    totalQuantity?: number;
+}> {
+    try {
+        const shopId = await getShopId();
+        if (!shopId) {
+            return { success: false, error: "Dükkan oturumu bulunamadı." };
+        }
+
+        const { base64Data, mimeType, defaultMarkup = 5.00 } = payload;
+        if (!base64Data) {
+            return { success: false, error: "Belge verisi alınamadı." };
+        }
+
+        // Güncel USD kurunu al
+        const rates = await getExchangeRates(shopId);
+        const usdRate = rates?.usd && rates.usd > 0 ? Number(rates.usd) : 34.5;
+
+        const promptText = `Sen bir toptancı faturası ve satış fişi ayrıştırma uzmanısın.
+Sana verilen fatura belgesindeki (PDF veya görsel) tüm ürün/parça satırlarını eksiksiz oku ve geçerli JSON olarak döndür.
+
+DİKKAT EDİLECEK HUSUSLAR:
+1. Ürün Adı (name): Tablonun "Açıklama" veya "Ürün Tanımı" sütunundaki ürünün net adı. Sıra numarası veya adet ibaresi ekleme. Örn: "LUCATECH LT-601 ENC TWS AİRPODS KULAKLIK", "BAYROX AIR PRO 2 ANC ENC EARPHONE".
+2. Miktar (quantity): "Miktar" veya "Adet" sütunundaki sayı (Örn: "2 ad" -> 2). Belirtilmemişse 1 al.
+3. Alış Fiyatı (buyPrice): "Birim Fiyat" veya "Fiyat" sütunundaki sayı (1 adet birim alış fiyatı).
+   - Faturadaki para birimi dolar ($ veya USD) ise "currency": "USD" yap.
+   - Faturadaki para birimi TL (₺ veya TRY) ise "currency": "TRY" yap.
+4. Kategori (category): Ürünün türüne göre en uygun kategoriyi belirle:
+   "Kulaklık", "Şarj Başlığı", "Set Şarj", "Type-C Kablo", "Lightning Kablo", "Kablo", "Kılıf", "Ekran Koruyucu", "Powerbank", "LCD / Ekran", "LCD / Ekran (Çıtalı)", "Kapak", "Batarya", "Şarj Soketi", "Kamera", "Kasa", "Flex / Entegre", "Hoparlör / Ahize", "Yedek Parça", "Aksesuar".
+5. Marka (brand): Ürün veya toptancı markası (Örn: "Lucatech", "Bayrox", "Syrox", "Deji", "Apple", "Samsung" vb.).
+6. Renk (color): Ürün adında geçen renk varsa yaz (Örn: "Siyah", "Beyaz"), yoksa null.
+7. Tedarikçi/Toptancı Adı (supplierName): Faturanın tepesindeki satıcı firma/toptancı adı (Örn: "BAYROX TOPTAN", "BAYRAK ELEKTRONİK").
+8. Toplam Fatura Tutarı (invoiceTotal): Faturanın genel toplam tutarı (sayı).
+
+YANIT ŞEMASI (Sadece geçerli JSON döndür):
+{
+  "supplierName": "string veya null",
+  "invoiceTotal": 0.0,
+  "currency": "USD veya TRY",
+  "items": [
+    {
+      "name": "string",
+      "quantity": 1,
+      "buyPrice": 0.0,
+      "currency": "USD veya TRY",
+      "category": "string",
+      "brand": "string veya null",
+      "color": "string veya null"
+    }
+  ]
+}`;
+
+        const geminiRes = await callGemini(
+            shopId,
+            [
+                {
+                    inlineData: {
+                        data: base64Data,
+                        mimeType: mimeType || "application/pdf"
+                    }
+                },
+                promptText
+            ],
+            "json"
+        );
+
+        if ("error" in geminiRes) {
+            return { success: false, error: geminiRes.error };
+        }
+
+        let parsedJson: any;
+        try {
+            parsedJson = JSON.parse(geminiRes.text);
+        } catch (e) {
+            return { success: false, error: "Yapay zeka yanıtı JSON formatına dönüştürülemedi." };
+        }
+
+        const rawItems = Array.isArray(parsedJson.items) ? parsedJson.items : [];
+        if (rawItems.length === 0) {
+            return { success: false, error: "Belgede herhangi bir ürün veya fiyat satırı bulunamadı." };
+        }
+
+        // Tedarikçi eşleşmesi ara
+        let matchedSupplierId: string | null = null;
+        const detectedSupplierName = parsedJson.supplierName || null;
+        if (detectedSupplierName) {
+            const suppliers = await prisma.supplier.findMany({
+                where: { shopId },
+                select: { id: true, name: true }
+            });
+            const cleanDet = detectedSupplierName.toLowerCase().replace(/[^a-z0-9ğüşıöç]/gi, "");
+            const match = suppliers.find(s => {
+                const cleanS = s.name.toLowerCase().replace(/[^a-z0-9ğüşıöç]/gi, "");
+                return cleanDet.includes(cleanS) || cleanS.includes(cleanDet);
+            });
+            if (match) {
+                matchedSupplierId = match.id;
+            }
+        }
+
+        // Kalemleri ParsedWholesalerItem formatına dönüştür
+        const items: ParsedWholesalerItem[] = rawItems.map((it: any, index: number) => {
+            const cleanName = String(it.name || "").trim();
+            const qty = Math.max(1, parseInt(it.quantity) || 1);
+            const isTry = it.currency === "TRY" || (!it.currency && Number(it.buyPrice || 0) > 60);
+
+            let buyPriceUsd = 0;
+            if (isTry) {
+                buyPriceUsd = Math.round((Number(it.buyPrice || 0) / usdRate) * 100) / 100;
+            } else {
+                buyPriceUsd = Math.round(Number(it.buyPrice || 0) * 100) / 100;
+            }
+
+            const sellPriceUsd = Number((buyPriceUsd + defaultMarkup).toFixed(2));
+            const category = it.category && STANDARD_CATEGORIES.includes(it.category)
+                ? it.category
+                : smartDetectCategory(cleanName, it.category);
+            const color = it.color || detectColorInName(cleanName);
+            const sku = generateProductSku(cleanName, category, it.brand || undefined);
+
+            return {
+                id: `ai-doc-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                sku,
+                name: cleanName,
+                category,
+                brand: it.brand || undefined,
+                quantity: qty,
+                buyPriceUsd,
+                sellPriceUsd,
+                color,
+                selected: true,
+            };
+        });
+
+        const totalBuyUsd = Number(items.reduce((acc, it) => acc + (it.buyPriceUsd * it.quantity), 0).toFixed(2));
+        const totalQuantity = items.reduce((acc, it) => acc + it.quantity, 0);
+
+        return {
+            success: true,
+            items,
+            supplierName: detectedSupplierName,
+            matchedSupplierId,
+            totalBuyUsd,
+            totalQuantity,
+        };
+    } catch (err: any) {
+        console.error("parseWholesalerDocumentWithAIAction error:", err);
+        return { success: false, error: err?.message || "Belge işlenirken bir hata oluştu." };
     }
 }

@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CreditCard, Save, Wallet } from "lucide-react";
+import { Loader2, CreditCard, Save, Wallet, AlertTriangle } from "lucide-react";
 import { createSupplierTransactionAction } from "@/lib/actions/purchase-actions";
 import { getSupplierProfileDataAction } from "@/lib/actions/purchase-actions";
 import { getAccounts } from "@/lib/actions/finance-actions";
@@ -38,6 +38,8 @@ interface SupplierPaymentModalProps {
     onClose: () => void;
     supplierId?: string;
     supplierName?: string;
+    supplierBalance?: number;
+    initialAmount?: number;
     unpaidOrders?: any[];
     suppliers?: any[];
     allPurchaseOrders?: any[];
@@ -69,6 +71,8 @@ export function SupplierPaymentModal({
     onClose,
     supplierId: initialSupplierId,
     supplierName: initialSupplierName,
+    supplierBalance,
+    initialAmount,
     unpaidOrders: initialUnpaidOrders = [],
     suppliers = [],
     allPurchaseOrders = [],
@@ -106,6 +110,21 @@ export function SupplierPaymentModal({
     const selectedType = watch("type");
     const selectedOrderId = watch("purchaseOrderId");
     const selectedSupplierId = watch("supplierId");
+    const currentAmount = Number(watch("amount") || 0);
+
+    const effectiveSupplierBalance = supplierBalance !== undefined
+        ? Number(supplierBalance)
+        : Number(suppliers.find((s: any) => s.id === selectedSupplierId)?.balance || 0);
+
+    // Initial amount auto-fill (Borcu Kapat butonu ile açıldığında)
+    useEffect(() => {
+        if (isOpen && initialAmount !== undefined && initialAmount > 0) {
+            setValue("amount", Math.round(initialAmount));
+            setValue("description", "Borç Kapatma Ödemesi");
+            setValue("type", "EXPENSE");
+            setValue("purchaseOrderId", "manual");
+        }
+    }, [isOpen, initialAmount, setValue]);
 
     // Efektif unpaidOrders (eğer sidebar'dan açıldıysa ve supplier seçildiyse)
     const effectiveUnpaidOrders = initialSupplierId
@@ -148,7 +167,11 @@ export function SupplierPaymentModal({
             });
 
             if (result.success) {
-                toast.success("Cari işlem başarıyla kaydedildi.");
+                if (result.overpaymentRefund && result.overpaymentRefund > 0) {
+                    toast.success(`Borç başarıyla kapatıldı! Fazla girilen ₺${result.overpaymentRefund.toLocaleString("tr-TR")} kasaya iade edildi (kasada bırakıldı).`);
+                } else {
+                    toast.success("Cari işlem başarıyla kaydedildi.");
+                }
 
                 // Fetch updated supplier data
                 if (onSuccess) {
@@ -320,14 +343,34 @@ export function SupplierPaymentModal({
                     )}
 
                     <div className="space-y-2">
-                        <Label htmlFor="amount" className="font-medium text-[10px]  tracking-wider text-muted-foreground/80 uppercase">TUTAR (₺)</Label>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="amount" className="font-medium text-[10px] tracking-wider text-muted-foreground/80 uppercase">TUTAR (₺)</Label>
+                            {selectedType === "EXPENSE" && effectiveSupplierBalance > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setValue("amount", Math.round(effectiveSupplierBalance), { shouldValidate: true })}
+                                    className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 cursor-pointer transition-colors"
+                                >
+                                    ⚡ Tüm Borcu Kapat (₺{Math.round(effectiveSupplierBalance).toLocaleString("tr-TR")})
+                                </button>
+                            )}
+                        </div>
                         <PriceInput
                             id="amount"
                             value={watch("amount")}
                             onChange={(v) => setValue("amount", v, { shouldValidate: true })}
                             placeholder="0,00"
-                            className="bg-accent/5 border-border/50 h-12 rounded-xl text-lg  text-foreground placeholder:text-muted-foreground/30 focus-visible:ring-emerald-500"
+                            className="bg-accent/5 border-border/50 h-12 rounded-xl text-lg text-foreground placeholder:text-muted-foreground/30 focus-visible:ring-emerald-500"
                         />
+                        {currentAmount > effectiveSupplierBalance && effectiveSupplierBalance > 0 && selectedType === "EXPENSE" && (
+                            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
+                                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                                <span>
+                                    Girilen tutar güncel borçtan (₺{Math.round(effectiveSupplierBalance).toLocaleString("tr-TR")}) fazladır.
+                                    Kasadan sadece borç tutarı kadar çıkış yapılacak, borç kapatılacak ve aradaki fazla tutar (₺{(currentAmount - Math.round(effectiveSupplierBalance)).toLocaleString("tr-TR")}) kasada kalacaktır (Emanet kasa oluşturulmaz).
+                                </span>
+                            </div>
+                        )}
                         {errors.amount && <p className="text-[10px] text-red-400">{errors.amount.message}</p>}
                     </div>
 
