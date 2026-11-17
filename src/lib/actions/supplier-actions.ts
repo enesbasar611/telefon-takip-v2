@@ -75,6 +75,40 @@ export async function getSuppliers() {
   }
 }
 
+export async function getSupplierById(id: string) {
+  try {
+    const shopId = await getShopId(false);
+    if (!shopId) return null;
+    const supplier = await prisma.supplier.findUnique({
+      where: { id, shopId },
+      include: {
+        purchases: {
+          include: { items: { include: { product: true } } },
+          orderBy: { createdAt: "desc" }
+        },
+        inventoryMovements: {
+          include: { product: true },
+          orderBy: { createdAt: "desc" }
+        },
+        products: {
+          include: { category: true }
+        },
+        returns: {
+          include: { product: true, customer: true, serviceTicket: true },
+          orderBy: { createdAt: "desc" }
+        },
+        SupplierTransaction: {
+          orderBy: { date: "desc" }
+        }
+      }
+    });
+    return serializePrisma(supplier);
+  } catch (error) {
+    console.error("Error fetching supplier by id:", error);
+    return null;
+  }
+}
+
 export async function createSupplier(data: {
   name: string;
   contact?: string | null;

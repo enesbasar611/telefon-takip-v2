@@ -44,7 +44,7 @@ import { PurchaseOrderDetailModal } from "./purchase-order-detail-modal";
 import { TedarikciCariEkstreModal } from "./tedarikci-cari-ekstre-modal";
 import { SupplierPaymentHistoryModal } from "./supplier-payment-history-modal";
 import { EditSupplierModal } from "./edit-supplier-modal";
-import { deleteSupplier, cancelPurchaseOrder } from "@/lib/actions/supplier-actions";
+import { deleteSupplier, cancelPurchaseOrder, getSupplierById } from "@/lib/actions/supplier-actions";
 import { toast } from "sonner";
 import { PurchaseForm } from "./purchase-form";
 import {
@@ -95,6 +95,13 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
 
     useEffect(() => {
         setSupplier(initialSupplier);
+        if (initialSupplier?.id) {
+            getSupplierById(initialSupplier.id).then((fresh) => {
+                if (fresh) {
+                    setSupplier(fresh);
+                }
+            }).catch(console.error);
+        }
     }, [initialSupplier]);
 
     const handleDetail = (order: any) => {
@@ -130,21 +137,27 @@ export function SupplierProfile({ supplier: initialSupplier, onBack, suppliers, 
 
     const products = useMemo(() => {
         const prodMap = new Map<string, any>();
-        supplier.purchases?.forEach((p: any) => {
-            p.items?.forEach((item: any) => {
-                if (item.productId) {
-                    const existing = prodMap.get(item.productId);
-                    if (existing) {
-                        existing.quantity += item.quantity;
-                        existing.totalAmount += Number(item.totalAmount);
-                    } else {
-                        prodMap.set(item.productId, {
-                            id: item.productId,
-                            name: item.product?.name,
-                            quantity: item.quantity,
-                            totalAmount: Number(item.totalAmount),
-                        });
-                    }
+        (supplier.purchases || []).forEach((p: any) => {
+            (p.items || []).forEach((item: any) => {
+                const key = item.productId || item.name;
+                if (!key) return;
+
+                const itemName = item.name || item.product?.name || "İsimsiz Ürün";
+                const qty = Number(item.quantity || item.receivedQuantity || 1);
+                const unitBuy = Number(item.buyPrice || 0);
+                const totalItemAmount = Number(item.totalAmount ?? (unitBuy * qty));
+
+                const existing = prodMap.get(key);
+                if (existing) {
+                    existing.quantity += qty;
+                    existing.totalAmount += totalItemAmount;
+                } else {
+                    prodMap.set(key, {
+                        id: key,
+                        name: itemName,
+                        quantity: qty,
+                        totalAmount: totalItemAmount,
+                    });
                 }
             });
         });

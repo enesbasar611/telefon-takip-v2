@@ -667,3 +667,162 @@ YANIT ŞEMASI (Sadece geçerli JSON döndür):
         return { success: false, error: err?.message || "Belge işlenirken bir hata oluştu." };
     }
 }
+
+/**
+ * Yapıştırılan serbest veya karmaşık toptancı metnini Gemini AI ile analiz eder.
+ * Çok satırlı fatura dökümleri, WhatsApp mesajları veya Excel kopyalarında
+ * ürün adlarını, adetleri ve birim alış fiyatlarını yüksek doğrulukla çıkarır.
+ */
+export async function parseWholesalerRawTextWithAIAction(payload: {
+    text: string;
+    defaultMarkup?: number;
+}): Promise<{
+    success: boolean;
+    error?: string;
+    items?: ParsedWholesalerItem[];
+    supplierName?: string | null;
+    matchedSupplierId?: string | null;
+    totalBuyUsd?: number;
+    totalQuantity?: number;
+}> {
+    try {
+        const shopId = await getShopId();
+        if (!shopId) {
+            return { success: false, error: "Dükkan oturumu bulunamadı." };
+        }
+
+        const { text, defaultMarkup = 5.00 } = payload;
+        if (!text || !text.trim()) {
+            return { success: false, error: "Ayrıştırılacak metin bulunamadı." };
+        }
+
+        const rates = await getExchangeRates(shopId);
+        const usdRate = rates?.usd && rates.usd > 0 ? Number(rates.usd) : 34.5;
+
+        const promptText = `Sen bir toptancı satış fişi ve parça listesi ayrıştırma uzmanısın.
+Kullanıcı bir toptancıdan kopyaladığı fatura veya parça listesi metnini paylaştı. Bu metindeki tüm ürün satırlarını eksiksiz çıkar ve JSON formatında döndür.
+
+KURALLAR:
+1. Ürün Adı (name): Sadece ürünün gerçek adını ve modelini al (Örn: "LUCATECH LT-601 ENC TWS AİRPODS KULAKLIK", "BAYROX AIR PRO 2 ANC ENC EARPHONE").
+   - Kesinlikle sıra numarası ("1", "2"), iskonto/yüzde ("%0,00", "%0"), veya "ad" gibi ibareleri ürün adına dahil etme.
+2. Adet (quantity): Ürün adedini sayı olarak çıkar (Örn: "2 ad" -> 2). Belirtilmemişse 1 al.
+3. Alış Fiyatı (buyPrice): Ürünün 1 adet BİRİM alış fiyatı ($ veya ₺). Toplam tutarı değil, birim fiyatı al!
+   - Örneğin "2 ad $ 10,75 ... $ 21,50" satırında birim fiyat 10.75'tir.
+   - Dolar ise "currency": "USD", TL ise "currency": "TRY" olarak belirt.
+4. Kategori (category): En uygun kategoriyi seç ("Kulaklık", "Şarj Başlığı", "Set Şarj", "Type-C Kablo", "Lightning Kablo", "Kablo", "Kılıf", "Ekran Koruyucu", "Powerbank", "LCD / Ekran", "LCD / Ekran (Çıtalı)", "Kapak", "Batarya", "Şarj Soketi", "Kamera", "Kasa", "Flex / Entegre", "Hoparlör / Ahize", "Yedek Parça", "Aksesuar").
+5. Marka (brand): Varsa marka adını çıkar.
+6. Renk (color): Varsa renk adını çıkar.
+7. Tedarikçi Adı (supplierName): Metinde geçen toptancı/firma adı varsa belirt (Örn: "BAYROX", "BAYRAK ELEKTRONİK").
+
+METİN:
+${text}
+
+YANIT FORMATI (Yalnızca geçerli JSON):
+{
+  "supplierName": "string veya null",
+  "items": [
+    {
+      "name": "string",
+      "quantity": 1,
+      "buyPrice": 0.0,
+      "currency": "USD veya TRY",
+      "category": "string",
+      "brand": "string veya null",
+      "color": "string veya null"
+    }
+  ]
+}`;
+
+        const geminiRes = await callGemini(
+            shopId,
+            [promptText],
+            "json"
+        );
+
+        if ("error" in geminiRes) {
+            return {
+                success: false,
+                error: geminiRes.error || "Yapay zeka metni çözümleyemedi."
+            };
+        }
+
+        let parsedJson: any;
+        try {
+            const rawJson = geminiRes.text.replace(/```json/gi, "").replace(/```/g, "").trim();
+            parsedJson = JSON.parse(rawJson);
+        } catch (parseErr) {
+            console.error("JSON parse error:", parseErr, geminiRes.text);
+            return { success: false, error: "Yapay zeka yanıtı geçerli JSON formatında ayrıştırılamadı." };
+        }
+
+        const rawItems = Array.isArray(parsedJson) ? parsedJson : (parsedJson.items || []);
+        if (!rawItems || rawItems.length === 0) {
+            return { success: false, error: "Metinde ürün veya fiyat satırı tespit edilemedi." };
+        }
+
+        let detectedSupplierName: string | null = parsedJson.supplierName || null;
+        let matchedSupplierId: string | null = null;
+
+        if (detectedSupplierName) {
+            const suppliers = await prisma.supplier.findMany({
+                where: { shopId },
+                select: { id: true, name: true }
+            });
+            const sNameLower = detectedSupplierName.toLowerCase();
+            const matched = suppliers.find(s =>
+                s.name.toLowerCase().includes(sNameLower) || sNameLower.includes(s.name.toLowerCase())
+            );
+            if (matched) {
+                matchedSupplierId = matched.id;
+            }
+        }
+
+        const items: ParsedWholesalerItem[] = rawItems.map((it: any, index: number) => {
+            const cleanName = (it.name || "Bilinmeyen Ürün").trim();
+            const category = it.category && it.category !== "Genel"
+                ? it.category
+                : smartDetectCategory(cleanName);
+            const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
+
+            let buyPriceUsd = 0;
+            const rawPrice = Number(it.buyPrice || 0);
+            if (it.currency === "TRY") {
+                buyPriceUsd = Number((rawPrice / usdRate).toFixed(2));
+            } else {
+                buyPriceUsd = Number(rawPrice.toFixed(2));
+            }
+
+            const sellPriceUsd = Number((buyPriceUsd + defaultMarkup).toFixed(2));
+            const sku = generateProductSku(cleanName, category, it.brand);
+            const color = it.color || detectColorInName(cleanName);
+
+            return {
+                id: `ai-txt-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                sku,
+                name: cleanName,
+                category,
+                brand: it.brand || undefined,
+                quantity: qty,
+                buyPriceUsd,
+                sellPriceUsd,
+                color,
+                selected: true,
+            };
+        });
+
+        const totalBuyUsd = Number(items.reduce((acc, it) => acc + (it.buyPriceUsd * it.quantity), 0).toFixed(2));
+        const totalQuantity = items.reduce((acc, it) => acc + it.quantity, 0);
+
+        return {
+            success: true,
+            items,
+            supplierName: detectedSupplierName,
+            matchedSupplierId,
+            totalBuyUsd,
+            totalQuantity,
+        };
+    } catch (err: any) {
+        console.error("parseWholesalerRawTextWithAIAction error:", err);
+        return { success: false, error: err?.message || "Metin işlenirken bir hata oluştu." };
+    }
+}

@@ -41,6 +41,28 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-17: Çok Satırlı PDF / Metin Fiş Ayrıştırıcı Geliştirmesi, Tedarikçi Ürünleri/Siparişleri Senkronizasyonu & Yapay Zeka ile Metin Çözümleme:
+  - **Sorun:**
+    1. Kullanıcı PDF faturasından metin kopyalayıp toptancı parça aktarma modalına yapıştırdığında, PDF formatının çok satırlı olması (1. satır ürün adı, 2. satır miktar/fiyat/iskonto) sebebiyle eski ayrıştırıcı iskonto yüzdesini (`%0,00`) ürün adı sanıyor, adedi 1 ve alış fiyatını birim fiyat yerine toplam tutar ($21.50) olarak alıyordu.
+    2. Stok içe aktarımı yapıldıktan sonra tedarikçi borcu bakiye kartına yansımasına rağmen tedarikçi detayındaki "İŞLEMLER (Sipariş & Alım Hareketleri)" ve "ÜRÜNLER (Alınan Ürün Özetleri)" sekmesinde 0 kayıt görünüyordu.
+  - **Kök Neden:**
+    1. Eski `parseWholesalerRawText` tek satır bazlı virgül sayma (`line.match(/,/g).length >= 3`) mantığı kullandığı için `$ 10,75 %0,00 %0 $ 21,50` satırındaki virgülleri sütun ayracı zannedip parçalıyordu ve satır numaralarını (1, 2) filtrelemiyordu.
+    2. Tedarikçi profilinde (`supplier-profile.tsx`) React Query önbellekleri (`["suppliers"]`, `["purchase-orders"]`) aktarım sonrası tazeletilmediği ve `SupplierProfile` ilk açılışta güncel veriyi API'den tekrar çekmediği için `supplier.purchases` boş kalıyordu. Ayrıca ürün toplamları hesaplanırken `item.totalAmount` (Prisma'da olmayan alan) okunup `NaN` üretiliyordu.
+  - **Çözüm:**
+    1. **Çok Stratejili Fiş & Fatura Ayrıştırıcı (`src/lib/stock/wholesaler-parser.ts`):**
+       - Satır numaraları (`/^\d+$/`), iskonto yüzdeleri (`%0,00`), bakiye ve fiş dipnotları (`güncel bakiyeniz`, `net $`, `toplam $`, `satış özet fişi`) `isIgnoredRow` ile elendi.
+       - Çok satırlı PDF tablo yapısı tanıma eklendi: Ürün adı satırı (`LUCATECH LT-601 ENC TWS AİRPODS KULAKLIK`) ve hemen altındaki miktar/fiyat satırı (`2 ad $ 10,75 %0,00 %0 $ 21,50`) otomatik eşleştirildi; `2 ad`'den miktar (2), `$ 10,75`'ten birim alış fiyatı ($10.75) ve `KULAKLIK`'tan kategori otomatik tespit edildi.
+    2. **Tedarikçi Profil Canlı Veri & Ürün Özeti Düzeltmesi (`src/components/supplier/supplier-profile.tsx` & `supplier-actions.ts`):**
+       - `getSupplierById` sunucu aksiyonu eklendi; `purchases`, `items`, `products`, `inventoryMovements` ve `SupplierTransaction` eksiksiz çekilip profil açıldığında canlı senkronize edildi.
+       - `products` özet listesi hesaplaması `(item.buyPrice * qty)` formülüyle `NaN` oluşmasını engelleyecek ve tüm özel/stok dışı parçaları da gösterecek şekilde güncellendi.
+    3. **React Query Otomatik Önbellek Tazeleme (`src/components/stock/wholesaler-import-modal.tsx`):**
+       - Aktarım tamamlandığında `queryClient.invalidateQueries` ile `suppliers`, `purchase-orders`, `supplier`, `products`, `accounts` ve `stock-movements` önbellekleri anında tazeletildi.
+    4. **Yapay Zeka ile Metin Çözümleme (`src/lib/actions/stock-import-actions.ts` - `parseWholesalerRawTextWithAIAction`):**
+       - Serbest, karmaşık veya bozuk kopyalanmış toptancı metinleri için Gemini AI destekli "✨ Yapay Zeka ile Çöz" butonu eklendi.
+  - **Doğrulama:**
+    - Kullanıcının faturasındaki gerçek verilerle (`LUCATECH LT-601...` ve `BAYROX AIR PRO 2...`) test edildi: Ürün adları, adetler (2 ad), birim fiyatlar ($10.75 ve $11.25) ve toplamlar ($44.00, 4 adet) %100 doğrulukla ayrıştırıldı.
+    - `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
 - [x] 2026-11-17: Gemini 503 High Demand Kilitlenmesi Giderilmesi & Modal Kapanışında Arka Plan İptali (Abort Controller):
   - **Sorun:** 
     1. Kullanıcı fatura/PDF yüklediğinde sunucuda `[Gemini Auto-Retry] Model 'gemini-3.8-flash' encountered transient error ([503 Service Unavailable] This model is currently experiencing high demand)` hatası vererek uzun süre beklemede kalması.

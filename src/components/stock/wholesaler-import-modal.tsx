@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Dialog,
     DialogContent,
@@ -56,6 +57,7 @@ import {
     importWholesalerBatchAction,
     checkWholesalerStockMatchesAction,
     parseWholesalerDocumentWithAIAction,
+    parseWholesalerRawTextWithAIAction,
     type StockMatchInfo
 } from "@/lib/actions/stock-import-actions";
 import { getAccounts } from "@/lib/actions/finance-actions";
@@ -74,6 +76,7 @@ export function WholesalerImportModal({
     onSuccess,
     trigger,
 }: WholesalerImportModalProps) {
+    const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState<1 | 2>(1);
     const [rawText, setRawText] = useState("");
@@ -177,7 +180,8 @@ export function WholesalerImportModal({
         abortParsingRef.current = true;
         setIsParsingDoc(false);
         toast.dismiss("ai-doc-parse");
-        toast.info("Yapay zeka belge taraması durduruldu.");
+        toast.dismiss("ai-text-parse");
+        toast.info("Yapay zeka taraması durduruldu.");
     };
 
     // Modal açılıp kapanma yönetimi (modal kapanırsa arka plan işlemini iptal et)
@@ -186,8 +190,50 @@ export function WholesalerImportModal({
             abortParsingRef.current = true;
             setIsParsingDoc(false);
             toast.dismiss("ai-doc-parse");
+            toast.dismiss("ai-text-parse");
         }
         setOpen(newOpen);
+    };
+
+    // Yapıştırılan metni AI (Gemini) ile analiz etme alternatifi
+    const handleParseWithAI = async () => {
+        if (!rawText || !rawText.trim()) {
+            toast.error("Lütfen ayrıştırılacak metni yapıştırın.");
+            return;
+        }
+        setIsParsingDoc(true);
+        abortParsingRef.current = false;
+        try {
+            toast.loading("Yapay zeka metni inceliyor (ürün adları, adetler, birim fiyatlar)...", { id: "ai-text-parse" });
+            const res = await parseWholesalerRawTextWithAIAction({
+                text: rawText,
+                defaultMarkup: defaultMarkup || 5.00
+            });
+            if (abortParsingRef.current) return;
+            if (!res.success || !res.items || res.items.length === 0) {
+                toast.error(res.error || "Metinden ürün veya fiyat okunamadı.", { id: "ai-text-parse" });
+                return;
+            }
+            if (res.matchedSupplierId) {
+                setSelectedSupplierId(res.matchedSupplierId);
+            }
+            const itemsWithSelection = res.items.map(it => ({ ...it, selected: true }));
+            setParsedItems(itemsWithSelection);
+            setStep(2);
+            queryStockMatches(itemsWithSelection);
+            toast.success(
+                `Yapay zeka ${res.items.length} kalem ürünü başarıyla ayrıştırdı! (${res.totalQuantity} adet)` +
+                (res.supplierName ? ` • ${res.supplierName}` : ""),
+                { id: "ai-text-parse" }
+            );
+        } catch (err: any) {
+            if (abortParsingRef.current) return;
+            toast.error("Yapay zeka çözümleme hatası: " + (err?.message || ""), { id: "ai-text-parse" });
+        } finally {
+            if (!abortParsingRef.current) {
+                setIsParsingDoc(false);
+            }
+        }
     };
 
     // AI ile Fatura / Belge / PDF / Görsel Ayrıştırma
@@ -711,6 +757,17 @@ export function WholesalerImportModal({
                         toast.info(`Tedarikçi siparişi açık hesap (₺${totalBuyTry.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} veresiye borcu) olarak kaydedildi.`);
                     }
                 }
+                // React Query önbelleklerini tazele (Tedarikçi, Siparişler, Kasa, Stok)
+                queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+                queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+                queryClient.invalidateQueries({ queryKey: ["supplier"] });
+                queryClient.invalidateQueries({ queryKey: ["products"] });
+                queryClient.invalidateQueries({ queryKey: ["finance-accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["transactions"] });
+                queryClient.invalidateQueries({ queryKey: ["stock-movements"] });
+                queryClient.invalidateQueries({ queryKey: ["critical-products"] });
+
                 setOpen(false);
                 setStep(1);
                 setRawText("");
@@ -913,6 +970,18 @@ LCD / Ekran;Apple (iPhone);DE Iph 11 Pro Hard Oled Ekran;1;$26,00;$26,00
                                 ) : (
                                     <Button variant="outline" className="rounded-xl h-11 px-5" onClick={() => handleOpenChange(false)}>
                                         Vazgeç
+                                    </Button>
+                                )}
+                                {!isParsingDoc && rawText.trim() && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl h-11 px-4 font-bold gap-2 text-indigo-400 hover:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/10"
+                                        onClick={handleParseWithAI}
+                                        disabled={isParsingDoc}
+                                    >
+                                        <Sparkles className="h-4 w-4 text-indigo-400" />
+                                        <span>Yapay Zeka ile Çöz</span>
                                     </Button>
                                 )}
                                 <Button
