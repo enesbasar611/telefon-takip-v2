@@ -41,6 +41,74 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-17: Kasa Kartı İkinci Yüzündeki 'Kasa Bakiyesine Geri Dön' Butonunun Kaldırılması:
+  - **İyileştirme:** Kullanıcı talebi doğrultusunda Kasa kartının arka yüzünde (Bugünkü Performans) yer alan "← Kasa Bakiyesi" alt buton ve çizgisi tamamen kaldırıldı.
+  - **Kullanılabilirlik:** Masaüstünde zaten fareyi kart üzerinden çekmek doğal olarak ön yüze döndürdüğü için alt buton gereksiz kalabalık yaratıyordu. Buton kaldırılarak "Bugün Satış" ve "Bugün Kâr" kartlarına daha ferah bir dikey alan sağlandı. Mobil/dokunmatik ekranda ise karta hafifçe dokunulduğunda doğrudan ön yüze pürüzsüz dönüş sağlandı.
+  - **Doğrulama:** `npx tsc --noEmit` ile kontrol edildi (0 hata).
+
+- [x] 2026-11-17: Kasa Bakiyesi Kayan Kartında Subpixel Bulanıklık (Blur) Giderilmesi & Keskin Render Optimizasyonu:
+  - **Sorun:** Hover slide esnasında kart üzerindeki yazı ve sayıların ("BUGÜNKÜ PERFORMANS", "BUGÜN SATIŞ", tutarlar) bulanık görünmesi.
+  - **Kök Neden:** 
+    1. `w-[200%]` genişliğindeki konteynerin `-translate-x-1/2` ile kaydırılması; ekran ölçeklendirmesinde (125%/150% DPI) fraksiyonel ondalıklı piksel koordinatları oluşturup Chromium motorunun bilinear texture filtering ile yazıları bulanıklaştırması.
+    2. Konteynerdeki `will-change: transform` stilinin GPU dokusunu kalıcı olarak önbellekte tutması ve geçiş bittikten sonra bile fontların yerel keskinlikle (ClearType) tekrar çizilmesini engellemesi.
+    3. Ana karttaki `md:hover:-translate-y-1` zıplamasının ek bir dikey subpixel kayması yaratması.
+  - **Çözüm:**
+    1. 200% genişlikli kaydırma yapısı tamamen kaldırılarak yerine iki bağımsız %100 genişlikli katman kuruldu: Ön yüz (`w-full h-full`) ve Arka yüz (`absolute inset-0`).
+    2. Aktif yüz konumu tam sayı koordinatına (`translate-x-0` = 0px) kilitlendi; geçişler yumuşak `opacity` ve 24px'lik zarif mikro kaydırma ile pürüzsüzleştirildi.
+    3. `will-change-transform` kaldırıldı; tarayıcının yerel font antialiasing (ClearType) motoru serbest bırakıldı.
+    4. Kasa kartında fareyle üzerine gelindiğinde dikey zıplama (`translateY`) yerine zümrüt kenarlık ve gölge ışıltısı verildi; kart piksel ızgarasında sabitlendi.
+    5. Arka yüz zümrüt cam arka plan (`bg-white/95 dark:bg-[#061b15]/95 backdrop-blur-xl border border-emerald-500/25`) ve yüksek kontrastlı kutucuklarla donatılarak pırıl pırıl, jilet gibi keskin bir okunabilirlik sağlandı.
+  - **Doğrulama:** `npx tsc --noEmit` ile tip kontrolü yapıldı (0 hata).
+
+- [x] 2026-11-17: Kasa Bakiyesi Kartı Masaüstü Hover Slide & Mobil Carousel Mekanizması:
+  - **Sorun:** Dashboard üzerinde yer alan Kasa Bakiyesi kartında bugünlük satış ve bugünlük kâr kutucuklarının sabit yükseklikten ötürü kartın alt sınırında sıkışıp kesilmesi (clipping).
+  - **İyileştirme:**
+    - Kasa kartı için çift yüzlü akıcı slide (carousel) konteyneri geliştirildi (`src/components/dashboard/stat-card.tsx`).
+    - **Slide 1 (Ön Yüz - Kasa Bakiyesi):** Nakit Kasa ana bakiyesi, USD karşılığı, aylık kâr rozeti, `GÜNCEL` durumu ve `Bugün Satış & Kâr →` yönlendirme butonu ile navigasyon noktaları eklendi.
+    - **Slide 2 (Arka Yüz - Günlük Performans):** Kart sağa kaydığında veya üzerine gelindiğinde `Bugün Satış` (ciro, USD karşılığı) ve `Bugün Kâr` (net kâr/zarar göstergesi) iki sütunlu ferah kartlar halinde sunuldu; `CANLI` nabız efekti ve `← Kasa Bakiyesi` geri dönüş butonu entegre edildi.
+    - **Masaüstü Etkileşimi:** Masaüstünde kartın üzerine gelindiğinde (`md:group-hover:-translate-x-1/2`) kart otomatik olarak 60fps akıcı CSS transform ile sağa kayarak günlük satış ve kârı gösteriyor; fare çekildiğinde ana bakiyeye geri dönüyor.
+    - **Mobil Uyumluluk:** Mobil cihazlarda dokunmatik butonlar (`Bugün Satış & Kâr →` / `← Kasa Bakiyesi`) ve yatay kaydırma (touch swipe) desteği ile iki yüz arasında pürüzsüz geçiş sağlandı. Kart tıklama/detay eylemleri korunarak hiçbir taşma ve kesilme kalmayacak şekilde stabilize edildi.
+  - **Doğrulama:** `npx tsc --noEmit` çalıştırıldı, 0 hata ile tip doğrulaması tamamlandı.
+
+- [x] 2026-11-17: Server Action 'parseTransactionDate' Async Derleme Hatası Düzeltmesi:
+  - **Hata:** Next.js derleyicisinde `"Server actions must be async functions"` hatası alındı (`./src/lib/actions/finance-actions.ts`).
+  - **Kök Neden:** `"use server"` direktifine sahip olan `finance-actions.ts` dosyasında dahili tarih ayrıştırma yardımcısı olan `parseTransactionDate` fonksiyonunun `export` edilmiş olması; Next.js Server Action protokolünün dışa aktarılan her fonksiyonun `async` olmasını şart koşması.
+  - **Düzeltme:** Fonksiyon sadece dosya içinde kullanıldığı için `export` ifadesi kaldırılarak yerel yardımcı fonksiyon (`function parseTransactionDate`) haline getirildi.
+  - **Doğrulama:** `npx tsc --noEmit` ile kontrol edildi (0 hata).
+
+- [x] 2026-11-17: Finansal Hareketler Tablosuna Bağlamsal İkonlar ve Görsel Ayrım Genişletmesi:
+  - **Talep:** `transaction-history.tsx` tablosunda ve mobil görünümde gelir, gider, nakit, kart, satış ve alt gider/gelir kalemlerinin (özellikle yemek gideri, kira, maaş, fatura, stok, servis vb.) rahatça ayırt edilebilmesi için kategoriye özel renkli ikon rozetleri ve ödeme yöntemi ikonlarının eklenmesi.
+  - **Uygulanan İyileştirmeler:**
+    - `src/components/finance/transaction-history.tsx`:
+      1. **Bağlamsal Kategori ve İşlem İkonları (`getTransactionMeta`):**
+         - **Yemek / İkram Gideri:** `UtensilsCrossed` ikonu, kehribar/turuncu rozet (`bg-amber-500/10 text-amber-600 border-amber-500/25`). Açıklamadaki yemek, restoran, lokanta, çay, kahve, döner, kebap vb. anahtar kelimeleri de otomatik algılanır.
+         - **Satış / POS Geliri:** `ShoppingCart` ikonu, zümrüt yeşili rozet (`bg-emerald-500/10 text-emerald-600 border-emerald-500/25`).
+         - **Teknik Servis Geliri:** `Wrench` ikonu, gök mavisi rozet (`bg-sky-500/10 text-sky-600 border-sky-500/25`).
+         - **Veresiye / Borç Tahsilatı:** `HandCoins` ikonu, camgöbeği/teal rozet (`bg-teal-500/10 text-teal-600 border-teal-500/25`).
+         - **Kira / Dükkan Gideri:** `Home` ikonu, mor rozet (`bg-purple-500/10 text-purple-600 border-purple-500/25`).
+         - **Maaş / Personel Gideri:** `Users` ikonu, çivit mavisi rozet (`bg-indigo-500/10 text-indigo-600 border-indigo-500/25`).
+         - **Fatura Gideri (Elektrik, Su, Doğalgaz, İnternet):** `Zap` ikonu, sarı/amber rozet (`bg-yellow-500/10 text-yellow-600 border-yellow-500/25`).
+         - **Stok / Parça / Malzeme Alımı:** `Package` ikonu, açık mavi rozet (`bg-cyan-500/10 text-cyan-600 border-cyan-500/25`).
+         - **Toptancı / Tedarikçi Ödemesi:** `Truck` ikonu, mavi rozet (`bg-blue-500/10 text-blue-600 border-blue-500/25`).
+         - **Kargo / Ulaşım / Akaryakıt:** `Fuel` ikonu, koyu turuncu rozet (`bg-amber-600/10 text-amber-600 border-amber-600/25`).
+         - **Kırtasiye / Sarf Malzeme:** `Paperclip` ikonu, kurşuni rozet (`bg-slate-500/10 text-slate-600 border-slate-500/25`).
+         - **Temizlik / Bakım:** `Sparkles` ikonu, turkuaz rozet.
+         - **İade Çıkışı:** `RotateCcw` ikonu, gül kırmızısı rozet.
+         - **Kasa Devir / Açılış:** `Landmark` ikonu, mavi rozet.
+         - **Genel Gelir / Gider:** `TrendingUp` / `TrendingDown` ikonları.
+      2. **Ödeme Yöntemi İkonları (`getPaymentMeta`):**
+         - **Nakit:** `Banknote` ikonu, yeşil rozet.
+         - **Kart:** `CreditCard` ikonu, mavi rozet.
+         - **Havale / EFT:** `Landmark` ikonu, mor rozet.
+         - **Veresiye:** `Receipt` ikonu, sarı rozet.
+      3. **Masaüstü ve Mobil Uyumu:**
+         - Masaüstü tabloda "Açıklama" kolonunun başına 36x36px renkli yuvarlatılmış kategori avatar kutusu yerleştirildi, altına kategori rozeti eklendi.
+         - "Hesap / Kanal" kolonundaki ödeme rozetine ilgili yöntem ikonu (`Banknote`, `CreditCard`, `Landmark`) eklendi.
+         - Tutar kolonunda gelirler `ArrowDownLeft` (kasa girişi) ve yeşil, giderler `ArrowUpRight` (kasa çıkışı) ve kırmızı ile netleştirildi.
+         - Mobil kartlarda da aynı zengin kategori avatar kutusu, ödeme yöntemi çipi ve tutar yön ikonları eksiksiz uygulandı.
+         - Filtreleme çubuğundaki "Gelir (+)", "Gider (-)" ve ödeme yöntemi butonlarına ilgili ikonlar entegre edildi.
+  - **Doğrulama:** `npx tsc --noEmit` ile 0 hata doğrulandı.
+
 - [x] 2026-11-17: Kurye Operasyonları Sayfası (/kurye) Yüksek Veri Hacmi & Performans/Stabilite Optimizasyonu:
   - **Talep:** Veri hacmi yüksek olan ve yoğun çalışan bayilerde internet hızı iyi olmasına rağmen `/kurye` sayfasında yaşanan yavaşlık, donma ve takılmaların tespit edilip çözülmesi.
   - **Kök Neden & Analiz:**

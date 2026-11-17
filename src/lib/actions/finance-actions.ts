@@ -239,7 +239,7 @@ export async function createAccount(data: {
 }
 
 
-export function parseTransactionDate(dateStr?: string | null): Date {
+function parseTransactionDate(dateStr?: string | null): Date {
   if (!dateStr || !dateStr.trim()) return new Date();
 
   const cleanStr = dateStr.trim();

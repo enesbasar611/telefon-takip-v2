@@ -6,20 +6,40 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
     AlertCircle,
+    ArrowDownLeft,
     ArrowDownRight,
     ArrowUpRight,
+    Banknote,
+    Building,
     Building2,
+    CreditCard,
     FileSpreadsheet,
     FileText,
+    Filter,
+    Fuel,
+    HandCoins,
     History,
+    Home,
+    Landmark,
+    Package,
+    Paperclip,
     Pencil,
-    Search,
-    Trash2,
-    User,
-    Scale,
     Receipt,
     RotateCcw,
-    Filter,
+    Scale,
+    Search,
+    ShoppingCart,
+    Sparkles,
+    Trash2,
+    TrendingDown,
+    TrendingUp,
+    Truck,
+    User,
+    Users,
+    UtensilsCrossed,
+    Wallet,
+    Wrench,
+    Zap,
 } from "lucide-react";
 import { format, isToday, isYesterday, isThisWeek, isThisMonth } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -65,6 +85,243 @@ const typeLabels: Record<string, string> = {
     INCOME: "Tahsilat",
     EXPENSE: "Ödeme",
 };
+
+interface TransactionMeta {
+    icon: React.ComponentType<{ className?: string }>;
+    categoryLabel: string;
+    badgeClass: string;
+    iconBgClass: string;
+    iconColorClass: string;
+}
+
+function getPaymentMeta(method?: string) {
+    switch (method) {
+        case "CASH":
+            return {
+                label: "NAKİT",
+                icon: Banknote,
+                badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25",
+            };
+        case "CARD":
+            return {
+                label: "KART",
+                icon: CreditCard,
+                badgeClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25",
+            };
+        case "TRANSFER":
+            return {
+                label: "HAVALE",
+                icon: Landmark,
+                badgeClass: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25",
+            };
+        case "DEBT":
+            return {
+                label: "VERESİYE",
+                icon: Receipt,
+                badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25",
+            };
+        default:
+            return {
+                label: method || "DİĞER",
+                icon: Wallet,
+                badgeClass: "bg-muted/30 border-border/40 text-muted-foreground",
+            };
+    }
+}
+
+function getTransactionMeta(t: any): TransactionMeta {
+    const desc = (t.description || "").toLowerCase();
+    const cat = (t.category || "").toLowerCase();
+    const isIncome = t.type === "INCOME";
+    const hasSupplier = !!t.supplierId || !!t.supplier;
+    const hasSale = !!t.saleId || !!t.sale;
+    const hasCustomer = !!t.customerId || !!t.customer;
+    const hasReturn = !!t.returnId || !!t.returnTicketId || desc.includes("iade") || cat.includes("iade");
+
+    // 1. İade (Geri Ödeme / İade Çıkışı)
+    if (hasReturn) {
+        return {
+            icon: RotateCcw,
+            categoryLabel: "İade",
+            badgeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25",
+            iconBgClass: "bg-rose-500/10 dark:bg-rose-500/20",
+            iconColorClass: "text-rose-600 dark:text-rose-400",
+        };
+    }
+
+    // 2. Yemek / İkram / Restoran / Kafe
+    if (
+        cat.includes("yemek") ||
+        /(yemek|restoran|lokanta|öğle yemeği|ogle yemegi|akşam yemeği|aksam yemegi|çay|cay|kahve|simit|pide|döner|doner|kebap|tatlı|tatli|pasta|ikram|kahvaltı|kahvalti|lahmacun|dürüm|durum|çorba|corba|tost|büfe|bufe|köfte|kofte)/i.test(desc)
+    ) {
+        return {
+            icon: UtensilsCrossed,
+            categoryLabel: "Yemek / İkram",
+            badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25",
+            iconBgClass: "bg-amber-500/10 dark:bg-amber-500/20",
+            iconColorClass: "text-amber-600 dark:text-amber-400",
+        };
+    }
+
+    // 3. Satış / POS / Kasa Satışı
+    if (hasSale || cat.includes("satış") || cat.includes("satis") || /(satış|satis|pos satış|perakende)/i.test(desc)) {
+        return {
+            icon: ShoppingCart,
+            categoryLabel: "Satış",
+            badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25",
+            iconBgClass: "bg-emerald-500/10 dark:bg-emerald-500/20",
+            iconColorClass: "text-emerald-600 dark:text-emerald-400",
+        };
+    }
+
+    // 4. Teknik Servis / Cihaz Tamiri
+    if (
+        cat.includes("servis") ||
+        /(servis|tamir|onarım|onarim|ekran değişimi|ekran degisimi|batarya|kasa değişimi|soket|anakart|yazılım|yazilim|format)/i.test(desc)
+    ) {
+        return {
+            icon: Wrench,
+            categoryLabel: "Teknik Servis",
+            badgeClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25",
+            iconBgClass: "bg-sky-500/10 dark:bg-sky-500/20",
+            iconColorClass: "text-sky-600 dark:text-sky-400",
+        };
+    }
+
+    // 5. Tahsilat / Veresiye / Borç Kapama
+    if (
+        cat.includes("tahsilat") ||
+        cat.includes("veresiye") ||
+        /(tahsilat|veresiye|borç ödeme|borc odeme|hesap kapatma|cari tahsilat|borç kapama)/i.test(desc) ||
+        (isIncome && hasCustomer && !hasSale)
+    ) {
+        return {
+            icon: HandCoins,
+            categoryLabel: "Tahsilat",
+            badgeClass: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/25",
+            iconBgClass: "bg-teal-500/10 dark:bg-teal-500/20",
+            iconColorClass: "text-teal-600 dark:text-teal-400",
+        };
+    }
+
+    // 6. Kira / Dükkan / Depo / Aidat
+    if (cat.includes("kira") || cat.includes("aidat") || /(dükkan kirası|dukkan kirasi|kira|depo kirası|aidat|stopaj)/i.test(desc)) {
+        return {
+            icon: Home,
+            categoryLabel: "Kira / Gider",
+            badgeClass: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25",
+            iconBgClass: "bg-purple-500/10 dark:bg-purple-500/20",
+            iconColorClass: "text-purple-600 dark:text-purple-400",
+        };
+    }
+
+    // 7. Maaş / Personel / Avans / Prim
+    if (cat.includes("maaş") || cat.includes("maas") || cat.includes("personel") || /(maaş|maas|avans|personel|prim|yevmiye|haftalık|haftalik|aylık|aylik|sgk|sigorta)/i.test(desc)) {
+        return {
+            icon: Users,
+            categoryLabel: "Maaş / Personel",
+            badgeClass: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25",
+            iconBgClass: "bg-indigo-500/10 dark:bg-indigo-500/20",
+            iconColorClass: "text-indigo-600 dark:text-indigo-400",
+        };
+    }
+
+    // 8. Fatura / Elektrik / Su / Doğalgaz / İnternet
+    if (cat.includes("fatura") || /(fatura|elektrik|su faturası|su faturasi|internet|doğalgaz|dogalgaz|enerjisa|vodafone|turkcell|telekom|superonline|gediz)/i.test(desc)) {
+        return {
+            icon: Zap,
+            categoryLabel: "Fatura",
+            badgeClass: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/25",
+            iconBgClass: "bg-yellow-500/10 dark:bg-yellow-500/20",
+            iconColorClass: "text-yellow-600 dark:text-yellow-400",
+        };
+    }
+
+    // 9. Stok / Parça / Malzeme Alımı
+    if (cat.includes("stok") || cat.includes("malzeme") || /(stok|malzeme|ürün alımı|urun alimi|parça alımı|parca alimi|toptan mal|yedek parça)/i.test(desc)) {
+        return {
+            icon: Package,
+            categoryLabel: "Stok Alımı",
+            badgeClass: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/25",
+            iconBgClass: "bg-cyan-500/10 dark:bg-cyan-500/20",
+            iconColorClass: "text-cyan-600 dark:text-cyan-400",
+        };
+    }
+
+    // 10. Toptancı / Tedarikçi Ödemesi
+    if (hasSupplier || cat.includes("toptancı") || cat.includes("toptanci") || cat.includes("tedarikçi") || cat.includes("tedarikci") || /(toptancı|toptanci|tedarikçi|tedarikci|cari ödeme|cari odeme)/i.test(desc)) {
+        return {
+            icon: Truck,
+            categoryLabel: "Tedarikçi Ödemesi",
+            badgeClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25",
+            iconBgClass: "bg-blue-500/10 dark:bg-blue-500/20",
+            iconColorClass: "text-blue-600 dark:text-blue-400",
+        };
+    }
+
+    // 11. Kargo / Ulaşım / Akaryakıt
+    if (/(kargo|kurye|yurtiçi|yurtici|aras|mng|sürat|surat|yakıt|yakit|benzin|mazot|otopark|ulaşım|ulasim|bilet|taksi)/i.test(desc)) {
+        return {
+            icon: Fuel,
+            categoryLabel: "Kargo / Ulaşım",
+            badgeClass: "bg-amber-600/10 text-amber-600 dark:text-amber-400 border-amber-600/25",
+            iconBgClass: "bg-amber-600/10 dark:bg-amber-600/20",
+            iconColorClass: "text-amber-600 dark:text-amber-400",
+        };
+    }
+
+    // 12. Kırtasiye / Sarf Malzeme
+    if (/(kırtasiye|kirtasiye|kağıt|kagit|toner|kartuş|kartus|fiş rulosu|fis rulosu|koli|bant|poşet|poset|ambalaj)/i.test(desc)) {
+        return {
+            icon: Paperclip,
+            categoryLabel: "Kırtasiye",
+            badgeClass: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/25",
+            iconBgClass: "bg-slate-500/10 dark:bg-slate-500/20",
+            iconColorClass: "text-slate-600 dark:text-slate-400",
+        };
+    }
+
+    // 13. Temizlik / Bakım
+    if (/(temizlik|deterjan|peçete|pecete|çöp|cop|tamirat|tadilat)/i.test(desc)) {
+        return {
+            icon: Sparkles,
+            categoryLabel: "Temizlik",
+            badgeClass: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/25",
+            iconBgClass: "bg-teal-500/10 dark:bg-teal-500/20",
+            iconColorClass: "text-teal-600 dark:text-teal-400",
+        };
+    }
+
+    // 14. Kasa Devir / Açılış / Transfer
+    if (cat.includes("açılış") || cat.includes("acilis") || cat.includes("devir") || /(açılış|acilis|devir|virman|transfer)/i.test(desc)) {
+        return {
+            icon: Landmark,
+            categoryLabel: "Kasa Devir",
+            badgeClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25",
+            iconBgClass: "bg-blue-500/10 dark:bg-blue-500/20",
+            iconColorClass: "text-blue-600 dark:text-blue-400",
+        };
+    }
+
+    // 15. Genel Fallback
+    if (isIncome) {
+        return {
+            icon: TrendingUp,
+            categoryLabel: t.category && t.category !== "GENEL" && t.category !== "DİĞER" ? t.category : "Genel Gelir",
+            badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25",
+            iconBgClass: "bg-emerald-500/10 dark:bg-emerald-500/20",
+            iconColorClass: "text-emerald-600 dark:text-emerald-400",
+        };
+    }
+
+    return {
+        icon: TrendingDown,
+        categoryLabel: t.category && t.category !== "GENEL" && t.category !== "DİĞER" ? t.category : "Genel Gider",
+        badgeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25",
+        iconBgClass: "bg-rose-500/10 dark:bg-rose-500/20",
+        iconColorClass: "text-rose-600 dark:text-rose-400",
+    };
+}
 
 const currencySymbol = (currency?: string) => {
     if (currency === "USD") return "$";
@@ -479,41 +736,46 @@ export function TransactionHistory({
                                 size="sm"
                                 onClick={() => setTypeFilter("INCOME")}
                                 className={cn(
-                                    "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight gap-1",
+                                    "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight gap-1.5",
                                     typeFilter === "INCOME" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm" : "text-emerald-600/70 hover:text-emerald-600"
                                 )}
                             >
-                                <ArrowUpRight className="h-3 w-3" /> Gelir (+)
+                                <TrendingUp className="h-3 w-3 text-emerald-500" /> Gelir (+)
                             </Button>
                             <Button
                                 variant={typeFilter === "EXPENSE" ? "secondary" : "ghost"}
                                 size="sm"
                                 onClick={() => setTypeFilter("EXPENSE")}
                                 className={cn(
-                                    "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight gap-1",
+                                    "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight gap-1.5",
                                     typeFilter === "EXPENSE" ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold shadow-sm" : "text-rose-600/70 hover:text-rose-600"
                                 )}
                             >
-                                <ArrowDownRight className="h-3 w-3" /> Gider (-)
+                                <TrendingDown className="h-3 w-3 text-rose-500" /> Gider (-)
                             </Button>
                         </div>
 
                         {/* Ödeme Yöntemi Filtresi */}
                         <div className="flex items-center gap-1 p-1 bg-muted/40 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-x-auto no-scrollbar shrink-0">
-                            {["ALL", "CASH", "CARD", "TRANSFER"].map((method) => (
-                                <Button
-                                    key={method}
-                                    variant={paymentFilter === method ? "secondary" : "ghost"}
-                                    size="sm"
-                                    onClick={() => setPaymentFilter(method)}
-                                    className={cn(
-                                        "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight",
-                                        paymentFilter === method ? "bg-background shadow-sm text-foreground font-semibold" : "text-muted-foreground/70 hover:text-foreground"
-                                    )}
-                                >
-                                    {method === "ALL" ? "Tüm Kanallar" : paymentLabels[method]}
-                                </Button>
-                            ))}
+                            {["ALL", "CASH", "CARD", "TRANSFER"].map((method) => {
+                                const pMeta = getPaymentMeta(method);
+                                const Icon = method === "ALL" ? Wallet : pMeta.icon;
+                                return (
+                                    <Button
+                                        key={method}
+                                        variant={paymentFilter === method ? "secondary" : "ghost"}
+                                        size="sm"
+                                        onClick={() => setPaymentFilter(method)}
+                                        className={cn(
+                                            "h-7 text-[10px] rounded-lg px-2.5 transition-all uppercase tracking-tight gap-1.5",
+                                            paymentFilter === method ? "bg-background shadow-sm text-foreground font-semibold" : "text-muted-foreground/70 hover:text-foreground"
+                                        )}
+                                    >
+                                        <Icon className="h-3 w-3" />
+                                        {method === "ALL" ? "Tüm Kanallar" : paymentLabels[method]}
+                                    </Button>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -669,148 +931,187 @@ export function TransactionHistory({
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                sortedData.map((t) => (
-                                    <TableRow key={t.id} className="border-border/10 hover:bg-muted/10 transition-colors h-14">
-                                        <TableCell className="pl-4 py-2">
-                                            <Checkbox
-                                                checked={selectedIds.includes(t.id)}
-                                                onCheckedChange={(checked) => handleSelectRow(t.id, !!checked)}
-                                                className="rounded-md border-zinc-300 dark:border-zinc-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                                            />
-                                        </TableCell>
-                                        <TableCell className="py-2">
-                                            {(() => {
-                                                const date = new Date(t.createdAt);
-                                                const isValid = !isNaN(date.getTime());
-                                                return (
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[11px] font-medium leading-tight">{isValid ? format(date, "dd MMM yyyy", { locale: tr }) : "-"}</span>
-                                                        <span className="text-[9px] text-muted-foreground opacity-60">{isValid ? format(date, "HH:mm") : "-"}</span>
-                                                    </div>
-                                                );
-                                            })()}
-                                        </TableCell>
-                                        <TableCell className="py-2">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[10px] font-medium text-blue-500 uppercase tracking-tight truncate max-w-[130px]">
-                                                    {t.financeAccount?.name || "Genel Kasa"}
-                                                </span>
-                                                <Badge variant="outline" className="w-fit text-[8px] py-0 px-1.5 rounded bg-muted/30 border-border/40 opacity-80 uppercase tracking-tighter">
-                                                    {paymentLabels[t.paymentMethod] || t.paymentMethod}
-                                                </Badge>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="py-2">
-                                            <div className="flex flex-col gap-0.5 max-w-[340px]">
-                                                <span className="text-xs font-medium text-foreground truncate">{t.description || "Açıklama belirtilmemiş"}</span>
-                                                <div className="flex items-center gap-2">
-                                                    {t.customer && (
-                                                        <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium truncate max-w-[150px]">
-                                                            <User className="h-3 w-3 shrink-0" /> {t.customer.name}
-                                                        </span>
-                                                    )}
-                                                    {t.supplier && (
-                                                        <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium truncate max-w-[150px]">
-                                                            <Building2 className="h-3 w-3 shrink-0" /> {t.supplier.name}
-                                                        </span>
-                                                    )}
-                                                    {t.category && <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">{t.category}</span>}
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="py-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-6 w-6 rounded-md bg-muted border border-border/40 flex items-center justify-center text-[10px] text-muted-foreground shadow-sm shrink-0">
-                                                    {t.user?.name?.charAt(0) || "S"}
-                                                </div>
-                                                <span className="text-[10px] uppercase tracking-tight truncate max-w-[70px]">{t.user?.name || "Sistem"}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="py-2 text-right pr-4">
-                                            <div className="flex flex-col items-end">
-                                                <div className={cn("flex items-center gap-1 text-sm tracking-tight font-semibold", t.type === "INCOME" ? "text-emerald-500" : "text-rose-500")}>
-                                                    {t.type === "INCOME" ? "+" : "-"}
-                                                    {formatMoney(t.amount, t.currency)}
-                                                    {t.type === "INCOME" ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                                                </div>
-                                                <div className="text-[9px] text-muted-foreground/60 font-medium">
-                                                    {t.currency === "TRY" ? (
-                                                        <span>
-                                                            ~${(Number(t.amount) / usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • ~€{(Number(t.amount) / eurRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        </span>
-                                                    ) : (
-                                                        <span>~₺{Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString("tr-TR")}</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="py-2 text-right pr-4">
-                                            <div className="flex flex-col items-end gap-0.5">
-                                                {(() => {
-                                                    const hasBalance = t.runningBalance !== null && t.runningBalance !== undefined;
-                                                    if (!hasBalance) return <span className="text-[10px] text-muted-foreground/40 italic">-</span>;
-                                                    const isIncome = t.type === "INCOME";
-                                                    return (
-                                                        <div className={cn(
-                                                            "flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border",
-                                                            isIncome
-                                                                ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/8 border-emerald-500/20"
-                                                                : "text-rose-600 dark:text-rose-400 bg-rose-500/8 border-rose-500/20"
-                                                        )}>
-                                                            {isIncome ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                                                            <KasaBalanceText
-                                                                balance={t.runningBalance}
-                                                                currency={t.currency || "TRY"}
-                                                                accountType={t.financeAccount?.type}
-                                                                mainClassName="text-inherit"
-                                                            />
-                                                        </div>
-                                                    );
-                                                })()}
-                                                {t.currency !== "TRY" && t.runningBalance !== null && t.runningBalance !== undefined && (
-                                                    <span className="text-[9px] text-muted-foreground/60 font-medium">
-                                                        ~<KasaBalanceText
-                                                            balance={Math.round(Number(t.runningBalance) * (t.currency === "USD" ? usdRate : eurRate))}
-                                                            currency="TRY"
-                                                            accountType={t.financeAccount?.type}
-                                                            minimumFractionDigits={0}
-                                                            maximumFractionDigits={0}
-                                                        />
-                                                    </span>
-                                                )}
-                                                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-wider whitespace-nowrap">
-                                                    {t.financeAccount?.name || "Kasa"} bakiye
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="py-2 pr-4 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <EditTransactionWrapper
-                                                    transaction={t}
-                                                    trigger={
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            title="İşlemi Düzenle"
-                                                            className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 transition-colors"
-                                                        >
-                                                            <Pencil className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    }
+                                sortedData.map((t) => {
+                                    const meta = getTransactionMeta(t);
+                                    const paymentMeta = getPaymentMeta(t.paymentMethod);
+                                    const date = new Date(t.createdAt);
+                                    const isValidDate = !isNaN(date.getTime());
+
+                                    return (
+                                        <TableRow key={t.id} className="border-border/10 hover:bg-muted/10 transition-colors h-14">
+                                            <TableCell className="pl-4 py-2">
+                                                <Checkbox
+                                                    checked={selectedIds.includes(t.id)}
+                                                    onCheckedChange={(checked) => handleSelectRow(t.id, !!checked)}
+                                                    className="rounded-md border-zinc-300 dark:border-zinc-700 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                                                 />
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    title="İşlemi Sil"
-                                                    onClick={() => handleTriggerDelete(t)}
-                                                    className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                            </TableCell>
+                                            <TableCell className="py-2">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[11px] font-medium leading-tight">
+                                                        {isValidDate ? format(date, "dd MMM yyyy", { locale: tr }) : "-"}
+                                                    </span>
+                                                    <span className="text-[9px] text-muted-foreground opacity-60">
+                                                        {isValidDate ? format(date, "HH:mm") : "-"}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-2">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[10px] font-semibold text-blue-500 uppercase tracking-tight truncate max-w-[130px]">
+                                                        {t.financeAccount?.name || "Genel Kasa"}
+                                                    </span>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={cn(
+                                                            "w-fit text-[8px] font-bold py-0.5 px-1.5 rounded-md border flex items-center gap-1 uppercase tracking-tight shadow-none",
+                                                            paymentMeta.badgeClass
+                                                        )}
+                                                    >
+                                                        <paymentMeta.icon className="h-2.5 w-2.5 shrink-0" />
+                                                        {paymentMeta.label}
+                                                    </Badge>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-2">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div
+                                                        className={cn(
+                                                            "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border shadow-sm transition-transform hover:scale-105",
+                                                            meta.iconBgClass,
+                                                            meta.iconColorClass
+                                                        )}
+                                                        title={meta.categoryLabel}
+                                                    >
+                                                        <meta.icon className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="flex flex-col gap-0.5 max-w-[340px] min-w-0">
+                                                        <span className="text-xs font-semibold text-foreground truncate" title={t.description || "Açıklama belirtilmemiş"}>
+                                                            {t.description || "Açıklama belirtilmemiş"}
+                                                        </span>
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={cn(
+                                                                    "text-[8px] font-bold py-0 px-1.5 rounded-md border flex items-center gap-1 uppercase tracking-wider",
+                                                                    meta.badgeClass
+                                                                )}
+                                                            >
+                                                                <meta.icon className="h-2.5 w-2.5 shrink-0" />
+                                                                {meta.categoryLabel}
+                                                            </Badge>
+                                                            {t.customer && (
+                                                                <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium truncate max-w-[140px]">
+                                                                    <User className="h-3 w-3 shrink-0" /> {t.customer.name}
+                                                                </span>
+                                                            )}
+                                                            {t.supplier && (
+                                                                <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium truncate max-w-[140px]">
+                                                                    <Building2 className="h-3 w-3 shrink-0" /> {t.supplier.name}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-6 w-6 rounded-md bg-muted border border-border/40 flex items-center justify-center text-[10px] text-muted-foreground shadow-sm shrink-0">
+                                                        {t.user?.name?.charAt(0) || "S"}
+                                                    </div>
+                                                    <span className="text-[10px] uppercase tracking-tight truncate max-w-[70px]">{t.user?.name || "Sistem"}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-2 text-right pr-4">
+                                                <div className="flex flex-col items-end">
+                                                    <div className={cn("flex items-center gap-1 text-sm tracking-tight font-bold", t.type === "INCOME" ? "text-emerald-500" : "text-rose-500")}>
+                                                        {t.type === "INCOME" ? "+" : "-"}
+                                                        {formatMoney(t.amount, t.currency)}
+                                                        {t.type === "INCOME" ? (
+                                                            <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
+                                                        ) : (
+                                                            <ArrowUpRight className="h-3.5 w-3.5 text-rose-500" />
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[9px] text-muted-foreground/60 font-medium">
+                                                        {t.currency === "TRY" ? (
+                                                            <span>
+                                                                ~${(Number(t.amount) / usdRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • ~€{(Number(t.amount) / eurRate).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </span>
+                                                        ) : (
+                                                            <span>~₺{Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString("tr-TR")}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-2 text-right pr-4">
+                                                <div className="flex flex-col items-end gap-0.5">
+                                                    {(() => {
+                                                        const hasBalance = t.runningBalance !== null && t.runningBalance !== undefined;
+                                                        if (!hasBalance) return <span className="text-[10px] text-muted-foreground/40 italic">-</span>;
+                                                        const isIncome = t.type === "INCOME";
+                                                        return (
+                                                            <div className={cn(
+                                                                "flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border",
+                                                                isIncome
+                                                                    ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/8 border-emerald-500/20"
+                                                                    : "text-rose-600 dark:text-rose-400 bg-rose-500/8 border-rose-500/20"
+                                                            )}>
+                                                                {isIncome ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                                                                <KasaBalanceText
+                                                                    balance={t.runningBalance}
+                                                                    currency={t.currency || "TRY"}
+                                                                    accountType={t.financeAccount?.type}
+                                                                    mainClassName="text-inherit"
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    {t.currency !== "TRY" && t.runningBalance !== null && t.runningBalance !== undefined && (
+                                                        <span className="text-[9px] text-muted-foreground/60 font-medium">
+                                                            ~<KasaBalanceText
+                                                                balance={Math.round(Number(t.runningBalance) * (t.currency === "USD" ? usdRate : eurRate))}
+                                                                currency="TRY"
+                                                                accountType={t.financeAccount?.type}
+                                                                minimumFractionDigits={0}
+                                                                maximumFractionDigits={0}
+                                                            />
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[8px] text-muted-foreground/40 uppercase tracking-wider whitespace-nowrap">
+                                                        {t.financeAccount?.name || "Kasa"} bakiye
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-2 pr-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <EditTransactionWrapper
+                                                        transaction={t}
+                                                        trigger={
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="İşlemi Düzenle"
+                                                                className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 transition-colors"
+                                                            >
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        }
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        title="İşlemi Sil"
+                                                        onClick={() => handleTriggerDelete(t)}
+                                                        className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             )}
                         </TableBody>
                     </Table>
@@ -822,79 +1123,108 @@ export function TransactionHistory({
                             İşlem bulunamadı
                         </div>
                     ) : (
-                        sortedData.map((t) => (
-                            <div key={t.id} className="p-4 flex flex-col gap-3 active:bg-muted/30 transition-colors relative">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                                            {(() => {
-                                                const date = new Date(t.createdAt);
-                                                return !isNaN(date.getTime()) ? format(date, "dd MMM yyyy, HH:mm", { locale: tr }) : "-";
-                                            })()}
-                                        </span>
-                                        <span className="text-[10px] text-blue-500 font-medium uppercase mt-0.5 truncate">
-                                            {t.financeAccount?.name || "Genel Kasa"}
-                                        </span>
-                                    </div>
-                                    <div className={cn("flex flex-col items-end gap-0.5 font-bold tracking-tighter shrink-0", t.type === "INCOME" ? "text-emerald-500" : "text-rose-500")}>
-                                        <div className="flex items-center gap-1 text-base">
-                                            {t.type === "INCOME" ? "+" : "-"}
-                                            {formatMoney(t.amount, t.currency)}
+                        sortedData.map((t) => {
+                            const meta = getTransactionMeta(t);
+                            const paymentMeta = getPaymentMeta(t.paymentMethod);
+                            const date = new Date(t.createdAt);
+                            const isValidDate = !isNaN(date.getTime());
+
+                            return (
+                                <div key={t.id} className="p-4 flex flex-col gap-3 active:bg-muted/30 transition-colors relative">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div
+                                                className={cn(
+                                                    "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border shadow-sm",
+                                                    meta.iconBgClass,
+                                                    meta.iconColorClass
+                                                )}
+                                                title={meta.categoryLabel}
+                                            >
+                                                <meta.icon className="h-5 w-5" />
+                                            </div>
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                                                    {isValidDate ? format(date, "dd MMM yyyy, HH:mm", { locale: tr }) : "-"}
+                                                </span>
+                                                <span className="text-[11px] text-blue-500 font-bold uppercase truncate">
+                                                    {t.financeAccount?.name || "Genel Kasa"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className={cn("flex flex-col items-end gap-0.5 font-bold tracking-tight shrink-0", t.type === "INCOME" ? "text-emerald-500" : "text-rose-500")}>
+                                            <div className="flex items-center gap-1 text-base font-extrabold">
+                                                {t.type === "INCOME" ? "+" : "-"}
+                                                {formatMoney(t.amount, t.currency)}
+                                                {t.type === "INCOME" ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                                            </div>
+                                            <span className="text-[9px] text-muted-foreground/60 font-medium">
+                                                {t.currency === "TRY"
+                                                    ? `~₺${Number(t.amount).toLocaleString("tr-TR")}`
+                                                    : `~₺${Math.round(Number(t.amount) * (t.currency === "USD" ? usdRate : eurRate)).toLocaleString("tr-TR")}`}
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex flex-col gap-1.5">
-                                    <p className="text-xs text-foreground/90 font-medium leading-tight">
-                                        {t.description || "Açıklama belirtilmemiş"}
-                                    </p>
-                                    {(t.customer || t.supplier) && (
+                                    <div className="flex flex-col gap-1.5 pl-1">
+                                        <p className="text-xs text-foreground font-semibold leading-tight">
+                                            {t.description || "Açıklama belirtilmemiş"}
+                                        </p>
+                                        {(t.customer || t.supplier) && (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {t.customer && (
+                                                    <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
+                                                        <User className="h-3 w-3" /> {t.customer.name}
+                                                    </span>
+                                                )}
+                                                {t.supplier && (
+                                                    <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium">
+                                                        <Building2 className="h-3 w-3" /> {t.supplier.name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                                            <Badge variant="outline" className={cn("text-[9px] px-2 py-0.5 rounded-lg font-bold border flex items-center gap-1", meta.badgeClass)}>
+                                                <meta.icon className="h-3 w-3" />
+                                                {meta.categoryLabel}
+                                            </Badge>
+                                            <Badge variant="outline" className={cn("text-[9px] py-0.5 px-2 rounded-lg font-bold border flex items-center gap-1 uppercase", paymentMeta.badgeClass)}>
+                                                <paymentMeta.icon className="h-3 w-3" />
+                                                {paymentMeta.label}
+                                            </Badge>
+                                            {t.runningBalance !== null && t.runningBalance !== undefined && (
+                                                <span className="text-[9px] text-muted-foreground font-medium ml-auto">
+                                                    Kasa: {formatMoney(t.runningBalance, t.currency || "TRY")}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-1 pt-3 border-t border-border/10 gap-2">
+                                        <span className="text-[9px] text-muted-foreground uppercase font-medium">{t.user?.name || "Sistem"}</span>
                                         <div className="flex items-center gap-2">
-                                            {t.customer && (
-                                                <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium">
-                                                    <User className="h-3 w-3" /> {t.customer.name}
-                                                </span>
-                                            )}
-                                            {t.supplier && (
-                                                <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium">
-                                                    <Building2 className="h-3 w-3" /> {t.supplier.name}
-                                                </span>
-                                            )}
+                                            <EditTransactionWrapper
+                                                transaction={t}
+                                                trigger={
+                                                    <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg border border-border/40 text-[10px] text-muted-foreground gap-2">
+                                                        <Pencil className="h-3 w-3" /> Düzenle
+                                                    </Button>
+                                                }
+                                            />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleTriggerDelete(t)}
+                                                className="h-8 px-3 rounded-lg border border-border/40 text-[10px] text-rose-500 gap-2 hover:bg-rose-500/10 hover:border-rose-500/20"
+                                            >
+                                                <Trash2 className="h-3 w-3" /> Sil
+                                            </Button>
                                         </div>
-                                    )}
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className={cn("text-[8px] px-2 py-0.5 border-none rounded-lg uppercase tracking-widest", t.type === "INCOME" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500")}>
-                                            {typeLabels[t.type] || t.type}
-                                        </Badge>
-                                        <Badge variant="outline" className="text-[8px] py-0.5 px-2 rounded-lg bg-muted/30 border-border/40 text-muted-foreground uppercase">
-                                            {paymentLabels[t.paymentMethod] || t.paymentMethod}
-                                        </Badge>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center justify-between mt-1 pt-3 border-t border-border/10 gap-2">
-                                    <span className="text-[9px] text-muted-foreground uppercase">{t.user?.name || "Sistem"}</span>
-                                    <div className="flex items-center gap-2">
-                                        <EditTransactionWrapper
-                                            transaction={t}
-                                            trigger={
-                                                <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg border border-border/40 text-[10px] text-muted-foreground gap-2">
-                                                    <Pencil className="h-3 w-3" /> Düzenle
-                                                </Button>
-                                            }
-                                        />
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleTriggerDelete(t)}
-                                            className="h-8 px-3 rounded-lg border border-border/40 text-[10px] text-rose-500 gap-2 hover:bg-rose-500/10 hover:border-rose-500/20"
-                                        >
-                                            <Trash2 className="h-3 w-3" /> Sil
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </CardContent>

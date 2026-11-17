@@ -1,7 +1,7 @@
 "use client";
 
 import { TrendingUp as ProfitTrendIcon } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useLongPress } from "@/hooks/use-long-press";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -98,6 +98,23 @@ export function StatCard({
     const hasUSD = usdValue !== undefined && usdValue !== null;
     const hasTRY = value !== undefined && value !== null;
     const isKasaCard = id === "stat_sales" || (typeof label === "string" && label.toLowerCase().includes("kasa"));
+    const [kasaSlide, setKasaSlide] = useState<0 | 1>(0);
+    const touchStartX = useRef<number | null>(null);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        if (diff > 40) {
+            setKasaSlide(1);
+        } else if (diff < -40) {
+            setKasaSlide(0);
+        }
+        touchStartX.current = null;
+    };
 
     const parseTRYNumber = (val: any) => {
         if (typeof val === "number") return val;
@@ -265,7 +282,9 @@ export function StatCard({
                 aria-label={actionLabel ? `${label}: ${actionLabel} (detay için basılı tutun)` : label}
                 {...gesture}
                 className={cn(
-                    "rounded-2xl transition-all duration-300 md:hover:-translate-y-1 group relative overflow-hidden cursor-pointer active:scale-[0.98] h-full select-none touch-manipulation [-webkit-touch-callout:none] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    "rounded-2xl transition-all duration-300 group relative overflow-hidden cursor-pointer active:scale-[0.98] h-full select-none touch-manipulation [-webkit-touch-callout:none] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    !isKasaCard && "md:hover:-translate-y-1",
+                    isKasaCard && "md:hover:shadow-[0_8px_30px_0_rgba(16,185,129,0.22)] md:hover:border-emerald-400/50",
                     "backdrop-blur-2xl border bg-white/90 dark:bg-card/40",
                     glassTheme.bg,
                     glassTheme.border,
@@ -279,144 +298,274 @@ export function StatCard({
                 <div className={cn("pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full blur-2xl opacity-20 group-hover:opacity-40 dark:opacity-40 dark:group-hover:opacity-75 transition-opacity duration-500", glassTheme.blobColor)} />
                 <div className={cn("pointer-events-none absolute -bottom-8 -left-8 w-24 h-24 rounded-full blur-xl opacity-15 group-hover:opacity-30 dark:opacity-20 dark:group-hover:opacity-45 transition-opacity duration-500", glassTheme.blobSecondary)} />
 
-                <CardContent className="p-3.5 sm:p-4.5 flex flex-col justify-between h-full relative z-10 font-sans">
-                    <div className="flex items-start justify-between relative">
-                        <div className={cn(
-                            "p-2.5 rounded-xl border transition-all duration-300 group-hover:scale-105",
-                            glassTheme.iconPill
-                        )}>
-                            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            {isKasaCard && profitValue !== undefined && profitValue !== null && (
-                                <span
-                                    className="text-[8px] sm:text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 tracking-tight font-bold uppercase shadow-xs hidden sm:inline-flex items-center gap-1"
-                                    title={`Bu Ay Toplam Kâr: ₺${Number(profitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Satış: ₺${Number(salesProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Servis: ₺${Number(serviceProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
-                                >
-                                    <ProfitTrendIcon className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
-                                    <span>Ay: {isUSD ? formatUSD(profitUsdValue) : `₺${Math.round(Number(profitValue || 0)).toLocaleString("tr-TR")}`}</span>
-                                </span>
-                            )}
-                            {badge && (
-                                <span className={cn(
-                                    "text-[9px] px-2 py-0.5 rounded-full tracking-tight font-bold uppercase shadow-xs",
-                                    glassTheme.badgePill
-                                )}>
-                                    {badge}
-                                </span>
-                            )}
-                            {trend && !isUSD && (
-                                <span className="text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/25 dark:text-emerald-100 tracking-tight font-bold uppercase shadow-xs">
-                                    {trend}
-                                </span>
-                            )}
-                            {isUSD && (
-                                <span className="text-[9px] px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/20 text-sky-900 dark:border-sky-400/40 dark:bg-sky-500/25 dark:text-sky-100 tracking-tight font-bold uppercase shadow-xs">
-                                    USD
-                                </span>
-                            )}
-                            {onDetail && (
-                                <button
-                                    type="button"
-                                    aria-label={`${label} detayları`}
-                                    onPointerDown={(e) => e.stopPropagation()}
-                                    onPointerUp={(e) => e.stopPropagation()}
-                                    onClick={(e) => { e.stopPropagation(); onDetail(); }}
-                                    className="h-6 w-6 rounded-full flex items-center justify-center transition-colors bg-slate-900/10 hover:bg-slate-900/20 text-slate-800 dark:bg-white/15 dark:hover:bg-white/30 dark:text-white shadow-xs"
-                                >
-                                    <Info className="h-3 w-3" />
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                {isKasaCard ? (() => {
+                    const numTodaySales = Number(todaySales || 0);
+                    const numTodaySalesUSD = Number(todaySalesUSD ?? (numTodaySales / 34).toFixed(2));
+                    const todaySalesDisplay = isUSD ? formatUSD(numTodaySalesUSD) : formatTRY(numTodaySales);
 
-                    <div className="mt-2.5 relative min-w-0 @container">
-                        <p className="text-[10px] sm:text-[11px] mb-1 font-bold tracking-wider uppercase text-slate-800 dark:text-white/80 truncate">
-                            {label}
-                        </p>
-                        {isKasaCard ? (() => {
-                            const numTodaySales = Number(todaySales || 0);
-                            const numTodaySalesUSD = Number(todaySalesUSD ?? (numTodaySales / 34).toFixed(2));
-                            const todaySalesDisplay = isUSD ? formatUSD(numTodaySalesUSD) : formatTRY(numTodaySales);
+                    const numTodayProfit = Number(todayProfit || 0);
+                    const numTodayProfitUSD = Number(todayProfitUSD ?? (numTodayProfit / 34).toFixed(2));
+                    const effectiveTodayProfit = isUSD ? numTodayProfitUSD : numTodayProfit;
+                    const isTodayProfitPos = effectiveTodayProfit >= 0;
+                    const todayProfitPrefix = `${effectiveTodayProfit < 0 ? "-" : "+"}${isUSD ? "$" : "₺"}`;
 
-                            const numTodayProfit = Number(todayProfit || 0);
-                            const numTodayProfitUSD = Number(todayProfitUSD ?? (numTodayProfit / 34).toFixed(2));
-                            const effectiveTodayProfit = isUSD ? numTodayProfitUSD : numTodayProfit;
-                            const isTodayProfitPos = effectiveTodayProfit >= 0;
-                            const todayProfitPrefix = `${effectiveTodayProfit < 0 ? "-" : "+"}${isUSD ? "$" : "₺"}`;
+                    const profitTRY = Number(profitValue || 0);
+                    const profitBreakdownTitle = `Bugünkü Kâr: ₺${numTodayProfit.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • Bu Ay Toplam Kâr: ₺${profitTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Satış: ₺${Number(salesProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Servis: ₺${Number(serviceProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
 
-                            const profitTRY = Number(profitValue || 0);
-                            const profitBreakdownTitle = `Bugünkü Kâr: ₺${numTodayProfit.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • Bu Ay Toplam Kâr: ₺${profitTRY.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Satış: ₺${Number(salesProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Servis: ₺${Number(serviceProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
-
-                            return (
-                                <>
-                                    <div className="flex flex-col">
-                                        <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/65 mb-0.5 truncate">
-                                            Nakit Kasa
-                                        </span>
-                                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                                            <RevealFinancial
-                                                amount={mainDisplay}
-                                                prefix=""
-                                                deficitText={mainDeficitText}
-                                                className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums leading-tight break-words"
-                                            />
-                                            {secondaryDisplay && (
-                                                <p className="text-[10px] sm:text-[11px] font-semibold text-slate-700 dark:text-white/75 tabular-nums">
-                                                    (<CountingNumber value={secondaryDisplay} />
-                                                    {secondaryDeficitText && (
-                                                        <span className="text-rose-500 font-bold">{secondaryDeficitText}</span>
-                                                    )})
-                                                </p>
-                                            )}
-                                        </div>
+                    return (
+                        <div
+                            onTouchStart={handleTouchStart}
+                            onTouchEnd={handleTouchEnd}
+                            className="relative w-full h-full z-10 overflow-hidden font-sans select-none"
+                        >
+                            {/* SLIDE 1: Kasa Bakiyesi (Nakit Kasa & Ana Bakiye) */}
+                            <div
+                                className={cn(
+                                    "w-full h-full p-3.5 sm:p-4.5 flex flex-col justify-between transition-all duration-300 ease-out",
+                                    kasaSlide === 1
+                                        ? "opacity-0 -translate-x-6 pointer-events-none"
+                                        : "opacity-100 translate-x-0 pointer-events-auto md:group-hover:opacity-0 md:group-hover:-translate-x-6 md:group-hover:pointer-events-none"
+                                )}
+                            >
+                                <div className="flex items-start justify-between relative">
+                                    <div className={cn(
+                                        "p-2.5 rounded-xl border transition-all duration-300 group-hover:scale-105",
+                                        glassTheme.iconPill
+                                    )}>
+                                        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                                     </div>
+                                    <div className="flex items-center gap-1.5">
+                                        {profitValue !== undefined && profitValue !== null && (
+                                            <span
+                                                className="text-[8px] sm:text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 tracking-tight font-bold uppercase shadow-xs flex items-center gap-1"
+                                                title={`Bu Ay Toplam Kâr: ₺${Number(profitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Satış: ₺${Number(salesProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + Servis: ₺${Number(serviceProfitValue || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
+                                            >
+                                                <ProfitTrendIcon className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
+                                                <span>Ay: {isUSD ? formatUSD(profitUsdValue) : `₺${Math.round(Number(profitValue || 0)).toLocaleString("tr-TR")}`}</span>
+                                            </span>
+                                        )}
+                                        {badge && (
+                                            <span className={cn(
+                                                "text-[9px] px-2 py-0.5 rounded-full tracking-tight font-bold uppercase shadow-xs",
+                                                glassTheme.badgePill
+                                            )}>
+                                                {badge}
+                                            </span>
+                                        )}
+                                        {onDetail && (
+                                            <button
+                                                type="button"
+                                                aria-label={`${label} detayları`}
+                                                onPointerDown={(e) => e.stopPropagation()}
+                                                onPointerUp={(e) => e.stopPropagation()}
+                                                onClick={(e) => { e.stopPropagation(); onDetail(); }}
+                                                className="h-6 w-6 rounded-full flex items-center justify-center transition-colors bg-slate-900/10 hover:bg-slate-900/20 text-slate-800 dark:bg-white/15 dark:hover:bg-white/30 dark:text-white shadow-xs"
+                                            >
+                                                <Info className="h-3 w-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
 
-                                    {/* Günlük Finansal Metrikler: Bugünlük Satış & Bugünün Kârı */}
-                                    <div className="mt-2 pt-2 border-t border-slate-300/50 dark:border-white/10 grid grid-cols-2 gap-2">
-                                        {/* 1. Bugünlük Satış */}
+                                <div className="my-auto py-1">
+                                    <p className="text-[10px] sm:text-[11px] mb-0.5 font-bold tracking-wider uppercase text-slate-800 dark:text-white/80 truncate">
+                                        {label}
+                                    </p>
+                                    <span className="block text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/65 mb-0.5 truncate">
+                                        Nakit Kasa
+                                    </span>
+                                    <div className="flex items-baseline gap-2 flex-wrap">
+                                        <RevealFinancial
+                                            amount={mainDisplay}
+                                            prefix=""
+                                            deficitText={mainDeficitText}
+                                            className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white tabular-nums leading-tight break-words"
+                                        />
+                                        {secondaryDisplay && (
+                                            <p className="text-[11px] sm:text-[12px] font-semibold text-slate-700 dark:text-white/75 tabular-nums">
+                                                (<CountingNumber value={secondaryDisplay} />
+                                                {secondaryDeficitText && (
+                                                    <span className="text-rose-500 font-bold">{secondaryDeficitText}</span>
+                                                )})
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 border-t border-slate-300/40 dark:border-white/10 flex items-center justify-between text-[10px] text-slate-600 dark:text-white/70">
+                                    <button
+                                        type="button"
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onPointerUp={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setKasaSlide(1);
+                                        }}
+                                        className="group/slide inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/20 transition-all font-semibold text-[9px] sm:text-[10px]"
+                                        title="Bugünkü Satış ve Kârı Gör"
+                                    >
+                                        <ShoppingCart className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
+                                        <span>Bugün Satış & Kâr</span>
+                                        <span className="transition-transform group-hover/slide:translate-x-0.5 font-bold">→</span>
+                                    </button>
+
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-1.5 rounded-full bg-emerald-500 transition-all" />
+                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400/50 dark:bg-white/30 transition-all" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SLIDE 2: Bugün Satış & Bugün Kâr (Tamamen keskin, subpixel bulanıklığı olmadan) */}
+                            <div
+                                onClick={(e) => {
+                                    if (kasaSlide === 1) {
+                                        e.stopPropagation();
+                                        setKasaSlide(0);
+                                    }
+                                }}
+                                className={cn(
+                                    "absolute inset-0 p-3.5 sm:p-4.5 flex flex-col justify-between transition-all duration-300 ease-out",
+                                    "bg-white/95 dark:bg-[#061b15]/95 backdrop-blur-xl border border-emerald-500/25 rounded-2xl",
+                                    kasaSlide === 1
+                                        ? "opacity-100 translate-x-0 pointer-events-auto"
+                                        : "opacity-0 translate-x-6 pointer-events-none md:group-hover:opacity-100 md:group-hover:translate-x-0 md:group-hover:pointer-events-auto"
+                                )}
+                            >
+                                <div className="flex items-start justify-between relative">
+                                    <div className="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100 shadow-xs">
+                                        <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[8px] sm:text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/25 dark:text-emerald-100 font-bold uppercase shadow-xs flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span>CANLI</span>
+                                        </span>
+                                        {onDetail && (
+                                            <button
+                                                type="button"
+                                                aria-label={`${label} detayları`}
+                                                onPointerDown={(e) => e.stopPropagation()}
+                                                onPointerUp={(e) => e.stopPropagation()}
+                                                onClick={(e) => { e.stopPropagation(); onDetail(); }}
+                                                className="h-6 w-6 rounded-full flex items-center justify-center transition-colors bg-slate-900/10 hover:bg-slate-900/20 text-slate-800 dark:bg-white/15 dark:hover:bg-white/30 dark:text-white shadow-xs"
+                                            >
+                                                <Info className="h-3 w-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="my-auto py-1">
+                                    <p className="text-[10px] sm:text-[11px] mb-1.5 font-bold tracking-wider uppercase text-slate-800 dark:text-white/85 truncate">
+                                        BUGÜNKÜ PERFORMANS
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {/* 1. Bugün Satış */}
                                         <div
-                                            className="min-w-0 bg-slate-900/5 dark:bg-white/5 border border-slate-300/50 dark:border-white/10 rounded-xl px-2 py-1 flex flex-col justify-center"
+                                            className="min-w-0 bg-slate-900/5 dark:bg-white/[0.08] border border-slate-300/70 dark:border-white/15 rounded-xl p-2.5 flex flex-col justify-center shadow-xs"
                                             title={`Bugünkü Satış Cirosu: ${todaySalesDisplay}${numTodaySalesUSD > 0 ? ` (~$${numTodaySalesUSD})` : ""}`}
                                         >
-                                            <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/65 mb-0.5">
-                                                <ShoppingCart className="h-2.5 w-2.5 shrink-0 text-primary" />
+                                            <div className="flex items-center gap-1.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/75 mb-1">
+                                                <ShoppingCart className="h-2.5 w-2.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                                                 <span className="truncate">Bugün Satış</span>
                                             </div>
                                             <RevealFinancial
                                                 amount={todaySalesDisplay}
                                                 prefix=""
-                                                className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight truncate leading-tight"
+                                                className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight truncate leading-tight"
                                             />
+                                            {numTodaySalesUSD > 0 && (
+                                                <span className="text-[9px] font-semibold text-slate-500 dark:text-white/60 tabular-nums mt-0.5">
+                                                    ~${numTodaySalesUSD}
+                                                </span>
+                                            )}
                                         </div>
 
-                                        {/* 2. Bugünün Kârı */}
+                                        {/* 2. Bugün Kâr */}
                                         <div
                                             className={cn(
-                                                "min-w-0 border rounded-xl px-2 py-1 flex flex-col justify-center transition-colors",
+                                                "min-w-0 border rounded-xl p-2.5 flex flex-col justify-center shadow-xs transition-colors",
                                                 isTodayProfitPos
-                                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
-                                                    : "bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300"
+                                                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-900 dark:text-emerald-100"
+                                                    : "bg-rose-500/15 border-rose-500/40 text-rose-900 dark:text-rose-100"
                                             )}
                                             title={profitBreakdownTitle}
                                         >
-                                            <div className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mb-0.5">
+                                            <div className="flex items-center gap-1.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mb-1">
                                                 <ProfitTrendIcon className={cn("h-2.5 w-2.5 shrink-0", isTodayProfitPos ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")} />
-                                                <span className="truncate">Bugün Kâr</span>
+                                                <span className={cn("truncate font-bold", isTodayProfitPos ? "text-emerald-700 dark:text-emerald-300" : "text-rose-600 dark:text-rose-400")}>
+                                                    Bugün Kâr
+                                                </span>
                                             </div>
                                             <RevealFinancial
                                                 amount={Math.abs(effectiveTodayProfit)}
                                                 prefix={todayProfitPrefix}
                                                 className={cn(
-                                                    "text-xs sm:text-sm font-extrabold tabular-nums tracking-tight truncate leading-tight",
+                                                    "text-sm sm:text-base font-extrabold tabular-nums tracking-tight truncate leading-tight",
                                                     isTodayProfitPos ? "text-emerald-700 dark:text-emerald-300" : "text-rose-600 dark:text-rose-400"
                                                 )}
                                             />
+                                            <span className={cn(
+                                                "text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mt-0.5",
+                                                isTodayProfitPos ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"
+                                            )}>
+                                                {isTodayProfitPos ? "Net Kâr" : "Net Zarar"}
+                                            </span>
                                         </div>
                                     </div>
-                                </>
-                            );
-                        })() : profitValue !== undefined && profitValue !== null ? (() => {
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })() : (
+                    <CardContent className="p-3.5 sm:p-4.5 flex flex-col justify-between h-full relative z-10 font-sans">
+                        <div className="flex items-start justify-between relative">
+                            <div className={cn(
+                                "p-2.5 rounded-xl border transition-all duration-300 group-hover:scale-105",
+                                glassTheme.iconPill
+                            )}>
+                                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                {badge && (
+                                    <span className={cn(
+                                        "text-[9px] px-2 py-0.5 rounded-full tracking-tight font-bold uppercase shadow-xs",
+                                        glassTheme.badgePill
+                                    )}>
+                                        {badge}
+                                    </span>
+                                )}
+                                {trend && !isUSD && (
+                                    <span className="text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/25 dark:text-emerald-100 tracking-tight font-bold uppercase shadow-xs">
+                                        {trend}
+                                    </span>
+                                )}
+                                {isUSD && (
+                                    <span className="text-[9px] px-2 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/20 text-sky-900 dark:border-sky-400/40 dark:bg-sky-500/25 dark:text-sky-100 tracking-tight font-bold uppercase shadow-xs">
+                                        USD
+                                    </span>
+                                )}
+                                {onDetail && (
+                                    <button
+                                        type="button"
+                                        aria-label={`${label} detayları`}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onPointerUp={(e) => e.stopPropagation()}
+                                        onClick={(e) => { e.stopPropagation(); onDetail(); }}
+                                        className="h-6 w-6 rounded-full flex items-center justify-center transition-colors bg-slate-900/10 hover:bg-slate-900/20 text-slate-800 dark:bg-white/15 dark:hover:bg-white/30 dark:text-white shadow-xs"
+                                    >
+                                        <Info className="h-3 w-3" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mt-2.5 relative min-w-0 @container">
+                            <p className="text-[10px] sm:text-[11px] mb-1 font-bold tracking-wider uppercase text-slate-800 dark:text-white/80 truncate">
+                                {label}
+                            </p>
+                            {profitValue !== undefined && profitValue !== null ? (() => {
                             const profitIsUSD = defaultCurrency === "USD";
                             const profitTRY = Number(profitValue || 0);
                             const profitUSD = Number(profitUsdValue ?? 0);
@@ -574,6 +723,7 @@ export function StatCard({
                         )}
                     </div>
                 </CardContent>
+            )}
             </Card>
         </div>
     );
