@@ -130,6 +130,8 @@ export async function getCustomerById(id: string) {
         },
         sales: {
           include: {
+            transaction: true,
+            debt: true,
             items: {
               include: {
                 product: {
@@ -148,6 +150,7 @@ export async function getCustomerById(id: string) {
           include: {
             sale: {
               include: {
+                transaction: true,
                 items: {
                   include: {
                     product: true
@@ -160,7 +163,9 @@ export async function getCustomerById(id: string) {
         transactions: {
           orderBy: { createdAt: "desc" },
           include: {
-            user: true
+            user: true,
+            sale: true,
+            financeAccount: true
           }
         }
       }

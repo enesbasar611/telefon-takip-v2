@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { printReceipt, downloadReceiptImage, generateReceiptImage, getReceiptWidthClass } from "@/lib/receipt-print-styles";
 import { formatWhatsAppLink, sanitizeWhatsAppPhone } from "@/lib/utils/notifications";
 import { WhatsAppConfirmModal } from "@/components/common/whatsapp-confirm-modal";
+import { getSaleCustomDescription } from "@/components/pos/receipt-modal";
 
 interface UnifiedSaleModalProps {
     isOpen: boolean;
@@ -228,11 +229,14 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
             return `• ${item.product?.name}${qty}: ₺${getPriceTRY(item.totalPrice)}`;
         }).join("\n") || "";
 
+        const customNote = getSaleCustomDescription(sale);
+        const noteText = customNote ? `\n*Açıklama / Not:* ${customNote}` : "";
+
         const totalText = isUSD
             ? `*Toplam: $${getPriceUSD(sale.finalAmount)} (₺${getPriceTRY(sale.finalAmount)})*`
             : `*Toplam: ₺${getPriceTRY(sale.finalAmount)}*`;
 
-        return `${itemLines}\n\n${totalText}`;
+        return `${itemLines}${noteText}\n\n${totalText}`;
     };
 
     const sendWhatsAppDirect = (msgToSend?: string) => {
@@ -658,6 +662,22 @@ export function UnifiedSaleModal({ isOpen, onClose, sale, rates, initialDefaultC
                                             );
                                         })}
                                     </div>
+
+                                    {/* Satış Açıklaması / Özel Not */}
+                                    {(() => {
+                                        const customNote = getSaleCustomDescription(sale);
+                                        if (!customNote) return null;
+                                        return (
+                                            <div className="mb-2 p-1.5 border border-dashed border-black/40 rounded bg-black/[0.02]">
+                                                <span className="text-[7.5px] font-black text-black/60 uppercase block leading-none mb-0.5">
+                                                    SATIŞ AÇIKLAMASI / NOT
+                                                </span>
+                                                <span className="text-[9.5px] font-bold text-black leading-snug break-words block">
+                                                    {customNote}
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* Alt Toplam & Ödeme Yöntemi */}
                                     <div className="border-t-[1.5px] border-black pt-1.5 space-y-1">

@@ -81,10 +81,14 @@ function summarizeOperations(operations: UnifiedOperation[], totalCount?: number
 function getSearchVariants(term: string): string[] {
     const rawTrimmed = term.trim();
     if (!rawTrimmed) return [];
+    const withoutHash = rawTrimmed.replace(/^#/, "").trim();
     return Array.from(new Set([
         rawTrimmed,
+        withoutHash,
         rawTrimmed.toLowerCase(),
+        withoutHash.toLowerCase(),
         rawTrimmed.toUpperCase(),
+        withoutHash.toUpperCase(),
         rawTrimmed.toLocaleLowerCase('tr-TR'),
         rawTrimmed.toLocaleUpperCase('tr-TR'),
         rawTrimmed.replace(/i/g, "ı").replace(/İ/g, "I"),

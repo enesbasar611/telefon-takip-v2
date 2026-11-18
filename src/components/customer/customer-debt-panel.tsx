@@ -21,7 +21,10 @@ import {
     Printer,
     Pencil,
     RotateCcw,
+    ArrowUpRight,
+    ShoppingCart,
 } from "lucide-react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -394,9 +397,14 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
                                                     {debt.notes || "Satış İşlemi"}
                                                 </span>
                                                 {debt.sale && (
-                                                    <span className="text-[10px] text-muted-foreground uppercase opacity-70">
-                                                        Fiş: #{debt.sale.id.substring(0, 8)}
-                                                    </span>
+                                                    <Link
+                                                        href={`/satis/gecmis?search=${debt.sale.saleNumber || debt.sale.id}`}
+                                                        className="text-[10px] text-blue-500 hover:text-blue-400 font-bold uppercase opacity-90 hover:underline flex items-center gap-1 mt-0.5"
+                                                        title="Satış Kaydını Aç"
+                                                    >
+                                                        <span>Fiş: #{debt.sale.saleNumber || debt.sale.id.substring(0, 8)}</span>
+                                                        <ArrowUpRight className="w-2.5 h-2.5" />
+                                                    </Link>
                                                 )}
                                             </div>
                                         </TableCell>
@@ -478,7 +486,20 @@ export function CustomerDebtPanel({ customer, accounts, shop, rates, defaultCurr
                                             {format(new Date(tx.createdAt), "dd MMM yyyy, HH:mm", { locale: tr })}
                                         </TableCell>
                                         <TableCell className="text-sm font-medium">
-                                            {tx.description}
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span>{tx.description}</span>
+                                                {(tx.sale || tx.saleId) && (
+                                                    <Link
+                                                        href={`/satis/gecmis?search=${tx.sale?.saleNumber || tx.saleId}`}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-500 hover:text-blue-400 hover:underline bg-blue-500/10 px-2 py-0.5 rounded-md"
+                                                        title="İlgili Satış Kaydına Git"
+                                                    >
+                                                        <ShoppingCart className="w-2.5 h-2.5" />
+                                                        <span>#{tx.sale?.saleNumber || "Satış"}</span>
+                                                        <ArrowUpRight className="w-2.5 h-2.5" />
+                                                    </Link>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline" className="text-[10px]">

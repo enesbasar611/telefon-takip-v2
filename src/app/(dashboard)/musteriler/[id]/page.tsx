@@ -41,6 +41,7 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency } from "@/lib/utils";
+import { CustomerReportButton } from "@/components/customer/customer-report-button";
 
 import { Metadata } from "next";
 
@@ -215,7 +216,14 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                     </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 flex-wrap">
+                    <CustomerReportButton
+                        customer={customer}
+                        shop={shop}
+                        rates={rates}
+                        defaultCurrency={defaultCurrency}
+                        className="border-border bg-muted hover:bg-primary/10 hover:text-primary px-5 h-12 rounded-2xl transition-all shadow-none font-bold text-xs"
+                    />
                     <Link href={`/musteriler/duzenle/${customer.id}`}>
                         <Button variant="outline" className="border-border bg-muted hover:bg-blue-500/10 hover:text-blue-500 px-6 h-12 rounded-2xl  transition-all shadow-none">Profili düzenle</Button>
                     </Link>
@@ -323,6 +331,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                     customer={customer}
                                     rates={rates}
                                     defaultCurrency={defaultCurrency}
+                                    shop={shop}
                                 />
                             </TabsContent>
 
@@ -384,10 +393,17 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                                                                 </td>
                                                                 <td className="px-6 py-6">
                                                                     <div className="flex flex-col gap-1">
-                                                                        <div className={cn(
-                                                                            "text-[10px]  uppercase tracking-widest",
-                                                                            p.type === 'SERVICE' ? "text-blue-500" : "text-emerald-500"
-                                                                        )}>#{p.referenceNumber}</div>
+                                                                        <Link
+                                                                            href={p.type === 'SERVICE' ? `/servis/${p.referenceId}` : `/satis/gecmis?search=${encodeURIComponent(p.referenceNumber)}`}
+                                                                            className={cn(
+                                                                                "text-[10px] uppercase tracking-widest font-bold hover:underline flex items-center gap-1",
+                                                                                p.type === 'SERVICE' ? "text-blue-500 hover:text-blue-400" : "text-emerald-500 hover:text-emerald-400"
+                                                                            )}
+                                                                            title={p.type === 'SERVICE' ? "Servis Kaydını Aç" : "Satış Kaydını Aç"}
+                                                                        >
+                                                                            <span>#{p.referenceNumber}</span>
+                                                                            <ArrowUpRight className="w-2.5 h-2.5" />
+                                                                        </Link>
                                                                         <div className="text-[10px] text-muted-foreground font-medium">{format(new Date(p.date), "d MMM yyyy", { locale: tr })}</div>
                                                                     </div>
                                                                 </td>

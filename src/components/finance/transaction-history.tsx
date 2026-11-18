@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { format, isToday, isYesterday, isThisWeek, isThisMonth } from "date-fns";
 import { tr } from "date-fns/locale";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { KasaBalanceText } from "./kasa-balance-text";
 import { Input } from "@/components/ui/input";
@@ -1000,6 +1001,17 @@ export function TransactionHistory({
                                                                 <meta.icon className="h-2.5 w-2.5 shrink-0" />
                                                                 {meta.categoryLabel}
                                                             </Badge>
+                                                            {(t.sale || t.saleId) && (
+                                                                <Link
+                                                                    href={`/satis/gecmis?search=${encodeURIComponent(t.sale?.saleNumber || t.saleId)}`}
+                                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+                                                                    title="Satış Kaydına Git"
+                                                                >
+                                                                    <ShoppingCart className="h-2.5 w-2.5 shrink-0" />
+                                                                    <span>#{t.sale?.saleNumber || t.saleId}</span>
+                                                                    <ArrowUpRight className="h-2.5 w-2.5 opacity-60" />
+                                                                </Link>
+                                                            )}
                                                             {t.customer && (
                                                                 <span className="flex items-center gap-1 text-[10px] text-blue-500 font-medium truncate max-w-[140px]">
                                                                     <User className="h-3 w-3 shrink-0" /> {t.customer.name}
@@ -1085,6 +1097,15 @@ export function TransactionHistory({
                                             </TableCell>
                                             <TableCell className="py-2 pr-4 text-right">
                                                 <div className="flex items-center justify-end gap-1">
+                                                    {(t.sale || t.saleId) && (
+                                                        <Link
+                                                            href={`/satis/gecmis?search=${encodeURIComponent(t.sale?.saleNumber || t.saleId)}`}
+                                                            title="Satış Kaydını Aç"
+                                                            className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors flex items-center justify-center"
+                                                        >
+                                                            <ArrowUpRight className="h-3.5 w-3.5" />
+                                                        </Link>
+                                                    )}
                                                     <EditTransactionWrapper
                                                         transaction={t}
                                                         trigger={
@@ -1189,6 +1210,17 @@ export function TransactionHistory({
                                                 <meta.icon className="h-3 w-3" />
                                                 {meta.categoryLabel}
                                             </Badge>
+                                            {(t.sale || t.saleId) && (
+                                                <Link
+                                                    href={`/satis/gecmis?search=${encodeURIComponent(t.sale?.saleNumber || t.saleId)}`}
+                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+                                                    title="Satış Kaydına Git"
+                                                >
+                                                    <ShoppingCart className="h-2.5 w-2.5 shrink-0" />
+                                                    <span>#{t.sale?.saleNumber || t.saleId}</span>
+                                                    <ArrowUpRight className="h-2.5 w-2.5 opacity-60" />
+                                                </Link>
+                                            )}
                                             <Badge variant="outline" className={cn("text-[9px] py-0.5 px-2 rounded-lg font-bold border flex items-center gap-1 uppercase", paymentMeta.badgeClass)}>
                                                 <paymentMeta.icon className="h-3 w-3" />
                                                 {paymentMeta.label}
@@ -1204,6 +1236,14 @@ export function TransactionHistory({
                                     <div className="flex items-center justify-between mt-1 pt-3 border-t border-border/10 gap-2">
                                         <span className="text-[9px] text-muted-foreground uppercase font-medium">{t.user?.name || "Sistem"}</span>
                                         <div className="flex items-center gap-2">
+                                            {(t.sale || t.saleId) && (
+                                                <Link
+                                                    href={`/satis/gecmis?search=${encodeURIComponent(t.sale?.saleNumber || t.saleId)}`}
+                                                    className="h-8 px-2.5 rounded-lg border border-border/40 text-[10px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1.5 flex items-center"
+                                                >
+                                                    <ShoppingCart className="h-3 w-3" /> Satış
+                                                </Link>
+                                            )}
                                             <EditTransactionWrapper
                                                 transaction={t}
                                                 trigger={

@@ -41,6 +41,39 @@
 
 ## Degisiklik Gunlugu
 
+- [x] 2026-11-18: Müşteri Kapsamlı Faaliyet, Hizmet & Hesap Ekstresi Çıktı Sistemi:
+  - **Müşteri Faaliyet Raporu & Ekstre Modalı (`CustomerActivityReportModal`):**
+    - Müşteriye bugüne kadar yapılmış tüm satışları, teslim edilen/satılan ürünleri, teknik servis onarım ve cihaz kayıtlarını, kullanılan yedek parçaları, tahsilatları ve cari borç durumunu tek merkezden gösteren kapsamlı çıktı ve ekstre sistemi geliştirildi.
+    - **KPI Metrikleri**: Toplam işlem hacmi (TL ve USD), toplam satış cirosu ve adedi, toplam servis cirosu ve cihaz adedi, toplam teslim edilen ürün/parça adedi ve güncel açık borç bakiyesi.
+    - **Filtreler & Arama**: Sekme bazlı filtreleme (Tüm Faaliyetler, Satışlar, Servisler, Verilen Ürünler Konsolide Listesi, Tahsilatlar), tarih filtreleri (Tüm Zamanlar, Bu Yıl, Son 90 Gün, Bu Ay) ve ürün/cihaz/fiş no bazlı canlı arama.
+    - **Akordeon Detay Görünümü**: Satışların içindeki tüm ürün kalemleri, fiyatları ve satış notları; servislerin içindeki arıza açıklamaları, teknisyen bilgisi ve takılan yedek parçalar anlık açılıp incelenebiliyor.
+    - **Resmi A4 Baskı Çıktısı (`@media print`)**: Dükkan antetli başlığı (logo, adres, telefon, e-posta), müşteri bilgi kartı, özet mali tablo, detaylı satış & ürün listesi, teknik servis & parça listesi ve müşteri kabul/işletme yetkili imza alanı içeren kusursuz A4 çıktı şablonu.
+    - **Excel (CSV) & WhatsApp Entegrasyonu**: Tüm dökümü tek tıkla UTF-8 CSV olarak indirme ve müşteriye WhatsApp üzerinden şık özet mesaj gönderme desteği.
+  - **Müşteri Arayüzü Entegrasyonu (`CustomerReportButton`, `musteriler/[id]/page.tsx`, `customer-history-list.tsx`):**
+    - Müşteri profil detay sayfasının üst aksiyon alanına ("Profili düzenle" ve "Satış yap" yanına) `Faaliyet Ekstresi & Çıktı` butonu eklendi.
+    - "İşlem arşivi" sekmesi araç çubuğuna hızlı çıktı alma butonu entegre edildi.
+
+
+- [x] 2026-11-18: Müşteri Detayında Satış Açıklaması, 404 Satış Bağlantısı Düzeltmesi, Fiş Notu ve Finansal Hareket Satış Entegrasyonu:
+  - **Müşteri Detay & İşlem Geçmişi (`CustomerHistoryList`, `page.tsx`):**
+    - Satış işlemlerinde yalnızca ürün adı listeleniyordu; satış yapılırken girilen özel açıklama/not (`displaySaleDesc`) ürün adının hemen altında yeşil not rozeti ve `FileText` ikonuyla görünür kılındı (otomatik indirim/veresiye ekleri ve ürün adıyla birebir örtüşen generic metinler filtrelenerek sadece kullanıcı notu gösterildi).
+    - Canlı arama filtresine `transaction.description`, `debt.notes` ve `description` dahil edilerek satış açıklamalarına göre müşteri içi anlık filtreleme sağlandı.
+    - Satış kaydını aç (`↗`) butonu hatalı olarak `/satis/arşiv` sayfasına yönlendiriyor ve 404 Not Found veriyordu; doğrudan `/satis/gecmis?search=${encodeURIComponent(item.saleNumber)}` sayfasına yönlendirecek şekilde düzeltildi.
+    - "Kullanılan parçalar" sekmesindeki satış kayıtlarının referans numaraları da doğrudan ilgili satışa gidecek şekilde linklendirildi.
+  - **Fiş Çıktısı & WhatsApp Paylaşımı (`POSReceiptContent`, `ReceiptModal`, `UnifiedSaleModal`):**
+    - Termal ve A4 satış fişlerinde (`POSReceiptContent` & `UnifiedSaleModal`) `SATIŞ AÇIKLAMASI / NOT` alanı eklendi; özel not girilmiş satışların fiş baskısında ve önizlemesinde bu not çerçeveli olarak yazdırılıyor.
+    - WhatsApp ile paylaşılan fiş metnine (`buildReceiptMessage`) satış açıklaması/notu otomatik eklendi.
+  - **Finansal Hareketler & Borç / Tahsilat Satış Entegrasyonu (`TransactionHistory`, `CustomerDebtPanel`, `SaleDetailModal`):**
+    - Finansal Hareketler tablosunda (hem masaüstü tablo hem mobil kartlar) bir satışa bağlı olan işlemler için yeşil `#{saleNumber}` rozet linki ve satır sonuna tek tıkla satışa giden `↗` kısayol butonu eklendi.
+    - Müşteri "Borç & Tahsilat" sekmesinde satış kaynaklı açık borçlar ve tahsilat geçmişi kayıtları da `#{saleNumber}` üzerinden doğrudan satış arşivine yönlendirildi.
+    - `SaleDetailModal` içine satış açıklaması / özel not kartı eklendi.
+  - **Satış Geçmişi Arama & Tarih Filtresi İyileştirmesi (`src/app/(dashboard)/satis/gecmis/page.tsx`, `activity-actions.ts`):**
+    - Müşteri veya finans sayfasından arama parametresiyle (`search=SALE-...` veya `#SALE-...`) satış geçmişine gelindiğinde, varsayılan "bu ay" filtresi nedeniyle eski tarihli satışların bulunamama sorunu giderildi (`searchTerm` varsa tarih kısıtı genişletilerek doğrudan eşleşme sağlandı).
+    - `#` işaretiyle veya işaretsiz fiş numarası aramaları normalize edildi.
+  - **Backend Veri Çekimi (`customer-actions.ts`):**
+    - `getCustomerById` sorgusunda `sales` içerisine `transaction: true` ve `debt: true` ilişkileri dahil edildi; `debts` ve `transactions` sorgularına da `sale` ilişkisi eklendi.
+
+
 - [x] 2026-11-17: Kasa Giriş/Çıkış Modalı Tedarikçi Entegrasyonu, Ekstra Borç Girişi & Kesintisiz Çoklu Kayıt Desteği:
   - **Tedarikçi & Kasa Senkronizasyonu (`CreateTransactionModal`):**
     - İşlem Türü (kategori) dropdown'una `🏢 Tedarikçi / Toptancı` seçeneği ve diğer kategoriler altından tek tıkla geçiş sağlayan `Tedarikçi Borcu / Ödemesi Bağla` kısayolu eklendi.

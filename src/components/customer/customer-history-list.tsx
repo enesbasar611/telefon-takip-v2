@@ -17,7 +17,8 @@ import {
     CheckCircle2,
     AlertCircle,
     User,
-    Smartphone
+    Smartphone,
+    FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { cn, formatCurrency } from "@/lib/utils";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
 import { ServiceReceiptModal } from "@/components/service/service-receipt-modal";
+import { CustomerReportButton } from "@/components/customer/customer-report-button";
 import Link from "next/link";
 
 interface CustomerHistoryListProps {
@@ -32,6 +34,7 @@ interface CustomerHistoryListProps {
     rates?: any;
     defaultCurrency?: string;
     className?: string;
+    shop?: any;
 }
 
 const statusLabels: Record<string, string> = {
@@ -48,7 +51,8 @@ export function CustomerHistoryList({
     customer,
     rates,
     defaultCurrency = "TRY",
-    className
+    className,
+    shop
 }: CustomerHistoryListProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState<"ALL" | "SALE" | "SERVICE">("ALL");
@@ -97,6 +101,7 @@ export function CustomerHistoryList({
             const model = (item.deviceModel || "").toLowerCase();
             const problem = (item.problemDesc || "").toLowerCase();
             const notes = (item.notes || "").toLowerCase();
+            const saleNote = (item.description || item.transaction?.description || item.debt?.notes || "").toLowerCase();
 
             // Match product names in sale
             let productMatch = false;
@@ -120,6 +125,7 @@ export function CustomerHistoryList({
                 model.includes(q) ||
                 problem.includes(q) ||
                 notes.includes(q) ||
+                saleNote.includes(q) ||
                 productMatch ||
                 partMatch
             );
@@ -127,8 +133,10 @@ export function CustomerHistoryList({
     }, [allTransactions, typeFilter, searchTerm]);
 
     const handlePrintSaleReceipt = (item: any) => {
+        const saleDesc = item.description || item.transaction?.description || item.debt?.notes || "";
         const enrichedSale = {
             ...item,
+            description: saleDesc,
             customer: item.customer || {
                 name: customer?.name || "Müşteri",
                 phone: customer?.phone || "",
@@ -204,14 +212,26 @@ export function CustomerHistoryList({
                     </button>
                 </div>
 
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="İşlem no, cihaz, ürün ara..."
-                        className="pl-9 h-9 text-xs rounded-xl bg-background border-border/60"
+                <div className="flex items-center gap-2 flex-1 max-w-md justify-end">
+                    <CustomerReportButton
+                        customer={customer}
+                        shop={shop}
+                        rates={rates}
+                        defaultCurrency={defaultCurrency}
+                        size="sm"
+                        className="h-9 px-3 rounded-xl border-border bg-background hover:bg-primary/10 hover:text-primary text-xs font-bold gap-1.5 shrink-0 shadow-xs"
+                        label="Çıktı & Ekstre Al"
                     />
+
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="İşlem no, cihaz, ürün ara..."
+                            className="pl-9 h-9 text-xs rounded-xl bg-background border-border/60"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -233,6 +253,18 @@ export function CustomerHistoryList({
                         const saleItemNames = !isService && item.items?.length > 0
                             ? item.items.map((i: any) => `${i.product?.name || i.name || "Ürün"}${i.quantity > 1 ? ` (${i.quantity}x)` : ""}`).join(", ")
                             : null;
+
+                        const rawSaleDesc = !isService ? (item.description || item.transaction?.description || item.debt?.notes || "") : "";
+                        const cleanSaleDesc = rawSaleDesc
+                            ? rawSaleDesc.replace(/\s*\([₺$€][\d.,\s]+İndirim\)/gi, "").replace(/\s*\(VERESİYE\)/gi, "").trim()
+                            : "";
+                        const firstItemName = item.items?.[0]?.product?.name || "";
+                        const isGenericDesc = !cleanSaleDesc ||
+                            cleanSaleDesc.toLowerCase().startsWith("satış sale-") ||
+                            cleanSaleDesc.toLowerCase().startsWith("satış #") ||
+                            /^.+\s+\+\s+\d+\s+ürün$/i.test(cleanSaleDesc) ||
+                            (item.items?.length === 1 && cleanSaleDesc.toLowerCase() === firstItemName.toLowerCase());
+                        const displaySaleDesc = !isGenericDesc ? cleanSaleDesc : "";
 
                         const title = isService
                             ? `${item.deviceBrand || ""} ${item.deviceModel || ""}`.trim() || "Cihaz Onarımı"
@@ -278,6 +310,16 @@ export function CustomerHistoryList({
                                                 {isService ? "Servis / Tamir" : "Hızlı Satış"}
                                             </Badge>
                                         </div>
+
+                                        {!isService && displaySaleDesc && (
+                                            <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-1 flex items-start gap-1.5 bg-emerald-500/5 border border-emerald-500/15 px-2.5 py-1 rounded-lg w-fit max-w-full">
+                                                <FileText className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-500" />
+                                                <span className="leading-snug break-words">
+                                                    <span className="font-bold text-muted-foreground uppercase text-[10px] tracking-wider mr-1">Açıklama:</span>
+                                                    {displaySaleDesc}
+                                                </span>
+                                            </div>
+                                        )}
 
                                         <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                                             <span className="font-medium flex items-center gap-1">
@@ -357,7 +399,7 @@ export function CustomerHistoryList({
                                                 </Button>
                                             </Link>
                                         ) : (
-                                            <Link href={`/satis/arşiv?search=${item.saleNumber}`}>
+                                            <Link href={`/satis/gecmis?search=${item.saleNumber}`}>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"

@@ -21,6 +21,18 @@ interface ReceiptModalProps {
   initialDefaultCurrency?: string;
 }
 
+export const getSaleCustomDescription = (sale: any): string | null => {
+  if (!sale) return null;
+  const rawNote = sale.description || sale.transaction?.description || sale.debt?.notes || sale.notes || "";
+  if (!rawNote || typeof rawNote !== "string") return null;
+  const cleaned = rawNote.replace(/\s*\([^)]*(İndirim|VERESİYE)[^)]*\)/gi, "").trim();
+  const firstProductName = sale.items?.[0]?.product?.name || "";
+  if (firstProductName && cleaned.toLowerCase() === firstProductName.toLowerCase()) return null;
+  if (cleaned.toLowerCase().startsWith("satış sale-") || cleaned.toLowerCase().startsWith("satış #")) return null;
+  if (/^.+\s+\+\s+\d+\s+ürün$/i.test(cleaned)) return null;
+  return cleaned || null;
+};
+
 const POSReceiptContent = ({ sale, settings, selectedCurrency, shopName, shopPhone, shopAddress, shopLogo, shopWebsite, rates, customPhone }: any) => {
   if (!sale) return null;
 
@@ -108,6 +120,22 @@ const POSReceiptContent = ({ sale, settings, selectedCurrency, shopName, shopPho
           </div>
         ))}
       </div>
+
+      {/* Satış Açıklaması / Özel Not */}
+      {(() => {
+        const customNote = getSaleCustomDescription(sale);
+        if (!customNote) return null;
+        return (
+          <div className="mb-2 p-1.5 border border-dashed border-black/40 rounded bg-black/[0.02]">
+            <span className="text-[7.5px] font-black text-black/60 uppercase block leading-none mb-0.5">
+              SATIŞ AÇIKLAMASI / NOT
+            </span>
+            <span className="text-[9.5px] font-bold text-black leading-snug break-words block">
+              {customNote}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Totals */}
       <div className="border-t-[1.5px] border-black pt-1.5 space-y-1">
@@ -223,11 +251,14 @@ export function ReceiptModal({ isOpen, onClose, sale, rates, initialDefaultCurre
       return `• ${item.product?.name}${qty}: ₺${getPriceTRY(item.totalPrice)}`;
     }).join("\n") || "";
 
+    const customNote = getSaleCustomDescription(sale);
+    const noteText = customNote ? `\n*Açıklama / Not:* ${customNote}` : "";
+
     const totalText = isUSD
       ? `*Toplam: $${getPriceUSD(sale.finalAmount)} (₺${getPriceTRY(sale.finalAmount)})*`
       : `*Toplam: ₺${getPriceTRY(sale.finalAmount)}*`;
 
-    return `${itemLines}\n\n${totalText}`;
+    return `${itemLines}${noteText}\n\n${totalText}`;
   };
 
   const sendWhatsAppDirect = (msgToSend?: string) => {

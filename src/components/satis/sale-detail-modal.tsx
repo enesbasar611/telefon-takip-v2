@@ -19,7 +19,8 @@ import {
     Receipt,
     ArrowRight,
     TrendingUp,
-    TrendingDown
+    TrendingDown,
+    FileText
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -98,6 +99,19 @@ export function SaleDetailModal({ sale, isOpen, onClose }: SaleDetailModalProps)
                             <p className="text-[11px]  text-muted-foreground opacity-70 mt-0.5">{format(new Date(sale.createdAt), "HH:mm")}</p>
                         </div>
                     </div>
+
+                    {/* Satış Açıklaması / Not */}
+                    {(sale.transaction?.description || sale.description || sale.debt?.notes) && (
+                        <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 flex items-start gap-3">
+                            <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Satış Açıklaması / Not</span>
+                                <p className="text-xs font-medium text-foreground mt-0.5 leading-snug break-words">
+                                    {sale.description || sale.transaction?.description || sale.debt?.notes}
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Product List */}
                     <div className="space-y-4">

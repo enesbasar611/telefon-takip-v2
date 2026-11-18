@@ -21,8 +21,8 @@ export default async function SalesHistoryPage({
     const searchTerm = searchParams.search || "";
     const typeFilter = searchParams.type || "ALL";
     const now = new Date();
-    const startDate = searchParams.startDate || startOfMonth(now).toISOString();
-    const endDate = searchParams.endDate || endOfDay(now).toISOString();
+    const startDate = searchParams.startDate || (searchTerm ? "2020-01-01T00:00:00.000Z" : startOfMonth(now).toISOString());
+    const endDate = searchParams.endDate || (searchTerm ? "2030-12-31T23:59:59.999Z" : endOfDay(now).toISOString());
 
     const [historyData, reportData, staffList] = await Promise.all([
         getUnifiedHistory({
